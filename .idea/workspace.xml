@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/PyCharm.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="First window. Added basic PyCharm">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,23 +26,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.750708272426603" />
-      <entry key="MS500" value="5.78192187114925" />
-      <entry key="S2" value="11.699653771450247" />
-      <entry key="S5" value="19.813730709145805" />
-      <entry key="S10" value="35.61014976508063" />
-      <entry key="S30" value="89.55484492759676" />
-      <entry key="S60" value="146.5640378540504" />
-      <entry key="M2" value="214.18649971706702" />
-      <entry key="M5" value="312.9014180671235" />
-      <entry key="M10" value="389.36541534884157" />
-      <entry key="M15" value="428.01895891699246" />
-      <entry key="M30" value="477.48143540791506" />
-      <entry key="H1" value="507.52710245547576" />
-      <entry key="H2" value="524.1615479635569" />
-      <entry key="H4" value="532.9236811226444" />
-      <entry key="D1" value="540.4648762365975" />
-      <entry key="W1" value="541.780140120308" />
+      <entry key="MS100" value="1.6193579203636812" />
+      <entry key="MS500" value="5.724492361335249" />
+      <entry key="S2" value="15.385511896498226" />
+      <entry key="S5" value="27.784604379595788" />
+      <entry key="S10" value="47.49692685812968" />
+      <entry key="S30" value="106.5138550524582" />
+      <entry key="S60" value="148.48586805960394" />
+      <entry key="M2" value="186.1666540254851" />
+      <entry key="M5" value="267.10312970740625" />
+      <entry key="M10" value="387.56066576596874" />
+      <entry key="M15" value="469.26866747940517" />
+      <entry key="M30" value="593.391750343852" />
+      <entry key="H1" value="679.1760220178259" />
+      <entry key="H2" value="729.9646739499586" />
+      <entry key="H4" value="757.6495107792153" />
+      <entry key="D1" value="781.9878578594049" />
+      <entry key="W1" value="786.2809674556835" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -68,23 +64,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.6722500261931428" />
-      <entry key="MS500" value="5.727181599059768" />
-      <entry key="S2" value="11.670416676973227" />
-      <entry key="S5" value="19.793124403430927" />
-      <entry key="S10" value="35.591347642937556" />
-      <entry key="S30" value="89.53852721864962" />
-      <entry key="S60" value="146.55012299027007" />
-      <entry key="M2" value="214.17584928536004" />
-      <entry key="M5" value="312.89461470359623" />
-      <entry key="M10" value="389.36084259076165" />
-      <entry key="M15" value="428.0154817404745" />
-      <entry key="M30" value="477.47940912847986" />
-      <entry key="H1" value="507.52599877706314" />
-      <entry key="H2" value="524.1609706052031" />
-      <entry key="H4" value="532.9233856611495" />
-      <entry key="D1" value="540.4648260147064" />
-      <entry key="W1" value="541.780132921303" />
+      <entry key="MS100" value="1.541968540529272" />
+      <entry key="MS500" value="5.6689714047583655" />
+      <entry key="S2" value="15.347857004716843" />
+      <entry key="S5" value="27.757316742313222" />
+      <entry key="S10" value="47.47348324653846" />
+      <entry key="S30" value="106.49605891982425" />
+      <entry key="S60" value="148.47337568390293" />
+      <entry key="M2" value="186.15875952620453" />
+      <entry key="M5" value="267.09832547052645" />
+      <entry key="M10" value="387.55683245863185" />
+      <entry key="M15" value="469.2654086295101" />
+      <entry key="M30" value="593.3895557502672" />
+      <entry key="H1" value="679.1747206758185" />
+      <entry key="H2" value="729.9639614518425" />
+      <entry key="H4" value="757.649137475847" />
+      <entry key="D1" value="781.9877931246535" />
+      <entry key="W1" value="786.2809581441676" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -129,14 +125,35 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1785921132526</updated>
-      <workItem from="1786115173171" duration="1420000" />
+      <workItem from="1786115173171" duration="2147000" />
     </task>
+    <task id="LOCAL-00001" summary="First window. Added basic PyCharm">
+      <option name="closed" value="true" />
+      <created>1786116618475</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1786116618475</updated>
+    </task>
+    <task id="LOCAL-00002" summary="First window. Added basic PyCharm">
+      <option name="closed" value="true" />
+      <created>1786116647346</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1786116647346</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="First window. Added basic PyCharm" />
+    <option name="LAST_COMMIT_MESSAGE" value="First window. Added basic PyCharm" />
+  </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/PyCharm$main.coverage" NAME="main Coverage Results" MODIFIED="1786116047640" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PyCharm$main.coverage" NAME="main Coverage Results" MODIFIED="1786117108831" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

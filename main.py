@@ -1,20 +1,268 @@
-"""Stellar Wanderer — window bootstrap.
+"""Stellar Wanderer — first-person cockpit view.
 
-Opens a resizable pygame window and runs the main loop. Put drawing code in
-`draw()`; it is called once per frame with the surface to paint on.
+Draws the pilot's-seat view of the player's ship as vector art: the starfield
+seen through the canopy, the hull frame around it, and the instrument console.
+The panel on the upper right is the ship clock — it starts at
+500-01-01 00:00:00 and advances one second per real second.
 """
+
+import math
+import random
+from datetime import datetime, timedelta
 
 import pygame
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
-BACKGROUND = (8, 10, 24)  # deep space blue
+MIN_SIZE = (640, 400)
 FPS = 60
 
+# Ship clock. Rendered with an unpadded year so it reads "500-01-01", as spec'd.
+EPOCH = datetime(500, 1, 1)
 
-def draw(surface):
-    """Render one frame. Graphics go here."""
-    surface.fill(BACKGROUND)
+# Palette
+SPACE = (8, 10, 24)
+HULL = (38, 42, 55)
+HULL_DARK = (23, 26, 36)
+HULL_EDGE = (70, 78, 98)
+STRUT = (30, 34, 46)
+CONSOLE = (29, 32, 43)
+CONSOLE_EDGE = (74, 82, 102)
+ACCENT = (94, 234, 212)
+ACCENT_DIM = (34, 92, 92)
+AMBER = (240, 176, 92)
+READOUT_BG = (9, 17, 21)
+
+STAR_COUNT = 260
+STAR_SEED = 20270101
+
+# Canopy opening, as fractions of the window. The windshield is a trapezoid
+# that flares outward toward the console, which reads as forward perspective.
+CANOPY_TOP = 0.055
+CANOPY_TOP_INSET = 0.105
+CANOPY_BOTTOM_INSET = 0.02
+CONSOLE_TOP = 0.66
+
+
+def make_starfield(count, seed):
+    """Stars as (nx, ny, radius, brightness), normalised to the canopy area."""
+    rng = random.Random(seed)
+    stars = []
+    for _ in range(count):
+        brightness = rng.randint(70, 255)
+        # Bias small: a few bright stars read better than a uniform wash.
+        radius = 1 if rng.random() < 0.82 else 2
+        stars.append((rng.random(), rng.random(), radius, brightness))
+    return stars
+
+
+class FontCache:
+    """Fonts are rebuilt on resize, so keep one per pixel size."""
+
+    def __init__(self):
+        self._fonts = {}
+
+    def get(self, size, bold=False):
+        key = (size, bold)
+        if key not in self._fonts:
+            self._fonts[key] = pygame.font.SysFont(
+                'consolas,dejavusansmono,couriernew,monospace', size, bold=bold
+            )
+        return self._fonts[key]
+
+    def render_to_fit(self, text, color, max_width, size):
+        """Render `text`, stepping the font down until it fits `max_width`."""
+        while size > 7:
+            surf = self.get(size).render(text, True, color)
+            if surf.get_width() <= max_width:
+                return surf
+            size -= 1
+        return self.get(size).render(text, True, color)
+
+
+def format_ship_time(moment):
+    """ISO 8601 layout without zero-padding the year, e.g. '500-01-01 00:00:00'."""
+    return (f'{moment.year}-{moment.month:02d}-{moment.day:02d} '
+            f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
+
+
+def draw_view(surface, stars, w, h):
+    """Space seen through the canopy. Fills the whole upper region; the hull
+    frame is painted over it afterwards to cut the windshield shape out."""
+    view_h = int(h * CONSOLE_TOP)
+    surface.fill(SPACE, (0, 0, w, view_h))
+
+    for nx, ny, radius, brightness in stars:
+        x = int(nx * w)
+        y = int(ny * view_h)
+        # Slightly cool tint keeps the stars from looking like flat white dots.
+        color = (brightness, brightness, min(255, brightness + 18))
+        if radius == 1:
+            surface.set_at((x, y), color)
+        else:
+            pygame.draw.circle(surface, color, (x, y), radius)
+
+
+def draw_canopy(surface, w, h):
+    """Hull frame: top rail, two A-pillars, and the struts between panes."""
+    top = int(h * CANOPY_TOP)
+    bottom = int(h * CONSOLE_TOP)
+    top_inset = w * CANOPY_TOP_INSET
+    bottom_inset = w * CANOPY_BOTTOM_INSET
+
+    # Top rail.
+    pygame.draw.rect(surface, HULL, (0, 0, w, top))
+    pygame.draw.line(surface, HULL_EDGE, (0, top - 1), (w, top - 1), 2)
+
+    # A-pillars, angling inward as they rise.
+    left = [(0, 0), (top_inset, top), (bottom_inset, bottom), (0, bottom)]
+    right = [(w, 0), (w - top_inset, top), (w - bottom_inset, bottom), (w, bottom)]
+    for pillar in (left, right):
+        points = [(int(x), int(y)) for x, y in pillar]
+        pygame.draw.polygon(surface, HULL, points)
+        pygame.draw.lines(surface, HULL_EDGE, False, points[1:3], 2)
+
+    # Two vertical struts splitting the windshield into three panes.
+    for frac in (1 / 3, 2 / 3):
+        half = max(2, int(w * 0.004))
+        x_top = top_inset + (w - 2 * top_inset) * frac
+        x_bottom = bottom_inset + (w - 2 * bottom_inset) * frac
+        strut = [
+            (int(x_top - half), top), (int(x_top + half), top),
+            (int(x_bottom + half), bottom), (int(x_bottom - half), bottom),
+        ]
+        pygame.draw.polygon(surface, STRUT, strut)
+        pygame.draw.line(surface, HULL_EDGE, strut[0], strut[3], 1)
+
+
+def draw_gauge(surface, center, radius, fraction, color):
+    """Round dial with tick marks and a needle at `fraction` of its sweep."""
+    pygame.draw.circle(surface, READOUT_BG, center, radius)
+    pygame.draw.circle(surface, CONSOLE_EDGE, center, radius, 2)
+
+    start, sweep = math.radians(150), math.radians(240)
+    for i in range(9):
+        angle = start + sweep * (i / 8)
+        inner = radius * (0.72 if i % 2 else 0.62)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        pygame.draw.line(
+            surface, ACCENT_DIM,
+            (center[0] + cos_a * inner, center[1] + sin_a * inner),
+            (center[0] + cos_a * radius * 0.88, center[1] + sin_a * radius * 0.88),
+            1,
+        )
+
+    angle = start + sweep * fraction
+    pygame.draw.line(
+        surface, color, center,
+        (center[0] + math.cos(angle) * radius * 0.78,
+         center[1] + math.sin(angle) * radius * 0.78),
+        max(2, radius // 12),
+    )
+    pygame.draw.circle(surface, CONSOLE_EDGE, center, max(2, radius // 8))
+
+
+def draw_console(surface, fonts, w, h):
+    """Instrument panel below the windshield."""
+    top = int(h * CONSOLE_TOP)
+    height = h - top
+
+    pygame.draw.rect(surface, CONSOLE, (0, top, w, height))
+    pygame.draw.line(surface, CONSOLE_EDGE, (0, top), (w, top), 2)
+    # Shadowed lip under the windshield, so the console reads as tilted away.
+    pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))
+
+    label_font = fonts.get(max(9, int(h * 0.017)))
+
+    # Left cluster: three dials.
+    radius = int(height * 0.20)
+    dial_y = top + int(height * 0.42)
+    for i, (name, fraction, color) in enumerate((
+        ('VEL', 0.42, ACCENT),
+        ('HDG', 0.66, ACCENT),
+        ('FUEL', 0.28, AMBER),
+    )):
+        cx = int(w * (0.10 + i * 0.10))
+        draw_gauge(surface, (cx, dial_y), radius, fraction, color)
+        label = label_font.render(name, True, ACCENT_DIM)
+        surface.blit(label, label.get_rect(midtop=(cx, dial_y + radius + 6)))
+
+    # Centre multi-function display.
+    mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
+    mfd.center = (w // 2, top + int(height * 0.44))
+    pygame.draw.rect(surface, READOUT_BG, mfd)
+    pygame.draw.rect(surface, CONSOLE_EDGE, mfd, 2)
+
+    nav = fonts.render_to_fit(
+        'NAV — NO CONTACT', ACCENT, mfd.width - 12, max(9, int(h * 0.017))
+    )
+    surface.blit(nav, nav.get_rect(midtop=(mfd.centerx, mfd.top + 5)))
+
+    # Grid sits below the header band so the two never collide.
+    grid = mfd.inflate(-8, 0)
+    grid.top = mfd.top + nav.get_height() + 9
+    grid.height = mfd.bottom - 5 - grid.top
+    pygame.draw.line(surface, CONSOLE_EDGE, (grid.left, grid.top - 4),
+                     (grid.right, grid.top - 4), 1)
+    for i in range(1, 5):
+        y = grid.top + grid.height * i // 5
+        pygame.draw.line(surface, ACCENT_DIM, (grid.left, y), (grid.right, y), 1)
+    for i in range(1, 6):
+        x = grid.left + grid.width * i // 6
+        pygame.draw.line(surface, ACCENT_DIM, (x, grid.top), (x, grid.bottom), 1)
+
+    # Right cluster: vertical level bars.
+    bar_w = int(w * 0.018)
+    bar_h = int(height * 0.46)
+    bar_top = top + int(height * 0.24)
+    for i, level in enumerate((0.72, 0.51, 0.88, 0.34)):
+        x = int(w * 0.70 + i * bar_w * 2.1)
+        pygame.draw.rect(surface, READOUT_BG, (x, bar_top, bar_w, bar_h))
+        filled = int(bar_h * level)
+        pygame.draw.rect(
+            surface, ACCENT, (x, bar_top + bar_h - filled, bar_w, filled)
+        )
+        pygame.draw.rect(surface, CONSOLE_EDGE, (x, bar_top, bar_w, bar_h), 1)
+
+    # Indicator lights along the bottom.
+    light = max(4, int(height * 0.045))
+    for i in range(10):
+        x = int(w * 0.06 + i * light * 2.2)
+        color = AMBER if i in (3, 7) else ACCENT_DIM
+        pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
+
+
+def draw_ship_clock(surface, fonts, text, w, h):
+    """Clock panel mounted on the upper right of the cockpit."""
+    digit_font = fonts.get(max(14, int(h * 0.030)), bold=True)
+    label_font = fonts.get(max(9, int(h * 0.016)))
+
+    digits = digit_font.render(text, True, ACCENT)
+    label = label_font.render('SHIP TIME', True, ACCENT_DIM)
+
+    pad = max(8, int(h * 0.014))
+    panel = pygame.Rect(
+        0, 0,
+        max(digits.get_width(), label.get_width()) + pad * 2,
+        digits.get_height() + label.get_height() + pad * 2,
+    )
+    panel.topright = (int(w * 0.975), int(h * 0.075))
+
+    pygame.draw.rect(surface, HULL_DARK, panel.inflate(6, 6))
+    pygame.draw.rect(surface, READOUT_BG, panel)
+    pygame.draw.rect(surface, CONSOLE_EDGE, panel, 2)
+
+    surface.blit(label, (panel.left + pad, panel.top + pad))
+    surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
+
+
+def draw(surface, fonts, stars, ship_time):
+    w, h = surface.get_size()
+    surface.fill(SPACE)
+    draw_view(surface, stars, w, h)
+    draw_canopy(surface, w, h)
+    draw_console(surface, fonts, w, h)
+    draw_ship_clock(surface, fonts, format_ship_time(ship_time), w, h)
 
 
 def main():
@@ -23,6 +271,10 @@ def main():
     pygame.display.set_caption(WINDOW_TITLE)
     clock = pygame.time.Clock()
 
+    fonts = FontCache()
+    stars = make_starfield(STAR_COUNT, STAR_SEED)
+    elapsed = 0.0  # seconds of ship time since EPOCH
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -30,10 +282,15 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
+            elif event.type == pygame.VIDEORESIZE:
+                size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
+                screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 
-        draw(screen)
+        dt = clock.tick(FPS) / 1000.0
+        elapsed += dt
+
+        draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed))
         pygame.display.flip()
-        clock.tick(FPS)
 
     pygame.quit()
 
