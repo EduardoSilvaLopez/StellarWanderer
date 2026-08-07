@@ -4,6 +4,11 @@ Draws the pilot's-seat view of the player's ship as vector art: the starfield
 seen through the canopy, the hull frame around it, and the instrument console.
 The panel on the upper right is the ship clock — it starts at
 500-01-01 00:00:00 and advances one second per real second.
+
+Controls:
+    Keypad +   compress time 10x further, up to 1 000 000 s/s
+    Keypad -   step back down, no slower than 1 s/s
+    Esc        quit
 """
 
 import math
@@ -19,6 +24,13 @@ FPS = 60
 
 # Ship clock. Rendered with an unpadded year so it reads "500-01-01", as spec'd.
 EPOCH = datetime(500, 1, 1)
+
+# Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
+TIME_SCALE_MIN = 1
+TIME_SCALE_MAX = 1_000_000
+TIME_SCALE_STEP = 10
+# datetime tops out at year 9999; stop there rather than raising mid-frame.
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - EPOCH).total_seconds()
 
 # Palette
 SPACE = (8, 10, 24)
@@ -232,18 +244,28 @@ def draw_console(surface, fonts, w, h):
         pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
 
 
-def draw_ship_clock(surface, fonts, text, w, h):
+def format_time_scale(scale):
+    """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'."""
+    return f'x{scale:,}'.replace(',', ' ')
+
+
+def draw_ship_clock(surface, fonts, text, scale, w, h):
     """Clock panel mounted on the upper right of the cockpit."""
     digit_font = fonts.get(max(14, int(h * 0.030)), bold=True)
     label_font = fonts.get(max(9, int(h * 0.016)))
 
     digits = digit_font.render(text, True, ACCENT)
     label = label_font.render('SHIP TIME', True, ACCENT_DIM)
+    # Highlight the rate whenever time is compressed, so the state is obvious.
+    rate_color = ACCENT_DIM if scale == TIME_SCALE_MIN else AMBER
+    rate = label_font.render(format_time_scale(scale), True, rate_color)
 
     pad = max(8, int(h * 0.014))
+    gap = max(10, int(w * 0.012))
+    header_w = label.get_width() + gap + rate.get_width()
     panel = pygame.Rect(
         0, 0,
-        max(digits.get_width(), label.get_width()) + pad * 2,
+        max(digits.get_width(), header_w) + pad * 2,
         digits.get_height() + label.get_height() + pad * 2,
     )
     panel.topright = (int(w * 0.975), int(h * 0.075))
@@ -253,16 +275,17 @@ def draw_ship_clock(surface, fonts, text, w, h):
     pygame.draw.rect(surface, CONSOLE_EDGE, panel, 2)
 
     surface.blit(label, (panel.left + pad, panel.top + pad))
+    surface.blit(rate, rate.get_rect(topright=(panel.right - pad, panel.top + pad)))
     surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
 
-def draw(surface, fonts, stars, ship_time):
+def draw(surface, fonts, stars, ship_time, time_scale=TIME_SCALE_MIN):
     w, h = surface.get_size()
     surface.fill(SPACE)
     draw_view(surface, stars, w, h)
     draw_canopy(surface, w, h)
     draw_console(surface, fonts, w, h)
-    draw_ship_clock(surface, fonts, format_ship_time(ship_time), w, h)
+    draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)
 
 
 def main():
@@ -274,22 +297,28 @@ def main():
     fonts = FontCache()
     stars = make_starfield(STAR_COUNT, STAR_SEED)
     elapsed = 0.0  # seconds of ship time since EPOCH
+    time_scale = TIME_SCALE_MIN
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key == pygame.K_KP_PLUS:
+                    time_scale = min(time_scale * TIME_SCALE_STEP, TIME_SCALE_MAX)
+                elif event.key == pygame.K_KP_MINUS:
+                    time_scale = max(time_scale // TIME_SCALE_STEP, TIME_SCALE_MIN)
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 
         dt = clock.tick(FPS) / 1000.0
-        elapsed += dt
+        elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
 
-        draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed))
+        draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), time_scale)
         pygame.display.flip()
 
     pygame.quit()
