@@ -17,6 +17,8 @@ from datetime import datetime, timedelta
 
 import pygame
 
+from FontCache import FontCache
+
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
 MIN_SIZE = (640, 400)
@@ -66,30 +68,6 @@ def make_starfield(count, seed):
         radius = 1 if rng.random() < 0.82 else 2
         stars.append((rng.random(), rng.random(), radius, brightness))
     return stars
-
-
-class FontCache:
-    """Fonts are rebuilt on resize, so keep one per pixel size."""
-
-    def __init__(self):
-        self._fonts = {}
-
-    def get(self, size, bold=False):
-        key = (size, bold)
-        if key not in self._fonts:
-            self._fonts[key] = pygame.font.SysFont(
-                'consolas,dejavusansmono,couriernew,monospace', size, bold=bold
-            )
-        return self._fonts[key]
-
-    def render_to_fit(self, text, color, max_width, size):
-        """Render `text`, stepping the font down until it fits `max_width`."""
-        while size > 7:
-            surf = self.get(size).render(text, True, color)
-            if surf.get_width() <= max_width:
-                return surf
-            size -= 1
-        return self.get(size).render(text, True, color)
 
 
 def format_ship_time(moment):
@@ -299,6 +277,24 @@ def main():
     elapsed = 0.0  # seconds of ship time since EPOCH
     time_scale = TIME_SCALE_MIN
 
+    # Create all seeds and random objects and calculate the initial planet's radius.
+    print("Give the galactic Seed: ")
+    galacticSeed = 1 # galacticSeed = input()
+    galacticRandom = random.Random(galacticSeed)
+    solarSeed = galacticRandom.randint(1, 1000000000)
+    print("Initial solar seed: " + str(solarSeed))
+    solarRandom = random.Random(solarSeed)
+    orbitalSeed = solarRandom.randint(1, 1000000000)
+    print("Initial orbital seed: " + str(orbitalSeed))
+    orbitalRandom = random.Random(orbitalSeed)
+    planetSeed = orbitalRandom.randint(1, 1000000000)
+    print("Initial planet seed: " + str(planetSeed))
+    planetRandom = random.Random(planetSeed)
+    planetRadius = planetRandom.gauss(5000000, 1000000)
+    while planetRadius <= 0:
+        planetRadius = planetRandom.gauss(5000000, 1000000)
+    print("Initial planet's radius: " + str(planetRadius))
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -311,6 +307,10 @@ def main():
                     time_scale = min(time_scale * TIME_SCALE_STEP, TIME_SCALE_MAX)
                 elif event.key == pygame.K_KP_MINUS:
                     time_scale = max(time_scale // TIME_SCALE_STEP, TIME_SCALE_MIN)
+                elif event.key == pygame.K_F5:
+                    print("F5 pressed")
+                elif event.key == pygame.K_F6:
+                    print("F6 pressed")
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
