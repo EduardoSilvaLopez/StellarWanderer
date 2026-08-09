@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 import pygame
 
 from FontCache import FontCache
+from Savefile import Savefile
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
@@ -308,7 +309,7 @@ def main():
                 elif event.key == pygame.K_KP_MINUS:
                     time_scale = max(time_scale // TIME_SCALE_STEP, TIME_SCALE_MIN)
                 elif event.key == pygame.K_F5:
-                    print("F5 pressed")
+                    Savefile.new(galacticSeed, EPOCH + timedelta(seconds=elapsed))
                 elif event.key == pygame.K_F6:
                     print("F6 pressed")
             elif event.type == pygame.VIDEORESIZE:
