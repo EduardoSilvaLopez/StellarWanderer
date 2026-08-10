@@ -1,20 +1,31 @@
-import pygame
 import json
 
+from GameEnvironment import GameEnvironment
+
 class Savefile:
-    def __init__(self):
-        print('Savefile init')
+    lastName = ''
+    lastSavefile = None
 
     @classmethod
-    def new(cls, galacticSeed, gameDateTime):
+    def new(cls, environment, gameDateTime):
         data = {
-            'galacticSeed': galacticSeed,
+            'galacticSeed': environment.galacticSeed,
             'gameDateTime': str(gameDateTime)
         }
         fileName = str(gameDateTime)
         fileName = fileName.replace(' ', 'T').replace(':', '_')[:19]
-        fileName = 'Savefile ' + str(galacticSeed) + ' ' + fileName + '.json'
-        print("Filename: " + fileName)
+        fileName = 'Savefile ' + str(environment.galacticSeed) + ' ' + fileName + '.json'
+        print("New savefile's name: " + fileName)
         with open(fileName, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        pass
+            cls.lastName = f.name
+
+    def __init__(self):
+        self.name = Savefile.lastName
+
+    @classmethod
+    def load(cls):
+        with open(Savefile.lastName, 'r', encoding='utf-8') as f:
+            loadObject = json.load(f)
+            GameEnvironment.curEnv = GameEnvironment(loadObject['galacticSeed'])
+            print("Loaded seed: " + str(GameEnvironment.curEnv.galacticSeed))

@@ -14,11 +14,13 @@ Controls:
 import math
 import random
 from datetime import datetime, timedelta
+from shutil import SameFileError
 
 import pygame
 
 from FontCache import FontCache
 from Savefile import Savefile
+from GameEnvironment import GameEnvironment
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
@@ -281,20 +283,7 @@ def main():
     # Create all seeds and random objects and calculate the initial planet's radius.
     print("Give the galactic Seed: ")
     galacticSeed = 1 # galacticSeed = input()
-    galacticRandom = random.Random(galacticSeed)
-    solarSeed = galacticRandom.randint(1, 1000000000)
-    print("Initial solar seed: " + str(solarSeed))
-    solarRandom = random.Random(solarSeed)
-    orbitalSeed = solarRandom.randint(1, 1000000000)
-    print("Initial orbital seed: " + str(orbitalSeed))
-    orbitalRandom = random.Random(orbitalSeed)
-    planetSeed = orbitalRandom.randint(1, 1000000000)
-    print("Initial planet seed: " + str(planetSeed))
-    planetRandom = random.Random(planetSeed)
-    planetRadius = planetRandom.gauss(5000000, 1000000)
-    while planetRadius <= 0:
-        planetRadius = planetRandom.gauss(5000000, 1000000)
-    print("Initial planet's radius: " + str(planetRadius))
+    ge = GameEnvironment(galacticSeed)
 
     running = True
     while running:
@@ -309,9 +298,9 @@ def main():
                 elif event.key == pygame.K_KP_MINUS:
                     time_scale = max(time_scale // TIME_SCALE_STEP, TIME_SCALE_MIN)
                 elif event.key == pygame.K_F5:
-                    Savefile.new(galacticSeed, EPOCH + timedelta(seconds=elapsed))
+                    Savefile.new(ge, EPOCH + timedelta(seconds=elapsed))
                 elif event.key == pygame.K_F6:
-                    print("F6 pressed")
+                    Savefile.load()
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
@@ -324,8 +313,7 @@ def main():
 
     pygame.quit()
 
-
 if __name__ == '__main__':
-    print('Before main()')
+    print('Starting game.')
     main()
-    print('After main()')
+    print('Ending game.')
