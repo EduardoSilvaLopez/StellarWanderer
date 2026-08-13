@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="Save and load the seed.">
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
+    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="Horizon is drawn.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GameEnvironment.py" beforeDir="false" afterPath="$PROJECT_DIR$/GameEnvironment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Savefile.py" beforeDir="false" afterPath="$PROJECT_DIR$/Savefile.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -48,61 +45,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.014765656324545" />
-      <entry key="MS500" value="3.1231685500806172" />
-      <entry key="S2" value="11.130211685074087" />
-      <entry key="S5" value="22.613232345025025" />
-      <entry key="S10" value="40.429539754564594" />
-      <entry key="S30" value="106.66658014512218" />
-      <entry key="S60" value="172.3073081970137" />
-      <entry key="M2" value="235.4481018742431" />
-      <entry key="M5" value="311.3692532732587" />
-      <entry key="M10" value="388.7016619134647" />
-      <entry key="M15" value="446.7844207095238" />
-      <entry key="M30" value="582.5431003620577" />
-      <entry key="H1" value="812.3060032938113" />
-      <entry key="H2" value="1105.1393631022115" />
-      <entry key="H4" value="1358.2880034237114" />
-      <entry key="D1" value="1661.1554684026298" />
-      <entry key="W1" value="1724.1400174786259" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.000000110611152" />
+      <entry key="S2" value="1.0185809177908993" />
+      <entry key="S5" value="1.2427261450035672" />
+      <entry key="S10" value="1.6518642398594658" />
+      <entry key="S30" value="2.3605227168389273" />
+      <entry key="S60" value="2.8702861871392127" />
+      <entry key="M2" value="7.98925868234713" />
+      <entry key="M5" value="68.8320958318019" />
+      <entry key="M10" value="183.98272549619483" />
+      <entry key="M15" value="273.68539018569464" />
+      <entry key="M30" value="461.18295190743305" />
+      <entry key="H1" value="728.2705079417698" />
+      <entry key="H2" value="1052.8872770119735" />
+      <entry key="H4" value="1333.9876999978603" />
+      <entry key="D1" value="1673.6011282900286" />
+      <entry key="W1" value="1744.7203340093195" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="6.225677789999634E-115" />
-      <entry key="S5" value="2.078139302699677E-46" />
-      <entry key="S10" value="1.4415752851307102E-23" />
-      <entry key="S30" value="2.4337676233158612E-8" />
-      <entry key="S60" value="1.5600583281860842E-4" />
-      <entry key="M2" value="0.012514904206089403" />
-      <entry key="M5" value="0.20653413358697248" />
-      <entry key="M10" value="0.9973351853582517" />
-      <entry key="M15" value="2.2544826382202783" />
-      <entry key="M30" value="6.384350853892698" />
-      <entry key="H1" value="12.132856818253076" />
-      <entry key="H2" value="17.45680002239109" />
-      <entry key="H4" value="21.206701693769524" />
-      <entry key="D1" value="25.115205547657617" />
-      <entry key="W1" value="25.87129264181753" />
+      <entry key="MS500" value="1.263326528108771E-122" />
+      <entry key="S2" value="3.3525781015742242E-31" />
+      <entry key="S5" value="6.458795909894853E-13" />
+      <entry key="S10" value="8.036663430737194E-7" />
+      <entry key="S30" value="0.009297337439023758" />
+      <entry key="S60" value="0.09642274325787421" />
+      <entry key="M2" value="0.3107238529667601" />
+      <entry key="M5" value="0.6661607141943524" />
+      <entry key="M10" value="1.229160934154737" />
+      <entry key="M15" value="2.1576357654223193" />
+      <entry key="M30" value="5.776786882984708" />
+      <entry key="H1" value="11.538602961508744" />
+      <entry key="H2" value="17.27969827511694" />
+      <entry key="H4" value="21.481686131528345" />
+      <entry key="D1" value="25.97036399523486" />
+      <entry key="W1" value="26.849933203147682" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9601366221143004" />
-      <entry key="MS500" value="3.089862931313802" />
-      <entry key="S2" value="11.099195103937994" />
-      <entry key="S5" value="22.586581772432194" />
-      <entry key="S10" value="40.40436808434467" />
-      <entry key="S30" value="106.64267668558405" />
-      <entry key="S60" value="172.2873933016498" />
-      <entry key="M2" value="235.44593199742013" />
-      <entry key="M5" value="311.56361667647076" />
-      <entry key="M10" value="389.6825463990985" />
-      <entry key="M15" value="449.01714672667754" />
-      <entry key="M30" value="588.8973081616637" />
-      <entry key="H1" value="824.4089300961782" />
-      <entry key="H2" value="1122.573849733624" />
-      <entry key="H4" value="1379.480866183474" />
-      <entry key="D1" value="1686.2678906459994" />
-      <entry key="W1" value="1750.010899168492" />
+      <entry key="MS100" value="2.6525001890902754E-9" />
+      <entry key="MS500" value="0.01926331771652783" />
+      <entry key="S2" value="0.3760348451168803" />
+      <entry key="S5" value="0.8018036544342599" />
+      <entry key="S10" value="1.300543297166267" />
+      <entry key="S30" value="2.1786181489110517" />
+      <entry key="S60" value="2.852776359407943" />
+      <entry key="M2" value="8.233100898250871" />
+      <entry key="M5" value="69.4635138662166" />
+      <entry key="M10" value="185.18662432042265" />
+      <entry key="M15" value="275.81789769761406" />
+      <entry key="M30" value="466.93024037260903" />
+      <entry key="H1" value="739.7796372397041" />
+      <entry key="H2" value="1070.1444278323015" />
+      <entry key="H4" value="1355.455151113337" />
+      <entry key="D1" value="1699.5685802061512" />
+      <entry key="W1" value="1771.5698359117234" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -200,7 +197,7 @@
       <workItem from="1786348852697" duration="3512000" />
       <workItem from="1786537052265" duration="2467000" />
       <workItem from="1786539715618" duration="2060000" />
-      <workItem from="1786610657883" duration="294000" />
+      <workItem from="1786610657883" duration="1567000" />
     </task>
     <task id="LOCAL-00001" summary="First window. Added basic PyCharm">
       <option name="closed" value="true" />
@@ -258,7 +255,15 @@
       <option name="project" value="LOCAL" />
       <updated>1786352346431</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Horizon is drawn.">
+      <option name="closed" value="true" />
+      <created>1786611015020</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1786611015020</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -282,10 +287,11 @@
     <MESSAGE value="Separated FontCache, created Randoms and initial planet's radius." />
     <MESSAGE value="Savefiles created." />
     <MESSAGE value="Save and load the seed." />
-    <option name="LAST_COMMIT_MESSAGE" value="Save and load the seed." />
+    <MESSAGE value="Horizon is drawn." />
+    <option name="LAST_COMMIT_MESSAGE" value="Horizon is drawn." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PyCharm$Savefile.coverage" NAME="Savefile Coverage Results" MODIFIED="1786285187724" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/PyCharm$main.coverage" NAME="main Coverage Results" MODIFIED="1786539907071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PyCharm$main.coverage" NAME="main Coverage Results" MODIFIED="1786612267537" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

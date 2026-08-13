@@ -82,11 +82,30 @@ def format_ship_time(moment):
             f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 
 
-def draw_view(surface, stars, w, h, environment):
-    """Space, stars, and the planet horizon seen through the canopy."""
+def draw_deep_space(surface, stars, w, h):
+    """Space seen through the canopy."""
     view_h = int(h * CONSOLE_TOP)
     surface.fill(SPACE, (0, 0, w, view_h))
 
+
+def draw_stars(surface, stars, w, h):
+    """Stars seen through the canopy."""
+    view_h = int(h * CONSOLE_TOP)
+
+    for nx, ny, radius, brightness in stars:
+        x = int(nx * w)
+        y = int(ny * view_h)
+
+        # Slightly cool tint keeps the stars from looking like flat white dots.
+        color = (brightness, brightness, min(255, brightness + 18))
+        if radius == 1:
+            surface.set_at((x, y), color)
+        else:
+            pygame.draw.circle(surface, color, (x, y), radius)
+
+def draw_world(surface, w, h, environment):
+    """Planet surface and horizon seen through the canopy."""
+    view_h = int(h * CONSOLE_TOP)
     planet_radius = environment.planetRadius
     observer_radius = planet_radius + VIEW_ALTITUDE_METERS
 
@@ -97,7 +116,6 @@ def draw_view(surface, stars, w, h, environment):
     focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
     angular_radius = math.asin(planet_radius / observer_radius)
     planet_radius_px = focal_length_px * math.tan(angular_radius)
-    pixels_per_meter = planet_radius_px / planet_radius
 
     horizon_y = int(view_h * 0.52)
     planet_center = (w // 2, int(horizon_y + planet_radius_px))
@@ -121,22 +139,6 @@ def draw_view(surface, stars, w, h, environment):
         math.tau,
         2,
     )
-
-    for nx, ny, radius, brightness in stars:
-        x = int(nx * w)
-        y = int(ny * view_h)
-
-        dx = x - planet_center[0]
-        dy = y - planet_center[1]
-        if dx * dx + dy * dy <= planet_radius_px * planet_radius_px:
-            continue
-
-        # Slightly cool tint keeps the stars from looking like flat white dots.
-        color = (brightness, brightness, min(255, brightness + 18))
-        if radius == 1:
-            surface.set_at((x, y), color)
-        else:
-            pygame.draw.circle(surface, color, (x, y), radius)
 
 def draw_canopy(surface, w, h):
     """Hull frame: top rail, two A-pillars, and the struts between panes."""
@@ -305,7 +307,9 @@ def draw_ship_clock(surface, fonts, text, scale, w, h):
 def draw(surface, fonts, stars, ship_time, environment, time_scale=TIME_SCALE_MIN):
     w, h = surface.get_size()
     surface.fill(SPACE)
-    draw_view(surface, stars, w, h, environment)
+    draw_deep_space(surface, stars, w, h)
+    draw_stars(surface, stars, w, h)
+    draw_world(surface, w, h, environment)
     draw_canopy(surface, w, h)
     draw_console(surface, fonts, w, h)
     draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)
