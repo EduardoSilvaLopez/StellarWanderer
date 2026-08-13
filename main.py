@@ -39,6 +39,8 @@ MAX_ELAPSED = (datetime.max.replace(microsecond=0) - EPOCH).total_seconds()
 
 # Palette
 SPACE = (8, 10, 24)
+PLANET_GRAY = (96, 96, 96)
+PLANET_HORIZON = (150, 150, 150)
 HULL = (38, 42, 55)
 HULL_DARK = (23, 26, 36)
 HULL_EDGE = (70, 78, 98)
@@ -59,7 +61,8 @@ CANOPY_TOP = 0.055
 CANOPY_TOP_INSET = 0.105
 CANOPY_BOTTOM_INSET = 0.02
 CONSOLE_TOP = 0.66
-
+VIEW_ALTITUDE_METERS = 10
+VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 
 def make_starfield(count, seed):
     """Stars as (nx, ny, radius, brightness), normalised to the canopy area."""
@@ -79,22 +82,61 @@ def format_ship_time(moment):
             f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 
 
-def draw_view(surface, stars, w, h):
-    """Space seen through the canopy. Fills the whole upper region; the hull
-    frame is painted over it afterwards to cut the windshield shape out."""
+def draw_view(surface, stars, w, h, environment):
+    """Space, stars, and the planet horizon seen through the canopy."""
     view_h = int(h * CONSOLE_TOP)
     surface.fill(SPACE, (0, 0, w, view_h))
+
+    planet_radius = environment.planetRadius
+    observer_radius = planet_radius + VIEW_ALTITUDE_METERS
+
+    # Perspective projection from a 10 m altitude. The planet is not fitted to the
+    # viewport; its screen radius is the projected angular radius seen by the
+    # observer. Large planets therefore produce an enormous off-screen circle and a
+    # nearly flat horizon, while small planets show visible curvature.
+    focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
+    angular_radius = math.asin(planet_radius / observer_radius)
+    planet_radius_px = focal_length_px * math.tan(angular_radius)
+    pixels_per_meter = planet_radius_px / planet_radius
+
+    horizon_y = int(view_h * 0.52)
+    planet_center = (w // 2, int(horizon_y + planet_radius_px))
+
+    pygame.draw.circle(
+        surface,
+        PLANET_GRAY,
+        planet_center,
+        max(1, int(planet_radius_px)),
+    )
+    pygame.draw.arc(
+        surface,
+        PLANET_HORIZON,
+        pygame.Rect(
+            int(planet_center[0] - planet_radius_px),
+            int(planet_center[1] - planet_radius_px),
+            int(planet_radius_px * 2),
+            int(planet_radius_px * 2),
+        ),
+        math.pi,
+        math.tau,
+        2,
+    )
 
     for nx, ny, radius, brightness in stars:
         x = int(nx * w)
         y = int(ny * view_h)
+
+        dx = x - planet_center[0]
+        dy = y - planet_center[1]
+        if dx * dx + dy * dy <= planet_radius_px * planet_radius_px:
+            continue
+
         # Slightly cool tint keeps the stars from looking like flat white dots.
         color = (brightness, brightness, min(255, brightness + 18))
         if radius == 1:
             surface.set_at((x, y), color)
         else:
             pygame.draw.circle(surface, color, (x, y), radius)
-
 
 def draw_canopy(surface, w, h):
     """Hull frame: top rail, two A-pillars, and the struts between panes."""
@@ -260,10 +302,10 @@ def draw_ship_clock(surface, fonts, text, scale, w, h):
     surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
 
-def draw(surface, fonts, stars, ship_time, time_scale=TIME_SCALE_MIN):
+def draw(surface, fonts, stars, ship_time, environment, time_scale=TIME_SCALE_MIN):
     w, h = surface.get_size()
     surface.fill(SPACE)
-    draw_view(surface, stars, w, h)
+    draw_view(surface, stars, w, h, environment)
     draw_canopy(surface, w, h)
     draw_console(surface, fonts, w, h)
     draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)
@@ -308,7 +350,7 @@ def main():
         dt = clock.tick(FPS) / 1000.0
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
 
-        draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), time_scale)
+        draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), ge, time_scale)
         pygame.display.flip()
 
     pygame.quit()

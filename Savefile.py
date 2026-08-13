@@ -7,12 +7,16 @@ class Savefile:
     lastSavefile = None
 
     @classmethod
-    def new(cls, environment, gameDateTime):
+    def new(cls, environment, playerDateTime):
         data = {
-            'galacticSeed': environment.galacticSeed,
-            'gameDateTime': str(gameDateTime)
+            'environment': {
+                'galacticSeed': environment.galacticSeed
+            },
+            'player': {
+                'dateTime': str(playerDateTime)
+            }
         }
-        fileName = str(gameDateTime)
+        fileName = str(playerDateTime)
         fileName = fileName.replace(' ', 'T').replace(':', '_')[:19]
         fileName = 'Savefile ' + str(environment.galacticSeed) + ' ' + fileName + '.json'
         print("New savefile's name: " + fileName)
@@ -27,5 +31,5 @@ class Savefile:
     def load(cls):
         with open(Savefile.lastName, 'r', encoding='utf-8') as f:
             loadObject = json.load(f)
-            GameEnvironment.curEnv = GameEnvironment(loadObject['galacticSeed'])
+            GameEnvironment.curEnv = GameEnvironment(loadObject['environment']['galacticSeed'])
             print("Loaded seed: " + str(GameEnvironment.curEnv.galacticSeed))
