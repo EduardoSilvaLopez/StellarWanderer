@@ -15,14 +15,14 @@ class Savefile:
         with open(Savefile.lastName, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
         GameEnvironment.curEnv = GameEnvironment(load_object['environment']['galacticSeed'])
-        print("Loaded seed: " + str(GameEnvironment.curEnv.galacticSeed))
+        print("Loaded seed: " + str(GameEnvironment.curEnv.galaxy.seed))
         self.playerDateTime = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         return self
 
     def save(self, environment, playerDateTime ):
         data = {
             'environment': {
-                'galacticSeed': environment.galacticSeed
+                'galacticSeed': environment.galaxy.seed
             },
             'player': {
                 'dateTime': str(playerDateTime)
@@ -30,7 +30,7 @@ class Savefile:
         }
         fileName = str(playerDateTime)
         fileName = fileName.replace(' ', 'T').replace(':', '_')[:19]
-        fileName = 'Savefile ' + str(environment.galacticSeed) + ' ' + fileName + '.json'
+        fileName = 'Savefile ' + str(environment.galaxy.seed) + ' ' + fileName + '.json'
         print("New savefile's name: " + fileName)
         with open(fileName, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

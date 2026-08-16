@@ -105,7 +105,7 @@ def draw_stars(surface, stars, w, h):
 def draw_world(surface, w, h, environment):
     """Planet surface and horizon seen through the canopy."""
     view_h = int(h * CONSOLE_TOP)
-    planet_radius = environment.planetRadius
+    planet_radius = environment.current_world.radius
     observer_radius = planet_radius + VIEW_ALTITUDE_METERS
 
     # Perspective projection from a 10 m altitude. The planet is not fitted to the
