@@ -14,7 +14,6 @@ Controls:
 import math
 import random
 from datetime import datetime, timedelta
-from shutil import SameFileError
 
 import pygame
 
@@ -344,9 +343,10 @@ def main():
                 elif event.key == pygame.K_KP_MINUS:
                     time_scale = max(time_scale // TIME_SCALE_STEP, TIME_SCALE_MIN)
                 elif event.key == pygame.K_F5:
-                    Savefile.new(ge, EPOCH + timedelta(seconds=elapsed))
+                    Savefile().save(ge, EPOCH + timedelta(seconds=elapsed))
                 elif event.key == pygame.K_F6:
-                    Savefile.load()
+                    loaded_savefile = Savefile().load()
+                    elapsed = (loaded_savefile.playerDateTime - EPOCH).total_seconds()
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)

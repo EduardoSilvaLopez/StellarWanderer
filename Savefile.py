@@ -1,13 +1,25 @@
 import json
+from datetime import datetime
+from logging import setLogRecordFactory
+from xmlrpc.client import DateTime
 
 from GameEnvironment import GameEnvironment
 
 class Savefile:
     lastName = ''
-    lastSavefile = None
 
-    @classmethod
-    def new(cls, environment, playerDateTime):
+    def __init__(self):
+        self.playerDateTime = None
+
+    def load(self):
+        with open(Savefile.lastName, 'r', encoding='utf-8') as f:
+            load_object = json.load(f)
+        GameEnvironment.curEnv = GameEnvironment(load_object['environment']['galacticSeed'])
+        print("Loaded seed: " + str(GameEnvironment.curEnv.galacticSeed))
+        self.playerDateTime = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
+        return self
+
+    def save(self, environment, playerDateTime ):
         data = {
             'environment': {
                 'galacticSeed': environment.galacticSeed
@@ -22,14 +34,5 @@ class Savefile:
         print("New savefile's name: " + fileName)
         with open(fileName, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-            cls.lastName = f.name
-
-    def __init__(self):
-        self.name = Savefile.lastName
-
-    @classmethod
-    def load(cls):
-        with open(Savefile.lastName, 'r', encoding='utf-8') as f:
-            loadObject = json.load(f)
-            GameEnvironment.curEnv = GameEnvironment(loadObject['environment']['galacticSeed'])
-            print("Loaded seed: " + str(GameEnvironment.curEnv.galacticSeed))
+        Savefile.lastName = fileName
+        return self

@@ -15,4 +15,4 @@ class GameEnvironment:
         while self.planetRadius <= 0:
             self.planetRadius = self.planetRandom.gauss(GameEnvironment.EARTHLIKE_RADIUS_AVERAGE, GameEnvironment.EARTHLIKE_RADIUS_SIGMA)
         print("Initial planet's radius: " + str(self.planetRadius))
-        curEnv = self
+        GameEnvironment.curEnv = self
