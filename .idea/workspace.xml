@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="Load time works now.">
-      <change afterPath="$PROJECT_DIR$/GalaxyChunk.py" afterDir="false" />
+    <list default="true" id="d9a70307-4008-42dc-ab4e-4b2872d0ec2e" name="Changes" comment="GalaxyChunk is working.">
+      <change afterPath="$PROJECT_DIR$/Gui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/GameEnvironment.py" beforeDir="false" afterPath="$PROJECT_DIR$/GameEnvironment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Savefile.py" beforeDir="false" afterPath="$PROJECT_DIR$/Savefile.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -15,7 +17,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="18" />
+    <option name="cachedIndexableFilesCount" value="22" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="FileTemplateManagerImpl">
@@ -46,61 +48,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.1921093976610015" />
-      <entry key="MS500" value="1.7189682664234787" />
-      <entry key="S2" value="1.92082569720504" />
-      <entry key="S5" value="1.967544552743901" />
-      <entry key="S10" value="1.983642439844933" />
-      <entry key="S30" value="2.048583903358422" />
-      <entry key="S60" value="2.761861444332793" />
-      <entry key="M2" value="5.89437795052208" />
-      <entry key="M5" value="19.402126549758552" />
-      <entry key="M10" value="40.0668345336111" />
-      <entry key="M15" value="60.41792265135174" />
-      <entry key="M30" value="148.4100825202185" />
-      <entry key="H1" value="382.52024184884834" />
-      <entry key="H2" value="776.2054643629443" />
-      <entry key="H4" value="1193.7088768859253" />
-      <entry key="D1" value="1780.970643200774" />
-      <entry key="W1" value="1914.574403025678" />
+      <entry key="MS100" value="1.0001382914899042" />
+      <entry key="MS500" value="1.1691060288812842" />
+      <entry key="S2" value="1.6412683013813147" />
+      <entry key="S5" value="1.8371825114978941" />
+      <entry key="S10" value="1.9178307925076126" />
+      <entry key="S30" value="2.1293448768376675" />
+      <entry key="S60" value="2.745958026950901" />
+      <entry key="M2" value="5.034627421729764" />
+      <entry key="M5" value="16.104032676036958" />
+      <entry key="M10" value="36.14021614618597" />
+      <entry key="M15" value="56.33108411891864" />
+      <entry key="M30" value="141.36327860329342" />
+      <entry key="H1" value="370.7745548604079" />
+      <entry key="H2" value="764.0336302452616" />
+      <entry key="H4" value="1186.3608075193565" />
+      <entry key="D1" value="1785.8889032811337" />
+      <entry key="W1" value="1922.9470848489223" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="3.872570027831915E-288" />
-      <entry key="S2" value="1.4028131230362247E-72" />
-      <entry key="S5" value="1.814679479795358E-29" />
-      <entry key="S10" value="4.260045324992784E-15" />
-      <entry key="S30" value="1.7148233528920718E-5" />
-      <entry key="S60" value="0.005737487004992929" />
-      <entry key="M2" value="0.1449279420689269" />
-      <entry key="M5" value="1.30908659941451" />
-      <entry key="M10" value="3.631830778862535" />
-      <entry key="M15" value="5.997422280422416" />
-      <entry key="M30" value="11.987575033633458" />
-      <entry key="H1" value="20.533683821437346" />
-      <entry key="H2" value="30.468335054684125" />
-      <entry key="H4" value="39.012884541087416" />
-      <entry key="D1" value="49.422209392272805" />
-      <entry key="W1" value="51.61985967875514" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="1.7437955617409852E-115" />
+      <entry key="S5" value="1.2491029312235084E-46" />
+      <entry key="S10" value="1.1176694221934503E-23" />
+      <entry key="S30" value="2.365115961757329E-8" />
+      <entry key="S60" value="2.130778175303653E-4" />
+      <entry key="M2" value="0.027929321664685064" />
+      <entry key="M5" value="0.6775349178308824" />
+      <entry key="M10" value="2.612806557360897" />
+      <entry key="M15" value="4.815252481495884" />
+      <entry key="M30" value="10.741342284237268" />
+      <entry key="H1" value="19.437055699719448" />
+      <entry key="H2" value="29.643571520284823" />
+      <entry key="H4" value="38.48123171941623" />
+      <entry key="D1" value="49.309315457035694" />
+      <entry key="W1" value="51.602998311327795" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.2406146037580973" />
-      <entry key="MS500" value="1.05115686098173" />
-      <entry key="S2" value="1.6712354124029518" />
-      <entry key="S5" value="1.8584619466342986" />
-      <entry key="S10" value="1.9274321815918514" />
-      <entry key="S30" value="2.027825327401434" />
-      <entry key="S60" value="2.7470036882056648" />
-      <entry key="M2" value="6.009334432406276" />
-      <entry key="M5" value="20.671986141554587" />
-      <entry key="M10" value="43.658438107412024" />
-      <entry key="M15" value="66.3760799814178" />
-      <entry key="M30" value="160.36186675411832" />
-      <entry key="H1" value="403.02154613640937" />
-      <entry key="H2" value="806.6473367076662" />
-      <entry key="H4" value="1232.7036422403548" />
-      <entry key="D1" value="1830.3887796598697" />
-      <entry key="W1" value="1966.193648183287" />
+      <entry key="MS100" value="9.222778271004052E-4" />
+      <entry key="MS500" value="0.357939756018486" />
+      <entry key="S2" value="1.2825598911024638" />
+      <entry key="S5" value="1.6724138848665584" />
+      <entry key="S10" value="1.8312077653751435" />
+      <entry key="S30" value="2.0963740037435428" />
+      <entry key="S60" value="2.724598091981292" />
+      <entry key="M2" value="5.041833859410207" />
+      <entry key="M5" value="16.752326056141754" />
+      <entry key="M10" value="38.71877139007526" />
+      <entry key="M15" value="61.11104477946177" />
+      <entry key="M30" value="152.0705433516017" />
+      <entry key="H1" value="390.1799231082596" />
+      <entry key="H2" value="793.6509281329435" />
+      <entry key="H4" value="1224.8239011405517" />
+      <entry key="D1" value="1835.194110493502" />
+      <entry key="W1" value="1974.5494624586058" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -201,7 +203,8 @@
       <workItem from="1786610657883" duration="4314000" />
       <workItem from="1786883081161" duration="1980000" />
       <workItem from="1786885235770" duration="1379000" />
-      <workItem from="1786886662114" duration="105000" />
+      <workItem from="1786886662114" duration="523000" />
+      <workItem from="1786887445698" duration="531000" />
     </task>
     <task id="LOCAL-00001" summary="First window. Added basic PyCharm">
       <option name="closed" value="true" />
@@ -283,7 +286,15 @@
       <option name="project" value="LOCAL" />
       <updated>1786883386655</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="GalaxyChunk is working.">
+      <option name="closed" value="true" />
+      <created>1786886995626</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1786886995626</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -310,7 +321,8 @@
     <MESSAGE value="Horizon is drawn." />
     <MESSAGE value="Drawing of deep space, stars and world separated." />
     <MESSAGE value="Load time works now." />
-    <option name="LAST_COMMIT_MESSAGE" value="Load time works now." />
+    <MESSAGE value="GalaxyChunk is working." />
+    <option name="LAST_COMMIT_MESSAGE" value="GalaxyChunk is working." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PyCharm$Savefile.coverage" NAME="Savefile Coverage Results" MODIFIED="1786285187724" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

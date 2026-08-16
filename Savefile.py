@@ -1,7 +1,5 @@
 import json
 from datetime import datetime
-from logging import setLogRecordFactory
-from xmlrpc.client import DateTime
 
 from GameEnvironment import GameEnvironment
 
@@ -28,11 +26,11 @@ class Savefile:
                 'dateTime': str(playerDateTime)
             }
         }
-        fileName = str(playerDateTime)
-        fileName = fileName.replace(' ', 'T').replace(':', '_')[:19]
-        fileName = 'Savefile ' + str(environment.galaxy.seed) + ' ' + fileName + '.json'
-        print("New savefile's name: " + fileName)
-        with open(fileName, 'w', encoding='utf-8') as f:
+        file_name = str(playerDateTime)
+        file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
+        file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
+        print("New savefile's name: " + file_name)
+        with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        Savefile.lastName = fileName
+        Savefile.lastName = file_name
         return self
