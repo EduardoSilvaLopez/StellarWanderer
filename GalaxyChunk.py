@@ -2,6 +2,7 @@ from enum import Enum
 import random
 
 class GalaxyChunk:
+    """A part of a galaxy self, which can be a galaxy, stellar system, orbit, world, or square kilometer chunk."""
     SEED_SCALING = 1000000000
     EARTHLIKE_RADIUS_AVERAGE = 5000000
     EARTHLIKE_RADIUS_SIGMA = 1000000
