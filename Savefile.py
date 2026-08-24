@@ -1,4 +1,6 @@
 import json
+import os
+import glob
 from datetime import datetime
 
 from GameEnvironment import GameEnvironment
@@ -10,7 +12,42 @@ class Savefile:
         self.playerDateTime = None
 
     def load(self):
-        with open(Savefile.lastName, 'r', encoding='utf-8') as f:
+        # Find all savefiles matching the pattern
+        savefiles = glob.glob('Savefile *.json')
+        
+        if not savefiles:
+            raise FileNotFoundError("No savefiles found.")
+        
+        # Parse datetime from filename and find the most recent
+        # Filename format: "Savefile {seed} {datetime}.json"
+        # DateTime format in filename: "YYYY-MM-DDTHH_MM_SS"
+        latest_file = None
+        latest_datetime = None
+        
+        for filepath in savefiles:
+            try:
+                # Extract datetime part from filename
+                # Format: "Savefile {seed} YYYY-MM-DDTHH_MM_SS.json"
+                filename = os.path.basename(filepath)
+                # Remove "Savefile " prefix and ".json" suffix
+                datetime_part = filename.replace('Savefile ', '').rsplit(' ', 1)[-1].replace('.json', '')
+                # Convert "YYYY-MM-DDTHH_MM_SS" back to datetime object
+                file_datetime = datetime.strptime(datetime_part, '%Y-%m-%dT%H_%M_%S')
+                
+                if latest_datetime is None or file_datetime > latest_datetime:
+                    latest_datetime = file_datetime
+                    latest_file = filepath
+            except (ValueError, IndexError):
+                # Skip files that don't match the expected format
+                continue
+        
+        if latest_file is None:
+            raise FileNotFoundError("No valid savefiles found with datetime information.")
+        
+        # Load the most recent savefile
+        print(f"Loading savefile: {latest_file}")
+        Savefile.lastName = latest_file
+        with open(latest_file, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
         GameEnvironment.curEnv = GameEnvironment(load_object['environment']['galacticSeed'])
         print("Loaded seed: " + str(GameEnvironment.curEnv.galaxy.seed))
