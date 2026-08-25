@@ -6,8 +6,6 @@ from datetime import datetime
 from GameEnvironment import GameEnvironment
 
 class Savefile:
-    lastName = ''
-
     def __init__(self):
         self.playerDateTime = None
 
@@ -46,7 +44,6 @@ class Savefile:
         
         # Load the most recent savefile
         print(f"Loading savefile: {latest_file}")
-        Savefile.lastName = latest_file
         with open(latest_file, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
         GameEnvironment.curEnv = GameEnvironment(load_object['environment']['galacticSeed'])
@@ -69,5 +66,4 @@ class Savefile:
         print("New savefile's name: " + file_name)
         with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        Savefile.lastName = file_name
         return self
