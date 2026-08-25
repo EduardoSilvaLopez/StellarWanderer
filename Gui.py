@@ -39,7 +39,6 @@ CANOPY_TOP = 0.055
 CANOPY_TOP_INSET = 0.105
 CANOPY_BOTTOM_INSET = 0.02
 CONSOLE_TOP = 0.66
-VIEW_ALTITUDE_METERS = 10
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 
 def make_starfield(count, seed):
@@ -81,11 +80,11 @@ def draw_stars(surface, stars, w, h):
         else:
             pygame.draw.circle(surface, color, (x, y), radius)
 
-def draw_world(surface, w, h, environment):
+def draw_world(surface, w, h, environment, player):
     """Planet surface and horizon seen through the canopy."""
     view_h = int(h * CONSOLE_TOP)
     planet_radius = environment.current_world.radius
-    observer_radius = planet_radius + VIEW_ALTITUDE_METERS
+    observer_radius = planet_radius + player.position.y
 
     # Perspective projection from a 10 m altitude. The planet is not fitted to the
     # viewport; its screen radius is the projected angular radius seen by the
@@ -282,12 +281,12 @@ def draw_ship_clock(surface, fonts, text, scale, w, h):
     surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
 
-def draw(surface, fonts, stars, ship_time, environment, time_scale=TIME_SCALE_MIN):
+def draw(surface, fonts, stars, ship_time, environment, player, time_scale=TIME_SCALE_MIN):
     w, h = surface.get_size()
     surface.fill(SPACE)
     draw_deep_space(surface, stars, w, h)
     draw_stars(surface, stars, w, h)
-    draw_world(surface, w, h, environment)
+    draw_world(surface, w, h, environment, player)
     draw_canopy(surface, w, h)
     draw_console(surface, fonts, w, h)
     draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)

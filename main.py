@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import pygame
 
 from FontCache import FontCache
+from Player import Player
 from Savefile import Savefile
 from GameEnvironment import GameEnvironment
 
@@ -44,8 +45,9 @@ def main():
     # Create all seeds and random objects and calculate the initial planet's radius.
     print("Give the galactic Seed: ")
     galacticSeed = 1 # galacticSeed = input()
-    ge = GameEnvironment(galacticSeed)
-
+    game_environment = GameEnvironment(galacticSeed)
+    player = Player().set_in_environment(game_environment)
+    
     running = True
     while running:
         for event in pygame.event.get():
@@ -59,7 +61,7 @@ def main():
                 elif event.key == pygame.K_KP_MINUS:
                     time_scale = max(time_scale // Gui.TIME_SCALE_STEP, Gui.TIME_SCALE_MIN)
                 elif event.key == pygame.K_F5:
-                    Savefile().save(ge, EPOCH + timedelta(seconds=elapsed))
+                    Savefile().save(game_environment, player, EPOCH + timedelta(seconds=elapsed))
                 elif event.key == pygame.K_F6:
                     loaded_savefile = Savefile().load()
                     elapsed = (loaded_savefile.playerDateTime - EPOCH).total_seconds()
@@ -70,7 +72,7 @@ def main():
         dt = clock.tick(FPS) / 1000.0
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
 
-        Gui.draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), ge, time_scale)
+        Gui.draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), game_environment, player, time_scale)
         pygame.display.flip()
 
     pygame.quit()

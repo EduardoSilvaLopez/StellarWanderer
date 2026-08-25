@@ -4,6 +4,7 @@ import glob
 from datetime import datetime
 
 from GameEnvironment import GameEnvironment
+from Player import Player
 
 class Savefile:
     def __init__(self):
@@ -46,19 +47,29 @@ class Savefile:
         print(f"Loading savefile: {latest_file}")
         with open(latest_file, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
-        GameEnvironment.curEnv = GameEnvironment(load_object['environment']['galacticSeed'])
-        print("Loaded seed: " + str(GameEnvironment.curEnv.galaxy.seed))
-        self.playerDateTime = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
+
+        GameEnvironment.singleton = GameEnvironment(load_object['environment']['galacticSeed'])
+        print("Loaded seed: " + str(GameEnvironment.singleton.galaxy.seed))
+
+        # Contrary to the environment, the player information cannot be retrieved from a simple seed.
+        Player.singleton.set_in_environment(GameEnvironment.singleton)
+        Player.singleton.position_in(load_object['player']['world'], load_object['player']['worldChunk'], load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
+        self.playerDateTime = datetime.strptime(load_object['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         return self
 
-    def save(self, environment, playerDateTime ):
+    def save(self, environment, player, playerDateTime ):
         data = {
             'environment': {
                 'galacticSeed': environment.galaxy.seed
-            },
-            'player': {
-                'dateTime': str(playerDateTime)
             }
+            , 'player': {
+                'world': player.position.currentWorld.seed,
+                'worldChunk': player.position.worldChunk.seed,
+                'x': player.position.x,
+                'y': player.position.y,
+                'z': player.position.z
+            }
+            , 'dateTime': str(playerDateTime)
         }
         file_name = str(playerDateTime)
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
