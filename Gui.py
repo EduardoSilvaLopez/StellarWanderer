@@ -176,7 +176,7 @@ def draw_gauge(surface, center, radius, fraction, color):
     pygame.draw.circle(surface, CONSOLE_EDGE, center, max(2, radius // 8))
 
 
-def draw_console(surface, fonts, w, h):
+def draw_console(surface, fonts, w, h, environment, player):
     """Instrument panel below the windshield."""
     top = int(h * CONSOLE_TOP)
     height = h - top
@@ -188,18 +188,39 @@ def draw_console(surface, fonts, w, h):
 
     label_font = fonts.get(max(9, int(h * 0.017)))
 
-    # Left cluster: three dials.
-    radius = int(height * 0.20)
-    dial_y = top + int(height * 0.42)
-    for i, (name, fraction, color) in enumerate((
-        ('VEL', 0.42, ACCENT),
-        ('HDG', 0.66, ACCENT),
-        ('FUEL', 0.28, AMBER),
-    )):
-        cx = int(w * (0.10 + i * 0.10))
-        draw_gauge(surface, (cx, dial_y), radius, fraction, color)
-        label = label_font.render(name, True, ACCENT_DIM)
-        surface.blit(label, label.get_rect(midtop=(cx, dial_y + radius + 6)))
+    # Left cluster: altitude bar and position coordinates.
+    cluster_left = int(w * 0.02)
+    cluster_top = top + int(height * 0.24)
+    cluster_height = int(height * 0.46)
+    
+    # Altitude bar (vertical level indicator)
+    bar_w = int(w * 0.028)
+    bar_h = cluster_height
+    pygame.draw.rect(surface, READOUT_BG, (cluster_left, cluster_top, bar_w, bar_h))
+    
+    # Calculate altitude fraction (0-1) based on player position
+    # Assuming max altitude of 10000 meters for scaling
+    max_altitude = 10000
+    altitude_fraction = min(1.0, max(0.0, player.position.y / max_altitude))
+    filled = int(bar_h * altitude_fraction)
+    pygame.draw.rect(
+        surface, ACCENT, (cluster_left, cluster_top + bar_h - filled, bar_w, filled)
+    )
+    pygame.draw.rect(surface, CONSOLE_EDGE, (cluster_left, cluster_top, bar_w, bar_h), 2)
+    
+    # Altitude label
+    alt_label = label_font.render('ALT', True, ACCENT_DIM)
+    surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 12)))
+    
+    # Position coordinates (X and Z) displayed as numbers
+    coord_x = cluster_left + bar_w + int(w * 0.035)
+    coord_y = cluster_top + int(height * 0.05)
+    
+    x_text = label_font.render(f'X: {int(player.position.x)}', True, ACCENT)
+    z_text = label_font.render(f'Z: {int(player.position.z)}', True, ACCENT)
+    
+    surface.blit(x_text, (coord_x, coord_y))
+    surface.blit(z_text, (coord_x, coord_y + int(height * 0.06)))
 
     # Centre multi-function display.
     mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
@@ -246,6 +267,12 @@ def draw_console(surface, fonts, w, h):
         pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
 
 
+def update_altitude(player, delta):
+    """Adjust player altitude by delta meters, clamped between 0 and 10000."""
+    max_altitude = 10000
+    player.position.y = max(10, min(max_altitude, player.position.y + delta))
+
+
 def format_time_scale(scale):
     """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'."""
     return f'x{scale:,}'.replace(',', ' ')
@@ -288,5 +315,5 @@ def draw(surface, fonts, stars, ship_time, environment, player, time_scale=TIME_
     draw_stars(surface, stars, w, h)
     draw_world(surface, w, h, environment, player)
     draw_canopy(surface, w, h)
-    draw_console(surface, fonts, w, h)
+    draw_console(surface, fonts, w, h, environment, player)
     draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)

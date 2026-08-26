@@ -3,6 +3,8 @@
 Controls:
     Keypad +   compress time 10x further, up to 1 000 000 s/s
     Keypad -   step back down, no slower than 1 s/s
+    Numpad +   increase altitude by 10m
+    Numpad -   decrease altitude by 10m
     Esc        quit
 """
 
@@ -14,7 +16,6 @@ from FontCache import FontCache
 from Player import Player
 from Savefile import Savefile
 from GameEnvironment import GameEnvironment
-
 import Gui
 
 WINDOW_TITLE = 'Stellar Wanderer'
@@ -68,6 +69,13 @@ def main():
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
+
+        # Handle continuous altitude adjustment with numpad +/-
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_KP_9]:
+            Gui.update_altitude(player, 10)  # Increase altitude by 10m
+        if keys[pygame.K_KP_3]:
+            Gui.update_altitude(player, -10)  # Decrease altitude by 10m
 
         dt = clock.tick(FPS) / 1000.0
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)

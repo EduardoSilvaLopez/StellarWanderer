@@ -1,0 +1,13 @@
+{
+    "environment": {
+        "galacticSeed": 1
+    },
+    "player": {
+        "world": 700500258,
+        "worldChunk": 219467783,
+        "x": 500,
+        "y": 10,
+        "z": 500
+    },
+    "dateTime": "0500-01-01 00:08:07.176000"
+}
