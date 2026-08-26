@@ -81,6 +81,15 @@ def main():
             player.update_altitude(dt, time_scale)  # Increase altitude
         if keys[pygame.K_KP_3]:
             player.update_altitude(-dt, time_scale)  # Decrease altitude
+        if keys[pygame.K_w]: # As for now, there is no orientation of the ship.
+            player.update_latitude(player.position.currentWorld, dt, time_scale)
+        if keys[pygame.K_s]:
+            player.update_latitude(player.position.currentWorld, -dt, time_scale)
+        if keys[pygame.K_a]:
+            player.update_longitude(player.position.currentWorld, -dt, time_scale)
+        if keys[pygame.K_d]:
+            player.update_longitude(player.position.currentWorld, dt, time_scale)
+        
 
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
 

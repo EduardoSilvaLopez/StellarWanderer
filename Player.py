@@ -1,3 +1,6 @@
+from cmath import pi
+
+
 class Player:
     singleton = None
     
@@ -6,6 +9,8 @@ class Player:
     MAX_ALTITUDE = 20000
     # Base altitude change rate: 1 meter per second at time scale 1
     BASE_ALTITUDE_CHANGE_RATE = 1  # meters per second
+    BASE_LONGITUDE_CHANGE_RATE = 10  # meters per second
+    BASE_LATITUDE_CHANGE_RATE = 10  # meters per second
 
     def __init__(self):
         self.environment = None
@@ -85,3 +90,48 @@ class Player:
             self.MIN_ALTITUDE, 
             min(self.MAX_ALTITUDE, self.position.y + altitude_change)
         )
+
+    def update_longitude(self, world, delta_time, time_scale):
+        """
+        Adjust player longitude based on time scale and delta time.
+        
+        At time_scale=1, longitude changes by 1 meter per second.
+        At higher time scales, longitude changes proportionally faster.
+        
+        Args:
+            delta_time: Time elapsed in real seconds
+            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+        """
+        # Calculate longitude change: base_rate * time_scale * delta_time
+        longitude_change = self.BASE_LONGITUDE_CHANGE_RATE * time_scale * delta_time
+        
+        # Update longitude (assuming x-axis represents longitude)
+        self.position.x += longitude_change
+        if self.position.x < -pi * world.radius:
+            self.position.x += pi * world.radius * 2
+        elif self.position.x > pi * world.radius:
+            self.position.x -= pi * world.radius * 2
+
+    def update_latitude(self, world, delta_time, time_scale):
+        """
+        Adjust player latitude based on time scale and delta time.
+        
+        At time_scale=1, latitude changes by 1 meter per second.
+        At higher time scales, latitude changes proportionally faster.
+        
+        Args:
+            delta_time: Time elapsed in real seconds
+            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+        """
+
+        # No south of south pole or north of north pole
+        if self.position.z <= -pi * world.radius / 2:
+            self.position.z = -pi * world.radius / 2
+        elif self.position.z >= pi * world.radius / 2:
+            self.position.z = pi * world.radius / 2
+        else:
+            # Calculate latitude change: base_rate * time_scale * delta_time
+            latitude_change = self.BASE_LATITUDE_CHANGE_RATE * time_scale * delta_time
+
+            # Update latitude (assuming z-axis represents latitude)
+            self.position.z += latitude_change
