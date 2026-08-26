@@ -3,8 +3,8 @@
 Controls:
     Keypad +   compress time 10x further, up to 1 000 000 s/s
     Keypad -   step back down, no slower than 1 s/s
-    Numpad +   increase altitude by 10m
-    Numpad -   decrease altitude by 10m
+    Numpad +   increase altitude (speed depends on time scale)
+    Numpad -   decrease altitude (speed depends on time scale)
     Esc        quit
 """
 
@@ -31,6 +31,9 @@ MAX_ELAPSED = (datetime.max.replace(microsecond=0) - EPOCH).total_seconds()
 
 STAR_COUNT = 260
 STAR_SEED = 20270101
+
+# Altitude change control
+ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
 
 def main():
     pygame.init()
@@ -70,14 +73,15 @@ def main():
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 
-        # Handle continuous altitude adjustment with numpad +/-
+        # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_KP_9]:
-            Gui.update_altitude(player, 10)  # Increase altitude by 10m
-        if keys[pygame.K_KP_3]:
-            Gui.update_altitude(player, -10)  # Decrease altitude by 10m
-
         dt = clock.tick(FPS) / 1000.0
+        
+        if keys[pygame.K_KP_9]:
+            player.update_altitude(dt, time_scale)  # Increase altitude
+        if keys[pygame.K_KP_3]:
+            player.update_altitude(-dt, time_scale)  # Decrease altitude
+
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
 
         Gui.draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), game_environment, player, time_scale)

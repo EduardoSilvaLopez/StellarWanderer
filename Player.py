@@ -1,5 +1,11 @@
 class Player:
     singleton = None
+    
+    # Altitude boundaries (in meters)
+    MIN_ALTITUDE = 10
+    MAX_ALTITUDE = 20000
+    # Base altitude change rate: 1 meter per second at time scale 1
+    BASE_ALTITUDE_CHANGE_RATE = 1  # meters per second
 
     def __init__(self):
         self.environment = None
@@ -59,3 +65,23 @@ class Player:
         self.position.y = y
         self.position.z = z
         return self  # Return self to allow method chaining
+
+    def update_altitude(self, delta_time, time_scale):
+        """
+        Adjust player altitude based on time scale and delta time.
+        
+        At time_scale=1, altitude changes by 1 meter per second.
+        At higher time scales, altitude changes proportionally faster.
+        
+        Args:
+            delta_time: Time elapsed in real seconds
+            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+        """
+        # Calculate altitude change: base_rate * time_scale * delta_time
+        altitude_change = self.BASE_ALTITUDE_CHANGE_RATE * time_scale * delta_time
+        
+        # Update altitude and clamp between MIN and MAX
+        self.position.y = max(
+            self.MIN_ALTITUDE, 
+            min(self.MAX_ALTITUDE, self.position.y + altitude_change)
+        )

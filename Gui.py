@@ -198,10 +198,10 @@ def draw_console(surface, fonts, w, h, environment, player):
     bar_h = cluster_height
     pygame.draw.rect(surface, READOUT_BG, (cluster_left, cluster_top, bar_w, bar_h))
     
-    # Calculate altitude fraction (0-1) based on player position
-    # Assuming max altitude of 10000 meters for scaling
-    max_altitude = 10000
-    altitude_fraction = min(1.0, max(0.0, player.position.y / max_altitude))
+    # Calculate altitude fraction (0-1) based on player position using the max from Player class
+    from Player import Player
+    altitude_fraction = min(1.0, max(0.0, player.position.y / Player.MAX_ALTITUDE))
+    
     filled = int(bar_h * altitude_fraction)
     pygame.draw.rect(
         surface, ACCENT, (cluster_left, cluster_top + bar_h - filled, bar_w, filled)
@@ -265,12 +265,6 @@ def draw_console(surface, fonts, w, h, environment, player):
         x = int(w * 0.06 + i * light * 2.2)
         color = AMBER if i in (3, 7) else ACCENT_DIM
         pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
-
-
-def update_altitude(player, delta):
-    """Adjust player altitude by delta meters, clamped between 0 and 10000."""
-    max_altitude = 10000
-    player.position.y = max(10, min(max_altitude, player.position.y + delta))
 
 
 def format_time_scale(scale):
