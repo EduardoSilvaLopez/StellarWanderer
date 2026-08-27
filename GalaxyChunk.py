@@ -24,8 +24,12 @@ class GalaxyChunk:
 
         if size == GalaxyChunk.Size.World:
             self.radius = self.random.gauss(GalaxyChunk.EARTHLIKE_RADIUS_AVERAGE, GalaxyChunk.EARTHLIKE_RADIUS_SIGMA)
+            self.seedUsages += 1
             while self.radius <= 0:
                 self.radius = self.random.gauss(GalaxyChunk.EARTHLIKE_RADIUS_AVERAGE, GalaxyChunk.EARTHLIKE_RADIUS_SIGMA)
+                self.seedUsages += 1
+
+        print(f"Created {self.size.name} with seed {self.seed}.")
 
     def add_child(self):
         if self.size.value >= GalaxyChunk.Size.Km2.value:
@@ -33,6 +37,7 @@ class GalaxyChunk:
                 "Square Km chunks cannot have children."
             )
         newChild = GalaxyChunk(self.random.randint(1, GalaxyChunk.SEED_SCALING), GalaxyChunk.Size(self.size.value + 1), self)
+        self.seedUsages += 1
         self.children.append(newChild)
         return newChild
 

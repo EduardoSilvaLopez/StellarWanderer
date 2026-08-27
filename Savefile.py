@@ -60,7 +60,7 @@ class Savefile:
     def save(self, environment, player, playerDateTime ):
         data = {
             'environment': {
-                'galacticSeed': environment.galaxy.seed
+                'galacticSeed': environment.galaxy.seed,
             }
             , 'player': {
                 'world': player.position.currentWorld.seed,
