@@ -12,7 +12,7 @@ class Savefile:
 
     def load(self):
         # Find all savefiles matching the pattern
-        savefiles = glob.glob('Savefile *.json')
+        savefiles = glob.glob('Savefiles/Savefile *.json')
         
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
@@ -24,21 +24,11 @@ class Savefile:
         latest_datetime = None
         
         for filepath in savefiles:
-            try:
-                # Extract datetime part from filename
-                # Format: "Savefile {seed} YYYY-MM-DDTHH_MM_SS.json"
-                filename = os.path.basename(filepath)
-                # Remove "Savefile " prefix and ".json" suffix
-                datetime_part = filename.replace('Savefile ', '').rsplit(' ', 1)[-1].replace('.json', '')
-                # Convert "YYYY-MM-DDTHH_MM_SS" back to datetime object
-                file_datetime = datetime.strptime(datetime_part, '%Y-%m-%dT%H_%M_%S')
-                
-                if latest_datetime is None or file_datetime > latest_datetime:
-                    latest_datetime = file_datetime
-                    latest_file = filepath
-            except (ValueError, IndexError):
-                # Skip files that don't match the expected format
-                continue
+            file_datetime = os.path.getmtime(filepath)
+            
+            if latest_datetime is None or file_datetime > latest_datetime:
+                latest_datetime = file_datetime
+                latest_file = filepath
         
         if latest_file is None:
             raise FileNotFoundError("No valid savefiles found with datetime information.")
@@ -74,6 +64,7 @@ class Savefile:
         file_name = str(playerDateTime)
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
         file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
+        file_name = 'Savefiles/' + file_name
         print("New savefile's name: " + file_name)
         with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

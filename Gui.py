@@ -24,6 +24,8 @@ ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
 AMBER = (240, 176, 92)
 READOUT_BG = (9, 17, 21)
+ROCK = (112, 112, 112)
+ROCK_EDGE = (60, 60, 60)
 
 STAR_COUNT = 260
 STAR_SEED = 20270101
@@ -117,6 +119,117 @@ def draw_world(surface, w, h, environment, player):
         2,
     )
 
+
+def draw_rocks(surface, w, h, environment, player):
+    """Draw rocks from the current world chunk as isometric cubes on the surface."""
+    view_h = int(h * CONSOLE_TOP)
+    
+    # Get the current world chunk
+    try:
+        chunk = player.position.worldChunk
+        if not chunk or not hasattr(chunk, 'rocks'):
+            return
+    except:
+        return
+    
+    # Player position within the Km2
+    player_x = player.position.x
+    player_z = player.position.z
+    player_y = player.position.y
+    
+    # Planet and observer parameters
+    planet_radius = environment.current_world.radius
+    observer_radius = planet_radius + player_y
+    focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
+    
+    # Horizon Y position
+    horizon_y = int(view_h * 0.52)
+    
+    # Render each rock
+    for rock in chunk.rocks:
+        rock_x = rock.x
+        rock_z = rock.z
+        rock_size = rock.size
+        
+        # Relative position to player (in world coordinates)
+        rel_x = rock_x - player_x
+        rel_z = rock_z - player_z
+        
+        # Distance from player in horizontal plane
+        distance = math.sqrt(rel_x**2 + rel_z**2)
+        
+        # Skip rocks that are too far or behind the player
+        if distance > 1000 or rel_z <= 0:
+            continue
+        
+        # Rock sits on the surface at altitude 0
+        # When player is above surface (positive altitude), rocks appear lower on screen
+        rel_y = player_y  # Negative altitude difference (rock is below observer)
+        
+        # Calculate screen position using perspective projection
+        # Horizontal angle from center
+        angle_h = math.atan2(rel_x, rel_z)
+        screen_x = w / 2 + focal_length_px * math.tan(angle_h)
+        
+        # Vertical angle and position
+        # Use atan2 with proper signs: rel_y is negative when player is above rock
+        angle_v = math.atan2(rel_y, distance)
+        screen_y_offset = focal_length_px * math.tan(angle_v)
+        
+        # Rock's screen Y position (offset from horizon)
+        screen_y_base = horizon_y + screen_y_offset
+        
+        # Angular size of the rock based on its size and distance
+        angular_size = math.atan2(rock_size, distance)
+        rock_size_px = focal_length_px * angular_size
+        
+        # Draw the rock as a complete isometric cube with three visible faces
+        if rock_size_px > 1:  # Only draw if visible
+            # Cube dimensions in screen space
+            cube_w = rock_size_px
+            cube_h = rock_size_px
+            cube_d = rock_size_px / 2.5  # depth offset for isometric effect
+            
+            # Center of cube base on screen
+            center_x = screen_x
+            base_y = screen_y_base
+            
+            # Front face corners (the square facing camera)
+            # Bottom edge sits at base_y
+            front_bl = (center_x - cube_w / 2, base_y)
+            front_br = (center_x + cube_w / 2, base_y)
+            front_tr = (center_x + cube_w / 2, base_y - cube_h)
+            front_tl = (center_x - cube_w / 2, base_y - cube_h)
+            
+            # Top face corners (receding into distance)
+            top_bl = (center_x - cube_w / 2 - cube_d / 2, base_y - cube_h - cube_d / 2)
+            top_br = (center_x + cube_w / 2 - cube_d / 2, base_y - cube_h - cube_d / 2)
+            top_tr = (center_x + cube_w / 2 + cube_d / 2, base_y - cube_h - cube_d)
+            top_tl = (center_x - cube_w / 2 + cube_d / 2, base_y - cube_h - cube_d)
+            
+            # Right face corners
+            right_bl = (center_x + cube_w / 2, base_y)
+            right_br = (center_x + cube_w / 2 + cube_d, base_y - cube_d / 2)
+            right_tr = (center_x + cube_w / 2 + cube_d, base_y - cube_h - cube_d / 2)
+            right_tl = (center_x + cube_w / 2, base_y - cube_h)
+            
+            # Draw in order: top, right, front (back to front for proper occlusion)
+            
+            # Top face (darkest)
+            top_color = tuple(max(0, c - 50) for c in ROCK)
+            pygame.draw.polygon(surface, top_color, [front_tl, front_tr, top_tr, top_tl])
+            pygame.draw.lines(surface, ROCK_EDGE, True, [front_tl, front_tr, top_tr, top_tl], 1)
+            
+            # Right face (medium shade)
+            right_color = tuple(max(0, c - 25) for c in ROCK)
+            pygame.draw.polygon(surface, right_color, [right_bl, right_br, right_tr, right_tl])
+            pygame.draw.lines(surface, ROCK_EDGE, True, [right_bl, right_br, right_tr, right_tl], 1)
+            
+            # Front face (brightest)
+            pygame.draw.polygon(surface, ROCK, [front_bl, front_br, front_tr, front_tl])
+            pygame.draw.lines(surface, ROCK_EDGE, True, [front_bl, front_br, front_tr, front_tl], 2)
+
+
 def draw_canopy(surface, w, h):
     """Hull frame: top rail, two A-pillars, and the struts between panes."""
     top = int(h * CANOPY_TOP)
@@ -198,9 +311,14 @@ def draw_console(surface, fonts, w, h, environment, player):
     bar_h = cluster_height
     pygame.draw.rect(surface, READOUT_BG, (cluster_left, cluster_top, bar_w, bar_h))
     
-    # Calculate altitude fraction (0-1) based on player position using the max from Player class
+    # Calculate altitude fraction (0-1) based on player position
+    # Using the min/max from Player class
     from Player import Player
-    altitude_fraction = min(1.0, max(0.0, player.position.y / Player.MAX_ALTITUDE))
+    max_altitude = Player.MAX_ALTITUDE
+    min_altitude = Player.MIN_ALTITUDE
+    altitude_range = max_altitude - min_altitude
+    altitude_fraction = (player.position.y - min_altitude) / altitude_range
+    altitude_fraction = min(1.0, max(0.0, altitude_fraction))
     
     filled = int(bar_h * altitude_fraction)
     pygame.draw.rect(
@@ -308,6 +426,7 @@ def draw(surface, fonts, stars, ship_time, environment, player, time_scale=TIME_
     draw_deep_space(surface, stars, w, h)
     draw_stars(surface, stars, w, h)
     draw_world(surface, w, h, environment, player)
+    draw_rocks(surface, w, h, environment, player)
     draw_canopy(surface, w, h)
     draw_console(surface, fonts, w, h, environment, player)
     draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)

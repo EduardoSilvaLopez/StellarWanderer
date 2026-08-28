@@ -56,8 +56,8 @@ class GalaxyChunk:
             raise Exception(
                 "Only square Km chunks can have rocks."
             )
-        newRock = Rock(self, self.random.random(), self.random.uniform(0, 500), 0, self.random.uniform(0, 500), self.random.uniform(0, 100))
-        self.seedUsages += 4
+        newRock = Rock(parent_chunk=self, seed=self.random.random())
+        self.seedUsages += 1
         self.rocks.append(newRock)
         return newRock
 
