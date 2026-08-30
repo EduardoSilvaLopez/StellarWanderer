@@ -8,4 +8,4 @@ class Rock:
         self.x = rnd.uniform(0, 1000)
         self.y = 0
         self.z = rnd.uniform(0, 1000)
-        self.size = abs(rnd.gauss(0, 5))
+        self.size = abs(rnd.gauss(0, 10))
