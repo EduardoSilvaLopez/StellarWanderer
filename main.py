@@ -50,7 +50,7 @@ def main():
     print("Give the galactic Seed: ")
     galacticSeed = 1 # galacticSeed = input()
     game_environment = GameEnvironment(galacticSeed)
-    player = Player().set_in_environment(game_environment)
+    player = Player().spawn_in_environment(game_environment)
     
     running = True
     while running:
@@ -82,13 +82,13 @@ def main():
         if keys[pygame.K_KP_3]:
             player.update_altitude(-dt, time_scale)  # Decrease altitude
         if keys[pygame.K_w]: # As for now, there is no orientation of the ship.
-            player.update_latitude(player.position.currentWorld, dt, time_scale)
+            player.update_latitude(player.position.Km2.parent_world, dt, time_scale)
         if keys[pygame.K_s]:
-            player.update_latitude(player.position.currentWorld, -dt, time_scale)
+            player.update_latitude(player.position.Km2.parent_world, -dt, time_scale)
         if keys[pygame.K_a]:
-            player.update_longitude(player.position.currentWorld, -dt, time_scale)
+            player.update_longitude(player.position.Km2.parent_world, -dt, time_scale)
         if keys[pygame.K_d]:
-            player.update_longitude(player.position.currentWorld, dt, time_scale)
+            player.update_longitude(player.position.Km2.parent_world, dt, time_scale)
         
 
         elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)

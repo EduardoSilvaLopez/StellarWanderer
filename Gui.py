@@ -135,8 +135,8 @@ def draw_rocks(surface, w, h, environment, player):
 
     # Get the current world chunk
     try:
-        chunk = player.position.worldChunk
-        if not chunk or not hasattr(chunk, 'rocks'):
+        km2 = player.position.Km2
+        if not km2 or not hasattr(km2, 'rocks'):
             return
     except AttributeError:
         return
@@ -169,7 +169,7 @@ def draw_rocks(surface, w, h, environment, player):
 
     # Gather rocks with their near-face depth, for far-to-near draw order.
     visible_rocks = []
-    for rock in chunk.rocks:
+    for rock in km2.rocks:
         half = rock.size / 2.0
         z0 = rock.z - half - player_z  # near face forward depth
         if z0 <= NEAR_CLIP or z0 > MAX_DEPTH:

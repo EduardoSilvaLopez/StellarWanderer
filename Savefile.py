@@ -41,20 +41,29 @@ class Savefile:
         GameEnvironment.singleton = GameEnvironment(load_object['environment']['galacticSeed'])
         print("Loaded seed: " + str(GameEnvironment.singleton.galaxy.seed))
 
-        # Contrary to the environment, the player information cannot be retrieved from a simple seed.
-        Player.singleton.set_in_environment(GameEnvironment.singleton)
-        Player.singleton.position_in(load_object['player']['world'], load_object['player']['worldChunk'], load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
+        km2 = GameEnvironment.singleton.galaxy.generate(load_object['player']['StellarSystem.x'], load_object['player']['StellarSystem.y'], load_object['player']['StellarSystem.z'])\
+            .generate(load_object['player']['Orbit.distance_from_star'])\
+            .generate(load_object['player']['World.degrees_in_orbit'])\
+            .generate(load_object['player']['Km2.longitude'], load_object['player']['Km2.latitude'])
+             
+        Player.singleton.position_in(km2, load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
+
         self.playerDateTime = datetime.strptime(load_object['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         return self
 
     def save(self, environment, player, playerDateTime ):
         data = {
             'environment': {
-                'galacticSeed': environment.galaxy.seed,
+                'GalacticSeed': environment.galaxy.seed,
             }
             , 'player': {
-                'world': player.position.currentWorld.seed,
-                'worldChunk': player.position.worldChunk.seed,
+                'StellarSystem.x': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.x,
+                'StellarSystem.y': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.y,
+                'StellarSystem.z': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.z,
+                'Orbit.distance_from_star': player.position.Km2.parent_world.parent_orbit.distance_from_star,
+                'World.degrees_in_orbit': player.position.Km2.parent_world.degrees_in_orbit,
+                'Km2.longitude': player.position.Km2.longitude,
+                'Km2.latitude': player.position.Km2.latitude,
                 'x': player.position.x,
                 'y': player.position.y,
                 'z': player.position.z
