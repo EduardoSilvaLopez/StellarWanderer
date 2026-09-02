@@ -4,7 +4,7 @@ class GameEnvironment:
     singleton = None
 
     def __init__(self, galactic_seed):
-        self.galaxy = Galaxy(galactic_seed).generate()
+        self.galaxy = Galaxy(galactic_seed)
         self.current_world = self.galaxy\
             .add_stellar_system(0, 0, 0)\
             .add_orbit(1000000)\

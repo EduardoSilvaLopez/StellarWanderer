@@ -8,9 +8,9 @@ class World:
     EARTHLIKE_RADIUS_SIGMA = 1000000
 
     def __init__(self, parent_orbit, degrees_in_orbit):
-        self.parent = parent_orbit
+        self.parent_orbit = parent_orbit
         self.degrees_in_orbit = degrees_in_orbit
-        self.seed = (self.degrees_in_orbit + self.parent.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.seed = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
         my_random = random.Random(self.seed)
         self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
