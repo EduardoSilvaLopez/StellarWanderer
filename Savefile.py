@@ -8,11 +8,10 @@ from GameEnvironment import GameEnvironment
 from Player import Player
 
 class Savefile:
-    def __init__(self):
-        self.playerDateTime = None
 
-    def load(self):
-        # Find all savefiles matching the pattern
+    @staticmethod
+    def load():
+        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.'''
         savefiles = glob.glob('Savefiles/Savefile *.json')
         
         if not savefiles:
@@ -49,17 +48,23 @@ class Savefile:
             .add_Km2(load_object['player']['Km2.Longitude'], load_object['player']['Km2.Latitude']\
             )
              
+        Player.singleton.date_time = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
+        Player.singleton.time_scale = load_object['player']['timeScale']
         Player.singleton.position_in(km2, load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
 
-        self.playerDateTime = datetime.strptime(load_object['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
-        return self
+    @staticmethod
+    def save():
+        '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
+        environment = GameEnvironment.singleton
+        player = Player.singleton
 
-    def save(self, environment, player, playerDateTime ):
         data = {
             'environment': {
                 'GalacticSeed': environment.galaxy.seed,
             }
             , 'player': {
+                'dateTime': str(player.date_time),
+                'timeScale': player.time_scale,
                 'StellarSystem.x': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.x,
                 'StellarSystem.y': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.y,
                 'StellarSystem.z': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.z,
@@ -71,13 +76,11 @@ class Savefile:
                 'y': player.position.y,
                 'z': player.position.z
             }
-            , 'dateTime': str(playerDateTime)
         }
-        file_name = str(playerDateTime)
+        file_name = str(player.date_time)
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
         file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
         file_name = 'Savefiles/' + file_name
         print("New savefile's name: " + file_name)
         with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        return self

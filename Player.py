@@ -1,4 +1,5 @@
 from cmath import pi
+import datetime
 import Galaxies
 
 class Player:
@@ -12,7 +13,15 @@ class Player:
     BASE_LONGITUDE_CHANGE_RATE = 10  # meters per second
     BASE_LATITUDE_CHANGE_RATE = 10  # meters per second
 
+    # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
+    EPOCH = datetime.datetime(500, 1, 1)
+    TIME_SCALE_MIN = 1
+    TIME_SCALE_MAX = 1_000_000
+    TIME_SCALE_STEP = 10
+
     def __init__(self):
+        self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
+        self.time_scale = 1  # Default time scale
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
         self.position.Km2 = None
         self.position.x = 0
@@ -38,6 +47,12 @@ class Player:
         self.position.y = y
         self.position.z = z
         return self  # Return self to allow method chaining
+
+    def increase_time_scale(self):
+        self.time_scale = min(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MAX)
+
+    def decrease_time_scale(self):
+        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
     def update_altitude(self, delta_time, time_scale):
         """

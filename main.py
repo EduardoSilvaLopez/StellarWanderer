@@ -23,17 +23,12 @@ WINDOW_SIZE = (1280, 720)
 MIN_SIZE = (640, 400)
 FPS = 60
 
-# Ship clock. Rendered with an unpadded year so it reads "500-01-01", as spec'd.
-EPOCH = datetime(500, 1, 1)
-
-# datetime tops out at year 9999; stop there rather than raising mid-frame.
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - EPOCH).total_seconds()
-
 STAR_COUNT = 260
 STAR_SEED = 20270101
 
 # Altitude change control
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - Player.EPOCH).total_seconds() # datetime tops out at year 9999;
 
 def main():
     pygame.init()
@@ -44,7 +39,6 @@ def main():
     fonts = FontCache()
     stars = Gui.make_starfield(STAR_COUNT, STAR_SEED)
     elapsed = 0.0  # seconds of ship time since EPOCH
-    time_scale = Gui.TIME_SCALE_MIN
 
     # Create all seeds and random objects and calculate the initial planet's radius.
     print("Give the galactic Seed: ")
@@ -61,14 +55,14 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.key == pygame.K_KP_PLUS:
-                    time_scale = min(time_scale * Gui.TIME_SCALE_STEP, Gui.TIME_SCALE_MAX)
+                    player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:
-                    time_scale = max(time_scale // Gui.TIME_SCALE_STEP, Gui.TIME_SCALE_MIN)
+                    player.decrease_time_scale()
                 elif event.key == pygame.K_F5:
-                    Savefile().save(game_environment, player, EPOCH + timedelta(seconds=elapsed))
+                    Savefile.save()
                 elif event.key == pygame.K_F6:
-                    loaded_savefile = Savefile().load()
-                    elapsed = (loaded_savefile.playerDateTime - EPOCH).total_seconds()
+                    Savefile.load()
+                    elapsed = (Player.singleton.date_time - Player.EPOCH).total_seconds()
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
@@ -78,22 +72,22 @@ def main():
         dt = clock.tick(FPS) / 1000.0
         
         if keys[pygame.K_KP_9]:
-            player.update_altitude(dt, time_scale)  # Increase altitude
+            player.update_altitude(dt, player.time_scale)  # Increase altitude
         if keys[pygame.K_KP_3]:
-            player.update_altitude(-dt, time_scale)  # Decrease altitude
+            player.update_altitude(-dt, player.time_scale)  # Decrease altitude
         if keys[pygame.K_w]: # As for now, there is no orientation of the ship.
-            player.update_latitude(player.position.Km2.parent_world, dt, time_scale)
+            player.update_latitude(player.position.Km2.parent_world, dt, player.time_scale)
         if keys[pygame.K_s]:
-            player.update_latitude(player.position.Km2.parent_world, -dt, time_scale)
+            player.update_latitude(player.position.Km2.parent_world, -dt, player.time_scale)
         if keys[pygame.K_a]:
-            player.update_longitude(player.position.Km2.parent_world, -dt, time_scale)
+            player.update_longitude(player.position.Km2.parent_world, -dt, player.time_scale)
         if keys[pygame.K_d]:
-            player.update_longitude(player.position.Km2.parent_world, dt, time_scale)
+            player.update_longitude(player.position.Km2.parent_world, dt, player.time_scale)
         
+        elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
+        player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
 
-        elapsed = min(elapsed + dt * time_scale, MAX_ELAPSED)
-
-        Gui.draw(screen, fonts, stars, EPOCH + timedelta(seconds=elapsed), game_environment, player, time_scale)
+        Gui.draw(screen, fonts, stars, game_environment, player)
         pygame.display.flip()
 
     pygame.quit()

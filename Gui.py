@@ -10,6 +10,8 @@ import math
 import random
 import pygame
 
+from Player import Player
+
 # Palette
 SPACE = (8, 10, 24)
 PLANET_GRAY = (96, 96, 96)
@@ -29,11 +31,6 @@ ROCK_EDGE = (60, 60, 60)
 
 STAR_COUNT = 260
 STAR_SEED = 20270101
-
-# Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
-TIME_SCALE_MIN = 1
-TIME_SCALE_MAX = 1_000_000
-TIME_SCALE_STEP = 10
 
 # Canopy opening, as fractions of the window. The windshield is a trapezoid
 # that flares outward toward the console, which reads as forward perspective.
@@ -61,7 +58,7 @@ def format_ship_time(moment):
             f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 
 
-def draw_deep_space(surface, stars, w, h):
+def draw_deep_space(surface, w, h):
     """Space seen through the canopy."""
     view_h = int(h * CONSOLE_TOP)
     surface.fill(SPACE, (0, 0, w, view_h))
@@ -120,7 +117,7 @@ def draw_world(surface, w, h, environment, player):
     )
 
 
-def draw_rocks(surface, w, h, environment, player):
+def draw_rocks(surface, w, h, player):
     """Draw rocks from the current world chunk as cubes on the surface.
 
     Each cube's 8 corners are projected individually through a pinhole-camera
@@ -300,7 +297,7 @@ def draw_gauge(surface, center, radius, fraction, color):
     pygame.draw.circle(surface, CONSOLE_EDGE, center, max(2, radius // 8))
 
 
-def draw_console(surface, fonts, w, h, environment, player):
+def draw_console(surface, fonts, w, h, player):
     """Instrument panel below the windshield."""
     top = int(h * CONSOLE_TOP)
     height = h - top
@@ -409,7 +406,7 @@ def draw_ship_clock(surface, fonts, text, scale, w, h):
     digits = digit_font.render(text, True, ACCENT)
     label = label_font.render('SHIP TIME', True, ACCENT_DIM)
     # Highlight the rate whenever time is compressed, so the state is obvious.
-    rate_color = ACCENT_DIM if scale == TIME_SCALE_MIN else AMBER
+    rate_color = ACCENT_DIM if scale == Player.TIME_SCALE_MIN else AMBER
     rate = label_font.render(format_time_scale(scale), True, rate_color)
 
     pad = max(8, int(h * 0.014))
@@ -431,13 +428,13 @@ def draw_ship_clock(surface, fonts, text, scale, w, h):
     surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
 
-def draw(surface, fonts, stars, ship_time, environment, player, time_scale=TIME_SCALE_MIN):
+def draw(surface, fonts, stars, environment, player):
     w, h = surface.get_size()
     surface.fill(SPACE)
-    draw_deep_space(surface, stars, w, h)
+    draw_deep_space(surface, w, h)
     draw_stars(surface, stars, w, h)
     draw_world(surface, w, h, environment, player)
-    draw_rocks(surface, w, h, environment, player)
+    draw_rocks(surface, w, h, player)
     draw_canopy(surface, w, h)
-    draw_console(surface, fonts, w, h, environment, player)
-    draw_ship_clock(surface, fonts, format_ship_time(ship_time), time_scale, w, h)
+    draw_console(surface, fonts, w, h, player)
+    draw_ship_clock(surface, fonts, format_ship_time(player.date_time), player.time_scale, w, h)
