@@ -54,64 +54,41 @@ class Player:
     def decrease_time_scale(self):
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
-    def update_altitude(self, delta_time):
+    def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
         """
-        Adjust player altitude based on time scale and delta time.
-        
-        At time_scale=1, altitude changes by 1 meter per second.
-        At higher time scales, altitude changes proportionally faster.
+        Update the player's position based on time scale and delta time.
         
         Args:
             delta_time: Time elapsed in game seconds
+            altitude_change: Change in altitude (1 for increase, -1 for decrease, 0 for no change)
+            longitude_change: Change in longitude (1 for increase, -1 for decrease, 0 for no change)
+            latitude_change: Change in latitude (1 for increase, -1 for decrease, 0 for no change)
         """
-        # Calculate altitude change: base_rate * time_scale * delta_time
-        altitude_change = self.BASE_ALTITUDE_CHANGE_RATE * delta_time
-        
-        # Update altitude and clamp between MIN and MAX
-        self.position.y = max(
-            self.MIN_ALTITUDE, 
-            min(self.MAX_ALTITUDE, self.position.y + altitude_change)
-        )
+        # Update longitude, east to west of viceversa crossing the anti-meridian.
+        if longitude_change != 0:
+            change_in_mts = longitude_change * self.BASE_LONGITUDE_CHANGE_RATE * delta_time
+            self.position.x += change_in_mts
 
-    def update_longitude(self, world, delta_time):
-        """
-        Adjust player longitude based on time scale and delta time.
-        
-        At time_scale=1, longitude changes by 1 meter per second.
-        At higher time scales, longitude changes proportionally faster.
-        
-        Args:
-            delta_time: Time elapsed in game seconds
-        """
-        # Calculate longitude change: base_rate * time_scale * delta_time
-        longitude_change = self.BASE_LONGITUDE_CHANGE_RATE * delta_time
-        
-        # Update longitude (assuming x-axis represents longitude)
-        self.position.x += longitude_change
-        if self.position.x < -pi * world.radius:
-            self.position.x += pi * world.radius * 2
-        elif self.position.x > pi * world.radius:
-            self.position.x -= pi * world.radius * 2
+            if self.position.x < -pi * self.position.Km2.parent_world.radius:
+                self.position.x += pi * self.position.Km2.parent_world.radius * 2
+            elif self.position.x > pi * self.position.Km2.parent_world.radius:
+                self.position.x -= pi * self.position.Km2.parent_world.radius * 2
 
-    def update_latitude(self, world, delta_time):
-        """
-        Adjust player latitude based on time scale and delta time.
-        
-        At time_scale=1, latitude changes by 1 meter per second.
-        At higher time scales, latitude changes proportionally faster.
-        
-        Args:
-            delta_time: Time elapsed in game seconds
-        """
+        # Update altitude, clamp between MIN and MAX
+        if altitude_change != 0:
+            change_in_mts = altitude_change * self.BASE_ALTITUDE_CHANGE_RATE * delta_time
+            
+            self.position.y = max(
+                self.MIN_ALTITUDE, 
+                min(self.MAX_ALTITUDE, self.position.y + change_in_mts)
+            )
 
-        # No south of south pole or north of north pole
-        if self.position.z <= -pi * world.radius / 2:
-            self.position.z = -pi * world.radius / 2
-        elif self.position.z >= pi * world.radius / 2:
-            self.position.z = pi * world.radius / 2
-        else:
-            # Calculate latitude change: base_rate * time_scale * delta_time
-            latitude_change = self.BASE_LATITUDE_CHANGE_RATE * delta_time
+        # Update latitude, clamping between the north and south poles.
+        if latitude_change != 0:
+            change_in_mts = latitude_change * self.BASE_LATITUDE_CHANGE_RATE * delta_time
+            self.position.z += change_in_mts
 
-            # Update latitude (assuming z-axis represents latitude)
-            self.position.z += latitude_change
+            self.position.z = max(
+                -pi * self.position.Km2.parent_world.radius / 2,
+                min(pi * self.position.Km2.parent_world.radius / 2, self.position.z)
+            )

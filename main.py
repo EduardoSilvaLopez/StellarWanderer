@@ -71,19 +71,13 @@ def main():
         # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
         keys = pygame.key.get_pressed()
         dt = clock.tick(FPS) / 1000.0
-        
-        if keys[pygame.K_KP_9]:
-            player.update_altitude(dt, player.time_scale)  # Increase altitude
-        if keys[pygame.K_KP_3]:
-            player.update_altitude(-dt, player.time_scale)  # Decrease altitude
-        if keys[pygame.K_w]: # As for now, there is no orientation of the ship.
-            player.update_latitude(player.position.Km2.parent_world, dt * player.time_scale)
-        if keys[pygame.K_s]:
-            player.update_latitude(player.position.Km2.parent_world, -dt * player.time_scale)
-        if keys[pygame.K_a]:
-            player.update_longitude(player.position.Km2.parent_world, -dt * player.time_scale)
-        if keys[pygame.K_d]:
-            player.update_longitude(player.position.Km2.parent_world, dt * player.time_scale)
+
+        player.update_position(
+            dt * player.time_scale\
+            , 1 if keys[pygame.K_d] else (- 1 if keys[pygame.K_a] else 0)
+            , 1 if keys[pygame.K_KP_9] else (- 1 if keys[pygame.K_KP_3] else 0)
+            , 1 if keys[pygame.K_w] else (- 1 if keys[pygame.K_s] else 0)
+        )        
         
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
