@@ -64,21 +64,23 @@ def main():
                 elif event.key == pygame.K_F6:
                     Savefile.load()
                     elapsed = (Player.singleton.date_time - Player.EPOCH).total_seconds()
+                        # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 
-        # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
-        keys = pygame.key.get_pressed()
         dt = clock.tick(FPS) / 1000.0
 
-        player.update_position(
-            dt * player.time_scale\
-            , 1 if keys[pygame.K_d] else (- 1 if keys[pygame.K_a] else 0)
-            , 1 if keys[pygame.K_KP_9] else (- 1 if keys[pygame.K_KP_3] else 0)
-            , 1 if keys[pygame.K_w] else (- 1 if keys[pygame.K_s] else 0)
-        )        
-        
+        keys = pygame.key.get_pressed()
+        if (keys[pygame.K_a] or keys[pygame.K_d] or keys[pygame.K_w] or keys[pygame.K_s] or
+            keys[pygame.K_KP_9] or keys[pygame.K_KP_3]):
+            player.update_position(
+                dt * player.time_scale,
+                1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
+                1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),
+                1 if keys[pygame.K_w] else (-1 if keys[pygame.K_s] else 0)
+            )        
+
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
 

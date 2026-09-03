@@ -1,6 +1,7 @@
 from cmath import pi
 import datetime
 from Galaxies.Km2 import Km2
+from Galaxies.World import World
 
 class Player:
     singleton = None
@@ -34,7 +35,8 @@ class Player:
 
     def spawn_in_environment(self, environment):
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        self.position.Km2 = environment.galaxy.stellar_systems[0].orbits[0].worlds[0].Km2s[0]
+        environment.current_world.ensure_surroundings(0, 0)
+        self.position.Km2 = environment.current_world.Km2s[0]
         self.position.x = self.position.Km2.longitude + 500
         self.position.y = 10
         self.position.z = self.position.Km2.latitude + 500
@@ -56,8 +58,10 @@ class Player:
 
     def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
-        self.position.Km2 = self.find_km2()
-        self.position.Km2.parent_world.ensure_surroundings(self.position.Km2)
+        new_km2 = self.find_km2_in(self.position.Km2.parent_world)
+        if new_km2 != self.position.Km2:
+            self.position.Km2 = new_km2
+            self.position.Km2.parent_world.ensure_surroundings(self.position.Km2.longitude, self.position.Km2.latitude)
 
     def update_coordinates(self, delta_time, longitude_change, altitude_change, latitude_change):
         """
@@ -98,19 +102,15 @@ class Player:
                 min(pi * self.position.Km2.parent_world.radius / 2, self.position.z)
             )
 
-    def find_km2(self):
+    def find_km2_in(self, world):
         """
-        Ensure the player is within the bounds of the current Km2 and its world.
-        If the player is outside, find the correct Km2 or generate it, and update the player's position accordingly.
+        Find the right Km2 for the player based on their current position.
         """
-        if (self.position.Km2.longitude <= self.position.x < self.position.Km2.longitude + Km2.SIZE and
-            self.position.Km2.latitude <= self.position.z < self.position.Km2.latitude + Km2.SIZE):
-            return self.position.Km2
-
-        # Player is outside the current Km2, find the correct Km2
         new_longitude = (self.position.x // Km2.SIZE) * Km2.SIZE
         new_latitude = (self.position.z // Km2.SIZE) * Km2.SIZE
-        world = self.position.Km2.parent_world
+        if (self.position.Km2 and self.position.Km2.longitude == new_longitude and self.position.Km2.latitude == new_latitude):
+            return self.position.Km2  # No change in Km2
+
         new_km2 = next((km2 for km2 in world.Km2s if km2.longitude == new_longitude and km2.latitude == new_latitude), None)
         if new_km2:
             return new_km2
