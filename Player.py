@@ -54,7 +54,7 @@ class Player:
     def decrease_time_scale(self):
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
-    def update_altitude(self, delta_time, time_scale):
+    def update_altitude(self, delta_time):
         """
         Adjust player altitude based on time scale and delta time.
         
@@ -62,11 +62,10 @@ class Player:
         At higher time scales, altitude changes proportionally faster.
         
         Args:
-            delta_time: Time elapsed in real seconds
-            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+            delta_time: Time elapsed in game seconds
         """
         # Calculate altitude change: base_rate * time_scale * delta_time
-        altitude_change = self.BASE_ALTITUDE_CHANGE_RATE * time_scale * delta_time
+        altitude_change = self.BASE_ALTITUDE_CHANGE_RATE * delta_time
         
         # Update altitude and clamp between MIN and MAX
         self.position.y = max(
@@ -74,7 +73,7 @@ class Player:
             min(self.MAX_ALTITUDE, self.position.y + altitude_change)
         )
 
-    def update_longitude(self, world, delta_time, time_scale):
+    def update_longitude(self, world, delta_time):
         """
         Adjust player longitude based on time scale and delta time.
         
@@ -82,11 +81,10 @@ class Player:
         At higher time scales, longitude changes proportionally faster.
         
         Args:
-            delta_time: Time elapsed in real seconds
-            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+            delta_time: Time elapsed in game seconds
         """
         # Calculate longitude change: base_rate * time_scale * delta_time
-        longitude_change = self.BASE_LONGITUDE_CHANGE_RATE * time_scale * delta_time
+        longitude_change = self.BASE_LONGITUDE_CHANGE_RATE * delta_time
         
         # Update longitude (assuming x-axis represents longitude)
         self.position.x += longitude_change
@@ -95,7 +93,7 @@ class Player:
         elif self.position.x > pi * world.radius:
             self.position.x -= pi * world.radius * 2
 
-    def update_latitude(self, world, delta_time, time_scale):
+    def update_latitude(self, world, delta_time):
         """
         Adjust player latitude based on time scale and delta time.
         
@@ -103,8 +101,7 @@ class Player:
         At higher time scales, latitude changes proportionally faster.
         
         Args:
-            delta_time: Time elapsed in real seconds
-            time_scale: Current time compression scale (e.g., 1, 10, 100, 1000)
+            delta_time: Time elapsed in game seconds
         """
 
         # No south of south pole or north of north pole
@@ -114,7 +111,7 @@ class Player:
             self.position.z = pi * world.radius / 2
         else:
             # Calculate latitude change: base_rate * time_scale * delta_time
-            latitude_change = self.BASE_LATITUDE_CHANGE_RATE * time_scale * delta_time
+            latitude_change = self.BASE_LATITUDE_CHANGE_RATE * delta_time
 
             # Update latitude (assuming z-axis represents latitude)
             self.position.z += latitude_change

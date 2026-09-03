@@ -16,7 +16,8 @@ from FontCache import FontCache
 from Player import Player
 from Savefile import Savefile
 from GameEnvironment import GameEnvironment
-import Gui
+from Graphics.Gui import Gui
+from Graphics.Stars import Stars
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
@@ -37,7 +38,7 @@ def main():
     clock = pygame.time.Clock()
 
     fonts = FontCache()
-    stars = Gui.make_starfield(STAR_COUNT, STAR_SEED)
+    stars = Stars.make_starfield(STAR_COUNT, STAR_SEED)
     elapsed = 0.0  # seconds of ship time since EPOCH
 
     # Create all seeds and random objects and calculate the initial planet's radius.
@@ -76,18 +77,19 @@ def main():
         if keys[pygame.K_KP_3]:
             player.update_altitude(-dt, player.time_scale)  # Decrease altitude
         if keys[pygame.K_w]: # As for now, there is no orientation of the ship.
-            player.update_latitude(player.position.Km2.parent_world, dt, player.time_scale)
+            player.update_latitude(player.position.Km2.parent_world, dt * player.time_scale)
         if keys[pygame.K_s]:
-            player.update_latitude(player.position.Km2.parent_world, -dt, player.time_scale)
+            player.update_latitude(player.position.Km2.parent_world, -dt * player.time_scale)
         if keys[pygame.K_a]:
-            player.update_longitude(player.position.Km2.parent_world, -dt, player.time_scale)
+            player.update_longitude(player.position.Km2.parent_world, -dt * player.time_scale)
         if keys[pygame.K_d]:
-            player.update_longitude(player.position.Km2.parent_world, dt, player.time_scale)
+            player.update_longitude(player.position.Km2.parent_world, dt * player.time_scale)
         
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
 
-        Gui.draw(screen, fonts, stars, game_environment, player)
+        gui = Gui()
+        gui.draw(screen, fonts, game_environment, player)
         pygame.display.flip()
 
     pygame.quit()
