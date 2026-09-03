@@ -8,7 +8,7 @@ from .Constants import (
 )
 
 
-class World:
+class CurrentWorld:
     """Renders the planet surface and rocks visible from the cockpit."""
 
     @staticmethod
@@ -22,8 +22,13 @@ class World:
             environment: Game environment with current world
             player: Player object with position
         """
-        World.draw_surface(surface, w, h, environment, player)
-        World.draw_rocks(surface, w, h, player)
+        CurrentWorld.draw_surface(surface, w, h, environment, player)
+
+        # Find the Km2 to be drawn, poviding they exist.
+        for km2 in environment.current_world.Km2s:
+            if (km2.longitude - km2.SIZE*10 <= player.position.x < km2.longitude + km2.SIZE*10 and
+                km2.latitude - km2.SIZE*10 <= player.position.z < km2.latitude + km2.SIZE*10):
+                CurrentWorld.draw_rocks(surface, w, h, player, km2)
 
     @staticmethod
     def draw_surface(surface, w, h, environment, player):
@@ -66,7 +71,7 @@ class World:
         )
 
     @staticmethod
-    def draw_rocks(surface, w, h, player):
+    def draw_rocks(surface, w, h, player, km2):
         """Draw rocks from the current world chunk as cubes on the surface.
 
         Each cube's 8 corners are projected individually through a pinhole-camera
@@ -77,14 +82,6 @@ class World:
         than straight-line distance.
         """
         view_h = int(h * CONSOLE_TOP)
-
-        # Get the current world chunk
-        try:
-            km2 = player.position.Km2
-            if not km2 or not hasattr(km2, 'rocks'):
-                return
-        except AttributeError:
-            return
 
         player_x = player.position.x
         player_z = player.position.z

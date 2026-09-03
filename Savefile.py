@@ -50,7 +50,7 @@ class Savefile:
              
         Player.singleton.date_time = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         Player.singleton.time_scale = load_object['player']['timeScale']
-        Player.singleton.position_in(km2, load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
+        Player.singleton.position_in_km2(km2, load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
 
     @staticmethod
     def save():

@@ -4,6 +4,8 @@ from Galaxies.Rock import Rock
 
 class Km2:
 
+    SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
+
     def __init__(self, parent_world, longitude, latitude):
         self.parent_world = parent_world
         self.longitude = longitude
@@ -14,9 +16,9 @@ class Km2:
         rocksCount = my_random.gauss(100, 20)
         self.rocks = []
         for i in range(int(rocksCount)):
-            self.add_rock(my_random.randint(0, 1000), my_random.randint(0, 1000))
+            self.add_rock(longitude + my_random.randint(0, 1000), latitude + my_random.randint(0, 1000))
 
-    def add_rock(self, x, z):
-        newRock = Rock(self, x, z)
+    def add_rock(self, longitude, latitude):
+        newRock = Rock(self, longitude, latitude)
         self.rocks.append(newRock)
         return newRock

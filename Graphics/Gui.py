@@ -8,7 +8,7 @@ The panel on the upper right is the ship clock — it starts at
 
 from .DeepSpace import DeepSpace
 from .Stars import Stars
-from .World import World
+from .World import CurrentWorld
 from .Cockpit import Cockpit
 from .Constants import SPACE
 
@@ -42,7 +42,7 @@ class Gui:
         # Draw space and celestial objects
         DeepSpace.draw(surface, w, h)
         Stars.draw(surface, self.stars, w, h)
-        World.draw(surface, w, h, environment, player)
+        CurrentWorld.draw(surface, w, h, environment, player)
 
         # Draw cockpit frame and instruments
         Cockpit.draw(surface, fonts, w, h, player, player.date_time, player.time_scale)

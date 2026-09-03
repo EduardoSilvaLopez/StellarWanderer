@@ -1,6 +1,6 @@
 from cmath import pi
 import datetime
-import Galaxies
+from Galaxies.Km2 import Km2
 
 class Player:
     singleton = None
@@ -40,7 +40,7 @@ class Player:
         self.position.z = self.position.Km2.latitude + 500
         return self  # Return self to allow method chaining
 
-    def position_in(self, km2, x, y, z):
+    def position_in_km2(self, km2, x, y, z):
         ''' Set the player in a specific Km2 and coordinates.'''
         self.position.Km2 = km2
         self.position.x = x
@@ -55,6 +55,10 @@ class Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
     def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
+        self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
+        self.ensure_surroundings()
+
+    def update_coordinates(self, delta_time, longitude_change, altitude_change, latitude_change):
         """
         Update the player's position based on time scale and delta time.
         
@@ -92,3 +96,25 @@ class Player:
                 -pi * self.position.Km2.parent_world.radius / 2,
                 min(pi * self.position.Km2.parent_world.radius / 2, self.position.z)
             )
+
+    def ensure_surroundings(self):
+        """
+        Ensure the player is within the bounds of the current Km2 and its world.
+        If the player is outside, find the correct Km2 or generate it, and update the player's position accordingly.
+        """
+        if (self.position.Km2.longitude <= self.position.x < self.position.Km2.longitude + Km2.SIZE and
+            self.position.Km2.latitude <= self.position.z < self.position.Km2.latitude + Km2.SIZE):
+            return  # Player is within the current Km2
+
+        # Player is outside the current Km2, find the correct Km2
+        new_longitude = (self.position.x // Km2.SIZE) * Km2.SIZE
+        new_latitude = (self.position.z // Km2.SIZE) * Km2.SIZE
+        world = self.position.Km2.parent_world
+        new_km2 = next((km2 for km2 in world.Km2s if km2.longitude == new_longitude and km2.latitude == new_latitude), None)
+        if new_km2:
+            self.position.Km2 = new_km2
+            return
+
+        # If the Km2 does not exist, create it
+        self.position.Km2 = world.add_Km2(new_longitude, new_latitude)
+        return
