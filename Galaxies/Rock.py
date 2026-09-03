@@ -8,3 +8,4 @@ class Rock:
         self.y = 0
         self.z = z
         self.size = abs(my_random.gauss(0, 10))
+        self.color = (96 + my_random.randint(0, 32), 96 + my_random.randint(0, 32), 96 + my_random.randint(0, 32))

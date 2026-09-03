@@ -4,7 +4,7 @@ import math
 import pygame
 from .Constants import (
     CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON,
-    ROCK, ROCK_EDGE, NEAR_CLIP, MAX_DEPTH, ROCK_DEPTH_SCALE
+    ROCK_EDGE, NEAR_CLIP, MAX_DEPTH, ROCK_DEPTH_SCALE
 )
 
 
@@ -25,10 +25,12 @@ class CurrentWorld:
         CurrentWorld.draw_surface(surface, w, h, environment, player)
 
         # Find the Km2 to be drawn, poviding they exist.
+        rocks = []
         for km2 in environment.current_world.Km2s:
-            if (km2.longitude - km2.SIZE*10 <= player.position.x < km2.longitude + km2.SIZE*10 and
-                km2.latitude - km2.SIZE*10 <= player.position.z < km2.latitude + km2.SIZE*10):
-                CurrentWorld.draw_rocks(surface, w, h, player, km2)
+            if (km2.longitude - km2.SIZE*2 <= player.position.x < km2.longitude + km2.SIZE*2 and
+                km2.latitude - km2.SIZE*2 <= player.position.z < km2.latitude + km2.SIZE*2):
+                rocks.extend(km2.rocks)
+        CurrentWorld.draw_rocks(surface, w, h, player, rocks)
 
     @staticmethod
     def draw_surface(surface, w, h, environment, player):
@@ -71,7 +73,7 @@ class CurrentWorld:
         )
 
     @staticmethod
-    def draw_rocks(surface, w, h, player, km2):
+    def draw_rocks(surface, w, h, player, rocks):
         """Draw rocks from the current world chunk as cubes on the surface.
 
         Each cube's 8 corners are projected individually through a pinhole-camera
@@ -98,7 +100,7 @@ class CurrentWorld:
 
         # Gather rocks with their near-face depth, for far-to-near draw order.
         visible_rocks = []
-        for rock in km2.rocks:
+        for rock in rocks:
             half = rock.size / 2.0
             z0 = rock.z - half - player_z  # near face forward depth
             if z0 <= NEAR_CLIP or z0 > MAX_DEPTH:
@@ -146,22 +148,22 @@ class CurrentWorld:
                 continue
 
             # Draw back-to-front: top, side, front.
-            top_color = tuple(max(0, c - 50) for c in ROCK)
+            top_color = tuple(max(0, c - 50) for c in rock.color)
             pygame.draw.polygon(surface, top_color, top_quad)
             pygame.draw.lines(surface, ROCK_EDGE, True, top_quad, 1)
 
             if show_x1_face:
                 side_quad = [corners[(1, 0, 0)], corners[(1, 0, 1)],
                              corners[(1, 1, 1)], corners[(1, 1, 0)]]
-                side_color = tuple(max(0, c - 25) for c in ROCK)
+                side_color = tuple(max(0, c - 25) for c in rock.color)
                 pygame.draw.polygon(surface, side_color, side_quad)
                 pygame.draw.lines(surface, ROCK_EDGE, True, side_quad, 1)
             elif show_x0_face:
                 side_quad = [corners[(0, 0, 0)], corners[(0, 0, 1)],
                              corners[(0, 1, 1)], corners[(0, 1, 0)]]
-                side_color = tuple(max(0, c - 25) for c in ROCK)
+                side_color = tuple(max(0, c - 25) for c in rock.color)
                 pygame.draw.polygon(surface, side_color, side_quad)
                 pygame.draw.lines(surface, ROCK_EDGE, True, side_quad, 1)
 
-            pygame.draw.polygon(surface, ROCK, front_quad)
+            pygame.draw.polygon(surface, rock.color, front_quad)
             pygame.draw.lines(surface, ROCK_EDGE, True, front_quad, 2)

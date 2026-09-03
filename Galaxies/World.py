@@ -22,3 +22,13 @@ class World:
         self.Km2s.append(new_Km2)
         return new_Km2
 
+    def ensure_surroundings(self, km2):
+        """Ensure the surroundings of the player are generated."""
+
+        for lon_delta in range(-2, 2):
+            for lat_delta in range(-2, 2):
+                target_longitude = km2.longitude + lon_delta*Km2.SIZE
+                target_latitude = km2.latitude + lat_delta*Km2.SIZE
+
+                if not any(km2.longitude == target_longitude and km2.latitude == target_latitude for km2 in self.Km2s):
+                    self.add_Km2(target_longitude, target_latitude)

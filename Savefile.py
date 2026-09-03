@@ -51,6 +51,7 @@ class Savefile:
         Player.singleton.date_time = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         Player.singleton.time_scale = load_object['player']['timeScale']
         Player.singleton.position_in_km2(km2, load_object['player']['x'], load_object['player']['y'], load_object['player']['z'])
+        GameEnvironment.singleton.galaxy.stellar_systems[0].orbits[0].worlds[0].ensure_surroundings(Player.singleton.position.Km2)
 
     @staticmethod
     def save():

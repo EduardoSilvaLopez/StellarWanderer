@@ -8,7 +8,7 @@ The panel on the upper right is the ship clock — it starts at
 
 from .DeepSpace import DeepSpace
 from .Stars import Stars
-from .World import CurrentWorld
+from .CurrentWorld import CurrentWorld
 from .Cockpit import Cockpit
 from .Constants import SPACE
 

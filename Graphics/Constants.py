@@ -14,7 +14,6 @@ ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
 AMBER = (240, 176, 92)
 READOUT_BG = (9, 17, 21)
-ROCK = (112, 112, 112)
 ROCK_EDGE = (60, 60, 60)
 
 # Starfield
@@ -31,5 +30,5 @@ CONSOLE_TOP = 0.66
 import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 NEAR_CLIP = 0.5   # metres
-MAX_DEPTH = 1000  # metres
+MAX_DEPTH = 2000  # metres
 ROCK_DEPTH_SCALE = 0.35
