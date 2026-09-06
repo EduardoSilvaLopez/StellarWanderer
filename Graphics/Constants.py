@@ -31,4 +31,3 @@ import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
-ROCK_DEPTH_SCALE = 0.35

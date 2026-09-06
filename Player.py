@@ -1,5 +1,6 @@
 from cmath import pi
 import datetime
+import math
 from Galaxies.Km2 import Km2
 from Galaxies.World import World
 
@@ -13,6 +14,7 @@ class Player:
     BASE_ALTITUDE_CHANGE_RATE = 1  # meters per second
     BASE_LONGITUDE_CHANGE_RATE = 10  # meters per second
     BASE_LATITUDE_CHANGE_RATE = 10  # meters per second
+    ROTATION_RATE = 10  # degrees per game second
 
     # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
     EPOCH = datetime.datetime(500, 1, 1)
@@ -23,6 +25,7 @@ class Player:
     def __init__(self):
         self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
         self.time_scale = 1  # Default time scale
+        self.orientation = 0.0  # Degrees clockwise from north
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
         self.position.Km2 = None
         self.position.x = 0
@@ -56,6 +59,11 @@ class Player:
     def decrease_time_scale(self):
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
+    def update_orientation(self, delta_time, counterclockwise, clockwise):
+        """Rotate the ship using game seconds elapsed since the last frame."""
+        direction = clockwise - counterclockwise
+        self.orientation = (self.orientation + direction * self.ROTATION_RATE * delta_time) % 360
+
     def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
         new_km2 = self.find_km2_in(self.position.Km2.parent_world)
@@ -65,14 +73,22 @@ class Player:
 
     def update_coordinates(self, delta_time, longitude_change, altitude_change, latitude_change):
         """
-        Update the player's position based on time scale and delta time.
+        Update the player's position based on ship-relative controls.
         
         Args:
             delta_time: Time elapsed in game seconds
             altitude_change: Change in altitude (1 for increase, -1 for decrease, 0 for no change)
-            longitude_change: Change in longitude (1 for increase, -1 for decrease, 0 for no change)
+            longitude_change: Ship-relative right movement (1 for right, -1 for left, 0 for no movement)
             latitude_change: Change in latitude (1 for increase, -1 for decrease, 0 for no change)
         """
+        orientation = math.radians(self.orientation)
+        sin_orientation = math.sin(orientation)
+        cos_orientation = math.cos(orientation)
+        local_right = longitude_change
+        local_forward = latitude_change
+        longitude_change = local_right * cos_orientation + local_forward * sin_orientation
+        latitude_change = -local_right * sin_orientation + local_forward * cos_orientation
+
         # Update longitude, east to west of viceversa crossing the anti-meridian.
         if longitude_change != 0:
             change_in_mts = longitude_change * self.BASE_LONGITUDE_CHANGE_RATE * delta_time

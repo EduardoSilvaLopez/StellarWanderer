@@ -53,6 +53,7 @@ class Savefile:
         player = Player.singleton     
         player.date_time = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         player.time_scale = load_object['player']['timeScale']
+        player.orientation = load_object['player'].get('orientation', 0.0)
         player.position.x = load_object['player']['x']
         player.position.y = load_object['player']['y']
         player.position.z = load_object['player']['z']
@@ -71,6 +72,7 @@ class Savefile:
             , 'player': {
                 'dateTime': str(player.date_time),
                 'timeScale': player.time_scale,
+                'orientation': player.orientation,
                 'StellarSystem.x': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.x,
                 'StellarSystem.y': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.y,
                 'StellarSystem.z': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.z,

@@ -1,6 +1,7 @@
 """Starfield rendering."""
 
 import random
+import math
 import pygame
 from .Constants import STAR_COUNT, STAR_SEED, CONSOLE_TOP
 
@@ -29,7 +30,7 @@ class Stars:
         return stars
 
     @staticmethod
-    def draw(surface, stars, w, h):
+    def draw(surface, stars, w, h, orientation=0.0):
         """Draw stars as points or small circles.
 
         Args:
@@ -39,10 +40,20 @@ class Stars:
             h: Window height
         """
         view_h = int(h * CONSOLE_TOP)
+        angle = math.radians(-orientation)
+        sin_angle = math.sin(angle)
+        cos_angle = math.cos(angle)
 
         for nx, ny, radius, brightness in stars:
-            x = int(nx * w)
-            y = int(ny * view_h)
+            centered_x = nx - 0.5
+            centered_y = ny - 0.5
+            rotated_x = centered_x * cos_angle + centered_y * sin_angle
+            rotated_y = -centered_x * sin_angle + centered_y * cos_angle
+            x = int((rotated_x + 0.5) * w)
+            y = int((rotated_y + 0.5) * view_h)
+
+            if not (0 <= x < w and 0 <= y < view_h):
+                continue
 
             # Slightly cool tint keeps the stars from looking like flat white dots.
             color = (brightness, brightness, min(255, brightness + 18))

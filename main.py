@@ -5,6 +5,8 @@ Controls:
     Keypad -   step back down, no slower than 1 s/s
     Numpad +   increase altitude (speed depends on time scale)
     Numpad -   decrease altitude (speed depends on time scale)
+    Q          turn counterclockwise (speed depends on time scale)
+    E          turn clockwise (speed depends on time scale)
     Esc        quit
 """
 
@@ -72,6 +74,11 @@ def main():
         dt = clock.tick(FPS) / 1000.0
 
         keys = pygame.key.get_pressed()
+        player.update_orientation(
+            dt * player.time_scale,
+            1 if keys[pygame.K_q] else 0,
+            1 if keys[pygame.K_e] else 0
+        )
         if (keys[pygame.K_a] or keys[pygame.K_d] or keys[pygame.K_w] or keys[pygame.K_s] or
             keys[pygame.K_KP_9] or keys[pygame.K_KP_3]):
             player.update_position(

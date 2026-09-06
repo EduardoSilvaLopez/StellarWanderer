@@ -4,11 +4,11 @@ import math
 import pygame
 from .Constants import (
     CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON,
-    ROCK_EDGE, NEAR_CLIP, MAX_DEPTH, ROCK_DEPTH_SCALE
+    ROCK_EDGE, NEAR_CLIP, MAX_DEPTH
 )
 
 
-class CurrentWorld:
+class NearestWorld:
     """Renders the planet surface and rocks visible from the cockpit."""
 
     @staticmethod
@@ -22,7 +22,7 @@ class CurrentWorld:
             environment: Game environment with current world
             player: Player object with position
         """
-        CurrentWorld.draw_surface(surface, w, h, environment, player)
+        NearestWorld.draw_surface(surface, w, h, environment, player)
 
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
@@ -30,7 +30,7 @@ class CurrentWorld:
             if (km2.longitude - km2.SIZE*2 <= player.position.x < km2.longitude + km2.SIZE*2 and
                 km2.latitude - km2.SIZE*2 <= player.position.z < km2.latitude + km2.SIZE*2):
                 rocks.extend(km2.rocks)
-        CurrentWorld.draw_rocks(surface, w, h, player, rocks)
+        NearestWorld.draw_rocks(surface, w, h, player, rocks)
 
     @staticmethod
     def draw_surface(surface, w, h, environment, player):
@@ -88,21 +88,38 @@ class CurrentWorld:
         player_x = player.position.x
         player_z = player.position.z
         player_y = player.position.y
+        orientation = math.radians(player.orientation)
+        sin_orientation = math.sin(orientation)
+        cos_orientation = math.cos(orientation)
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
         horizon_y = int(view_h * 0.52)
 
-        def project(cx, cy, cz):
-            """Project a camera-space offset (right, up, forward) to screen (x, y)."""
-            screen_x = w / 2 + focal_length_px * cx / cz
+        def project(cx, cy, cz, horizontal_depth):
+            """Project a cube corner with stable horizontal size."""
+            screen_x = w / 2 + focal_length_px * cx / horizontal_depth
             screen_y = horizon_y - focal_length_px * cy / cz
             return (screen_x, screen_y)
+
+        def camera_coordinates(world_x, world_z):
+            """Convert world coordinates to offsets relative to the ship's heading."""
+            offset_x = world_x - player_x
+            offset_z = world_z - player_z
+            right = offset_x * cos_orientation - offset_z * sin_orientation
+            forward = offset_x * sin_orientation + offset_z * cos_orientation
+            return right, forward
 
         # Gather rocks with their near-face depth, for far-to-near draw order.
         visible_rocks = []
         for rock in rocks:
             half = rock.size / 2.0
-            z0 = rock.z - half - player_z  # near face forward depth
+            near_depths = [
+                camera_coordinates(rock.x - half, rock.z - half)[1],
+                camera_coordinates(rock.x + half, rock.z - half)[1],
+                camera_coordinates(rock.x - half, rock.z + half)[1],
+                camera_coordinates(rock.x + half, rock.z + half)[1],
+            ]
+            z0 = min(near_depths)
             if z0 <= NEAR_CLIP or z0 > MAX_DEPTH:
                 continue
             visible_rocks.append((z0, rock, half))
@@ -110,60 +127,92 @@ class CurrentWorld:
         visible_rocks.sort(key=lambda item: item[0], reverse=True)  # far first
 
         for z0, rock, half in visible_rocks:
-            # Cube extents in world space. It rests on the surface (y=0) and
-            # rises to y=rock.size; x spans rock.x +/- half (true size).
-            # z (depth) is rendered at ROCK_DEPTH_SCALE of the true size.
+            # Build the actual axis-aligned cube in world space. Its dimensions
+            # stay fixed while the camera orientation changes.
             x0, x1 = rock.x - half, rock.x + half
+            z0_world, z1_world = rock.z - half, rock.z + half
             y0, y1 = 0.0, rock.size
-            render_depth = rock.size * ROCK_DEPTH_SCALE
-            z1 = z0 + render_depth  # far face forward depth
+            cy0, cy1 = y0 - player_y, y1 - player_y
+            _, center_depth = camera_coordinates(rock.x, rock.z)
 
-            if z1 <= NEAR_CLIP:
+            # Project the 8 corners and retain depth for face sorting.
+            corners = {}
+            corner_depths = {}
+            for ix, world_x in ((0, x0), (1, x1)):
+                for iy, cy in ((0, cy0), (1, cy1)):
+                    for iz, world_z in ((0, z0_world), (1, z1_world)):
+                        corner_cx, corner_cz = camera_coordinates(world_x, world_z)
+                        corners[(ix, iy, iz)] = project(
+                            corner_cx, cy, corner_cz, center_depth
+                        )
+                        corner_depths[(ix, iy, iz)] = corner_cz
+
+            if min(corner_depths.values()) <= NEAR_CLIP:
                 continue
 
-            # Camera-space offsets (right, up) for each x/y value, forward depths for z.
-            cx0, cx1 = x0 - player_x, x1 - player_x
-            cy0, cy1 = y0 - player_y, y1 - player_y
-
-            # Project the 8 corners.
-            corners = {}
-            for ix, cx in ((0, cx0), (1, cx1)):
-                for iy, cy in ((0, cy0), (1, cy1)):
-                    for iz, cz in ((0, z0), (1, z1)):
-                        corners[(ix, iy, iz)] = project(cx, cy, cz)
-
-            # A lateral face is visible only if the camera sits outside it.
-            show_x1_face = player_x > x1  # camera east of the cube: see its +x face
-            show_x0_face = player_x < x0  # camera west of the cube: see its -x face
+            # The cube is world-aligned, so visible horizontal faces depend on
+            # the ship heading, not on where the cube appears on screen.
+            show_x1_face = sin_orientation < 0
+            show_x0_face = sin_orientation > 0
+            show_z1_face = cos_orientation < 0
+            show_z0_face = cos_orientation > 0
 
             top_quad = [corners[(0, 1, 0)], corners[(1, 1, 0)],
                         corners[(1, 1, 1)], corners[(0, 1, 1)]]
-            front_quad = [corners[(0, 0, 0)], corners[(1, 0, 0)],
-                          corners[(1, 1, 0)], corners[(0, 1, 0)]]
+            z0_quad = [corners[(0, 0, 0)], corners[(1, 0, 0)],
+                       corners[(1, 1, 0)], corners[(0, 1, 0)]]
+            z1_quad = [corners[(1, 0, 1)], corners[(0, 0, 1)],
+                       corners[(0, 1, 1)], corners[(1, 1, 1)]]
 
             # Skip degenerate/too-small cubes.
-            front_span = max(abs(front_quad[1][0] - front_quad[0][0]),
-                              abs(front_quad[0][1] - front_quad[2][1]))
-            if front_span < 1:
+            face_span = max(abs(z0_quad[1][0] - z0_quad[0][0]),
+                            abs(z0_quad[0][1] - z0_quad[2][1]))
+            if face_span < 1:
                 continue
 
-            # Draw back-to-front: top, side, front.
-            top_color = tuple(max(0, c - 50) for c in rock.color)
-            pygame.draw.polygon(surface, top_color, top_quad)
-            pygame.draw.lines(surface, ROCK_EDGE, True, top_quad, 1)
-
+            faces = [(
+                top_quad,
+                tuple(max(0, c - 50) for c in rock.color),
+                1,
+                [(0, 1, 0), (1, 1, 0), (1, 1, 1), (0, 1, 1)],
+            )]
             if show_x1_face:
                 side_quad = [corners[(1, 0, 0)], corners[(1, 0, 1)],
                              corners[(1, 1, 1)], corners[(1, 1, 0)]]
-                side_color = tuple(max(0, c - 25) for c in rock.color)
-                pygame.draw.polygon(surface, side_color, side_quad)
-                pygame.draw.lines(surface, ROCK_EDGE, True, side_quad, 1)
+                faces.append((
+                    side_quad,
+                    tuple(max(0, c - 25) for c in rock.color),
+                    1,
+                    [(1, 0, 0), (1, 0, 1), (1, 1, 1), (1, 1, 0)],
+                ))
             elif show_x0_face:
                 side_quad = [corners[(0, 0, 0)], corners[(0, 0, 1)],
                              corners[(0, 1, 1)], corners[(0, 1, 0)]]
-                side_color = tuple(max(0, c - 25) for c in rock.color)
-                pygame.draw.polygon(surface, side_color, side_quad)
-                pygame.draw.lines(surface, ROCK_EDGE, True, side_quad, 1)
+                faces.append((
+                    side_quad,
+                    tuple(max(0, c - 25) for c in rock.color),
+                    1,
+                    [(0, 0, 0), (0, 0, 1), (0, 1, 1), (0, 1, 0)],
+                ))
 
-            pygame.draw.polygon(surface, rock.color, front_quad)
-            pygame.draw.lines(surface, ROCK_EDGE, True, front_quad, 2)
+            if show_z1_face:
+                z_face = z1_quad
+            elif show_z0_face:
+                z_face = z0_quad
+            else:
+                z_face = None
+
+            if z_face:
+                z_indices = (
+                    [(1, 0, 1), (0, 0, 1), (0, 1, 1), (1, 1, 1)]
+                    if show_z1_face else
+                    [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+                )
+                faces.append((z_face, rock.color, 2, z_indices))
+
+            def face_depth(face):
+                return sum(corner_depths[index] for index in face[3])
+
+            for face, color, edge_width, _ in sorted(faces, key=face_depth, reverse=True):
+                pygame.draw.polygon(surface, color, face)
+                pygame.draw.lines(surface, ROCK_EDGE, True, face, edge_width)
