@@ -11,6 +11,8 @@ from .Constants import (
 class NearestWorld:
     """Renders the planet surface and rocks visible from the cockpit."""
 
+    ROCK_DEPTH_PERSPECTIVE = 0.5
+
     @staticmethod
     def draw(surface, w, h, environment, player):
         """Draw planet surface and rocks.
@@ -96,8 +98,9 @@ class NearestWorld:
         horizon_y = int(view_h * 0.52)
 
         def project(cx, cy, cz, horizontal_depth):
-            """Project a cube corner with stable horizontal size."""
-            screen_x = w / 2 + focal_length_px * cx / horizontal_depth
+            """Project a corner with damped horizontal depth perspective."""
+            blended_depth = horizontal_depth + self_depth_factor * (cz - horizontal_depth)
+            screen_x = w / 2 + focal_length_px * cx / blended_depth
             screen_y = horizon_y - focal_length_px * cy / cz
             return (screen_x, screen_y)
 
@@ -134,6 +137,7 @@ class NearestWorld:
             y0, y1 = 0.0, rock.size
             cy0, cy1 = y0 - player_y, y1 - player_y
             _, center_depth = camera_coordinates(rock.x, rock.z)
+            self_depth_factor = NearestWorld.ROCK_DEPTH_PERSPECTIVE
 
             # Project the 8 corners and retain depth for face sorting.
             corners = {}
@@ -150,12 +154,25 @@ class NearestWorld:
             if min(corner_depths.values()) <= NEAR_CLIP:
                 continue
 
-            # The cube is world-aligned, so visible horizontal faces depend on
-            # the ship heading, not on where the cube appears on screen.
-            show_x1_face = sin_orientation < 0
-            show_x0_face = sin_orientation > 0
-            show_z1_face = cos_orientation < 0
-            show_z0_face = cos_orientation > 0
+            # A cube face is visible when the ship is outside that world side.
+            # This also exposes a lateral face when a north-facing ship views a
+            # cube that is clearly to its left or right.
+            show_x1_face = player_x > x1
+            show_x0_face = player_x < x0
+            if not show_x1_face and not show_x0_face:
+                show_x1_face = player_x > rock.x
+                show_x0_face = player_x < rock.x
+                if not show_x1_face and not show_x0_face:
+                    show_x1_face = sin_orientation < 0
+                    show_x0_face = sin_orientation > 0
+            show_z1_face = player_z > rock.z + half
+            show_z0_face = player_z < rock.z - half
+            if not show_z1_face and not show_z0_face:
+                show_z1_face = player_z > rock.z
+                show_z0_face = player_z < rock.z
+                if not show_z1_face and not show_z0_face:
+                    show_z1_face = cos_orientation < 0
+                    show_z0_face = cos_orientation > 0
 
             top_quad = [corners[(0, 1, 0)], corners[(1, 1, 0)],
                         corners[(1, 1, 1)], corners[(0, 1, 1)]]
@@ -213,6 +230,18 @@ class NearestWorld:
             def face_depth(face):
                 return sum(corner_depths[index] for index in face[3])
 
-            for face, color, edge_width, _ in sorted(faces, key=face_depth, reverse=True):
+            ordered_faces = sorted(faces, key=face_depth, reverse=True)
+            if player_y >= rock.size and len(ordered_faces) > 1:
+                top_face = faces[0]
+                x_face = faces[1] if show_x1_face or show_x0_face else None
+                ordered_faces = [top_face]
+                ordered_faces.extend(
+                    face for face in sorted(faces[1:], key=face_depth, reverse=True)
+                    if face is not x_face
+                )
+                if x_face is not None:
+                    ordered_faces.append(x_face)
+
+            for face, color, edge_width, _ in ordered_faces:
                 pygame.draw.polygon(surface, color, face)
                 pygame.draw.lines(surface, ROCK_EDGE, True, face, edge_width)
