@@ -1,1 +1,3 @@
 Savefiles
+__pycache__/
+*.py[cod]
