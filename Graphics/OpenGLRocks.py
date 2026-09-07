@@ -44,33 +44,7 @@ class OpenGLRocks:
         OpenGLRocks._draw_ground(player)
 
         for rock in rocks:
-            half = rock.size / 2.0
-            x0, x1 = rock.x - half, rock.x + half
-            z0, z1 = rock.z - half, rock.z + half
-            y0, y1 = 0.0, rock.size
-            base = rock.color
-            top = tuple(max(0, value - 50) for value in base)
-            side = tuple(max(0, value - 25) for value in base)
-            bottom = tuple(max(0, value - 70) for value in base)
-
-            OpenGLRocks._draw_face(top, (
-                (x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1)
-            ))
-            OpenGLRocks._draw_face(bottom, (
-                (x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0)
-            ))
-            OpenGLRocks._draw_face(side, (
-                (x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0)
-            ))
-            OpenGLRocks._draw_face(side, (
-                (x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1)
-            ))
-            OpenGLRocks._draw_face(base, (
-                (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0)
-            ))
-            OpenGLRocks._draw_face(base, (
-                (x1, y0, z1), (x0, y0, z1), (x0, y1, z1), (x1, y1, z1)
-            ))
+            OpenGLRocks._draw_rock(rock)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)
@@ -97,9 +71,28 @@ class OpenGLRocks:
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
 
     @staticmethod
-    def _draw_face(color, vertices):
-        GL.glColor3ub(*color)
+    def _draw_rock(rock):
+        half = rock.size / 2.0
+        x0, x1 = rock.x - half, rock.x + half
+        z0, z1 = rock.z - half, rock.z + half
+        y0, y1 = 0.0, rock.size
+        base = rock.color
+        top = tuple(max(0, value - 50) for value in base)
+        side = tuple(max(0, value - 25) for value in base)
+        bottom = tuple(max(0, value - 70) for value in base)
+
+        faces = (
+            (top, ((x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1))),
+            (bottom, ((x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0))),
+            (side, ((x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0))),
+            (side, ((x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1))),
+            (base, ((x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0))),
+            (base, ((x1, y0, z1), (x0, y0, z1), (x0, y1, z1), (x1, y1, z1))),
+        )
+
         GL.glBegin(GL.GL_QUADS)
-        for vertex in vertices:
-            GL.glVertex3f(*vertex)
+        for color, vertices in faces:
+            GL.glColor3ub(*color)
+            for vertex in vertices:
+                GL.glVertex3f(*vertex)
         GL.glEnd()

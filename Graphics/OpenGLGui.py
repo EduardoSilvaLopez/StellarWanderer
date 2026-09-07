@@ -64,17 +64,21 @@ class OpenGLGui:
         if self.world_surface is None or self.world_surface.get_size() != size:
             self.world_surface = pygame.Surface(size).convert()
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
-            self.world_texture = self._make_texture()
-            self.overlay_texture = self._make_texture()
+            self.world_texture = self._make_texture(*size)
+            self.overlay_texture = self._make_texture(*size)
 
     @staticmethod
-    def _make_texture():
+    def _make_texture(width, height):
         texture = GL.glGenTextures(1)
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
+        GL.glTexImage2D(
+            GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, width, height, 0,
+            GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, None
+        )
         return texture
 
     @staticmethod
@@ -86,8 +90,8 @@ class OpenGLGui:
         # before drawing either 2D texture.
         GL.glViewport(0, 0, width, height)
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
-        GL.glTexImage2D(
-            GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, width, height, 0,
+        GL.glTexSubImage2D(
+            GL.GL_TEXTURE_2D, 0, 0, 0, width, height,
             GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
         )
         if blend:
