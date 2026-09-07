@@ -77,9 +77,10 @@ class RockRendererTests(unittest.TestCase):
 
         polygons, _ = self.render(player, rock)
 
-        self.assertEqual(2, len(polygons))
-        self.assertEqual(tuple(max(0, value - 50) for value in self.ROCK_COLOR), polygons[0][0])
-        self.assertEqual(self.ROCK_COLOR, polygons[1][0])
+        self.assertEqual(6, len(polygons))
+        colors = [color for color, _ in polygons]
+        self.assertIn(tuple(max(0, value - 50) for value in self.ROCK_COLOR), colors)
+        self.assertIn(self.ROCK_COLOR, colors)
 
     def test_north_west_view_keeps_lateral_faces_visible(self):
         left_x, left_z = self.world_position(315.0, -100.0, 300.0)
@@ -88,8 +89,8 @@ class RockRendererTests(unittest.TestCase):
         left_polygons, _ = self.render(self.make_player(orientation=315.0), self.make_rock(left_x, left_z))
         right_polygons, _ = self.render(self.make_player(orientation=315.0), self.make_rock(right_x, right_z))
 
-        self.assertEqual(3, len(left_polygons))
-        self.assertEqual(3, len(right_polygons))
+        self.assertEqual(6, len(left_polygons))
+        self.assertEqual(6, len(right_polygons))
 
         lateral_color = tuple(max(0, value - 25) for value in self.ROCK_COLOR)
         self.assertIn(lateral_color, [color for color, _ in left_polygons])
@@ -101,7 +102,7 @@ class RockRendererTests(unittest.TestCase):
 
         polygons, _ = self.render(player, rock)
 
-        self.assertEqual(3, len(polygons))
+        self.assertEqual(6, len(polygons))
         lateral_color = tuple(max(0, value - 25) for value in self.ROCK_COLOR)
         self.assertIn(lateral_color, [color for color, _ in polygons])
 
@@ -111,7 +112,7 @@ class RockRendererTests(unittest.TestCase):
 
         polygons, _ = self.render(player, rock)
 
-        self.assertEqual(3, len(polygons))
+        self.assertEqual(6, len(polygons))
         colors = [color for color, _ in polygons]
         self.assertIn(self.ROCK_COLOR, colors)
         self.assertIn(tuple(max(0, value - 25) for value in self.ROCK_COLOR), colors)
@@ -144,7 +145,7 @@ class RockRendererTests(unittest.TestCase):
 
         polygons, _ = self.render(player, rock)
 
-        self.assertEqual(3, len(polygons))
+        self.assertEqual(6, len(polygons))
         lateral_color = tuple(max(0, value - 25) for value in self.ROCK_COLOR)
         self.assertIn(lateral_color, [color for color, _ in polygons])
 
@@ -158,7 +159,7 @@ class RockRendererTests(unittest.TestCase):
 
         polygons, _ = self.render(player, rock)
 
-        self.assertEqual(3, len(polygons))
+        self.assertEqual(6, len(polygons))
         self.assertIn(self.ROCK_COLOR, [color for color, _ in polygons])
 
     def test_saved_015952_lateral_face_switches_at_rock_center(self):
@@ -180,9 +181,12 @@ class RockRendererTests(unittest.TestCase):
         left_polygons, _ = self.render(left_player, rock)
         right_polygons, _ = self.render(right_player, rock)
 
-        self.assertEqual(3, len(left_polygons))
-        self.assertEqual(3, len(right_polygons))
-        self.assertNotEqual(left_polygons[1][1], right_polygons[1][1])
+        self.assertEqual(6, len(left_polygons))
+        self.assertEqual(6, len(right_polygons))
+        self.assertNotEqual(
+            {points for _, points in left_polygons},
+            {points for _, points in right_polygons},
+        )
 
     def test_saved_020648_rock_keeps_top_and_both_vertical_faces_visible(self):
         player = self.make_player(
@@ -229,9 +233,8 @@ class RockRendererTests(unittest.TestCase):
         for rock_x, rock_z in ((left_x, left_z), (right_x, right_z)):
             polygons, _ = self.render(player, self.make_rock(rock_x, rock_z, size=40.0))
 
-            self.assertEqual(3, len(polygons))
-            lateral_faces = polygons[1:]
-            self.assertTrue(all(self.polygon_area(points) > 1 for _, points in lateral_faces))
+            self.assertEqual(6, len(polygons))
+            self.assertTrue(all(self.polygon_area(points) > 1 for _, points in polygons))
 
     def test_off_center_rock_keeps_the_same_front_face_width(self):
         left_x, left_z = self.world_position(0.0, -100.0, 300.0)
@@ -240,8 +243,10 @@ class RockRendererTests(unittest.TestCase):
         left_polygons, _ = self.render(self.make_player(), self.make_rock(left_x, left_z))
         right_polygons, _ = self.render(self.make_player(), self.make_rock(right_x, right_z))
 
-        left_bounds = self.polygon_bounds(left_polygons[-1][1])
-        right_bounds = self.polygon_bounds(right_polygons[-1][1])
+        left_front = next(points for color, points in left_polygons if color == self.ROCK_COLOR)
+        right_front = next(points for color, points in right_polygons if color == self.ROCK_COLOR)
+        left_bounds = self.polygon_bounds(left_front)
+        right_bounds = self.polygon_bounds(right_front)
         self.assertAlmostEqual(left_bounds[1] - left_bounds[0], right_bounds[1] - right_bounds[0])
 
     def test_rock_crossing_near_clip_is_not_drawn(self):

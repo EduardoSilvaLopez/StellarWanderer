@@ -18,7 +18,7 @@ from FontCache import FontCache
 from Player import Player
 from Savefile import Savefile
 from GameEnvironment import GameEnvironment
-from Graphics.Gui import Gui
+from Graphics.OpenGLGui import OpenGLGui
 from Graphics.Stars import Stars
 
 WINDOW_TITLE = 'Stellar Wanderer'
@@ -35,7 +35,9 @@ MAX_ELAPSED = (datetime.max.replace(microsecond=0) - Player.EPOCH).total_seconds
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
+    screen = pygame.display.set_mode(
+        WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
+    )
     pygame.display.set_caption(WINDOW_TITLE)
     clock = pygame.time.Clock()
 
@@ -48,6 +50,7 @@ def main():
     galacticSeed = 1 # galacticSeed = input()
     game_environment = GameEnvironment(galacticSeed)
     player = Player().spawn_in_environment(game_environment)
+    gui = OpenGLGui()
     
     running = True
     while running:
@@ -69,7 +72,9 @@ def main():
                         # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
-                screen = pygame.display.set_mode(size, pygame.RESIZABLE)
+                screen = pygame.display.set_mode(
+                    size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
+                )
 
         dt = clock.tick(FPS) / 1000.0
 
@@ -91,7 +96,6 @@ def main():
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
 
-        gui = Gui()
         gui.draw(screen, fonts, game_environment, player)
         pygame.display.flip()
 
