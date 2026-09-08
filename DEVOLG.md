@@ -24,6 +24,7 @@ Introducing this log, previous version is the OpenOffice Write document "Vission
 - Prompt for loading a file.
 - Set flagpoles: Proof of concept essentially finished.
 - Show orientation in the instruments.
+- https://github.com/obra/superpowers#how-it-works
 - Make and show the sun.
 - Move away from world.
 - Create and show the planet and all its moons, establishing the initial world as one of them.
@@ -36,4 +37,6 @@ Introducing this log, previous version is the OpenOffice Write document "Vission
 - Allow travel to other stellar systems.
 - Create Jovian planets, with a forbidden area.
 
-### Learning Python: 4.9?
+### Learning Python:
+
+https://docs.python.org/3.14/tutorial/modules.html

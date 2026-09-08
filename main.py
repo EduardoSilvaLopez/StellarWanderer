@@ -7,6 +7,7 @@ Controls:
     Numpad -   decrease altitude (speed depends on time scale)
     Q          turn counterclockwise (speed depends on time scale)
     E          turn clockwise (speed depends on time scale)
+    SPACE      fire the laser
     Esc        quit
 """
 
@@ -91,7 +92,8 @@ def main():
                 1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
                 1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),
                 1 if keys[pygame.K_w] else (-1 if keys[pygame.K_s] else 0)
-            )        
+            )
+        player.firing = keys[pygame.K_SPACE]
 
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)

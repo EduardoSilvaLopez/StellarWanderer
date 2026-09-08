@@ -26,6 +26,7 @@ class Player:
         self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
         self.time_scale = 1  # Default time scale
         self.orientation = 0.0  # Degrees clockwise from north
+        self.firing = False  # Laser firing (SPACE held)
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
         self.position.Km2 = None
         self.position.x = 0

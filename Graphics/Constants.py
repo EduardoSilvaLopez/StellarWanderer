@@ -15,6 +15,7 @@ ACCENT_DIM = (34, 92, 92)
 AMBER = (240, 176, 92)
 READOUT_BG = (9, 17, 21)
 ROCK_EDGE = (60, 60, 60)
+LASER = (255, 255, 0)
 
 # Starfield
 STAR_COUNT = 260
@@ -31,3 +32,4 @@ import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
+LASER_LENGTH = 500  # metres
