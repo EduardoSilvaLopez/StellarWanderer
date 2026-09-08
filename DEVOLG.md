@@ -12,6 +12,12 @@ Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype fo
 
 Introducing this log, previous version is the OpenOffice Write document "Vission, Mission, Log.odt"
 
+### 2026-09-08 (4/7)
+
+18:30 - 20:15
+
+
+
 ## ToDo
 
 - Show orientation in the instruments.
@@ -28,3 +34,5 @@ Introducing this log, previous version is the OpenOffice Write document "Vission
 - Make the real stars around the one we are.
 - Allow travel to other stellar systems.
 - Create Jovian planets, with a forbidden area.
+
+### Learning Python: 4.9?
