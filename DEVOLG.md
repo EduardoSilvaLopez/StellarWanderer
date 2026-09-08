@@ -20,10 +20,11 @@ Introducing this log, previous version is the OpenOffice Write document "Vission
 
 ## ToDo
 
-- Show orientation in the instruments.
 - Laser.
+- Prompt for loading a file.
+- Set flagpoles: Proof of concept essentially finished.
+- Show orientation in the instruments.
 - Make and show the sun.
-- Set flagpoles.
 - Move away from world.
 - Create and show the planet and all its moons, establishing the initial world as one of them.
 - Create the concept of "attached" world, which determines how to interpret the coordinates of the ship. Make a manual detach / attack possible in a buffer zone.
