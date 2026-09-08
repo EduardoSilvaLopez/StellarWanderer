@@ -3,8 +3,8 @@
 import math
 import pygame
 from .Constants import (
-    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON,
-    ROCK_EDGE, NEAR_CLIP, MAX_DEPTH
+    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON_COLOR,
+    ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP, MAX_DEPTH
 )
 
 
@@ -62,7 +62,7 @@ class NearestWorld:
         )
         pygame.draw.arc(
             surface,
-            PLANET_HORIZON,
+            PLANET_HORIZON_COLOR,
             pygame.Rect(
                 int(planet_center[0] - planet_radius_px),
                 int(planet_center[1] - planet_radius_px),
@@ -194,4 +194,4 @@ class NearestWorld:
 
             for face, color, edge_width, _ in sorted(faces, key=face_depth, reverse=True):
                 pygame.draw.polygon(surface, color, face)
-                pygame.draw.lines(surface, ROCK_EDGE, True, face, edge_width)
+                pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, face, edge_width)

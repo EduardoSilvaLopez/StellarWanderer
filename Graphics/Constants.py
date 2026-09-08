@@ -1,21 +1,21 @@
 """Shared graphics constants and palette for the cockpit view."""
 
 # Color palette
-SPACE = (8, 10, 24)
+SPACE_COLOR = (8, 10, 24)
 PLANET_GRAY = (32, 32, 32)
-PLANET_HORIZON = (150, 150, 150)
-HULL = (38, 42, 55)
+PLANET_HORIZON_COLOR = (150, 150, 150)
+HULL_COLOR = (38, 42, 55)
 HULL_DARK = (23, 26, 36)
-HULL_EDGE = (70, 78, 98)
+HULL_EDGE_COLOR = (70, 78, 98)
 STRUT = (30, 34, 46)
 CONSOLE = (29, 32, 43)
-CONSOLE_EDGE = (74, 82, 102)
+CONSOLE_EDGE_COLOR = (74, 82, 102)
 ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
 AMBER = (240, 176, 92)
 READOUT_BG = (9, 17, 21)
-ROCK_EDGE = (60, 60, 60)
-LASER = (255, 255, 0)
+ROCK_EDGE_COLOR = (60, 60, 60)
+LASER_COLOR = (255, 255, 0)
 
 # Starfield
 STAR_COUNT = 260

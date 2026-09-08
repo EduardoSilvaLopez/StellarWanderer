@@ -10,7 +10,7 @@ from .DeepSpace import DeepSpace
 from .Stars import Stars
 from .NearestWorld import NearestWorld
 from .Cockpit import Cockpit
-from .Constants import SPACE
+from .Constants import SPACE_COLOR
 
 
 class Gui:
@@ -37,7 +37,7 @@ class Gui:
             player: Player object
         """
         w, h = surface.get_size()
-        surface.fill(SPACE)
+        surface.fill(SPACE_COLOR)
 
         # Draw space and celestial objects
         DeepSpace.draw(surface, w, h)

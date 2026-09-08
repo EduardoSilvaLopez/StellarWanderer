@@ -3,7 +3,7 @@
 import pygame
 from OpenGL import GL
 
-from .Constants import SPACE
+from .Constants import SPACE_COLOR
 from .Cockpit import Cockpit
 from .DeepSpace import DeepSpace
 from .NearestWorld import NearestWorld
@@ -27,7 +27,7 @@ class OpenGLGui:
         width, height = screen.get_size()
         self._ensure_surfaces(width, height)
 
-        self.world_surface.fill(SPACE)
+        self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
         Stars.draw(self.world_surface, self.stars, width, height, player.orientation)
         NearestWorld.draw_surface(self.world_surface, width, height, environment, player)

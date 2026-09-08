@@ -1,7 +1,7 @@
 """Deep space background rendering."""
 
 import pygame
-from .Constants import SPACE, CONSOLE_TOP
+from .Constants import SPACE_COLOR, CONSOLE_TOP
 
 
 class DeepSpace:
@@ -17,4 +17,4 @@ class DeepSpace:
             h: Window height
         """
         view_h = int(h * CONSOLE_TOP)
-        surface.fill(SPACE, (0, 0, w, view_h))
+        surface.fill(SPACE_COLOR, (0, 0, w, view_h))

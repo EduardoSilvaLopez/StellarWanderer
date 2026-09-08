@@ -4,7 +4,7 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_LENGTH, LASER
+from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_LENGTH, LASER_COLOR
 
 
 class Laser:
@@ -87,7 +87,7 @@ class Laser:
         e_tl = corner(end_x, end_y, end_z, -1, 1)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
-        GL.glColor3ub(*LASER)
+        GL.glColor3ub(*LASER_COLOR)
         GL.glBegin(GL.GL_QUADS)
         for a, b, c, d in (
             (s_tr, s_br, e_br, e_tr),  # right face

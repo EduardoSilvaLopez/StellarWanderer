@@ -3,8 +3,8 @@
 import math
 import pygame
 from .Constants import (
-    CONSOLE_TOP, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
-    HULL, HULL_DARK, HULL_EDGE, STRUT, CONSOLE, CONSOLE_EDGE,
+    CONSOLE_EDGE_COLOR, CONSOLE_TOP, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
+    HULL_COLOR, HULL_DARK, HULL_EDGE_COLOR, STRUT, CONSOLE, CONSOLE_EDGE_COLOR,
     ACCENT, ACCENT_DIM, AMBER, READOUT_BG
 )
 
@@ -38,16 +38,16 @@ class Cockpit:
         bottom_inset = w * CANOPY_BOTTOM_INSET
 
         # Top rail.
-        pygame.draw.rect(surface, HULL, (0, 0, w, top))
-        pygame.draw.line(surface, HULL_EDGE, (0, top - 1), (w, top - 1), 2)
+        pygame.draw.rect(surface, HULL_COLOR, (0, 0, w, top))
+        pygame.draw.line(surface, HULL_EDGE_COLOR, (0, top - 1), (w, top - 1), 2)
 
         # A-pillars, angling inward as they rise.
         left = [(0, 0), (top_inset, top), (bottom_inset, bottom), (0, bottom)]
         right = [(w, 0), (w - top_inset, top), (w - bottom_inset, bottom), (w, bottom)]
         for pillar in (left, right):
             points = [(int(x), int(y)) for x, y in pillar]
-            pygame.draw.polygon(surface, HULL, points)
-            pygame.draw.lines(surface, HULL_EDGE, False, points[1:3], 2)
+            pygame.draw.polygon(surface, HULL_COLOR, points)
+            pygame.draw.lines(surface, HULL_EDGE_COLOR, False, points[1:3], 2)
 
         # Two vertical struts splitting the windshield into three panes.
         for frac in (1 / 3, 2 / 3):
@@ -59,7 +59,7 @@ class Cockpit:
                 (int(x_bottom + half), bottom), (int(x_bottom - half), bottom),
             ]
             pygame.draw.polygon(surface, STRUT, strut)
-            pygame.draw.line(surface, HULL_EDGE, strut[0], strut[3], 1)
+            pygame.draw.line(surface, HULL_EDGE_COLOR, strut[0], strut[3], 1)
 
     @staticmethod
     def draw_console(surface, fonts, w, h, player):
@@ -68,7 +68,7 @@ class Cockpit:
         height = h - top
 
         pygame.draw.rect(surface, CONSOLE, (0, top, w, height))
-        pygame.draw.line(surface, CONSOLE_EDGE, (0, top), (w, top), 2)
+        pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (0, top), (w, top), 2)
         # Shadowed lip under the windshield, so the console reads as tilted away.
         pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))
 
@@ -87,7 +87,7 @@ class Cockpit:
         # Calculate altitude fraction (0-1) based on player position
         from Player import Player
         max_altitude = Player.MAX_ALTITUDE
-        min_altitude = Player.ship.HEIGHT
+        min_altitude = player.ship.HEIGHT
         altitude_range = max_altitude - min_altitude
         altitude_fraction = (player.position.y - min_altitude) / altitude_range
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
@@ -96,7 +96,7 @@ class Cockpit:
         pygame.draw.rect(
             surface, ACCENT, (cluster_left, cluster_top + bar_h - filled, bar_w, filled)
         )
-        pygame.draw.rect(surface, CONSOLE_EDGE, (cluster_left, cluster_top, bar_w, bar_h), 2)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, (cluster_left, cluster_top, bar_w, bar_h), 2)
 
         # Altitude label
         alt_label = label_font.render('ALT', True, ACCENT_DIM)
@@ -116,7 +116,7 @@ class Cockpit:
         mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
         mfd.center = (w // 2, top + int(height * 0.44))
         pygame.draw.rect(surface, READOUT_BG, mfd)
-        pygame.draw.rect(surface, CONSOLE_EDGE, mfd, 2)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, mfd, 2)
 
         nav = fonts.render_to_fit(
             'NAV — NO CONTACT', ACCENT, mfd.width - 12, max(9, int(h * 0.017))
@@ -127,7 +127,7 @@ class Cockpit:
         grid = mfd.inflate(-8, 0)
         grid.top = mfd.top + nav.get_height() + 9
         grid.height = mfd.bottom - 5 - grid.top
-        pygame.draw.line(surface, CONSOLE_EDGE, (grid.left, grid.top - 4),
+        pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (grid.left, grid.top - 4),
                          (grid.right, grid.top - 4), 1)
         for i in range(1, 5):
             y = grid.top + grid.height * i // 5
@@ -147,7 +147,7 @@ class Cockpit:
             pygame.draw.rect(
                 surface, ACCENT, (x, bar_top + bar_h - filled, bar_w, filled)
             )
-            pygame.draw.rect(surface, CONSOLE_EDGE, (x, bar_top, bar_w, bar_h), 1)
+            pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, (x, bar_top, bar_w, bar_h), 1)
 
         # Indicator lights along the bottom.
         light = max(4, int(height * 0.045))
@@ -185,7 +185,7 @@ class Cockpit:
 
         pygame.draw.rect(surface, HULL_DARK, panel.inflate(6, 6))
         pygame.draw.rect(surface, READOUT_BG, panel)
-        pygame.draw.rect(surface, CONSOLE_EDGE, panel, 2)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, panel, 2)
 
         surface.blit(label, (panel.left + pad, panel.top + pad))
         surface.blit(rate, rate.get_rect(topright=(panel.right - pad, panel.top + pad)))
