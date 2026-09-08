@@ -93,7 +93,7 @@ def main():
                 1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),
                 1 if keys[pygame.K_w] else (-1 if keys[pygame.K_s] else 0)
             )
-        player.firing = keys[pygame.K_SPACE]
+        player.ship.laser.firing = keys[pygame.K_SPACE]
 
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
         player.date_time = Player.EPOCH + timedelta(seconds=elapsed)

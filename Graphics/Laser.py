@@ -7,7 +7,7 @@ from OpenGL import GL, GLU
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_LENGTH, LASER
 
 
-class OpenGLLaser:
+class Laser:
     """Render the laser beam using the OpenGL depth buffer for occlusion."""
 
     @staticmethod
@@ -17,7 +17,7 @@ class OpenGLLaser:
         Laser is a straight line from player position extending 500 meters
         forward along the ship's heading, depth-tested against rocks/ground.
         """
-        if not player.firing:
+        if not player.ship.laser.firing:
             return
 
         view_height = int(height * CONSOLE_TOP)

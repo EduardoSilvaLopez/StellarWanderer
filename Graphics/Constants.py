@@ -2,7 +2,7 @@
 
 # Color palette
 SPACE = (8, 10, 24)
-PLANET_GRAY = (96, 96, 96)
+PLANET_GRAY = (32, 32, 32)
 PLANET_HORIZON = (150, 150, 150)
 HULL = (38, 42, 55)
 HULL_DARK = (23, 26, 36)

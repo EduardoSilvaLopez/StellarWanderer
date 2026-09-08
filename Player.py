@@ -2,19 +2,14 @@ from cmath import pi
 import datetime
 import math
 from Galaxies.Km2 import Km2
-from Galaxies.World import World
+from Spaceships.Ship import Ship
 
 class Player:
     singleton = None
     
     # Altitude boundaries (in meters)
-    MIN_ALTITUDE = 10
     MAX_ALTITUDE = 20000
     # Base altitude change rate: 1 meter per second at time scale 1
-    BASE_ALTITUDE_CHANGE_RATE = 1  # meters per second
-    BASE_LONGITUDE_CHANGE_RATE = 10  # meters per second
-    BASE_LATITUDE_CHANGE_RATE = 10  # meters per second
-    ROTATION_RATE = 10  # degrees per game second
 
     # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
     EPOCH = datetime.datetime(500, 1, 1)
@@ -26,7 +21,10 @@ class Player:
         self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
         self.time_scale = 1  # Default time scale
         self.orientation = 0.0  # Degrees clockwise from north
-        self.firing = False  # Laser firing (SPACE held)
+
+        self.ship = Ship()
+        self.ship.laser.firing = False  # Laser firing (SPACE held)
+
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
         self.position.Km2 = None
         self.position.x = 0
@@ -63,7 +61,7 @@ class Player:
     def update_orientation(self, delta_time, counterclockwise, clockwise):
         """Rotate the ship using game seconds elapsed since the last frame."""
         direction = clockwise - counterclockwise
-        self.orientation = (self.orientation + direction * self.ROTATION_RATE * delta_time) % 360
+        self.orientation = (self.orientation + direction * self.ship.ROTATION_SPEED * delta_time) % 360
 
     def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
@@ -92,7 +90,7 @@ class Player:
 
         # Update longitude, east to west of viceversa crossing the anti-meridian.
         if longitude_change != 0:
-            change_in_mts = longitude_change * self.BASE_LONGITUDE_CHANGE_RATE * delta_time
+            change_in_mts = longitude_change * self.ship.RIGHT_LEFT_SPEED * delta_time
             self.position.x += change_in_mts
 
             if self.position.x < -pi * self.position.Km2.parent_world.radius:
@@ -102,16 +100,16 @@ class Player:
 
         # Update altitude, clamp between MIN and MAX
         if altitude_change != 0:
-            change_in_mts = altitude_change * self.BASE_ALTITUDE_CHANGE_RATE * delta_time
+            change_in_mts = altitude_change * self.ship.UP_DOWN_SPEED * delta_time
             
             self.position.y = max(
-                self.MIN_ALTITUDE, 
+                self.ship.HEIGHT, 
                 min(self.MAX_ALTITUDE, self.position.y + change_in_mts)
             )
 
         # Update latitude, clamping between the north and south poles.
         if latitude_change != 0:
-            change_in_mts = latitude_change * self.BASE_LATITUDE_CHANGE_RATE * delta_time
+            change_in_mts = latitude_change * self.ship.FORWARD_BACKWARD_SPEED * delta_time
             self.position.z += change_in_mts
 
             self.position.z = max(

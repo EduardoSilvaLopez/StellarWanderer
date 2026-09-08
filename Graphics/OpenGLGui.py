@@ -7,8 +7,8 @@ from .Constants import SPACE
 from .Cockpit import Cockpit
 from .DeepSpace import DeepSpace
 from .NearestWorld import NearestWorld
-from .OpenGLRocks import OpenGLRocks
-from .OpenGLLaser import OpenGLLaser
+from .Rocks import Rocks
+from .Laser import Laser
 from .Stars import Stars
 
 
@@ -48,8 +48,8 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.world_surface, self.world_texture)
-        OpenGLRocks.draw(width, height, player, self._rocks(environment, player))
-        OpenGLLaser.draw(width, height, player)
+        Rocks.draw(width, height, player, self._rocks(environment, player))
+        Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
 

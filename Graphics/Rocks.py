@@ -7,7 +7,7 @@ from OpenGL import GL, GLU
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
 
 
-class OpenGLRocks:
+class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
     @staticmethod
@@ -41,10 +41,10 @@ class OpenGLRocks:
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)
-        OpenGLRocks._draw_ground(player)
+        Rocks._draw_ground(player)
 
         for rock in rocks:
-            OpenGLRocks._draw_rock(rock)
+            Rocks._draw_rock(rock)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)

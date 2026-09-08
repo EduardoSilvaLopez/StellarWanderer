@@ -87,7 +87,7 @@ class Cockpit:
         # Calculate altitude fraction (0-1) based on player position
         from Player import Player
         max_altitude = Player.MAX_ALTITUDE
-        min_altitude = Player.MIN_ALTITUDE
+        min_altitude = Player.ship.HEIGHT
         altitude_range = max_altitude - min_altitude
         altitude_fraction = (player.position.y - min_altitude) / altitude_range
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
