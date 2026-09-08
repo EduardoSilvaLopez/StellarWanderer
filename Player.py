@@ -22,7 +22,7 @@ class Player:
         self.time_scale = 1  # Default time scale
         self.orientation = 0.0  # Degrees clockwise from north
 
-        self.ship = Ship()
+        self.ship = Ship(self)
         self.ship.laser.firing = False  # Laser firing (SPACE held)
 
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes

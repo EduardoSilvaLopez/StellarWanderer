@@ -32,4 +32,3 @@ import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
-LASER_LENGTH = 500  # metres

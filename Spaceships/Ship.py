@@ -8,5 +8,6 @@ class Ship:
     FORWARD_BACKWARD_SPEED = 10  # meters per second
     ROTATION_SPEED = 10  # degrees per game second
 
-    def __init__(self):
-        self.laser = Laser()
+    def __init__(self, owner):
+        self.owner = owner  # Reference to the person who owns this ship
+        self.laser = Laser(self)

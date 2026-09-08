@@ -4,7 +4,7 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_LENGTH, LASER_COLOR
+from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
 
 
 class Laser:
@@ -39,21 +39,8 @@ class Laser:
         GL.glScalef(1.0, 1.0, -1.0)
         GL.glTranslatef(-player.position.x, -player.position.y, -player.position.z)
 
-        # Compute laser endpoint: forward vector is (sin(θ), 0, cos(θ))
-        orientation = math.radians(player.orientation)
-        forward_x = math.sin(orientation)
-        forward_z = math.cos(orientation)
-
-        # Offset start point slightly ahead of camera to avoid culling
-        start_x = player.position.x + forward_x * 5.0
-        start_y = player.position.y - 5.0  # slightly below camera to avoid z-fighting with cockpit
-        start_z = player.position.z + forward_z * 5.0
-
-        end_x = player.position.x + LASER_LENGTH * forward_x
-        end_y = player.position.y
-        end_z = player.position.z + LASER_LENGTH * forward_z
-
         # Perpendicular vector (right): rotate forward 90° in XZ plane
+        orientation = math.radians(player.orientation)
         right_x = math.cos(orientation)
         right_z = -math.sin(orientation)
 
@@ -77,14 +64,14 @@ class Laser:
                 cz + right_z * half_size * right_sign,
             )
 
-        s_tr = corner(start_x, start_y, start_z, 1, 1)
-        s_br = corner(start_x, start_y, start_z, 1, -1)
-        s_bl = corner(start_x, start_y, start_z, -1, -1)
-        s_tl = corner(start_x, start_y, start_z, -1, 1)
-        e_tr = corner(end_x, end_y, end_z, 1, 1)
-        e_br = corner(end_x, end_y, end_z, 1, -1)
-        e_bl = corner(end_x, end_y, end_z, -1, -1)
-        e_tl = corner(end_x, end_y, end_z, -1, 1)
+        s_tr = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, 1)
+        s_br = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, -1)
+        s_bl = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, -1, -1)
+        s_tl = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, -1, 1)
+        e_tr = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, 1, 1)
+        e_br = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, 1, -1)
+        e_bl = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, -1, -1)
+        e_tl = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, -1, 1)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glColor3ub(*LASER_COLOR)
