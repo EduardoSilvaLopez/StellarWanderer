@@ -70,6 +70,8 @@ def main():
                     Savefile.save()
                 elif event.key == pygame.K_F6:
                     Savefile.load()
+                    game_environment = GameEnvironment.singleton
+                    player = Player.singleton
                     elapsed = (Player.singleton.date_time - Player.EPOCH).total_seconds()
                         # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
             elif event.type == pygame.VIDEORESIZE:

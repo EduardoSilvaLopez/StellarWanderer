@@ -11,7 +11,9 @@ class Savefile:
 
     @staticmethod
     def load():
-        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.'''
+        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
+        
+        WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
         savefiles = glob.glob('Savefiles/Savefile *.json')
         
         if not savefiles:
@@ -50,7 +52,7 @@ class Savefile:
                     )
         GameEnvironment.singleton.current_world.ensure_surroundings(load_object['player']['Km2.Longitude'], load_object['player']['Km2.Latitude'])
 
-        player = Player.singleton     
+        player = Player()
         player.date_time = datetime.strptime(load_object['player']['dateTime'], '%Y-%m-%d %H:%M:%S.%f')
         player.time_scale = load_object['player']['timeScale']
         player.orientation = load_object['player'].get('orientation', 0.0)
@@ -58,6 +60,7 @@ class Savefile:
         player.position.y = load_object['player']['y']
         player.position.z = load_object['player']['z']
         player.position.Km2 = player.find_km2_in(GameEnvironment.singleton.current_world)
+        Player.singleton = player
 
     @staticmethod
     def save():
