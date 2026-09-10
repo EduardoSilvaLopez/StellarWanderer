@@ -75,7 +75,7 @@ class Rocks:
         half = rock.size / 2.0
         x0, x1 = rock.x - half, rock.x + half
         z0, z1 = rock.z - half, rock.z + half
-        y0, y1 = 0.0, rock.size
+        y0, y1 = rock.y - half, rock.y + half
         base = rock.color
         top = tuple(max(0, value - 50) for value in base)
         side = tuple(max(0, value - 25) for value in base)

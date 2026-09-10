@@ -38,7 +38,7 @@ class Savefile:
         with open(latest_file, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
 
-        GameEnvironment.singleton.galaxy = Galaxy(load_object['environment']['GalacticSeed'])
+        GameEnvironment.singleton = GameEnvironment(load_object['environment']['GalacticSeed'])
         print("Loaded seed: " + str(GameEnvironment.singleton.galaxy.seed))
 
         GameEnvironment.singleton.current_world = GameEnvironment.singleton.galaxy.add_stellar_system(

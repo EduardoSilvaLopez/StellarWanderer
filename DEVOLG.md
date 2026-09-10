@@ -14,7 +14,14 @@ Introducing this log, previous version is the OpenOffice Write document "Vission
 
 ### 2026-09-08 (4/7)
 
-18:30 - 20:15
+Laser logic moved to its own object.
+
+### 2026-09-09 (5/7)
+
+Calculate real end of the laser, so lasers hit rocks.
+The rock is hit and its temperature has risen... but it does not show. Also, not saving the increased temp yet.
+
+### 2026-09-10 (6/7) 10:00 - 11:45
 
 
 

@@ -50,6 +50,7 @@ def main():
     print("Give the galactic Seed: ")
     galacticSeed = 1 # galacticSeed = input()
     game_environment = GameEnvironment(galacticSeed)
+    game_environment.generate_default()
     player = Player().spawn_in_environment(game_environment)
     gui = OpenGLGui()
     
@@ -95,6 +96,8 @@ def main():
             )
         if (keys[pygame.K_SPACE]):
             player.ship.laser.fire()
+            if (player.ship.laser.hitting_rock):
+                player.ship.laser.hitting_rock.increase_temperature(dt * player.time_scale)
         elif (player.ship.laser.firing):
             player.ship.laser.cease_fire()
 
