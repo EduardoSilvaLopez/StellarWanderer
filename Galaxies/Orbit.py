@@ -8,6 +8,11 @@ class Orbit:
         self.distance_from_star = distance_from_star
         self.seed = (self.distance_from_star + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
         self.worlds = []
+        self.is_altered = False
+
+    def set_altered(self):
+        self.is_altered = True
+        self.parent_stellar_system.set_altered()
 
     def add_world(self, degrees_in_orbit):
         new_world = World(self, degrees_in_orbit)

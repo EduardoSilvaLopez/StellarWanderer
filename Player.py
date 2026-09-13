@@ -12,13 +12,11 @@ class Player:
     # Base altitude change rate: 1 meter per second at time scale 1
 
     # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
-    EPOCH = datetime.datetime(500, 1, 1)
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
 
     def __init__(self):
-        self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
         self.time_scale = 1  # Default time scale
         self.orientation = 0.0  # Degrees clockwise from north
 

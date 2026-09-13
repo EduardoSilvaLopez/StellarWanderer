@@ -11,6 +11,11 @@ class StellarSystem:
         self.z = z
         self.seed = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
         self.orbits = []
+        self.is_altered = False
+
+    def set_altered(self):
+        self.is_altered = True
+        self.parent_galaxy.set_altered()
 
     def add_orbit(self, distance_from_star):
         new_orbit = Orbit(self, distance_from_star)

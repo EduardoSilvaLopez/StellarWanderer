@@ -16,6 +16,11 @@ class World:
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         self.Km2s = []
+        self.is_altered = False
+
+    def set_altered(self):
+        self.is_altered = True
+        self.parent_orbit.set_altered()
 
     def add_Km2(self, longitude, latitude):
         new_Km2 = Km2(self, longitude, latitude)

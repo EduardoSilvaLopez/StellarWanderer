@@ -32,7 +32,7 @@ STAR_SEED = 20270101
 
 # Altitude change control
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - Player.EPOCH).total_seconds() # datetime tops out at year 9999;
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - GameEnvironment.EPOCH).total_seconds() # datetime tops out at year 9999;
 
 def main():
     pygame.init()
@@ -72,7 +72,7 @@ def main():
                     Savefile.load()
                     game_environment = GameEnvironment.singleton
                     player = Player.singleton
-                    elapsed = (Player.singleton.date_time - Player.EPOCH).total_seconds()
+                    elapsed = (GameEnvironment.singleton.date_time - GameEnvironment.EPOCH).total_seconds()
                         # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
@@ -104,7 +104,7 @@ def main():
             player.ship.laser.cease_fire()
 
         elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
-        player.date_time = Player.EPOCH + timedelta(seconds=elapsed)
+        GameEnvironment.singleton.date_time = GameEnvironment.EPOCH + timedelta(seconds=elapsed)
 
         gui.draw(screen, fonts, game_environment, player)
         pygame.display.flip()

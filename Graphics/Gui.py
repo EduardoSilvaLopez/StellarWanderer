@@ -45,7 +45,7 @@ class Gui:
         NearestWorld.draw(surface, w, h, environment, player)
 
         # Draw cockpit frame and instruments
-        Cockpit.draw(surface, fonts, w, h, player, player.date_time, player.time_scale)
+        Cockpit.draw(surface, fonts, w, h, player, environment.date_time, player.time_scale)
 
 
 def draw(surface, fonts, environment, player):

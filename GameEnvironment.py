@@ -1,9 +1,13 @@
+import datetime
 from Galaxies.Galaxy import Galaxy
 
 class GameEnvironment:
+    EPOCH = datetime.datetime(500, 1, 1)
+
     singleton = None
 
     def __init__(self, galactic_seed):
+        self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
         self.galaxy = Galaxy(galactic_seed)
         self.current_world = None
         GameEnvironment.singleton = self

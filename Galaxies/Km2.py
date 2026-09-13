@@ -13,10 +13,16 @@ class Km2:
         self.seed = (self.longitude + self.latitude + self.parent_world.seed) % Galaxies.Constants.SEEDS_SCALING
 
         my_random = random.Random(self.seed)
-        rocksCount = 1 # my_random.gauss(100, 20)
+        rocksCount = my_random.gauss(50, 10)
         self.rocks = []
         for i in range(int(rocksCount)):
             self.add_rock(longitude + my_random.randint(0, 1000), latitude + my_random.randint(0, 1000))
+
+        self.is_altered = False
+
+    def set_altered(self):
+        self.is_altered = True
+        self.parent_world.set_altered()
 
     def add_rock(self, longitude, latitude):
         newRock = Rock(self, longitude, latitude)

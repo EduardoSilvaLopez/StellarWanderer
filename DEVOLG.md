@@ -23,7 +23,9 @@ The rock is hit and its temperature has risen... but it does not show. Also, not
 
 ### 2026-09-10 (6/7) 10:00 - 11:45
 
+### 2026-09-13 (7/7) 15:30 - 17:15
 
+Refactor "alterations" to include the datetime.
 
 ## ToDo
 

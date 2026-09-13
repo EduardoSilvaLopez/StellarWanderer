@@ -39,7 +39,7 @@ class OpenGLGui:
             width,
             height,
             player,
-            player.date_time,
+            environment.date_time,
             player.time_scale,
         )
 
