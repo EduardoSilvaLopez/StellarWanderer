@@ -4,6 +4,8 @@ import glob
 from datetime import datetime
 
 from  Galaxies.Galaxy import Galaxy
+from  Galaxies.World import World
+from  Galaxies.Km2 import Km2
 from GameEnvironment import GameEnvironment
 from Player import Player
 
@@ -40,7 +42,7 @@ class Savefile:
         with open(latest_file, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
 
-        GameEnvironment.singleton = GameEnvironment(load_object['environment']['galactic_seed'])
+        GameEnvironment.singleton = GameEnvironment(load_object['environment']['galactic_seed'], load_object['environment']['galaxy_alterations'])
         print("Loaded seed: " + str(GameEnvironment.singleton.galaxy.seed))
 
         GameEnvironment.singleton.current_world = GameEnvironment.singleton.galaxy.add_stellar_system(
@@ -51,12 +53,7 @@ class Savefile:
                     load_object['player']['world.degrees_in_orbit']
                     )
         GameEnvironment.singleton.current_world.ensure_surroundings(load_object['player']['km2.longitude'], load_object['player']['km2.latitude'])
-
         GameEnvironment.singleton.date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
-
-        # Load and apply alterations:
-        GameEnvironment.singleton.saved_alterations = load_object['environment']['galaxy_alterations']
-        # ESIHERE: Iterate the environment (not the alterations) and seek for changes to be applied.
 
         player = Player()
         player.time_scale = load_object['player']['time_scale']
@@ -67,44 +64,20 @@ class Savefile:
         player.position.Km2 = player.find_km2_in(GameEnvironment.singleton.current_world)
         Player.singleton = player
 
+        # Apply the alterations in the surroundings of the player.
+        GameEnvironment.singleton.saved_alterations = load_object['environment']['galaxy_alterations']
+
     @staticmethod
     def save():
         '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
         environment = GameEnvironment.singleton
         player = Player.singleton
 
-        galaxy_alterations = dict()
-        if (environment.galaxy.is_altered):
-            for system in environment.galaxy.stellar_systems:
-                if not system.is_altered:
-                    continue
-                system_dic = dict()
-                for orbit in system.orbits:
-                    if not orbit.is_altered:
-                        continue
-                    orbit_dic = dict()
-                    for world in orbit.worlds:
-                        if not world.is_altered:
-                            continue
-                        world_dic = dict()
-                        for km2 in world.Km2s:
-                            if not km2.is_altered:
-                                continue
-                            km2dic = dict()
-                            for rock in km2.rocks:
-                                if not rock.is_altered:
-                                    continue
-                                km2dic[str(rock.x) + ' ' + str(rock.z)] = rock.get_alterations()
-                            world_dic[str(km2.longitude) + ' ' + str(km2.latitude)] = km2dic
-                        orbit_dic[world.degrees_in_orbit] = world_dic
-                    system_dic[orbit.distance_from_star] = orbit_dic
-                galaxy_alterations[str(system.x) + ' ' + str(system.y) + ' ' + str(system.z)] = system_dic
-
         data = {
             'environment': {
                 'galactic_seed': environment.galaxy.seed,
                 'date_time': str(environment.date_time),
-                'galaxy_alterations': galaxy_alterations
+                'galaxy_alterations': GameEnvironment.singleton.galaxy.get_alterations()
             }
             , 'player': {
                 'time_scale': player.time_scale,

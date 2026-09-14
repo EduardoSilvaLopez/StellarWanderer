@@ -6,9 +6,9 @@ class GameEnvironment:
 
     singleton = None
 
-    def __init__(self, galactic_seed):
+    def __init__(self, galactic_seed, saved_alterations):
         self.date_time = datetime.datetime(500, 1, 1)  # Default starting date and time
-        self.galaxy = Galaxy(galactic_seed)
+        self.galaxy = Galaxy(galactic_seed, saved_alterations)
         self.current_world = None
         GameEnvironment.singleton = self
 

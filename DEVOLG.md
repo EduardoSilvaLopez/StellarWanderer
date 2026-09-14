@@ -26,6 +26,12 @@ The rock is hit and its temperature has risen... but it does not show. Also, not
 ### 2026-09-13 (7/7) 15:30 - 17:15
 
 Refactor "alterations" to include the datetime.
+Saved and loaded the alterations. This works BUT applying afterwards, does not.
+Stuck there in a circular import. And ugly code around it. World.ensure_surroundings.
+
+### 2026-09-14 (1/8) 13:00 - 14:45
+
+
 
 ## ToDo
 
