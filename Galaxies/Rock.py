@@ -9,7 +9,7 @@ class Rock:
         my_random = random.Random(parent_Km2.seed + x + z)
         self.size = abs(my_random.gauss(0, 10))
         self.x = x
-        self.y = 0.5 * self.size
+        self.y = max(0.5 - abs(my_random.gauss(0, 0.1)), -0.5) * self.size
         self.z = z
         self.orientation = my_random.random() * 90 - 45
         self.initial_color = (32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32))

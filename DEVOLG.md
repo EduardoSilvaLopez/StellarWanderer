@@ -33,6 +33,12 @@ Stuck there in a circular import. And ugly code around it. World.ensure_surround
 
 Laser essentials look finished :)
 
+### 2026-09-15 (2/8) 11:15 - 13:15
+
+Rocks more lively (orientation, buried). Star and planet name.
+
+Laser cooling: new feature.
+
 ## ToDo
 
 - Show z coordinate, generate planet name, rock orientation and altitude.
