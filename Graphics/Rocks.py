@@ -73,21 +73,37 @@ class Rocks:
     @staticmethod
     def _draw_rock(rock):
         half = rock.size / 2.0
-        x0, x1 = rock.x - half, rock.x + half
-        z0, z1 = rock.z - half, rock.z + half
         y0, y1 = rock.y - half, rock.y + half
+
+        # Rocks are rotated around their own vertical (Y) axis by rock.orientation
+        # degrees, deviating from north (0 = unrotated, positive = clockwise) —
+        # the same convention used for the ship's forward vector.
+        orientation = math.radians(rock.orientation)
+        cos_o = math.cos(orientation)
+        sin_o = math.sin(orientation)
+
+        def rotated_corner(local_x, local_z):
+            world_x = rock.x + local_x * cos_o + local_z * sin_o
+            world_z = rock.z - local_x * sin_o + local_z * cos_o
+            return world_x, world_z
+
+        x0z0 = rotated_corner(-half, -half)
+        x1z0 = rotated_corner(half, -half)
+        x1z1 = rotated_corner(half, half)
+        x0z1 = rotated_corner(-half, half)
+
         base = rock.color
         top = tuple(max(0, value - 50) for value in base)
         side = tuple(max(0, value - 25) for value in base)
         bottom = tuple(max(0, value - 70) for value in base)
 
         faces = (
-            (top, ((x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1))),
-            (bottom, ((x0, y0, z1), (x1, y0, z1), (x1, y0, z0), (x0, y0, z0))),
-            (side, ((x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0))),
-            (side, ((x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1))),
-            (base, ((x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0))),
-            (base, ((x1, y0, z1), (x0, y0, z1), (x0, y1, z1), (x1, y1, z1))),
+            (top, ((x0z0[0], y1, x0z0[1]), (x1z0[0], y1, x1z0[1]), (x1z1[0], y1, x1z1[1]), (x0z1[0], y1, x0z1[1]))),
+            (bottom, ((x0z1[0], y0, x0z1[1]), (x1z1[0], y0, x1z1[1]), (x1z0[0], y0, x1z0[1]), (x0z0[0], y0, x0z0[1]))),
+            (side, ((x0z0[0], y0, x0z0[1]), (x0z1[0], y0, x0z1[1]), (x0z1[0], y1, x0z1[1]), (x0z0[0], y1, x0z0[1]))),
+            (side, ((x1z1[0], y0, x1z1[1]), (x1z0[0], y0, x1z0[1]), (x1z0[0], y1, x1z0[1]), (x1z1[0], y1, x1z1[1]))),
+            (base, ((x0z0[0], y0, x0z0[1]), (x1z0[0], y0, x1z0[1]), (x1z0[0], y1, x1z0[1]), (x0z0[0], y1, x0z0[1]))),
+            (base, ((x1z1[0], y0, x1z1[1]), (x0z1[0], y0, x0z1[1]), (x0z1[0], y1, x0z1[1]), (x1z1[0], y1, x1z1[1]))),
         )
 
         GL.glBegin(GL.GL_QUADS)

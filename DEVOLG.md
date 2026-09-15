@@ -35,7 +35,7 @@ Laser essentials look finished :)
 
 ## ToDo
 
-- Show z coordinate, generate planet name.
+- Show z coordinate, generate planet name, rock orientation and altitude.
 - Laser cooling.
 - Prompt for loading a file.
 - Set flagpoles: Proof of concept essentially finished.

@@ -103,21 +103,36 @@ class Laser:
         Returns the t-value (0 to 1) where the laser first enters the rock's bounding box,
         or None if no intersection occurs.
         """
-        # Define the cube's bounding box
-        # Note: rock.x and rock.z are at the CENTER of the rock in those dimensions
-        # rock.y is at the BOTTOM of the rock (y ranges from rock.y to rock.y + rock.size)
+        # Define the cube's bounding box in the rock's own local (unrotated) frame.
+        # Note: rock.x, rock.y and rock.z are all at the CENTER of the rock.
         half = rock.size / 2.0
-        box_min_x = rock.x - half
-        box_max_x = rock.x + half
-        box_min_y = rock.y
-        box_max_y = rock.y + rock.size
-        box_min_z = rock.z - half
-        box_max_z = rock.z + half
+        box_min_x = -half
+        box_max_x = half
+        box_min_y = rock.y - half
+        box_max_y = rock.y + half
+        box_min_z = -half
+        box_max_z = half
 
-        # Laser direction vector
-        dx = self.end_x - self.start_x
+        # Rocks are rotated around their own vertical (Y) axis by rock.orientation
+        # degrees, deviating from north (0 = unrotated, positive = clockwise) —
+        # the same convention used for the ship's forward vector. Transform the
+        # laser's start/end points into the rock's local frame before testing.
+        orientation = math.radians(rock.orientation)
+        cos_o = math.cos(orientation)
+        sin_o = math.sin(orientation)
+
+        def to_local_xz(world_x, world_z):
+            local_x = world_x - rock.x
+            local_z = world_z - rock.z
+            return (local_x * cos_o - local_z * sin_o, local_x * sin_o + local_z * cos_o)
+
+        start_x, start_z = to_local_xz(self.start_x, self.start_z)
+        end_x, end_z = to_local_xz(self.end_x, self.end_z)
+
+        # Laser direction vector (Y is unaffected by rotation around the Y axis)
+        dx = end_x - start_x
         dy = self.end_y - self.start_y
-        dz = self.end_z - self.start_z
+        dz = end_z - start_z
 
         # Use a parametric line equation: P(t) = start + t * direction, where t ∈ [0, 1]
         # Check intersection with the axis-aligned bounding box using the slab method
@@ -126,15 +141,15 @@ class Laser:
 
         # Check X axis
         if abs(dx) > 1e-9:  # Avoid division by zero
-            t1 = (box_min_x - self.start_x) / dx
-            t2 = (box_max_x - self.start_x) / dx
+            t1 = (box_min_x - start_x) / dx
+            t2 = (box_max_x - start_x) / dx
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
             # Ray is parallel to X axis; check if ray is within the box's X range
-            if self.start_x < box_min_x or self.start_x > box_max_x:
+            if start_x < box_min_x or start_x > box_max_x:
                 return None
 
         # Check Y axis
@@ -152,15 +167,15 @@ class Laser:
 
         # Check Z axis
         if abs(dz) > 1e-9:  # Avoid division by zero
-            t1 = (box_min_z - self.start_z) / dz
-            t2 = (box_max_z - self.start_z) / dz
+            t1 = (box_min_z - start_z) / dz
+            t2 = (box_max_z - start_z) / dz
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
             # Ray is parallel to Z axis; check if ray is within the box's Z range
-            if self.start_z < box_min_z or self.start_z > box_max_z:
+            if start_z < box_min_z or start_z > box_max_z:
                 return None
 
         # If t_min <= t_max, the line segment intersects the box
