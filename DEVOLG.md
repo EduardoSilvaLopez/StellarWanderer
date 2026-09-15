@@ -35,9 +35,11 @@ Laser essentials look finished :)
 
 ## ToDo
 
-- Laser.
+- Show z coordinate, generate planet name.
+- Laser cooling.
 - Prompt for loading a file.
 - Set flagpoles: Proof of concept essentially finished.
+- Stones have different orientations and altitudes.
 - Show orientation in the instruments.
 - https://github.com/obra/superpowers#how-it-works
 - Make and show the sun.

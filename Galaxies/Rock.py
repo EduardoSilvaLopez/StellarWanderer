@@ -11,6 +11,7 @@ class Rock:
         self.x = x
         self.y = 0.5 * self.size
         self.z = z
+        self.orientation = my_random.random() * 90 - 45
         self.initial_color = (32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32))
         self.temperature = 0.0
         self.adjust_color()

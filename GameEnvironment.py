@@ -14,8 +14,8 @@ class GameEnvironment:
 
     def generate_default(self):
         self.current_world = self.galaxy\
-            .add_stellar_system(0, 0, 0)\
-            .add_orbit(1000000)\
-            .add_world(0)
+            .add_stellar_system(26000, 0, 0)\
+            .add_orbit(150000000000)\
+            .add_world(180)
         print("Initial planet's radius: " + str(self.current_world.radius))
         self.current_world.add_Km2(0, 0) # by default

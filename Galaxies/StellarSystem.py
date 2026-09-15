@@ -1,3 +1,4 @@
+import random
 import Galaxies.Constants
 from Galaxies.Orbit import Orbit
 
@@ -10,6 +11,7 @@ class StellarSystem:
         self.y = y
         self.z = z
         self.seed = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
+        my_random = random.Random(self.seed)
         self.orbits = []
 
         self.is_altered = False
@@ -18,6 +20,8 @@ class StellarSystem:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
+
+        self.name = self.generate_name(my_random)
 
     def get_alterations_key(self):
         return str(self.x) + " " + str(self.y) + " " + str(self.z)
@@ -35,6 +39,23 @@ class StellarSystem:
         if alterations == {}:
             return None
         return alterations
+
+    def generate_name(self, my_random):
+        """Generate a random name for the world."""
+        vocals = "aeiouaeio" # repeating the most common.
+        consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
+        name = ""
+        for sylIdx in range(1, my_random.randint(3, 6)):
+            if (my_random.random() < 0.4):
+                name += my_random.choice(consonants)
+            name += my_random.choice(vocals)
+            if (my_random.random() < 0.4):
+                name += my_random.choice(consonants)
+
+        if (my_random.random() < 0.5):
+            name += "eia"
+
+        return name.capitalize()
 
     def add_orbit(self, distance_from_star):
         new_orbit = Orbit(self, distance_from_star, self.saved_alterations)

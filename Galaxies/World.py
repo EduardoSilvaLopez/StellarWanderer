@@ -25,6 +25,8 @@ class World:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
 
+        self.name = self.generate_name(my_random)
+
     def get_alterations_key(self):
         return str(self.degrees_in_orbit)
 
@@ -46,6 +48,20 @@ class World:
         new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
         self.Km2s.append(new_Km2)
         return new_Km2
+
+    def generate_name(self, my_random):
+        """Generate a random name for the world."""
+        vocals = "aeiouaeio" # repeating the most common.
+        consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
+        name = ""
+        for sylIdx in range(1, my_random.randint(3, 6)):
+            if (my_random.random() < 0.5):
+                name += my_random.choice(consonants)
+            name += my_random.choice(vocals)
+            if (my_random.random() < 0.5):
+                name += my_random.choice(consonants)
+        
+        return name.capitalize()
 
     def ensure_surroundings(self, longitude, latitude):
         """Ensure the surroundings of the player are generated."""

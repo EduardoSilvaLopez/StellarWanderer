@@ -73,6 +73,7 @@ class Cockpit:
         pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))
 
         label_font = fonts.get(max(9, int(h * 0.017)))
+        world_font = fonts.get(max(12, int(h * 0.024)))
 
         # Left cluster: altitude bar and position coordinates.
         cluster_left = int(w * 0.02)
@@ -102,15 +103,33 @@ class Cockpit:
         alt_label = label_font.render('ALT', True, ACCENT_DIM)
         surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 12)))
 
-        # Position coordinates (X and Z) displayed as numbers
+        # World name (displayed above coordinates)
         coord_x = cluster_left + bar_w + int(w * 0.035)
-        coord_y = cluster_top + int(height * 0.05)
+        world_y = cluster_top + int(height * 0.02)
 
-        x_text = label_font.render(f'X: {int(player.position.x)}', True, ACCENT)
-        z_text = label_font.render(f'Z: {int(player.position.z)}', True, ACCENT)
+        world_name = player.position.Km2.parent_world.name
+        star_name = player.position.Km2.parent_world.parent_orbit.parent_stellar_system.name
+        stellar_label = world_name + ", " + star_name + " System"
+        world_text = world_font.render(stellar_label, True, ACCENT)
+        surface.blit(world_text, (coord_x, world_y))
 
-        surface.blit(x_text, (coord_x, coord_y))
-        surface.blit(z_text, (coord_x, coord_y + int(height * 0.06)))
+        # Position coordinates displayed below world name
+        coord_y = world_y + world_text.get_height() + int(height * 0.04)
+        line_spacing = int(height * 0.06)
+
+        # Altitude (Y coordinate)
+        altitude_text = label_font.render(f'Altitude: {int(player.position.y)}', True, ACCENT)
+        surface.blit(altitude_text, (coord_x, coord_y))
+
+        # Longitude (X coordinate)
+        coord_y += line_spacing
+        longitude_text = label_font.render(f'Longitude: {int(player.position.x)}', True, ACCENT)
+        surface.blit(longitude_text, (coord_x, coord_y))
+
+        # Latitude (Z coordinate)
+        coord_y += line_spacing
+        latitude_text = label_font.render(f'Latitude: {int(player.position.z)}', True, ACCENT)
+        surface.blit(latitude_text, (coord_x, coord_y))
 
         # Centre multi-function display.
         mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))

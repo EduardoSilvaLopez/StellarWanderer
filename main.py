@@ -48,7 +48,7 @@ def main():
 
     # Create all seeds and random objects and calculate the initial planet's radius.
     print("Give the galactic Seed: ")
-    galacticSeed = 1 # galacticSeed = input()
+    galacticSeed = 2 # galacticSeed = input()
     game_environment = GameEnvironment(galacticSeed, None)
     game_environment.generate_default()
     player = Player().spawn_in_environment(game_environment)
