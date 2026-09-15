@@ -15,6 +15,7 @@ class Orbit:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
+            self.saved_alterations['date_time'] = saved_alterations['date_time']
 
     def get_alterations_key(self):
         return str(self.distance_from_star)

@@ -18,6 +18,7 @@ class Km2:
         if saved_alterations is not None and alteration_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alteration_key)
+            self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         my_random = random.Random(self.seed)
         rocksCount = my_random.gauss(50, 10)

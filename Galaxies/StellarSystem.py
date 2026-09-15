@@ -20,6 +20,7 @@ class StellarSystem:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
+            self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         self.name = self.generate_name(my_random)
 

@@ -22,6 +22,7 @@ class Rock:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations[alterations_key]
+            self.saved_alterations['date_time'] = saved_alterations['date_time']
 
             if ('temperature' in self.saved_alterations):
                 self.temperature = self.saved_alterations['temperature']

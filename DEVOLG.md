@@ -38,6 +38,9 @@ Laser essentials look finished :)
 Rocks more lively (orientation, buried). Star and planet name.
 
 Laser cooling: new feature.
+- Propagate the alterations_timestamp ? So that on re-create, it can be compared with Player's time.
+- The caller must be give the time difference? time_passed? Makes sense as external callers know the player, add because of it. Is somehow counter-intuitive.
+Pause at 12:15, resume 13:30 -14:30
 
 ## ToDo
 
