@@ -62,7 +62,8 @@ class Savefile:
                     )
         environment.current_world.ensure_surroundings(
             load_object['player']['km2.longitude'],
-            load_object['player']['km2.latitude']
+            load_object['player']['km2.latitude'],
+            game_date_time
             )
 
         player = Player()

@@ -21,26 +21,31 @@ Laser logic moved to its own object.
 Calculate real end of the laser, so lasers hit rocks.
 The rock is hit and its temperature has risen... but it does not show. Also, not saving the increased temp yet.
 
-### 2026-09-10 (6/7) 10:00 - 11:45
+### 2026-09-10 (6/7)
 
-### 2026-09-13 (7/7) 15:30 - 17:15
+### 2026-09-13 (7/7)
 
 Refactor "alterations" to include the datetime.
 Saved and loaded the alterations. This works BUT applying afterwards, does not.
 Stuck there in a circular import. And ugly code around it. World.ensure_surroundings.
 
-### 2026-09-14 (1/8) 13:00 - 14:45
+### 2026-09-14 (1/8)
 
 Laser essentials look finished :)
 
-### 2026-09-15 (2/8) 11:15 - 13:15
+### 2026-09-15 (2/8)
 
 Rocks more lively (orientation, buried). Star and planet name.
 
 Laser cooling: new feature.
 - Propagate the alterations_timestamp ? So that on re-create, it can be compared with Player's time.
 - The caller must be give the time difference? time_passed? Makes sense as external callers know the player, add because of it. Is somehow counter-intuitive.
-Pause at 12:15, resume 13:30 -14:30
+
+### 2026-09-16 (3/8) 15:15 - 17:15
+
+Laser cooling. Thoughts.
+- The moment of re-creation is clearly "add".
+- There is no "unload" yet. Later a queue, and special events when joining the queue? A queue of events sorted by time. "Update" as concept. There is an "apply saved alterations" (in the constructor) but then again an "update" to new dates.
 
 ## ToDo
 

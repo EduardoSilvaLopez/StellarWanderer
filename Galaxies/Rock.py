@@ -27,6 +27,7 @@ class Rock:
             if ('temperature' in self.saved_alterations):
                 self.temperature = self.saved_alterations['temperature']
                 self.adjust_color()
+        self.last_update = None
 
     def get_alterations_key(self):
         return str(self.x) + ' ' + str(self.z)
@@ -36,11 +37,18 @@ class Rock:
             self.is_altered = True
             self.parent_km2.set_altered()
 
-    def increase_temperature(self, delta_time):
+    def increase_temperature(self, game_date_time):
+        if self.last_update is None:
+            self.last_update = game_date_time
+            return
+
+        delta_time = (game_date_time - self.last_update).total_seconds()
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
         self.adjust_color()
+
         self.set_altered()
+        self.last_update = game_date_time
 
     def adjust_color(self):
         temperature_increase = int(sqrt(self.temperature))

@@ -45,7 +45,7 @@ class World:
             return None
         return alterations                    
 
-    def add_Km2(self, longitude, latitude):
+    def add_Km2(self, longitude, latitude, game_date_time):
         new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
         self.Km2s.append(new_Km2)
         return new_Km2
@@ -64,7 +64,7 @@ class World:
         
         return name.capitalize()
 
-    def ensure_surroundings(self, longitude, latitude):
+    def ensure_surroundings(self, longitude, latitude, player_date_time):
         """Ensure the surroundings of the player are generated."""
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS):
             for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS):
@@ -72,4 +72,4 @@ class World:
                 target_latitude = latitude + lat_delta * Km2.SIZE
 
                 if not any(km2.longitude == target_longitude and km2.latitude == target_latitude for km2 in self.Km2s):
-                    self.add_Km2(target_longitude, target_latitude)
+                    self.add_Km2(target_longitude, target_latitude, player_date_time)

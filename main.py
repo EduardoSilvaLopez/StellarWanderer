@@ -22,6 +22,8 @@ from GameEnvironment import GameEnvironment
 from Graphics.OpenGLGui import OpenGLGui
 from Graphics.Stars import Stars
 
+from Galaxies.Rock import Rock
+
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1280, 720)
 MIN_SIZE = (640, 400)
@@ -81,6 +83,8 @@ def main():
                 )
 
         dt = clock.tick(FPS) / 1000.0
+        elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
+        GameEnvironment.singleton.date_time = GameEnvironment.EPOCH + timedelta(seconds=elapsed)
 
         keys = pygame.key.get_pressed()
         player.update_orientation(
@@ -99,12 +103,9 @@ def main():
         if (keys[pygame.K_SPACE]):
             player.ship.laser.fire()
             if (player.ship.laser.hitting_rock):
-                player.ship.laser.hitting_rock.increase_temperature(dt * player.time_scale)
+                player.ship.laser.hitting_rock.increase_temperature(GameEnvironment.singleton.date_time)
         elif (player.ship.laser.firing):
             player.ship.laser.cease_fire()
-
-        elapsed = min(elapsed + dt * player.time_scale, MAX_ELAPSED)
-        GameEnvironment.singleton.date_time = GameEnvironment.EPOCH + timedelta(seconds=elapsed)
 
         gui.draw(screen, fonts, game_environment, player)
         pygame.display.flip()

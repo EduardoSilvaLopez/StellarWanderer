@@ -1,8 +1,8 @@
 from cmath import pi
-import datetime
 import math
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
+from GameEnvironment import GameEnvironment
 
 class Player:
     singleton = None
@@ -35,7 +35,7 @@ class Player:
 
     def spawn_in_environment(self, environment):
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.ensure_surroundings(0, 0)
+        environment.current_world.ensure_surroundings(0, 0, GameEnvironment.EPOCH)
         self.position.Km2 = environment.current_world.Km2s[0]
         self.position.x = self.position.Km2.longitude + 500
         self.position.y = 10
@@ -66,7 +66,11 @@ class Player:
         new_km2 = self.find_km2_in(self.position.Km2.parent_world)
         if new_km2 != self.position.Km2:
             self.position.Km2 = new_km2
-            self.position.Km2.parent_world.ensure_surroundings(self.position.Km2.longitude, self.position.Km2.latitude)
+            self.position.Km2.parent_world.ensure_surroundings(
+                self.position.Km2.longitude,
+                self.position.Km2.latitude,
+                GameEnvironment.singleton.date_time
+                )
 
     def update_coordinates(self, delta_time, longitude_change, altitude_change, latitude_change):
         """
