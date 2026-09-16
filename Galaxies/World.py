@@ -1,7 +1,3 @@
-import random
-import Galaxies.Constants
-from Galaxies.Km2 import Km2
-
 class World:
 
     EARTHLIKE_RADIUS_AVERAGE = 5000000
@@ -9,6 +5,8 @@ class World:
     SURROUNDINGS_RADIUS = 2
 
     def __init__(self, parent_orbit, degrees_in_orbit, saved_alterations):
+        import random
+        import Galaxies.Constants
         self.parent_orbit = parent_orbit
         self.degrees_in_orbit = degrees_in_orbit
         self.seed = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
@@ -46,6 +44,7 @@ class World:
         return alterations                    
 
     def add_Km2(self, longitude, latitude, game_date_time):
+        from Galaxies.Km2 import Km2
         new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
         self.Km2s.append(new_Km2)
         return new_Km2
@@ -66,6 +65,7 @@ class World:
 
     def ensure_surroundings(self, longitude, latitude, player_date_time):
         """Ensure the surroundings of the player are generated."""
+        from Galaxies.Km2 import Km2
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS):
             for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS):
                 target_longitude = longitude + lon_delta * Km2.SIZE
