@@ -33,9 +33,10 @@ class Player:
     def __str__(self):
         return f"Player in a world with radius {self.position.Km2.parent.radius}, altitude {self.position.y}, coordinates ({self.position.x}, {self.position.z})"
 
-    def spawn_in_environment(self, environment):
+    def spawn_in_environment(self, environment: GameEnvironment):
+        from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.ensure_surroundings(0, 0, GameEnvironment.EPOCH)
+        environment.current_world.update_surroundings(0, 0, GameEnvironment.EPOCH)
         self.position.Km2 = environment.current_world.Km2s[0]
         self.position.x = self.position.Km2.longitude + 500
         self.position.y = 10
@@ -61,12 +62,18 @@ class Player:
         direction = clockwise - counterclockwise
         self.orientation = (self.orientation + direction * self.ship.ROTATION_SPEED * delta_time) % 360
 
-    def update_position(self, delta_time, longitude_change, altitude_change, latitude_change):
+    def update_position(
+            self,
+            delta_time: float,
+            longitude_change: float,
+            altitude_change: float,
+            latitude_change: float
+            ):
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
         new_km2 = self.find_km2_in(self.position.Km2.parent_world)
         if new_km2 != self.position.Km2:
             self.position.Km2 = new_km2
-            self.position.Km2.parent_world.ensure_surroundings(
+            self.position.Km2.parent_world.update_surroundings(
                 self.position.Km2.longitude,
                 self.position.Km2.latitude,
                 GameEnvironment.singleton.date_time
@@ -132,4 +139,4 @@ class Player:
         if new_km2:
             return new_km2
         else:
-            raise Exception(f"Km2 at longitude {new_longitude} and latitude {new_latitude} not found in world. This should not happen if ensure_surroundings is called.")
+            raise Exception(f"Km2 at longitude {new_longitude} and latitude {new_latitude} not found in world. This should not happen if update_surroundings is called.")

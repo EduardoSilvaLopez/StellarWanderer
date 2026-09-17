@@ -41,11 +41,16 @@ Laser cooling: new feature.
 - Propagate the alterations_timestamp ? So that on re-create, it can be compared with Player's time.
 - The caller must be give the time difference? time_passed? Makes sense as external callers know the player, add because of it. Is somehow counter-intuitive.
 
-### 2026-09-16 (3/8) 15:15 - 17:15
+### 2026-09-16 (3/8)
 
 Laser cooling. Thoughts.
 - The moment of re-creation is clearly "add".
 - There is no "unload" yet. Later a queue, and special events when joining the queue? A queue of events sorted by time. "Update" as concept. There is an "apply saved alterations" (in the constructor) but then again an "update" to new dates.
+
+### 2026-09-17 (4/8) 11:30 - 12:15 + 17:30 - 
+
+Update queue works. Now we have not only to put new objects in, but take them out when they fall out of scope. Out of memory or out of update? Seems that out of update could be enough, out of memory means saving
+silently, which looks like something we do only when we abandon the world. A memory of 800.000.000 Km or more is however daunting. We could keep only the altered ones! Yep, that's the trick.
 
 ## ToDo
 

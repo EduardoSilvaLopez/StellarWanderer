@@ -1,12 +1,21 @@
+from __future__ import annotations
+
+import datetime
 import random
+from typing import List, TYPE_CHECKING
+
 import Galaxies.Constants
 from Galaxies.Rock import Rock
+from Updating.Updatable import Updatable
 
-class Km2:
+if TYPE_CHECKING:
+    from Galaxies.World import World
+
+class Km2(Updatable):
 
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
-    def __init__(self, parent_world, longitude, latitude, saved_alterations):
+    def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict):
         self.parent_world = parent_world
         self.longitude = longitude
         self.latitude = latitude
@@ -21,22 +30,17 @@ class Km2:
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         my_random = random.Random(self.seed)
-        rocksCount = my_random.gauss(50, 10)
-        self.rocks = []
+        rocksCount = max(my_random.gauss(50, 10), 0)
+        self.rocks: List[Rock] = []
         for i in range(int(rocksCount)):
-            self.add_rock(longitude + my_random.randint(0, 1000), latitude + my_random.randint(0, 1000))
-
-    def get_alterations_key(self):
-        return str(self.longitude) + " " + str(self.latitude)
+            self.add_rock(self.longitude + my_random.randint(0, 1000), self.latitude + my_random.randint(0, 1000))
 
     def set_altered(self):
         self.is_altered = True
         self.parent_world.set_altered()
 
-    def add_rock(self, longitude, latitude):
-        newRock = Rock(self, longitude, latitude, self.saved_alterations)
-        self.rocks.append(newRock)
-        return newRock
+    def get_alterations_key(self):
+        return str(self.longitude) + " " + str(self.latitude)
 
     def get_alterations(self):
         alterations = dict()
@@ -47,3 +51,19 @@ class Km2:
         if alterations == {}:
             return None
         return alterations
+
+    def get_next_update(self):
+        if self.next_update is None:
+            raise Exception("Next update of this Km2 is none, why was this asked?")
+        return self.next_update
+
+    def update(self, game_date_time: datetime):
+        # Km2 do not need updates (yet) but must pass the command to their children.
+        if (not self.is_altered): return
+        for rock in self.rocks:
+            rock.update(game_date_time)
+
+    def add_rock(self, longitude: int, latitude: int):
+        newRock = Rock(self, longitude, latitude)
+        self.rocks.append(newRock)
+        return newRock

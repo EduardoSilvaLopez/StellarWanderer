@@ -60,7 +60,7 @@ class Savefile:
                 ).add_world(
                     load_object['player']['world.degrees_in_orbit']
                     )
-        environment.current_world.ensure_surroundings(
+        environment.current_world.update_surroundings(
             load_object['player']['km2.longitude'],
             load_object['player']['km2.latitude'],
             game_date_time

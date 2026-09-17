@@ -131,6 +131,11 @@ class Cockpit:
         latitude_text = label_font.render(f'Latitude: {int(player.position.z)}', True, ACCENT)
         surface.blit(latitude_text, (coord_x, coord_y))
 
+        # Orientation compass: fixed "N" at top, needle rotates to show heading.
+        # Widest coordinate label reserves the space the text block actually needs.
+        text_right = coord_x + max(longitude_text.get_width(), latitude_text.get_width())
+        Cockpit.draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, text_right)
+
         # Centre multi-function display.
         mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
         mfd.center = (w // 2, top + int(height * 0.44))
@@ -174,6 +179,59 @@ class Cockpit:
             x = int(w * 0.06 + i * light * 2.2)
             color = AMBER if i in (3, 7) else ACCENT_DIM
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
+
+    @staticmethod
+    def draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, left_bound):
+        """Draw a north-up compass dial with a needle showing the player's heading.
+
+        The dial stays fixed with 'N' at the top; the needle rotates to point
+        in the direction the player is currently facing (player.orientation is
+        in degrees, clockwise from north). Sized to fit between left_bound
+        (the coordinate text block) and the centre multi-function display.
+        """
+        mfd_left = w // 2 - int(w * 0.24) // 2
+        margin = int(w * 0.015)
+        available = max(0, (mfd_left - margin) - (left_bound + margin))
+
+        radius = max(10, min(int(cluster_height * 0.32), available // 2))
+        center = (left_bound + margin + radius, cluster_top + cluster_height // 2)
+
+        pygame.draw.circle(surface, READOUT_BG, center, radius)
+        pygame.draw.circle(surface, CONSOLE_EDGE_COLOR, center, radius, 2)
+
+        # Cardinal tick marks (N/E/S/W), with N fixed at the top of the dial.
+        tick_font = fonts.get(max(9, int(h * 0.015)))
+        tick_len = max(3, int(radius * 0.16))
+        for label, angle_deg in (('N', 0), ('E', 90), ('S', 180), ('W', 270)):
+            angle = math.radians(angle_deg)
+            dx, dy = math.sin(angle), -math.cos(angle)
+            outer = (center[0] + dx * radius, center[1] + dy * radius)
+            inner = (center[0] + dx * (radius - tick_len), center[1] + dy * (radius - tick_len))
+            pygame.draw.line(surface, ACCENT_DIM, inner, outer, 2)
+
+            label_pos = (center[0] + dx * (radius + tick_len), center[1] + dy * (radius + tick_len))
+            label_surf = tick_font.render(label, True, ACCENT_DIM if label != 'N' else ACCENT)
+            surface.blit(label_surf, label_surf.get_rect(center=label_pos))
+
+        # Needle: points toward the player's current heading.
+        heading = math.radians(player.orientation)
+        dir_x, dir_y = math.sin(heading), -math.cos(heading)
+        perp_x, perp_y = math.cos(heading), math.sin(heading)
+
+        tip_len = radius * 0.75
+        tail_len = radius * 0.3
+        tip = (center[0] + dir_x * tip_len, center[1] + dir_y * tip_len)
+        tail = (center[0] - dir_x * tail_len, center[1] - dir_y * tail_len)
+        pygame.draw.line(surface, ACCENT, tail, tip, max(2, int(h * 0.004)))
+
+        # Arrowhead at the tip.
+        arrow_size = radius * 0.22
+        base = (tip[0] - dir_x * arrow_size, tip[1] - dir_y * arrow_size)
+        left = (base[0] + perp_x * arrow_size * 0.5, base[1] + perp_y * arrow_size * 0.5)
+        right = (base[0] - perp_x * arrow_size * 0.5, base[1] - perp_y * arrow_size * 0.5)
+        pygame.draw.polygon(surface, ACCENT, (tip, left, right))
+
+        pygame.draw.circle(surface, ACCENT, center, max(2, int(h * 0.006)))
 
     @staticmethod
     def draw_ship_clock(surface, fonts, date_time, time_scale, w, h):
