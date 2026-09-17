@@ -52,6 +52,8 @@ Laser cooling. Thoughts.
 Update queue works. Now we have not only to put new objects in, but take them out when they fall out of scope. Out of memory or out of update? Seems that out of update could be enough, out of memory means saving
 silently, which looks like something we do only when we abandon the world. A memory of 800.000.000 Km or more is however daunting. We could keep only the altered ones! Yep, that's the trick.
 
+Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
+
 ## ToDo
 
 - Show z coordinate, generate planet name, rock orientation and altitude.

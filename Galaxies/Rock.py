@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 class Rock(Updatable):
     TEMP_RISE_RATE = 1000.0 # Temp. raise for a 1 square cube rock in 1 second.
     TEMP_COOLING_PERIOD = 60 # Once every minute.
+    TEMP_COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature.
 
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int):
         import random
@@ -75,7 +76,7 @@ class Rock(Updatable):
         time_passed = game_date_time - last_updated_at
         periods_passed = time_passed.total_seconds() / self.TEMP_COOLING_PERIOD
 
-        self.temperature = (0.999 ** periods_passed) * self.temperature #TODO: remove magic number.
+        self.temperature = (self.TEMP_COOLING_FACTOR ** periods_passed) * self.temperature
         if self.temperature < 1.0:
             self.next_update = None
             self.temperature = 0
