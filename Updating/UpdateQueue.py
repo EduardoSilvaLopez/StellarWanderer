@@ -29,6 +29,10 @@ class _UpdateQueue:
         if updatable in self._queue:
             self._queue.remove(updatable)
 
+    def clear(self) -> None:
+        """Empty the queue. Used by reset of the game for some reason."""
+        self._queue.clear()
+
     def update(self, current_date_time: datetime) -> None:
         """Update all objects whose next update time has passed.
 

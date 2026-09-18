@@ -99,6 +99,7 @@ def main():
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:
+                    update_queue.clear()
                     Savefile.load_last()
                     game_environment = GameEnvironment.singleton
                     player = Player.singleton

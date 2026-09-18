@@ -21,7 +21,7 @@ class Updatable(ABC):
         pass
 
     @abstractmethod
-    def update(self) -> None:
+    def update(self, game_date_time: datetime) -> None:
         """Perform the update operation.
 
         This method is called by UpdateQueue when the current time has

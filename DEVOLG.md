@@ -55,7 +55,7 @@ silently, which looks like something we do only when we abandon the world. A mem
 Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
 - Did not test if they are SAVED even if war away.
 
-### 2026-09-18 (5/8), extra day, 11:00-
+### 2026-09-18 (5/8), extra day, 11:00-12:45, 16:00-
 
 Rocks have tilt, they are also more buried.
 
@@ -63,8 +63,6 @@ Unquere the Km2 far away but... no, do not take them from memory, this is unnece
 
 ## ToDo
 
-- Stones have different tilts.
-- Prompt for loading a file.
 - Laser cooling II: saved alterations > last alterations, so that it Km2 can be "dequeued" when far away.
 - World map.
 - https://github.com/obra/superpowers#how-it-works

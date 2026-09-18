@@ -29,6 +29,7 @@ class Rock(Updatable):
         self.adjust_color()
 
         self.is_altered = False
+        self.is_updating = False
         self.saved_alterations = None
         alterations_key = self.get_alterations_key()
         if parent_Km2.saved_alterations is not None and alterations_key in parent_Km2.saved_alterations:
@@ -42,32 +43,39 @@ class Rock(Updatable):
 
             self.next_update = self.saved_alterations['date_time'] + timedelta(seconds = 1)
             update_queue.add(self)
+            print("Altered rock loaded at ", self.temperature, "° . Queue size", len(update_queue._queue))
         else:
             self.next_update = None
 
-    def set_altered(self):
+    def set_altered(self) -> Rock:
         if not self.is_altered:
             self.is_altered = True
             self.parent_km2.set_altered()
+        return self
 
-    def get_alterations_key(self):
+    def get_alterations_key(self) -> str:
         return str(self.x) + ' ' + str(self.z)
 
-    def get_alterations(self):
+    def get_alterations(self) -> dict:
         '''The change, expressed as dictionary.'''
-        if (not self.is_altered):
+        if not self.is_altered:
             return dict()
 
         return {"temperature": self.temperature}
 
-    def get_next_update(self):
+    def get_next_update(self) -> datetime:
+        if not self.is_altered:
+            raise Exception("Not altered, why is this being asked?")
         if self.next_update is None:
-            raise Exception("Next update of this rock is none, why was this asked?")
+            raise Exception("Next update of this Km2 is none, why was this asked?")
         return self.next_update
 
-    def update(self, game_date_time: datetime):
-        if (not self.is_altered): return
+    def update(self, game_date_time: datetime) -> None:
+        if not self.is_altered: return
+        if not self.is_updating: return
+        self.is_updating = True
 
+        update_queue.remove(self)
         last_updated_at = self.next_update
         if (last_updated_at is None): # Re-created after loading.
             if (not self.saved_alterations): raise Exception("Altered but no alterations!?")
@@ -84,11 +92,29 @@ class Rock(Updatable):
         else:
             self.next_update = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
             update_queue.add(self)
-            print("Temperature reduced: " + str(self.temperature))
         self.adjust_color()
         self.set_altered()
 
-    def increase_temperature(self, delta_time: float):
+        print("Temperature reduced: ", str(self.temperature), ". Queue size: ", len(update_queue._queue))
+
+    def stop_updating(self) -> None:
+        if not self.is_altered: return
+        if not self.is_updating: return
+        self.is_updating = False
+
+        update_queue.remove(self)
+        self.next_update -= timedelta(seconds = self.TEMP_COOLING_PERIOD) # Means here "last update"
+        print("Rock won't be updated anymore, at ", self.temperature, "° . Queue size", len(update_queue._queue))
+
+    def restart_updating(self) -> None:
+        if not self.is_altered: return
+        if self.is_updating: return
+        self.is_updating = True
+
+        update_queue.add(self)
+        print("Rock will be updated again, at ", self.temperature, "° . Queue size", len(update_queue._queue))
+
+    def increase_temperature(self, delta_time: float) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
         self.adjust_color()
@@ -97,9 +123,14 @@ class Rock(Updatable):
         if self.next_update is None:
             # Set this object to be updated regularly
             from GameEnvironment import GameEnvironment
-            self.next_update = GameEnvironment.singleton.date_time + timedelta(seconds = 5) #TODO: remove magic number.
+            self.next_update = GameEnvironment.singleton.date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
             update_queue.add(self)
+            print("Temperature starts to rise. Queue size: ", len(update_queue._queue))
 
-    def adjust_color(self):
+        return self
+
+    def adjust_color(self) -> Rock:
         temperature_increase = int(sqrt(self.temperature))
         self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
+
+        return self

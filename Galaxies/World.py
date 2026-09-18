@@ -53,7 +53,7 @@ class World:
     def add_Km2(self, longitude: int, latitude: int, game_date_time: datetime):
         new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
         self.Km2s.append(new_Km2)
-        new_Km2.update(game_date_time)
+        # new_Km2.update(game_date_time)
         return new_Km2
 
     def generate_name(self, my_random: random.Random):
@@ -88,10 +88,18 @@ class World:
                     ):
                     # "Destruction" ring
                     if tgt_Km2 is None: continue
-                    if tgt_Km2.is_altered: continue
-                    tgt_Km2.parent_world = None
-                    self.Km2s.remove(tgt_Km2)
+
+                    if not tgt_Km2.is_altered:
+                        tgt_Km2.parent_world = None
+                        self.Km2s.remove(tgt_Km2)
+                        continue
+
+                    tgt_Km2.stop_updating()
                 else:
                     if tgt_Km2 is None:
                         self.add_Km2(target_longitude, target_latitude, game_date_time)
+                        continue
+                    if not tgt_Km2.is_altered: continue
+                    tgt_Km2.restart_updating()
+
         print("The surroundings have now ", len(self.Km2s), " Km2")
