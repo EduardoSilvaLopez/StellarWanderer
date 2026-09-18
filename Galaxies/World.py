@@ -33,14 +33,15 @@ class World:
 
         self.name = self.generate_name(my_random)
 
-    def get_alterations_key(self):
-        return str(self.degrees_in_orbit)
-
-    def set_altered(self):
+    def set_altered(self) -> World:
         self.is_altered = True
         self.parent_orbit.set_altered()
+        return self
 
-    def get_alterations(self):
+    def get_alterations_key(self) -> str:
+        return str(self.degrees_in_orbit)
+
+    def get_alterations(self) -> dict:
         alterations = dict()
         if self.is_altered:
             for km2 in self.Km2s:
@@ -50,10 +51,9 @@ class World:
             return None
         return alterations                    
 
-    def add_Km2(self, longitude: int, latitude: int, game_date_time: datetime):
+    def add_Km2(self, longitude: int, latitude: int):
         new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
         self.Km2s.append(new_Km2)
-        # new_Km2.update(game_date_time)
         return new_Km2
 
     def generate_name(self, my_random: random.Random):
@@ -70,7 +70,13 @@ class World:
         
         return name.capitalize()
 
-    def update_surroundings(self, longitude: int, latitude: int, game_date_time: datetime):
+    def load_altered(self) -> None:
+        """Load all altered children in memory."""
+        for world_key in self.saved_alterations:
+            if world_key == 'date_time': continue
+            self.add_Km2(int(world_key.split(" ")[0]), int(world_key.split(" ")[1]))
+
+    def update_surroundings(self, longitude: int, latitude: int) -> None:
         """Ensure the surroundings of the player exist and are updated."""
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
             for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
@@ -97,7 +103,7 @@ class World:
                     tgt_Km2.stop_updating()
                 else:
                     if tgt_Km2 is None:
-                        self.add_Km2(target_longitude, target_latitude, game_date_time)
+                        self.add_Km2(target_longitude, target_latitude)
                         continue
                     if not tgt_Km2.is_altered: continue
                     tgt_Km2.restart_updating()

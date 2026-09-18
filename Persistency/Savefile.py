@@ -12,7 +12,7 @@ from Player import Player
 class Savefile:
 
     @staticmethod
-    def load_from_file(filepath):
+    def load_from_file(filepath: str) -> None:
         '''Loads a specific savefile into GameEnvironment and Player singletons.
 
         Args:
@@ -41,10 +41,10 @@ class Savefile:
                 ).add_world(
                     load_object['player']['world.degrees_in_orbit']
                     )
+        environment.current_world.load_altered()
         environment.current_world.update_surroundings(
             load_object['player']['km2.longitude'],
-            load_object['player']['km2.latitude'],
-            game_date_time
+            load_object['player']['km2.latitude']
             )
 
         player = Player()
@@ -57,7 +57,7 @@ class Savefile:
         Player.singleton = player
 
     @staticmethod
-    def load_last():
+    def load_last() -> None:
         '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
@@ -85,7 +85,7 @@ class Savefile:
         Savefile.load_from_file(latest_file)
 
     @staticmethod
-    def save():
+    def save() -> None:
         '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
         environment = GameEnvironment.singleton
         player = Player.singleton

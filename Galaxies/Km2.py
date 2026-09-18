@@ -36,7 +36,7 @@ class Km2(Updatable):
         for i in range(int(rocksCount)):
             self.add_rock(self.longitude + my_random.randint(0, 1000), self.latitude + my_random.randint(0, 1000))
 
-    def set_altered(self) -> Rock:
+    def set_altered(self) -> Km2:
         self.is_altered = True
         self.parent_world.set_altered()
         return self

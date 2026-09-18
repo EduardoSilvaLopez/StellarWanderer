@@ -1,10 +1,15 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 import random
 import Galaxies.Constants
 from Galaxies.Orbit import Orbit
+if TYPE_CHECKING:
+    from Galaxies.Galaxy import Galaxy
 
 class StellarSystem:
 
-    def __init__(self, parent_galaxy, x, y, z, saved_alterations):
+    def __init__(self, parent_galaxy: Galaxy, x: int, y: int, z: int, saved_alterations: dict):
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
         self.parent_galaxy = parent_galaxy
         self.x = x
@@ -24,14 +29,15 @@ class StellarSystem:
 
         self.name = self.generate_name(my_random)
 
-    def get_alterations_key(self):
-        return str(self.x) + " " + str(self.y) + " " + str(self.z)
-
-    def set_altered(self):
+    def set_altered(self) -> StellarSystem:
         self.is_altered = True
         self.parent_galaxy.set_altered()
+        return self
 
-    def get_alterations(self):
+    def get_alterations_key(self) -> str:
+        return str(self.x) + " " + str(self.y) + " " + str(self.z)
+
+    def get_alterations(self) -> dict:
         alterations = dict()
         if self.is_altered:
             for orbit in self.orbits:
@@ -41,7 +47,7 @@ class StellarSystem:
             return None
         return alterations
 
-    def generate_name(self, my_random):
+    def generate_name(self, my_random: random.Random):
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
@@ -58,7 +64,7 @@ class StellarSystem:
 
         return name.capitalize()
 
-    def add_orbit(self, distance_from_star):
+    def add_orbit(self, distance_from_star: int):
         new_orbit = Orbit(self, distance_from_star, self.saved_alterations)
         self.orbits.append(new_orbit)
         return new_orbit

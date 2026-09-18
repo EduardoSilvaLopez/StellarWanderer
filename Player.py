@@ -1,8 +1,14 @@
+from __future__ import annotations
+from datetime import datetime
+from typing import TYPE_CHECKING
+
 from cmath import pi
 import math
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
 from GameEnvironment import GameEnvironment
+if TYPE_CHECKING:
+    from Galaxies.World import World
 
 class Player:
     singleton = None
@@ -30,37 +36,37 @@ class Player:
         self.position.z = 0
         Player.singleton = self        
 
-    def __str__(self):
-        return f"Player in a world with radius {self.position.Km2.parent.radius}, altitude {self.position.y}, coordinates ({self.position.x}, {self.position.z})"
-
-    def spawn_in_environment(self, environment: GameEnvironment):
+    def spawn_in_environment(self, environment: GameEnvironment) -> Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.update_surroundings(0, 0, GameEnvironment.EPOCH)
+        environment.current_world.update_surroundings(0, 0)
         self.position.Km2 = environment.current_world.Km2s[0]
         self.position.x = self.position.Km2.longitude + 500
         self.position.y = 10
         self.position.z = self.position.Km2.latitude + 500
-        return self  # Return self to allow method chaining
+        return self
 
-    def position_in_km2(self, km2, x, y, z):
+    def position_in_km2(self, km2: Km2, x: int, y: int, z: int) -> Player:
         ''' Set the player in a specific Km2 and coordinates.'''
         self.position.Km2 = km2
         self.position.x = x
         self.position.y = y
         self.position.z = z
-        return self  # Return self to allow method chaining
+        return self
 
-    def increase_time_scale(self):
+    def increase_time_scale(self) -> Player:
         self.time_scale = min(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MAX)
+        return self
 
-    def decrease_time_scale(self):
+    def decrease_time_scale(self) -> Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
+        return self
 
-    def update_orientation(self, delta_time, counterclockwise, clockwise):
+    def update_orientation(self, delta_time: datetime, counterclockwise: int, clockwise: int) -> Player:
         """Rotate the ship using game seconds elapsed since the last frame."""
         direction = clockwise - counterclockwise
         self.orientation = (self.orientation + direction * self.ship.ROTATION_SPEED * delta_time) % 360
+        return self
 
     def update_position(
             self,
@@ -68,18 +74,18 @@ class Player:
             longitude_change: float,
             altitude_change: float,
             latitude_change: float
-            ):
+            ) -> Player:
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
         new_km2 = self.find_km2_in(self.position.Km2.parent_world)
         if new_km2 != self.position.Km2:
             self.position.Km2 = new_km2
             self.position.Km2.parent_world.update_surroundings(
                 self.position.Km2.longitude,
-                self.position.Km2.latitude,
-                GameEnvironment.singleton.date_time
+                self.position.Km2.latitude
                 )
+        return self
 
-    def update_coordinates(self, delta_time, longitude_change, altitude_change, latitude_change):
+    def update_coordinates(self, delta_time: datetime, longitude_change: float, altitude_change: float, latitude_change: float) -> Player:
         """
         Update the player's position based on ship-relative controls.
         
@@ -125,8 +131,9 @@ class Player:
                 -pi * self.position.Km2.parent_world.radius / 2,
                 min(pi * self.position.Km2.parent_world.radius / 2, self.position.z)
             )
+        return self
 
-    def find_km2_in(self, world):
+    def find_km2_in(self, world) -> Km2:
         """
         Find the right Km2 for the player based on their current position.
         """
