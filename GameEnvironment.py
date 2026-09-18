@@ -20,3 +20,25 @@ class GameEnvironment:
             .add_world(180)
         print("Initial planet's radius: " + str(self.current_world.radius))
         self.current_world.add_Km2(0, 0, GameEnvironment.EPOCH) # by default
+
+    @staticmethod
+    def new_game(seed):
+        '''Create a new game with the given seed, initializing GameEnvironment and Player singletons.
+
+        Args:
+            seed: The galactic seed for the new game (int)
+        '''
+        print(f"Starting new game with seed: {seed}")
+
+        # Create a new GameEnvironment with the given seed
+        environment = GameEnvironment(seed, datetime.now())
+        GameEnvironment.singleton = environment
+
+        # Spawn player in the first world they encounter
+        player = Player()
+        player.spawn_in_environment(environment)
+        Player.singleton = player
+
+        print("New game started")
+
+

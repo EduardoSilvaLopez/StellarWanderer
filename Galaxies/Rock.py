@@ -20,10 +20,11 @@ class Rock(Updatable):
         my_random = random.Random(parent_Km2.seed + latitude + longitude)
         self.size = abs(my_random.gauss(0, 10))
         self.x = longitude
-        self.y = max(0.5 - abs(my_random.gauss(0, 0.1)), -0.5) * self.size
+        self.y = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
         self.z = latitude
-        self.orientation = my_random.random() * 90 - 45
-        self.initial_color = (32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32), 32 + my_random.randint(0, 32))
+        self.orientation = my_random.random() * 180 - 90
+        self.tilt = my_random.random() * 45
+        self.initial_color = (40 + my_random.randint(0, 32), 40 + my_random.randint(0, 32), 40 + my_random.randint(0, 32))
         self.temperature = 0.0
         self.adjust_color()
 

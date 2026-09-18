@@ -17,7 +17,8 @@ import pygame
 
 from FontCache import FontCache
 from Player import Player
-from Savefile import Savefile
+from Persistency.Savefile import Savefile
+from Persistency.StartDialog import StartDialog
 from GameEnvironment import GameEnvironment
 from Graphics.OpenGLGui import OpenGLGui
 from Graphics.Stars import Stars
@@ -37,6 +38,16 @@ MAX_ELAPSED = (datetime.max.replace(microsecond=0) - GameEnvironment.EPOCH).tota
 
 def main():
     pygame.init()
+
+    # Create temporary display for startup dialog
+    temp_screen = pygame.display.set_mode((800, 600))
+    pygame.display.set_caption(WINDOW_TITLE)
+
+    # Show startup dialog to load or create a new game
+    dialog = StartDialog(surface=temp_screen)
+    choice = dialog.run()
+
+    # Now create the main OpenGL display
     screen = pygame.display.set_mode(
         WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
     )
@@ -44,15 +55,33 @@ def main():
     clock = pygame.time.Clock()
 
     fonts = FontCache()
-    stars = Stars.make_starfield(STAR_COUNT, STAR_SEED)
     elapsed = 0.0  # seconds of ship time since EPOCH
 
-    # Create all seeds and random objects and calculate the initial planet's radius.
-    print("Give the galactic Seed: ")
-    galacticSeed = 1 # galacticSeed = input()
-    game_environment = GameEnvironment(galacticSeed, GameEnvironment.EPOCH, None)
-    game_environment.generate_default()
-    player = Player().spawn_in_environment(game_environment)
+    if choice is None:
+        pygame.quit()
+        return
+
+    action, value = choice
+
+    if action == 'load':
+        # Load existing savefile
+        Savefile.load_from_file(value)
+        game_environment = GameEnvironment.singleton
+        player = Player.singleton
+        elapsed = (GameEnvironment.singleton.date_time - GameEnvironment.EPOCH).total_seconds()
+    elif action == 'new':
+        print(f"Starting new game with seed: {value}")
+        GameEnvironment.singleton = game_environment = GameEnvironment(value, GameEnvironment.EPOCH, None)
+        game_environment.generate_default()
+
+        # Spawn player in the first world they encounter
+        player = Player()
+        player.spawn_in_environment(game_environment)
+        Player.singleton = player
+
+        print("New game started")
+        elapsed = 0.0
+
     gui = OpenGLGui()
     
     running = True
@@ -70,7 +99,7 @@ def main():
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:
-                    Savefile.load()
+                    Savefile.load_last()
                     game_environment = GameEnvironment.singleton
                     player = Player.singleton
                     elapsed = (GameEnvironment.singleton.date_time - GameEnvironment.EPOCH).total_seconds()

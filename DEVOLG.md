@@ -47,22 +47,28 @@ Laser cooling. Thoughts.
 - The moment of re-creation is clearly "add".
 - There is no "unload" yet. Later a queue, and special events when joining the queue? A queue of events sorted by time. "Update" as concept. There is an "apply saved alterations" (in the constructor) but then again an "update" to new dates.
 
-### 2026-09-17 (4/8) 11:30 - 12:15 + 17:30 - 
+### 2026-09-17 (4/8)
 
 Update queue works. Now we have not only to put new objects in, but take them out when they fall out of scope. Out of memory or out of update? Seems that out of update could be enough, out of memory means saving
 silently, which looks like something we do only when we abandon the world. A memory of 800.000.000 Km or more is however daunting. We could keep only the altered ones! Yep, that's the trick.
 
 Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
+- Did not test if they are SAVED even if war away.
+
+### 2026-09-18 (5/8), extra day, 11:00-
+
+Rocks have tilt, they are also more buried.
+
+Unquere the Km2 far away but... no, do not take them from memory, this is unnecessary (they are only the altered ones).
 
 ## ToDo
 
-- Show z coordinate, generate planet name, rock orientation and altitude.
-- Laser cooling.
+- Stones have different tilts.
 - Prompt for loading a file.
-- Set flagpoles: Proof of concept essentially finished.
-- Stones have different orientations and altitudes.
-- Show orientation in the instruments.
+- Laser cooling II: saved alterations > last alterations, so that it Km2 can be "dequeued" when far away.
+- World map.
 - https://github.com/obra/superpowers#how-it-works
+- Set flagpoles: Proof of concept essentially finished.
 - Make and show the sun.
 - Move away from world.
 - Create and show the planet and all its moons, establishing the initial world as one of them.

@@ -103,35 +103,43 @@ class Laser:
         Returns the t-value (0 to 1) where the laser first enters the rock's bounding box,
         or None if no intersection occurs.
         """
-        # Define the cube's bounding box in the rock's own local (unrotated) frame.
-        # Note: rock.x, rock.y and rock.z are all at the CENTER of the rock.
+        # The cube's bounding box in the rock's fully local (untilted, unrotated) frame,
+        # centered on the origin.
         half = rock.size / 2.0
-        box_min_x = -half
-        box_max_x = half
-        box_min_y = rock.y - half
-        box_max_y = rock.y + half
-        box_min_z = -half
-        box_max_z = half
+        box_min = -half
+        box_max = half
 
-        # Rocks are rotated around their own vertical (Y) axis by rock.orientation
-        # degrees, deviating from north (0 = unrotated, positive = clockwise) —
-        # the same convention used for the ship's forward vector. Transform the
-        # laser's start/end points into the rock's local frame before testing.
+        # Rocks are tilted around their own local Z axis by rock.tilt degrees,
+        # THEN rotated around their vertical (Y) axis by rock.orientation degrees,
+        # deviating from north (0 = unrotated, positive = clockwise) — the same
+        # convention used for the ship's forward vector. Undo both transforms, in
+        # reverse order, to bring the laser's endpoints into the rock's local frame.
+        tilt = math.radians(rock.tilt)
+        cos_t = math.cos(tilt)
+        sin_t = math.sin(tilt)
         orientation = math.radians(rock.orientation)
         cos_o = math.cos(orientation)
         sin_o = math.sin(orientation)
 
-        def to_local_xz(world_x, world_z):
-            local_x = world_x - rock.x
-            local_z = world_z - rock.z
-            return (local_x * cos_o - local_z * sin_o, local_x * sin_o + local_z * cos_o)
+        def to_local(world_x, world_y, world_z):
+            dx = world_x - rock.x
+            dy = world_y - rock.y
+            dz = world_z - rock.z
+            # Undo orientation (rotation around Y): affects (x, z).
+            x1 = dx * cos_o - dz * sin_o
+            z1 = dx * sin_o + dz * cos_o
+            y1 = dy
+            # Undo tilt (rotation around Z): affects (x, y).
+            x2 = x1 * cos_t + y1 * sin_t
+            y2 = -x1 * sin_t + y1 * cos_t
+            return x2, y2, z1
 
-        start_x, start_z = to_local_xz(self.start_x, self.start_z)
-        end_x, end_z = to_local_xz(self.end_x, self.end_z)
+        start_x, start_y, start_z = to_local(self.start_x, self.start_y, self.start_z)
+        end_x, end_y, end_z = to_local(self.end_x, self.end_y, self.end_z)
 
-        # Laser direction vector (Y is unaffected by rotation around the Y axis)
+        # Laser direction vector, now expressed in the rock's local frame.
         dx = end_x - start_x
-        dy = self.end_y - self.start_y
+        dy = end_y - start_y
         dz = end_z - start_z
 
         # Use a parametric line equation: P(t) = start + t * direction, where t ∈ [0, 1]
@@ -141,41 +149,41 @@ class Laser:
 
         # Check X axis
         if abs(dx) > 1e-9:  # Avoid division by zero
-            t1 = (box_min_x - start_x) / dx
-            t2 = (box_max_x - start_x) / dx
+            t1 = (box_min - start_x) / dx
+            t2 = (box_max - start_x) / dx
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
             # Ray is parallel to X axis; check if ray is within the box's X range
-            if start_x < box_min_x or start_x > box_max_x:
+            if start_x < box_min or start_x > box_max:
                 return None
 
         # Check Y axis
         if abs(dy) > 1e-9:  # Avoid division by zero
-            t1 = (box_min_y - self.start_y) / dy
-            t2 = (box_max_y - self.start_y) / dy
+            t1 = (box_min - start_y) / dy
+            t2 = (box_max - start_y) / dy
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
             # Ray is parallel to Y axis; check if ray is within the box's Y range
-            if self.start_y < box_min_y or self.start_y > box_max_y:
+            if start_y < box_min or start_y > box_max:
                 return None
 
         # Check Z axis
         if abs(dz) > 1e-9:  # Avoid division by zero
-            t1 = (box_min_z - start_z) / dz
-            t2 = (box_max_z - start_z) / dz
+            t1 = (box_min - start_z) / dz
+            t2 = (box_max - start_z) / dz
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
             # Ray is parallel to Z axis; check if ray is within the box's Z range
-            if start_z < box_min_z or start_z > box_max_z:
+            if start_z < box_min or start_z > box_max:
                 return None
 
         # If t_min <= t_max, the line segment intersects the box

@@ -73,24 +73,37 @@ class Rocks:
     @staticmethod
     def _draw_rock(rock):
         half = rock.size / 2.0
-        y0, y1 = rock.y - half, rock.y + half
 
-        # Rocks are rotated around their own vertical (Y) axis by rock.orientation
+        # Rocks are tilted around their own local Z axis by rock.tilt degrees,
+        # THEN rotated around their vertical (Y) axis by rock.orientation
         # degrees, deviating from north (0 = unrotated, positive = clockwise) —
         # the same convention used for the ship's forward vector.
+        tilt = math.radians(rock.tilt)
+        cos_t = math.cos(tilt)
+        sin_t = math.sin(tilt)
         orientation = math.radians(rock.orientation)
         cos_o = math.cos(orientation)
         sin_o = math.sin(orientation)
 
-        def rotated_corner(local_x, local_z):
-            world_x = rock.x + local_x * cos_o + local_z * sin_o
-            world_z = rock.z - local_x * sin_o + local_z * cos_o
-            return world_x, world_z
+        def corner(sign_x, sign_y, sign_z):
+            local_x, local_y, local_z = sign_x * half, sign_y * half, sign_z * half
+            # Apply tilt (rotation around the local Z axis): affects (x, y).
+            x1 = local_x * cos_t - local_y * sin_t
+            y1 = local_x * sin_t + local_y * cos_t
+            z1 = local_z
+            # Apply orientation (rotation around the Y axis): affects (x, z).
+            x2 = x1 * cos_o + z1 * sin_o
+            z2 = -x1 * sin_o + z1 * cos_o
+            return (rock.x + x2, rock.y + y1, rock.z + z2)
 
-        x0z0 = rotated_corner(-half, -half)
-        x1z0 = rotated_corner(half, -half)
-        x1z1 = rotated_corner(half, half)
-        x0z1 = rotated_corner(-half, half)
+        c000 = corner(-1, -1, -1)
+        c100 = corner(+1, -1, -1)
+        c110 = corner(+1, +1, -1)
+        c010 = corner(-1, +1, -1)
+        c001 = corner(-1, -1, +1)
+        c101 = corner(+1, -1, +1)
+        c111 = corner(+1, +1, +1)
+        c011 = corner(-1, +1, +1)
 
         base = rock.color
         top = tuple(max(0, value - 50) for value in base)
@@ -98,12 +111,12 @@ class Rocks:
         bottom = tuple(max(0, value - 70) for value in base)
 
         faces = (
-            (top, ((x0z0[0], y1, x0z0[1]), (x1z0[0], y1, x1z0[1]), (x1z1[0], y1, x1z1[1]), (x0z1[0], y1, x0z1[1]))),
-            (bottom, ((x0z1[0], y0, x0z1[1]), (x1z1[0], y0, x1z1[1]), (x1z0[0], y0, x1z0[1]), (x0z0[0], y0, x0z0[1]))),
-            (side, ((x0z0[0], y0, x0z0[1]), (x0z1[0], y0, x0z1[1]), (x0z1[0], y1, x0z1[1]), (x0z0[0], y1, x0z0[1]))),
-            (side, ((x1z1[0], y0, x1z1[1]), (x1z0[0], y0, x1z0[1]), (x1z0[0], y1, x1z0[1]), (x1z1[0], y1, x1z1[1]))),
-            (base, ((x0z0[0], y0, x0z0[1]), (x1z0[0], y0, x1z0[1]), (x1z0[0], y1, x1z0[1]), (x0z0[0], y1, x0z0[1]))),
-            (base, ((x1z1[0], y0, x1z1[1]), (x0z1[0], y0, x0z1[1]), (x0z1[0], y1, x0z1[1]), (x1z1[0], y1, x1z1[1]))),
+            (top, (c010, c110, c111, c011)),
+            (bottom, (c001, c101, c100, c000)),
+            (side, (c000, c001, c011, c010)),
+            (side, (c101, c100, c110, c111)),
+            (base, (c000, c100, c110, c010)),
+            (base, (c101, c001, c011, c111)),
         )
 
         GL.glBegin(GL.GL_QUADS)

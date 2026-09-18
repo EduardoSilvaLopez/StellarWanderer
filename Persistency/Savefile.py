@@ -12,34 +12,15 @@ from Player import Player
 class Savefile:
 
     @staticmethod
-    def load():
-        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
-        
+    def load_from_file(filepath):
+        '''Loads a specific savefile into GameEnvironment and Player singletons.
+
+        Args:
+            filepath: Path to the savefile to load
+
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        savefiles = glob.glob('Savefiles/Savefile *.json')
-        
-        if not savefiles:
-            raise FileNotFoundError("No savefiles found.")
-        
-        # Parse datetime from filename and find the most recent
-        # Filename format: "Savefile {seed} {datetime}.json"
-        # DateTime format in filename: "YYYY-MM-DDTHH_MM_SS"
-        latest_file = None
-        latest_datetime = None
-        
-        for filepath in savefiles:
-            file_datetime = os.path.getmtime(filepath)
-            
-            if latest_datetime is None or file_datetime > latest_datetime:
-                latest_datetime = file_datetime
-                latest_file = filepath
-        
-        if latest_file is None:
-            raise FileNotFoundError("No valid savefiles found with datetime information.")
-        
-        # Load the most recent savefile
-        print(f"Loading savefile: {latest_file}")
-        with open(latest_file, 'r', encoding='utf-8') as f:
+        print(f"Loading savefile: {filepath}")
+        with open(filepath, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
 
         game_date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
@@ -48,7 +29,7 @@ class Savefile:
             game_date_time,
             load_object['environment']['galaxy_alterations']
             )
-        GameEnvironment.singleton = environment        
+        GameEnvironment.singleton = environment
         print("Loaded seed: " + str(environment.galaxy.seed))
 
         environment.current_world = environment.galaxy.add_stellar_system(
@@ -74,6 +55,34 @@ class Savefile:
         player.position.z = load_object['player']['z']
         player.position.Km2 = player.find_km2_in(environment.current_world)
         Player.singleton = player
+
+    @staticmethod
+    def load_last():
+        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
+
+        WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
+        savefiles = glob.glob('Savefiles/Savefile *.json')
+        
+        if not savefiles:
+            raise FileNotFoundError("No savefiles found.")
+        
+        # Parse datetime from filename and find the most recent
+        # Filename format: "Savefile {seed} {datetime}.json"
+        # DateTime format in filename: "YYYY-MM-DDTHH_MM_SS"
+        latest_file = None
+        latest_datetime = None
+        
+        for filepath in savefiles:
+            file_datetime = os.path.getmtime(filepath)
+            
+            if latest_datetime is None or file_datetime > latest_datetime:
+                latest_datetime = file_datetime
+                latest_file = filepath
+        
+        if latest_file is None:
+            raise FileNotFoundError("No valid savefiles found with datetime information.")
+        
+        Savefile.load_from_file(latest_file)
 
     @staticmethod
     def save():

@@ -190,7 +190,7 @@ class Cockpit:
         (the coordinate text block) and the centre multi-function display.
         """
         mfd_left = w // 2 - int(w * 0.24) // 2
-        margin = int(w * 0.015)
+        margin = int(w * 0.05)
         available = max(0, (mfd_left - margin) - (left_bound + margin))
 
         radius = max(10, min(int(cluster_height * 0.32), available // 2))
