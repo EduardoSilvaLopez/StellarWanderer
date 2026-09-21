@@ -50,7 +50,7 @@ class _UpdateQueue:
         # Update each object and remove it from the queue
         for obj in to_update:
             self.remove(obj)
-            obj.update(current_date_time) # may insert it again.
+            obj.update(current_date_time) # May re-insert.
 
     def __len__(self) -> int:
         """Return the number of objects currently in the queue."""

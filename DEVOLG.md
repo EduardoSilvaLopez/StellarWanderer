@@ -55,11 +55,25 @@ silently, which looks like something we do only when we abandon the world. A mem
 Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
 - Did not test if they are SAVED even if war away.
 
-### 2026-09-18 (5/8), extra day, 11:00-12:45, 16:00-
+### 2026-09-18 (5/8), extra day, 11:00-12:45, 16:00-17:00
 
 Rocks have tilt, they are also more buried.
 
 Unquere the Km2 far away but... no, do not take them from memory, this is unnecessary (they are only the altered ones).
+
+DAMN.
+
+My whole strategy means unvisited altered rocks are not updated to the game time when saved.
+I have to update anyway, there is no 'updating window' - or - I must save the 'last changed at' on every object.
+... this prolly includes separating the children from the date_time in the alteration dictionaries anyway.
+
+### 2026-09-21 (6/8), 12:45 - 14:15 + 14:30 - 15:00
+
+Still stuck with the update problematic. I need a new strategy. A clear one, and a *SCALABLE* one. Keeping all altered objects in the world updating is, let us be honest, not scalable.
+
+So... let us make saved alterations just this, saved alterations. One-use thing, not correctly typified, used for save and load and that was it.
+
+Let us store next and last updates in memory, and queue and dequeue.
 
 ## ToDo
 

@@ -19,7 +19,6 @@ class GameEnvironment:
             .add_orbit(150000000000)\
             .add_world(180)
         print("Initial planet's radius: " + str(self.current_world.radius))
-        self.current_world.add_Km2(0, 0, GameEnvironment.EPOCH) # by default
 
     @staticmethod
     def new_game(seed):

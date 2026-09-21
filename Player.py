@@ -40,7 +40,8 @@ class Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
         environment.current_world.update_surroundings(0, 0)
-        self.position.Km2 = environment.current_world.Km2s[0]
+        central_km2 = next(km2 for km2 in environment.current_world.Km2s if km2.longitude == 0 and km2.latitude == 0)
+        self.position.Km2 = central_km2
         self.position.x = self.position.Km2.longitude + 500
         self.position.y = 10
         self.position.z = self.position.Km2.latitude + 500

@@ -35,7 +35,8 @@ class World:
 
     def set_altered(self) -> World:
         self.is_altered = True
-        self.parent_orbit.set_altered()
+        if not self.parent_orbit.is_altered:
+            self.parent_orbit.set_altered()
         return self
 
     def get_alterations_key(self) -> str:
@@ -51,11 +52,6 @@ class World:
             return None
         return alterations                    
 
-    def add_Km2(self, longitude: int, latitude: int):
-        new_Km2 = Km2(self, longitude, latitude, self.saved_alterations)
-        self.Km2s.append(new_Km2)
-        return new_Km2
-
     def generate_name(self, my_random: random.Random):
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
@@ -69,12 +65,6 @@ class World:
                 name += my_random.choice(consonants)
         
         return name.capitalize()
-
-    def load_altered(self) -> None:
-        """Load all altered children in memory."""
-        for world_key in self.saved_alterations:
-            if world_key == 'date_time': continue
-            self.add_Km2(int(world_key.split(" ")[0]), int(world_key.split(" ")[1]))
 
     def update_surroundings(self, longitude: int, latitude: int) -> None:
         """Ensure the surroundings of the player exist and are updated."""
@@ -94,18 +84,13 @@ class World:
                     ):
                     # "Destruction" ring
                     if tgt_Km2 is None: continue
-
-                    if not tgt_Km2.is_altered:
-                        tgt_Km2.parent_world = None
-                        self.Km2s.remove(tgt_Km2)
-                        continue
-
-                    tgt_Km2.stop_updating()
+                    tgt_Km2.stop_updating_rocks()
                 else:
                     if tgt_Km2 is None:
-                        self.add_Km2(target_longitude, target_latitude)
+                        new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
+                        self.Km2s.append(new_Km2)
                         continue
                     if not tgt_Km2.is_altered: continue
-                    tgt_Km2.restart_updating()
+                    tgt_Km2.start_updating_rocks()
 
         print("The surroundings have now ", len(self.Km2s), " Km2")

@@ -14,7 +14,7 @@ class Rock(Updatable):
     TEMP_COOLING_PERIOD = 60 # Once every minute.
     TEMP_COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature.
 
-    def __init__(self, parent_Km2: Km2, longitude: int, latitude: int):
+    def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
         import random
         self.parent_km2 = parent_Km2
         my_random = random.Random(parent_Km2.seed + latitude + longitude)
@@ -28,28 +28,24 @@ class Rock(Updatable):
         self.temperature = 0.0
         self.adjust_color()
 
-        self.is_altered = False
-        self.is_updating = False
-        self.saved_alterations = None
+        self.last_updated_at = None
+        self.next_update_at = None
         alterations_key = self.get_alterations_key()
-        if parent_Km2.saved_alterations is not None and alterations_key in parent_Km2.saved_alterations:
-            self.is_altered = True
-            self.saved_alterations = parent_Km2.saved_alterations[alterations_key]
-            self.saved_alterations['date_time'] = parent_Km2.saved_alterations['date_time']
+        if saved_parent_alterations is not None and alterations_key in saved_parent_alterations:
+            self.set_last_updated(parent_Km2.saved_parent_alterations['date_time'])
+            saved_alterations = parent_Km2.saved_alterations[alterations_key]
 
-            if ('temperature' in self.saved_alterations):
-                self.temperature = self.saved_alterations['temperature']
+            if ('temperature' in saved_alterations):
+                self.temperature = saved_alterations['temperature']
                 self.adjust_color()
 
-            self.next_update = self.saved_alterations['date_time'] + timedelta(seconds = 1)
+            self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
             update_queue.add(self)
             print("Altered rock loaded at ", self.temperature, "° . Queue size", len(update_queue._queue))
-        else:
-            self.next_update = None
 
-    def set_altered(self) -> Rock:
-        if not self.is_altered:
-            self.is_altered = True
+    def set_last_updated(self, new_date_time: datetime) -> Rock:
+        self.last_updated_at = new_date_time
+        if not self.parent_km2.is_altered:
             self.parent_km2.set_altered()
         return self
 
@@ -58,75 +54,64 @@ class Rock(Updatable):
 
     def get_alterations(self) -> dict:
         '''The change, expressed as dictionary.'''
-        if not self.is_altered:
-            return dict()
-
+        if self.last_updated_at is None:
+            return None
         return {"temperature": self.temperature}
 
     def get_next_update(self) -> datetime:
-        if not self.is_altered:
-            raise Exception("Not altered, why is this being asked?")
-        if self.next_update is None:
-            raise Exception("Next update of this Km2 is none, why was this asked?")
-        return self.next_update
+        return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
-        if not self.is_altered: return
-        if not self.is_updating: return
-        self.is_updating = True
+        if self.next_update_at is None:
+            return # Already running.
 
-        update_queue.remove(self)
-        last_updated_at = self.next_update
-        if (last_updated_at is None): # Re-created after loading.
-            if (not self.saved_alterations): raise Exception("Altered but no alterations!?")
-            last_updated_at = self.saved_alterations.get('date_time')
-            if (not last_updated_at): raise Exception("Alterations without timestamp!?")
+        if self.last_updated_at is None:
+            # No idea how much type passed. For rocks, this is critical. Prepare for next time and leave.
+            self.last_updated_at = game_date_time
+            self.next_update_at = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
+            update_queue.add(self)
+            print("Rock ready to be updated next time. Queue size: ", len(update_queue._queue))
+            return
 
-        time_passed = game_date_time - last_updated_at
+        time_passed = game_date_time - self.last_updated_at
         periods_passed = time_passed.total_seconds() / self.TEMP_COOLING_PERIOD
 
         self.temperature = (self.TEMP_COOLING_FACTOR ** periods_passed) * self.temperature
         if self.temperature < 1.0:
-            self.next_update = None
             self.temperature = 0
+            self.next_update_at = None
+            print("Rock won't be updated anymore, too cold. Queue size", len(update_queue._queue))
         else:
-            self.next_update = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
+            self.next_update_at = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
             update_queue.add(self)
+
         self.adjust_color()
-        self.set_altered()
+        self.set_last_updated(game_date_time)
 
         print("Temperature reduced: ", str(self.temperature), ". Queue size: ", len(update_queue._queue))
 
     def stop_updating(self) -> None:
-        if not self.is_altered: return
-        if not self.is_updating: return
-        self.is_updating = False
+        if self.next_update_at is None:
+            return # Already not updating.
 
+        self.next_update_at = None
         update_queue.remove(self)
-        self.next_update -= timedelta(seconds = self.TEMP_COOLING_PERIOD) # Means here "last update"
-        print("Rock won't be updated anymore, at ", self.temperature, "° . Queue size", len(update_queue._queue))
+        print("Rock won't be updated anymore, at (", self.x, ", ", self.z, ") . Queue size", len(update_queue._queue))
 
-    def restart_updating(self) -> None:
-        if not self.is_altered: return
-        if self.is_updating: return
-        self.is_updating = True
-
+    def start_updating(self, update_time: datetime) -> None:
+        if self.next_update_at is not None:
+            return # Already updating.
+        self.next_update_at = update_time # Immediately
         update_queue.add(self)
         print("Rock will be updated again, at ", self.temperature, "° . Queue size", len(update_queue._queue))
 
-    def increase_temperature(self, delta_time: float) -> Rock:
+    def increase_temperature(self, delta_time: float, game_date_time: datetime) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
+
         self.adjust_color()
-        self.set_altered()
-
-        if self.next_update is None:
-            # Set this object to be updated regularly
-            from GameEnvironment import GameEnvironment
-            self.next_update = GameEnvironment.singleton.date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
-            update_queue.add(self)
-            print("Temperature starts to rise. Queue size: ", len(update_queue._queue))
-
+        if self.next_update_at is None:
+            self.start_updating(game_date_time) # First time we just get ready anyway.
         return self
 
     def adjust_color(self) -> Rock:
