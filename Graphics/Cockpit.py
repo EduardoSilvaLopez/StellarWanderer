@@ -147,23 +147,7 @@ class Cockpit:
         pygame.draw.rect(surface, READOUT_BG, mfd)
         pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, mfd, 2)
 
-        nav = fonts.render_to_fit(
-            'NAV — NO CONTACT', ACCENT, mfd.width - 12, max(9, int(h * 0.017))
-        )
-        surface.blit(nav, nav.get_rect(midtop=(mfd.centerx, mfd.top + 5)))
-
-        # Grid sits below the header band so the two never collide.
-        grid = mfd.inflate(-8, 0)
-        grid.top = mfd.top + nav.get_height() + 9
-        grid.height = mfd.bottom - 5 - grid.top
-        pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (grid.left, grid.top - 4),
-                         (grid.right, grid.top - 4), 1)
-        for i in range(1, 5):
-            y = grid.top + grid.height * i // 5
-            pygame.draw.line(surface, ACCENT_DIM, (grid.left, y), (grid.right, y), 1)
-        for i in range(1, 6):
-            x = grid.left + grid.width * i // 6
-            pygame.draw.line(surface, ACCENT_DIM, (x, grid.top), (x, grid.bottom), 1)
+        Cockpit.draw_world_map(surface, fonts, mfd, h, player)
 
         # Right cluster: vertical level bars.
         bar_w = int(w * 0.018)
@@ -184,6 +168,67 @@ class Cockpit:
             x = int(w * 0.06 + i * light * 2.2)
             color = AMBER if i in (3, 7) else ACCENT_DIM
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
+
+    @staticmethod
+    def draw_world_map(surface, fonts, mfd, h, player):
+        """Draw a world map showing player position.
+
+        Args:
+            surface: Pygame surface to draw on
+            fonts: Font manager
+            mfd: Rectangle for the multi-function display
+            h: Window height
+            player: Player object with position and world info
+        """
+        world = player.position.Km2.parent_world
+        radius = world.radius
+
+        # Header with world name
+        world_name_text = fonts.render_to_fit(
+            world.name, ACCENT, mfd.width - 12, max(9, int(h * 0.017))
+        )
+        surface.blit(world_name_text, world_name_text.get_rect(midtop=(mfd.centerx, mfd.top + 5)))
+
+        # Map area below header
+        map_area = mfd.inflate(-8, 0)
+        map_area.top = mfd.top + world_name_text.get_height() + 9
+        map_area.height = mfd.bottom - 5 - map_area.top
+
+        # Draw map background and border
+        pygame.draw.rect(surface, READOUT_BG, map_area)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, map_area, 1)
+
+        # World bounds rectangle (normalized to map area)
+        # Longitude: -π*radius to +π*radius (horizontal)
+        # Latitude: -π*radius/2 to +π*radius/2 (vertical)
+        map_padding = 4
+        inner_area = map_area.inflate(-map_padding * 2, -map_padding * 2)
+
+        # Draw world rectangle
+        pygame.draw.rect(surface, ACCENT_DIM, inner_area, 1)
+
+        # Calculate player position as normalized coordinates within map
+        lon_min = -math.pi * radius
+        lon_max = math.pi * radius
+        lat_min = -math.pi * radius / 2
+        lat_max = math.pi * radius / 2
+
+        # Normalize player position to [0, 1]
+        norm_lon = (player.position.x - lon_min) / (lon_max - lon_min)
+        norm_lat = (player.position.z - lat_min) / (lat_max - lat_min)
+
+        # Clamp to [0, 1] in case of floating point errors
+        norm_lon = max(0, min(1, norm_lon))
+        norm_lat = max(0, min(1, norm_lat))
+
+        # Convert to pixel coordinates within inner_area
+        player_x = int(inner_area.left + norm_lon * inner_area.width)
+        player_y = int(inner_area.top + (1 - norm_lat) * inner_area.height)  # Flip Y (top=max latitude)
+
+        # Draw player position as a brilliant dot
+        dot_radius = max(2, int(h * 0.006))
+        pygame.draw.circle(surface, ACCENT, (player_x, player_y), dot_radius)
+        pygame.draw.circle(surface, (255, 255, 255), (player_x, player_y), max(1, dot_radius - 1))
 
     @staticmethod
     def draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, left_bound):
