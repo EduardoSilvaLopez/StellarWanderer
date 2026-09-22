@@ -13,7 +13,7 @@ This is not that game. This is a proof of concept, that such a game is possible.
 This provokes constraints.
 1. The game must generate the world procedurally, as no team can generate that vast amount of planet surface, atmosphere, stars, worlds.
 2. The game must be solo, as compressing the "game time" is a fundamental mechanic to avoid that travel requires hours... or years... in real time.
-3. More innovative: the game cannot save the world in save files, because the vast amount of information to save (the form of every quare meter of the 500.000.000.000.000 of a single planet, for example) would overwhelm any storage system.
+3. More innovative: the game cannot save the world in save files, because the vast amount of information to save (the form of every square meter of the 500.000.000.000.000 of a single planet, for example) would overwhelm any storage system.
 
 So - the world must be re-generated each time the player approaches, in a way the save file can contain only the changes. And this, taking in account that changes saved were saved in a specific game time, and the re-generation happens in a different one.
 
