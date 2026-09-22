@@ -6,8 +6,8 @@ from datetime import datetime
 from  Galaxies.Galaxy import Galaxy
 from  Galaxies.World import World
 from  Galaxies.Km2 import Km2
-from GameEnvironment import GameEnvironment
-from Player import Player
+import GameEnvironment as gem
+import Player as pem
 
 class Savefile:
 
@@ -24,15 +24,14 @@ class Savefile:
             load_object = json.load(f)
 
         game_date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
-        environment = GameEnvironment(
+        gem.current_environment = gem.GameEnvironment(
             load_object['environment']['galactic_seed'],
             game_date_time,
             load_object['environment']['galaxy_alterations']
             )
-        GameEnvironment.singleton = environment
-        print("Loaded seed: " + str(environment.galaxy.seed))
+        print("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
-        environment.current_world = environment.galaxy.add_stellar_system(
+        gem.current_environment.current_world = gem.current_environment.galaxy.add_stellar_system(
             load_object['player']['stellar_system.x'],
             load_object['player']['stellar_system.y'],
             load_object['player']['stellar_system.z']
@@ -41,20 +40,19 @@ class Savefile:
                 ).add_world(
                     load_object['player']['world.degrees_in_orbit']
                     )
-        environment.current_world.load_altered()
-        environment.current_world.update_surroundings(
+        gem.current_environment.current_world.update_surroundings(
             load_object['player']['km2.longitude'],
-            load_object['player']['km2.latitude']
+            load_object['player']['km2.latitude'],
+            game_date_time
             )
 
-        player = Player()
-        player.time_scale = load_object['player']['time_scale']
-        player.orientation = load_object['player'].get('orientation', 0.0)
-        player.position.x = load_object['player']['x']
-        player.position.y = load_object['player']['y']
-        player.position.z = load_object['player']['z']
-        player.position.Km2 = player.find_km2_in(environment.current_world)
-        Player.singleton = player
+        pem.current_player = pem.Player()
+        pem.current_player.time_scale = load_object['player']['time_scale']
+        pem.current_player.orientation = load_object['player'].get('orientation', 0.0)
+        pem.current_player.position.x = load_object['player']['x']
+        pem.current_player.position.y = load_object['player']['y']
+        pem.current_player.position.z = load_object['player']['z']
+        pem.current_player.position.Km2 = pem.current_player.find_km2_in(gem.current_environment.current_world)
 
     @staticmethod
     def load_last() -> None:
@@ -87,14 +85,14 @@ class Savefile:
     @staticmethod
     def save() -> None:
         '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
-        environment = GameEnvironment.singleton
-        player = Player.singleton
+        environment = gem.current_environment
+        player = pem.current_player
 
         data = {
             'environment': {
                 'galactic_seed': environment.galaxy.seed,
                 'date_time': str(environment.date_time),
-                'galaxy_alterations': GameEnvironment.singleton.galaxy.get_alterations()
+                'galaxy_alterations': gem.current_environment.galaxy.get_alterations()
             }
             , 'player': {
                 'time_scale': player.time_scale,

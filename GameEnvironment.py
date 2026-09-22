@@ -4,14 +4,11 @@ from Galaxies.Galaxy import Galaxy
 class GameEnvironment:
     EPOCH = datetime.datetime(500, 1, 1)
 
-    singleton = None
-
     def __init__(self, galactic_seed, date_time, saved_alterations):
         self.date_time = date_time
         if (saved_alterations): saved_alterations['date_time'] = date_time
         self.galaxy = Galaxy(galactic_seed, saved_alterations)
         self.current_world = None
-        GameEnvironment.singleton = self
 
     def generate_default(self):
         self.current_world = self.galaxy\
@@ -30,14 +27,13 @@ class GameEnvironment:
         print(f"Starting new game with seed: {seed}")
 
         # Create a new GameEnvironment with the given seed
-        environment = GameEnvironment(seed, datetime.now())
-        GameEnvironment.singleton = environment
+        current_environment = GameEnvironment(seed, datetime.now())
 
         # Spawn player in the first world they encounter
-        player = Player()
-        player.spawn_in_environment(environment)
-        Player.singleton = player
+        from Player import Player, current_player
+        current_player = Player()
+        current_player.spawn_in_environment(current_environment)
 
         print("New game started")
 
-
+current_environment: GameEnvironment = None

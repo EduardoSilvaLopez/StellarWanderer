@@ -66,7 +66,7 @@ class World:
         
         return name.capitalize()
 
-    def update_surroundings(self, longitude: int, latitude: int) -> None:
+    def update_surroundings(self, longitude: int, latitude: int, game_date_time: datetime) -> None:
         """Ensure the surroundings of the player exist and are updated."""
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
             for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
@@ -91,6 +91,6 @@ class World:
                         self.Km2s.append(new_Km2)
                         continue
                     if not tgt_Km2.is_altered: continue
-                    tgt_Km2.start_updating_rocks()
+                    tgt_Km2.start_updating_rocks(game_date_time)
 
         print("The surroundings have now ", len(self.Km2s), " Km2")

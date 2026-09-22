@@ -6,13 +6,11 @@ from cmath import pi
 import math
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
-from GameEnvironment import GameEnvironment
+import GameEnvironment as gem
 if TYPE_CHECKING:
     from Galaxies.World import World
 
 class Player:
-    singleton = None
-    
     # Altitude boundaries (in meters)
     MAX_ALTITUDE = 20000
     # Base altitude change rate: 1 meter per second at time scale 1
@@ -34,12 +32,11 @@ class Player:
         self.position.x = 0
         self.position.y = 0
         self.position.z = 0
-        Player.singleton = self        
 
-    def spawn_in_environment(self, environment: GameEnvironment) -> Player:
+    def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.update_surroundings(0, 0)
+        environment.current_world.update_surroundings(0, 0, gem.GameEnvironment.EPOCH)
         central_km2 = next(km2 for km2 in environment.current_world.Km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.Km2 = central_km2
         self.position.x = self.position.Km2.longitude + 500
@@ -82,7 +79,8 @@ class Player:
             self.position.Km2 = new_km2
             self.position.Km2.parent_world.update_surroundings(
                 self.position.Km2.longitude,
-                self.position.Km2.latitude
+                self.position.Km2.latitude,
+                gem.current_environment.date_time
                 )
         return self
 
@@ -148,3 +146,5 @@ class Player:
             return new_km2
         else:
             raise Exception(f"Km2 at longitude {new_longitude} and latitude {new_latitude} not found in world. This should not happen if update_surroundings is called.")
+
+current_player: Player = None

@@ -22,15 +22,21 @@ class Km2:
         self.seed = (self.longitude + self.latitude + self.parent_world.seed) % Galaxies.Constants.SEEDS_SCALING
 
         self.is_altered = False
-        alteration_key = self.get_alterations_key()
-        if saved_alterations is not None and alteration_key in saved_alterations:
+        alterations_key = self.get_alterations_key()
+        if saved_alterations is not None and alterations_key in saved_alterations:
+            saved_alterations[alterations_key]['date_time'] = saved_alterations['date_time'] # For the rocks
             self.set_altered()
 
         my_random = random.Random(self.seed)
         rocksCount = max(my_random.gauss(50, 10), 0)
         self.rocks: List[Rock] = []
         for i in range(int(rocksCount)):
-            newRock = Rock(self, self.longitude + my_random.randint(0, 1000), self.latitude + my_random.randint(0, 1000), saved_alterations)
+            newRock = Rock(
+                self,
+                self.longitude + my_random.randint(0, 1000),
+                self.latitude + my_random.randint(0, 1000),
+                saved_alterations.get(alterations_key) if saved_alterations is not None else None
+                )
             self.rocks.append(newRock)
 
     def set_altered(self) -> Km2:
@@ -60,7 +66,7 @@ class Km2:
             rock.stop_updating()
         print("Stop updating: ", self.longitude, " ", self.latitude)
 
-    def start_updating_rocks(self) -> None:
+    def start_updating_rocks(self, update_time: datetime) -> None:
         for rock in self.rocks:
-            rock.restart_updating()
+            rock.start_updating(update_time)
         print("Start updating: ", self.longitude, " ", self.latitude)

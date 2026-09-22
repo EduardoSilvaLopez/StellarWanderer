@@ -75,6 +75,14 @@ So... let us make saved alterations just this, saved alterations. One-use thing,
 
 Let us store next and last updates in memory, and queue and dequeue.
 
+Extra time: 20:00 - 21:30
+
+Stuck in the new singleton strategy, which creates lots of problems, damn it.
+
+### 2026-09-22 (7/8), 9:30 - 10:00
+
+
+
 ## ToDo
 
 - Laser cooling II: saved alterations > last alterations, so that it Km2 can be "dequeued" when far away.

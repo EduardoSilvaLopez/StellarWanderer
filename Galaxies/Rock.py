@@ -31,17 +31,17 @@ class Rock(Updatable):
         self.last_updated_at = None
         self.next_update_at = None
         alterations_key = self.get_alterations_key()
-        if saved_parent_alterations is not None and alterations_key in saved_parent_alterations:
-            self.set_last_updated(parent_Km2.saved_parent_alterations['date_time'])
-            saved_alterations = parent_Km2.saved_alterations[alterations_key]
+        if saved_parent_alterations is not None:
+            rock_alterations = saved_parent_alterations.get(alterations_key)
+            if rock_alterations is not None:
+                self.set_last_updated(saved_parent_alterations['date_time'])
+                if ('temperature' in rock_alterations):
+                    self.temperature = rock_alterations['temperature']
+                    self.adjust_color()
 
-            if ('temperature' in saved_alterations):
-                self.temperature = saved_alterations['temperature']
-                self.adjust_color()
-
-            self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
-            update_queue.add(self)
-            print("Altered rock loaded at ", self.temperature, "° . Queue size", len(update_queue._queue))
+                self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
+                update_queue.add(self)
+                print("Altered rock loaded at ", self.temperature, "° . Queue size", len(update_queue._queue))
 
     def set_last_updated(self, new_date_time: datetime) -> Rock:
         self.last_updated_at = new_date_time
@@ -54,7 +54,7 @@ class Rock(Updatable):
 
     def get_alterations(self) -> dict:
         '''The change, expressed as dictionary.'''
-        if self.last_updated_at is None:
+        if self.temperature == 0.0:
             return None
         return {"temperature": self.temperature}
 
@@ -62,6 +62,9 @@ class Rock(Updatable):
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
+        if not self.get_alterations():
+            return
+
         if self.next_update_at is None:
             return # Already running.
 
@@ -91,6 +94,9 @@ class Rock(Updatable):
         print("Temperature reduced: ", str(self.temperature), ". Queue size: ", len(update_queue._queue))
 
     def stop_updating(self) -> None:
+        if not self.get_alterations():
+            return
+
         if self.next_update_at is None:
             return # Already not updating.
 
@@ -99,6 +105,8 @@ class Rock(Updatable):
         print("Rock won't be updated anymore, at (", self.x, ", ", self.z, ") . Queue size", len(update_queue._queue))
 
     def start_updating(self, update_time: datetime) -> None:
+        if not self.get_alterations():
+            return
         if self.next_update_at is not None:
             return # Already updating.
         self.next_update_at = update_time # Immediately

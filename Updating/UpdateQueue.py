@@ -5,7 +5,7 @@ from typing import List
 from .Updatable import Updatable
 
 
-class _UpdateQueue:
+class UpdateQueue:
     """Internal UpdateQueue class. Use the module-level `update_queue` instance."""
 
     def __init__(self):
@@ -57,4 +57,4 @@ class _UpdateQueue:
         return len(self._queue)
 
 # Singleton instance: use this anywhere in the application
-update_queue = _UpdateQueue()
+update_queue = UpdateQueue()
