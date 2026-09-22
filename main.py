@@ -11,7 +11,9 @@ Controls:
     Esc        quit
 """
 
+from __future__ import annotations
 from datetime import datetime, timedelta
+from typing import Tuple
 import os
 import sys
 
@@ -41,7 +43,7 @@ MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).
 EPOCH = gem.GameEnvironment.EPOCH
 
 
-def center_window_on_screen(window_title, window_size):
+def center_window_on_screen(window_title: str, window_size: Tuple[int, int]) -> None:
     """Center a window on the screen. Windows only."""
     if sys.platform != 'win32':
         return
@@ -70,7 +72,7 @@ def center_window_on_screen(window_title, window_size):
         logger.debug(f"Failed to center window: {e}")
 
 
-def main():
+def main() -> None:
     configure_logging()
     pygame.init()
 

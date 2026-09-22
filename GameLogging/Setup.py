@@ -9,7 +9,7 @@ from .Constants import (
 )
 
 
-def configure_logging():
+def configure_logging() -> None:
     """Set up logging with both console and rotating file handlers.
 
     Configures the root logger to write to console (StreamHandler) and to a
