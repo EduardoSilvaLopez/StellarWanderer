@@ -131,9 +131,14 @@ class Cockpit:
         latitude_text = label_font.render(f'Latitude: {int(player.position.z)}', True, ACCENT)
         surface.blit(latitude_text, (coord_x, coord_y))
 
+        # Orientation (heading in degrees)
+        coord_y += line_spacing
+        orientation_text = label_font.render(f'Orientation: {int(player.orientation)}°', True, ACCENT)
+        surface.blit(orientation_text, (coord_x, coord_y))
+
         # Orientation compass: fixed "N" at top, needle rotates to show heading.
         # Widest coordinate label reserves the space the text block actually needs.
-        text_right = coord_x + max(longitude_text.get_width(), latitude_text.get_width())
+        text_right = coord_x + max(longitude_text.get_width(), latitude_text.get_width(), orientation_text.get_width())
         Cockpit.draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, text_right)
 
         # Centre multi-function display.
