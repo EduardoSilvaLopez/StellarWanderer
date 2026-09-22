@@ -1,15 +1,20 @@
 """Startup dialog for choosing between loading and starting a new game."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Tuple, List, Union
 import glob
 import os
 import pygame
 from datetime import datetime
 
+if TYPE_CHECKING:
+    from pygame import Surface, Rect
+
 
 class StartDialog:
     """Dialog to choose between loading a save file or starting a new game."""
 
-    def __init__(self, surface=None, screen_width=800, screen_height=600):
+    def __init__(self, surface: Optional[Surface] = None, screen_width: int = 800, screen_height: int = 600) -> None:
         """Initialize the dialog.
 
         Args:
@@ -32,12 +37,12 @@ class StartDialog:
         self.seed_input_active = False
         self.scroll_offset = 0  # For scrolling through the savefile list
 
-    def _safe_quit(self):
+    def _safe_quit(self) -> None:
         """Quit pygame only if we created the display ourselves."""
         if self.created_display:
             pygame.quit()
 
-    def setup_pygame(self):
+    def setup_pygame(self) -> None:
         """Initialize pygame and create the display (if not provided)."""
         pygame.init()
         if self.surface is None:
@@ -49,7 +54,7 @@ class StartDialog:
         self.font_small = pygame.font.Font(None, 18)
         self.font_savefile = pygame.font.Font(None, 22)  # Slightly larger for save files
 
-    def load_savefiles(self):
+    def load_savefiles(self) -> None:
         """Load list of available savefiles."""
         self.savefiles = []
         if os.path.exists('Savefiles'):
@@ -82,7 +87,7 @@ class StartDialog:
                         'display_name': f"Seed {seed}   -   Time: {game_time_formatted}   -   Saved at {real_time_formatted}"
                     })
 
-    def draw(self):
+    def draw(self) -> Tuple[Rect, Rect, List[Tuple[int, Rect]]]:
         """Draw the main dialog screen with seed input and scrollable save file list."""
         self.surface.fill((20, 20, 30))
 
@@ -168,11 +173,11 @@ class StartDialog:
         pygame.display.flip()
         return input_rect, new_game_rect, save_file_rects
 
-    def run(self):
+    def run(self) -> Optional[Tuple[str, Union[str, int]]]:
         """Run the dialog and return the user's choice.
 
         Returns:
-            tuple: ('load', filepath) or ('new', seed)
+            tuple: ('load', filepath) or ('new', seed), or None if user closes dialog
         """
         self.setup_pygame()
         self.load_savefiles()
