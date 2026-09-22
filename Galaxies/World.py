@@ -4,7 +4,7 @@ import logging; logger = logging.getLogger(__name__)
 
 import random
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import Galaxies.Constants
 from Galaxies.Km2 import Km2
@@ -15,7 +15,7 @@ class World:
     EARTHLIKE_RADIUS_SIGMA = 1000000
     SURROUNDINGS_RADIUS = 3
 
-    def __init__(self, parent_orbit: int, degrees_in_orbit: float, saved_alterations: dict):
+    def __init__(self, parent_orbit: int, degrees_in_orbit: float, saved_alterations: dict) -> None:
         self.parent_orbit = parent_orbit
         self.degrees_in_orbit = degrees_in_orbit
         self.seed = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
@@ -44,7 +44,7 @@ class World:
     def get_alterations_key(self) -> str:
         return str(self.degrees_in_orbit)
 
-    def get_alterations(self) -> dict:
+    def get_alterations(self) -> Optional[dict]:
         alterations = dict()
         if self.is_altered:
             for km2 in self.Km2s:
@@ -54,7 +54,7 @@ class World:
             return None
         return alterations                    
 
-    def generate_name(self, my_random: random.Random):
+    def generate_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"

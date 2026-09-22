@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import Galaxies.Constants
 from Galaxies.World import World
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 class Orbit:
 
-    def __init__(self, parent_stellar_system: StellarSystem, distance_from_star: int, saved_alterations: dict):
+    def __init__(self, parent_stellar_system: StellarSystem, distance_from_star: int, saved_alterations: dict) -> None:
         self.parent_stellar_system = parent_stellar_system
         self.distance_from_star = distance_from_star
         self.seed = (self.distance_from_star + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
@@ -30,7 +30,7 @@ class Orbit:
     def get_alterations_key(self) -> str:
         return str(self.distance_from_star)
 
-    def get_alterations(self) -> dict:
+    def get_alterations(self) -> Optional[dict]:
         alterations = dict()
         if self.is_altered:
             for world in self.worlds:
@@ -40,7 +40,7 @@ class Orbit:
             return None
         return alterations
 
-    def add_world(self, degrees_in_orbit: float):
+    def add_world(self, degrees_in_orbit: float) -> World:
         new_world = World(self, degrees_in_orbit, self.saved_alterations)
         self.worlds.append(new_world)
         return new_world

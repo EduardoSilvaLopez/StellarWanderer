@@ -1,4 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, List, Tuple
+
 import math
+if TYPE_CHECKING:
+    from Spaceships.Ship import Ship
+    from Galaxies.World import World
+    from Galaxies.Rock import Rock
 
 
 class Laser:
@@ -6,19 +13,19 @@ class Laser:
     POSITION_OFFSET = 5  # metres, offset from camera to avoid culling
     TEMP_RISE_RATE = 1000.0  # degrees per second, rate at which rock temperature rises when hit by laser, when the rock is 1 cubic meter.
 
-    def __init__(self, ship):
-        self.ship = ship  # Reference to the ship that owns this laser
-        self.firing = False  # Laser firing
-        self.hitting_rock = None
+    def __init__(self, ship: Ship) -> None:
+        self.ship = ship
+        self.firing = False
+        self.hitting_rock: Optional[Rock] = None
         self.length = Laser.MAX_LENGTH
-        self.start_x = 0
-        self.start_y = 0
-        self.start_z = 0
-        self.end_x = 0
-        self.end_y = 0
-        self.end_z = 0
+        self.start_x = 0.0
+        self.start_y = 0.0
+        self.start_z = 0.0
+        self.end_x = 0.0
+        self.end_y = 0.0
+        self.end_z = 0.0
 
-    def fire(self):
+    def fire(self) -> None:
         """Fire the laser, calculate where it starts and ends based on the ship's position and orientation."""
         self.firing = True
 
@@ -53,11 +60,9 @@ class Laser:
             self.end_x = self.start_x + closest_t * (self.end_x - self.start_x)
             self.end_z = self.start_z + closest_t * (self.end_z - self.start_z)
          
-    def cease_fire(self):
+    def cease_fire(self) -> None:
         if (not self.firing):
-            return  # Laser is already not firing
-
-        """Cease firing the laser."""
+            return
         self.firing = False
         self.start_x = 0
         self.start_y = 0
@@ -66,7 +71,7 @@ class Laser:
         self.end_y = 0
         self.end_z = 0
 
-    def get_hit_rocks(self, world):
+    def get_hit_rocks(self, world: World) -> Optional[List[Tuple[Rock, float]]]:
         if (not self.firing):
             return None
         if (self.ship.owner.position.Km2.parent_world != world):
@@ -94,7 +99,7 @@ class Laser:
                 hit_rocks.append((rock, t_value))
         return hit_rocks if hit_rocks else None
 
-    def is_rock_hit(self, rock):
+    def is_rock_hit(self, rock: Rock) -> Optional[float]:
         """Determine if the laser hits a rock and return the t-value of the intersection.
 
         Rocks are cubes of size rock.size, and the laser is a line segment from
@@ -121,15 +126,13 @@ class Laser:
         cos_o = math.cos(orientation)
         sin_o = math.sin(orientation)
 
-        def to_local(world_x, world_y, world_z):
+        def to_local(world_x: float, world_y: float, world_z: float) -> Tuple[float, float, float]:
             dx = world_x - rock.x
             dy = world_y - rock.y
             dz = world_z - rock.z
-            # Undo orientation (rotation around Y): affects (x, z).
             x1 = dx * cos_o - dz * sin_o
             z1 = dx * sin_o + dz * cos_o
             y1 = dy
-            # Undo tilt (rotation around Z): affects (x, y).
             x2 = x1 * cos_t + y1 * sin_t
             y2 = -x1 * sin_t + y1 * cos_t
             return x2, y2, z1
