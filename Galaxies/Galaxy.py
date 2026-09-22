@@ -2,7 +2,7 @@ from Galaxies.StellarSystem import StellarSystem
 
 class Galaxy():
 
-    def __init__(self, seeds_delta: int, saved_alterations: dict):
+    def __init__(self, seeds_delta: int, saved_alterations: dict) -> None:
         self.seed = seeds_delta # The galaxy's seed is just the seed_delta from the user.
         self.stellar_systems = []
         self.saved_alterations = saved_alterations
@@ -24,7 +24,7 @@ class Galaxy():
                     alterations[system.get_alterations_key()] = system.get_alterations()
         return alterations
 
-    def add_stellar_system(self, x: int, y:int, z:int):
+    def add_stellar_system(self, x: int, y: int, z: int) -> StellarSystem:
         new_system = StellarSystem(self, x, y, z, self.saved_alterations)
         self.stellar_systems.append(new_system)
         return new_system

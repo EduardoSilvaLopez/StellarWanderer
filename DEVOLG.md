@@ -83,25 +83,27 @@ Stuck in the new singleton strategy, which creates lots of problems, damn it.
 
 New release! As the alterations are now saved and recovered.
 
-Extra time: 10:00 - 10:45
+Extra time: 10:00 - 11:00 + 15:45 - 
 
 
 ## ToDo
 
-- World map.
-- https://github.com/obra/superpowers#how-it-works
-- Set flagpoles: Proof of concept essentially finished.
+- World map (only a rectangle, first)
+- Set mines: Proof of concept essentially finished. They allow to collect "ore" when you laser them.
 - Make and show the sun.
-- Move away from world.
+- Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player.
 - Create and show the planet and all its moons, establishing the initial world as one of them.
 - Create the concept of "attached" world, which determines how to interpret the coordinates of the ship. Make a manual detach / attack possible in a buffer zone.
 - Move the moons around their orbit, moving the ship with the attached world only. If none, as the coordinates are relative to the sun, it is "left behind".
 - Allow travel to another moon of the planet, or to it.
+- Make and show "trade posts", where the ore can be sold.
 - Create the other orbits, with planets (asteroids would require a radar, if realistic).
 - Allow travel to the sun and other planets. Create the concept of forbidden area (too near the star).
 - Make the real stars around the one we are.
 - Allow travel to other stellar systems.
+- https://github.com/obra/superpowers#how-it-works
 - Create Jovian planets, with a forbidden area.
+- Make the worlds real spheres.
 
 ### Learning Python:
 

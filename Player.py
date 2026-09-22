@@ -20,7 +20,7 @@ class Player:
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.time_scale = 1  # Default time scale
         self.orientation = 0.0  # Degrees clockwise from north
 
@@ -60,7 +60,7 @@ class Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         return self
 
-    def update_orientation(self, delta_time: datetime, counterclockwise: int, clockwise: int) -> Player:
+    def update_orientation(self, delta_time: float, counterclockwise: int, clockwise: int) -> Player:
         """Rotate the ship using game seconds elapsed since the last frame."""
         direction = clockwise - counterclockwise
         self.orientation = (self.orientation + direction * self.ship.ROTATION_SPEED * delta_time) % 360
@@ -84,7 +84,7 @@ class Player:
                 )
         return self
 
-    def update_coordinates(self, delta_time: datetime, longitude_change: float, altitude_change: float, latitude_change: float) -> Player:
+    def update_coordinates(self, delta_time: float, longitude_change: float, altitude_change: float, latitude_change: float) -> Player:
         """
         Update the player's position based on ship-relative controls.
         
@@ -132,7 +132,7 @@ class Player:
             )
         return self
 
-    def find_km2_in(self, world) -> Km2:
+    def find_km2_in(self, world: World) -> Km2:
         """
         Find the right Km2 for the player based on their current position.
         """

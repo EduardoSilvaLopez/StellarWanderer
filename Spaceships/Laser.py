@@ -44,16 +44,12 @@ class Laser:
         self.end_z = self.ship.owner.position.z + self.ship.laser.length * forward_z
 
         # Find out rocks hit by the laser and adjust the endpoint if necessary
-        hit_rocks = self.get_hit_rocks(self.ship.owner.position.Km2.parent_world)
+        hit_rock_tuple = self.get_hit_rock(self.ship.owner.position.Km2.parent_world)
 
         # Adjust endpoint to the closest rock hit, if any
-        if hit_rocks:
-            # Store the rock that was hit
-            self.hitting_rock = min(hit_rocks, key=lambda x: x[1])[0]
-
-            # Find the closest hit rock and use its t-value to adjust the endpoint
-            # hit_rocks is a list of (rock, t_value) tuples, where t_value ∈ [0, 1]
-            closest_t = min(hit_rocks, key=lambda x: x[1])[1]
+        if hit_rock_tuple:
+            self.hitting_rock = hit_rock_tuple[0]
+            closest_t = hit_rock_tuple[1]
 
             # Adjust the endpoint to the intersection point using the t-value
             # The intersection point is: start + t * (end - start)
@@ -71,7 +67,8 @@ class Laser:
         self.end_y = 0
         self.end_z = 0
 
-    def get_hit_rocks(self, world: World) -> Optional[List[Tuple[Rock, float]]]:
+    def get_hit_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
+        ''' Returns not only the rock but its t_value'''
         if (not self.firing):
             return None
         if (self.ship.owner.position.Km2.parent_world != world):
@@ -91,13 +88,15 @@ class Laser:
             relevant_km2.append(km2)
 
         # Analyse each rock to see if it is hit by the laser. This is a more precise check.
-        # Store tuples of (rock, t_value) for rocks that are hit.
-        hit_rocks = []
+        # Return the one with the minimum t_value.
+        hit_rock = None
+        hit_at_t_value = self.MAX_LENGTH
         for rock in (rock for km2 in relevant_km2 for rock in km2.rocks):
             t_value = self.is_rock_hit(rock)
-            if t_value is not None:
-                hit_rocks.append((rock, t_value))
-        return hit_rocks if hit_rocks else None
+            if t_value is not None and t_value < hit_at_t_value:
+                hit_rock = rock
+                hit_at_t_value = t_value
+        return (hit_rock, hit_at_t_value) if hit_rock else None
 
     def is_rock_hit(self, rock: Rock) -> Optional[float]:
         """Determine if the laser hits a rock and return the t-value of the intersection.

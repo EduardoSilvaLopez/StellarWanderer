@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import Optional
 from Galaxies.Galaxy import Galaxy
 
 logger = logging.getLogger(__name__)
@@ -7,13 +8,13 @@ logger = logging.getLogger(__name__)
 class GameEnvironment:
     EPOCH = datetime.datetime(500, 1, 1)
 
-    def __init__(self, galactic_seed, date_time, saved_alterations):
+    def __init__(self, galactic_seed: int, date_time: datetime.datetime, saved_alterations: Optional[dict]) -> None:
         self.date_time = date_time
         if (saved_alterations): saved_alterations['date_time'] = date_time
         self.galaxy = Galaxy(galactic_seed, saved_alterations)
         self.current_world = None
 
-    def generate_default(self):
+    def generate_default(self) -> None:
         self.current_world = self.galaxy\
             .add_stellar_system(26000, 0, 0)\
             .add_orbit(150000000000)\
@@ -21,7 +22,7 @@ class GameEnvironment:
         logger.info(f"Initial planet's radius: {self.current_world.radius}")
 
     @staticmethod
-    def new_game(seed):
+    def new_game(seed: int) -> None:
         '''Create a new game with the given seed, initializing GameEnvironment and Player singletons.
 
         Args:
