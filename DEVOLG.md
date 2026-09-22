@@ -81,11 +81,13 @@ Stuck in the new singleton strategy, which creates lots of problems, damn it.
 
 ### 2026-09-22 (7/8), 9:30 - 10:00
 
+New release! As the alterations are now saved and recovered.
+
+Extra time: 10:00 - 10:45
 
 
 ## ToDo
 
-- Laser cooling II: saved alterations > last alterations, so that it Km2 can be "dequeued" when far away.
 - World map.
 - https://github.com/obra/superpowers#how-it-works
 - Set flagpoles: Proof of concept essentially finished.

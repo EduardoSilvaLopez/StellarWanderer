@@ -12,6 +12,8 @@ Controls:
 """
 
 from datetime import datetime, timedelta
+import os
+import sys
 
 import pygame
 import logging; logger = logging.getLogger(__name__)
@@ -26,7 +28,7 @@ from Graphics.Stars import Stars
 from Updating.UpdateQueue import update_queue
 
 WINDOW_TITLE = 'Stellar Wanderer'
-WINDOW_SIZE = (1280, 720)
+WINDOW_SIZE = (1920, 1080)
 MIN_SIZE = (640, 400)
 FPS = 60
 
@@ -37,6 +39,36 @@ STAR_SEED = 20270101
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
 MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds() # datetime tops out at year 9999;
 EPOCH = gem.GameEnvironment.EPOCH
+
+
+def center_window_on_screen(window_title, window_size):
+    """Center a window on the screen. Windows only."""
+    if sys.platform != 'win32':
+        return
+
+    try:
+        import ctypes
+        import ctypes.wintypes as wintypes
+
+        # Get window handle by title
+        hwnd = ctypes.windll.user32.FindWindowW(None, window_title)
+        if not hwnd:
+            return
+
+        # Get screen dimensions
+        screen_width = ctypes.windll.user32.GetSystemMetrics(0)
+        screen_height = ctypes.windll.user32.GetSystemMetrics(1)
+
+        # Calculate center position
+        window_width, window_height = window_size
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        # Move window (SWP_NOZORDER = 0x0004)
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, window_width, window_height, 0x0004)
+    except Exception as e:
+        logger.debug(f"Failed to center window: {e}")
+
 
 def main():
     configure_logging()
@@ -59,6 +91,7 @@ def main():
         WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
     )
     pygame.display.set_caption(WINDOW_TITLE)
+    center_window_on_screen(WINDOW_TITLE, WINDOW_SIZE)
     clock = pygame.time.Clock()
 
     fonts = FontCache()
