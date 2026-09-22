@@ -1,6 +1,8 @@
 import json
 import os
 import glob
+
+import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
 from  Galaxies.Galaxy import Galaxy
@@ -19,7 +21,7 @@ class Savefile:
             filepath: Path to the savefile to load
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        print(f"Loading savefile: {filepath}")
+        logger.info(f"Loading savefile: {filepath}")
         with open(filepath, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
 
@@ -29,7 +31,7 @@ class Savefile:
             game_date_time,
             load_object['environment']['galaxy_alterations']
             )
-        print("Loaded seed: " + str(gem.current_environment.galaxy.seed))
+        logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
         gem.current_environment.current_world = gem.current_environment.galaxy.add_stellar_system(
             load_object['player']['stellar_system.x'],
@@ -113,6 +115,6 @@ class Savefile:
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
         file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
         file_name = 'Savefiles/' + file_name
-        print("New savefile's name: " + file_name)
+        logger.info("New savefile's name: " + file_name)
         with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

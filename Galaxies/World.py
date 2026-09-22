@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging; logger = logging.getLogger(__name__)
+
 import random
 from datetime import datetime
 from typing import List
@@ -93,4 +95,4 @@ class World:
                     if not tgt_Km2.is_altered: continue
                     tgt_Km2.start_updating_rocks(game_date_time)
 
-        print("The surroundings have now ", len(self.Km2s), " Km2")
+        logger.debug("The surroundings have now ", len(self.Km2s), " Km2")

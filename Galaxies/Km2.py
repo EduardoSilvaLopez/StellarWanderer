@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging; logger = logging.getLogger(__name__)
+
 import datetime
 import random
 from typing import List, TYPE_CHECKING
@@ -24,7 +26,6 @@ class Km2:
         self.is_altered = False
         alterations_key = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
-            saved_alterations[alterations_key]['date_time'] = saved_alterations['date_time'] # For the rocks
             self.set_altered()
 
         my_random = random.Random(self.seed)
@@ -64,9 +65,9 @@ class Km2:
     def stop_updating_rocks(self) -> None:
         for rock in self.rocks:
             rock.stop_updating()
-        print("Stop updating: ", self.longitude, " ", self.latitude)
+        logger.info("Stop updating: ", self.longitude, " ", self.latitude)
 
     def start_updating_rocks(self, update_time: datetime) -> None:
         for rock in self.rocks:
             rock.start_updating(update_time)
-        print("Start updating: ", self.longitude, " ", self.latitude)
+        logger.info("Start updating: ", self.longitude, " ", self.latitude)

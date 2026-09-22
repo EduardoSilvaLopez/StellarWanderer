@@ -14,9 +14,10 @@ Controls:
 from datetime import datetime, timedelta
 
 import pygame
-
+import logging; logger = logging.getLogger(__name__)
+from GameLogging import configure_logging
 from Graphics.FontCache import FontCache
-import GameEnvironment as game_environment_module
+import GameEnvironment as gem
 import Player as player_module
 from Persistency.Savefile import Savefile
 from Persistency.StartDialog import StartDialog
@@ -34,10 +35,11 @@ STAR_SEED = 20270101
 
 # Altitude change control
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - game_environment_module.GameEnvironment.EPOCH).total_seconds() # datetime tops out at year 9999;
-EPOCH = game_environment_module.GameEnvironment.EPOCH
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds() # datetime tops out at year 9999;
+EPOCH = gem.GameEnvironment.EPOCH
 
 def main():
+    configure_logging()
     pygame.init()
 
     # Create temporary display for startup dialog
@@ -47,7 +49,11 @@ def main():
     # Show startup dialog to load or create a new game
     dialog = StartDialog(surface=temp_screen)
     choice = dialog.run()
+    if choice is None:
+        pygame.quit()
+        return
 
+    logger.info("Game started.")
     # Now create the main OpenGL display
     screen = pygame.display.set_mode(
         WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
@@ -58,30 +64,26 @@ def main():
     fonts = FontCache()
     elapsed = 0.0  # seconds of ship time since EPOCH
 
-    if choice is None:
-        pygame.quit()
-        return
-
     action, value = choice
 
     if action == 'load':
         # Load existing savefile
         Savefile.load_from_file(value)
-        elapsed = (game_environment_module.current_environment.date_time - EPOCH).total_seconds()
+        elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
     elif action == 'new':
-        print(f"Starting new game with seed: {value}")
-        game_environment_module.current_environment = game_environment_module.GameEnvironment(
+        logger.info(f"New game with seed: {value}")
+        gem.current_environment = gem.GameEnvironment(
             value,
             EPOCH
             , None
             )
-        game_environment_module.current_environment.generate_default()
+        gem.current_environment.generate_default()
 
         # Spawn player in the first world they encounter
         player_module.current_player = player_module.Player()
-        player_module.current_player.spawn_in_environment(game_environment_module.current_environment)
+        player_module.current_player.spawn_in_environment(gem.current_environment)
 
-        print("New game started")
+        logger.debug("New game created.")
         elapsed = 0.0
 
     gui = OpenGLGui()
@@ -103,7 +105,7 @@ def main():
                 elif event.key == pygame.K_F6:
                     update_queue.clear()
                     Savefile.load_last()
-                    elapsed = (game_environment_module.current_environment.date_time - EPOCH).total_seconds()
+                    elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
                         # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
@@ -113,7 +115,7 @@ def main():
 
         dt = clock.tick(FPS) / 1000.0
         elapsed = min(elapsed + dt * player_module.current_player.time_scale, MAX_ELAPSED)
-        game_environment_module.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
+        gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
         keys = pygame.key.get_pressed()
         player_module.current_player.update_orientation(
@@ -133,19 +135,19 @@ def main():
             player_module.current_player.ship.laser.fire()
             if (player_module.current_player.ship.laser.hitting_rock):
                 player_module.current_player.ship.laser.hitting_rock.increase_temperature(
-                    elapsed, game_environment_module.current_environment.date_time
+                    elapsed, gem.current_environment.date_time
                     )
         elif (player_module.current_player.ship.laser.firing):
             player_module.current_player.ship.laser.cease_fire()
 
-        update_queue.update(game_environment_module.current_environment.date_time)
+        update_queue.update(gem.current_environment.date_time)
 
-        gui.draw(screen, fonts, game_environment_module.current_environment, player_module.current_player)
+        gui.draw(screen, fonts, gem.current_environment, player_module.current_player)
         pygame.display.flip()
 
     pygame.quit()
 
 if __name__ == '__main__':
-    print('Starting game.')
+    logger.debug('Starting application.')
     main()
-    print('Ending game.')
+    logger.debug('Ending application.')

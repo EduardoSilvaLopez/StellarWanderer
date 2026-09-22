@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+import logging; logger = logging.getLogger(__name__)
+
 from datetime import datetime, timedelta
 from math import sqrt
 from typing import TYPE_CHECKING
@@ -34,14 +37,14 @@ class Rock(Updatable):
         if saved_parent_alterations is not None:
             rock_alterations = saved_parent_alterations.get(alterations_key)
             if rock_alterations is not None:
-                self.set_last_updated(saved_parent_alterations['date_time'])
+                self.set_last_updated(datetime.strptime(rock_alterations['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f'))
                 if ('temperature' in rock_alterations):
                     self.temperature = rock_alterations['temperature']
                     self.adjust_color()
 
                 self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
                 update_queue.add(self)
-                print("Altered rock loaded at ", self.temperature, "° . Queue size", len(update_queue._queue))
+                logger.info("Altered rock loaded at ", self.x, ", ", self.z, " with temperature", self.temperature, "° . Queue size", len(update_queue._queue))
 
     def set_last_updated(self, new_date_time: datetime) -> Rock:
         self.last_updated_at = new_date_time
@@ -56,12 +59,15 @@ class Rock(Updatable):
         '''The change, expressed as dictionary.'''
         if self.temperature == 0.0:
             return None
-        return {"temperature": self.temperature}
+        return {"temperature": self.temperature,
+                "last_updated_at": str(self.last_updated_at)
+                }
 
     def get_next_update(self) -> datetime:
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
+        ''' Called by UpdateQueue after removing the object form it (it can re-insert, but FIFO)'''
         if not self.get_alterations():
             return
 
@@ -73,7 +79,7 @@ class Rock(Updatable):
             self.last_updated_at = game_date_time
             self.next_update_at = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
             update_queue.add(self)
-            print("Rock ready to be updated next time. Queue size: ", len(update_queue._queue))
+            logger.info("Rock ready to be updated next time. Queue size: ", len(update_queue._queue))
             return
 
         time_passed = game_date_time - self.last_updated_at
@@ -83,7 +89,7 @@ class Rock(Updatable):
         if self.temperature < 1.0:
             self.temperature = 0
             self.next_update_at = None
-            print("Rock won't be updated anymore, too cold. Queue size", len(update_queue._queue))
+            logger.info("Rock won't be updated anymore, too cold. Queue size", len(update_queue._queue))
         else:
             self.next_update_at = game_date_time + timedelta(seconds = self.TEMP_COOLING_PERIOD)
             update_queue.add(self)
@@ -91,7 +97,7 @@ class Rock(Updatable):
         self.adjust_color()
         self.set_last_updated(game_date_time)
 
-        print("Temperature reduced: ", str(self.temperature), ". Queue size: ", len(update_queue._queue))
+        logger.debug("Temperature reduced: ", str(self.temperature), ". Queue size: ", len(update_queue._queue))
 
     def stop_updating(self) -> None:
         if not self.get_alterations():
@@ -102,7 +108,7 @@ class Rock(Updatable):
 
         self.next_update_at = None
         update_queue.remove(self)
-        print("Rock won't be updated anymore, at (", self.x, ", ", self.z, ") . Queue size", len(update_queue._queue))
+        logger.info("Rock won't be updated anymore, at (", self.x, ", ", self.z, ") . Queue size", len(update_queue._queue))
 
     def start_updating(self, update_time: datetime) -> None:
         if not self.get_alterations():
@@ -111,7 +117,7 @@ class Rock(Updatable):
             return # Already updating.
         self.next_update_at = update_time # Immediately
         update_queue.add(self)
-        print("Rock will be updated again, at ", self.temperature, "° . Queue size", len(update_queue._queue))
+        logger.info("Rock will be updated again, at ", self.temperature, "° . Queue size", len(update_queue._queue))
 
     def increase_temperature(self, delta_time: float, game_date_time: datetime) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
