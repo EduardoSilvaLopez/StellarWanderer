@@ -1,18 +1,19 @@
 """Cockpit instrumentation: canopy, console, and clock."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Tuple
 import math
 import pygame
 from datetime import datetime
 from .Constants import (
     CONSOLE_EDGE_COLOR, CONSOLE_TOP, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     HULL_COLOR, HULL_DARK, HULL_EDGE_COLOR, STRUT, CONSOLE, CONSOLE_EDGE_COLOR,
-    ACCENT, ACCENT_DIM, AMBER, READOUT_BG
+    ACCENT, ACCENT_DIM, AMBER, READOUT_BG, ROCK_EDGE_COLOR
 )
 
 if TYPE_CHECKING:
     from Player import Player
+    from Galaxies.Rock import Rock
 
 
 class Cockpit:
@@ -155,18 +156,8 @@ class Cockpit:
 
         Cockpit.draw_world_map(surface, fonts, mfd, h, player)
 
-        # Right cluster: vertical level bars.
-        bar_w = int(w * 0.018)
-        bar_h = int(height * 0.46)
-        bar_top = top + int(height * 0.24)
-        for i, level in enumerate((0.72, 0.51, 0.88, 0.34)):
-            x = int(w * 0.70 + i * bar_w * 2.1)
-            pygame.draw.rect(surface, READOUT_BG, (x, bar_top, bar_w, bar_h))
-            filled = int(bar_h * level)
-            pygame.draw.rect(
-                surface, ACCENT, (x, bar_top + bar_h - filled, bar_w, filled)
-            )
-            pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, (x, bar_top, bar_w, bar_h), 1)
+        # Right cluster: scanner readout.
+        Cockpit.draw_scanner(surface, fonts, w, h, player, cluster_top, cluster_height, mfd.right)
 
         # Indicator lights along the bottom.
         light = max(4, int(height * 0.045))
@@ -235,6 +226,101 @@ class Cockpit:
         dot_radius = max(2, int(h * 0.003))
         pygame.draw.circle(surface, ACCENT, (player_x, player_y), dot_radius)
         pygame.draw.circle(surface, (255, 255, 255), (player_x, player_y), max(1, dot_radius - 1))
+
+    @staticmethod
+    def draw_scanner(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
+        """Draw a square scanner readout on the right cluster.
+
+        Mirrors whatever rock is currently in the laser's crosshair (whether or
+        not the laser is actually firing), scaled to fill the square but kept
+        at the same relative orientation and color the player sees ahead.
+        """
+        margin = int(w * 0.04)
+        available = max(0, (w - margin) - (mfd_right + margin))
+        size = max(20, min(cluster_height, available))
+
+        rect = pygame.Rect(0, 0, size, size)
+        rect.centery = cluster_top + cluster_height // 2
+        rect.right = w - margin
+
+        label_font = fonts.get(max(9, int(h * 0.017)))
+        label = label_font.render('SCANNER', True, ACCENT_DIM)
+        surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 6)))
+
+        pygame.draw.rect(surface, READOUT_BG, rect)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, rect, 2)
+
+        rock = player.ship.laser.targeted_rock
+        if rock is not None:
+            Cockpit._draw_scanned_rock(surface, rect, player, rock)
+
+    @staticmethod
+    def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:
+        """Render `rock` inside `rect`, at the same relative orientation the
+        player currently sees it from, normalized to a unit cube so every
+        rock — regardless of true size or distance — fills the square.
+        """
+        view = math.radians(player.orientation)
+        cos_view, sin_view = math.cos(view), math.sin(view)
+
+        tilt = math.radians(rock.tilt)
+        cos_t, sin_t = math.cos(tilt), math.sin(tilt)
+        rock_orientation = math.radians(rock.orientation)
+        cos_o, sin_o = math.cos(rock_orientation), math.sin(rock_orientation)
+
+        def corner(sign_x: int, sign_y: int, sign_z: int) -> Tuple[float, float, float]:
+            # Unit cube corner with the rock's own tilt/orientation applied.
+            lx, ly, lz = float(sign_x), float(sign_y), float(sign_z)
+            x1 = lx * cos_t - ly * sin_t
+            y1 = lx * sin_t + ly * cos_t
+            z1 = lz
+            x2 = x1 * cos_o + z1 * sin_o
+            z2 = -x1 * sin_o + z1 * cos_o
+            # Rotate into camera space so the player's current heading applies,
+            # matching the right/forward convention used elsewhere (e.g. NearestWorld).
+            cam_x = x2 * cos_view - z2 * sin_view
+            cam_z = x2 * sin_view + z2 * cos_view
+            return (cam_x, y1, cam_z)
+
+        corners = {
+            (sx, sy, sz): corner(sx, sy, sz)
+            for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+        }
+
+        # Orthographic projection (screen_y flipped); cam_z is kept only for
+        # face depth sorting and does not affect scale (size-normalized view).
+        xs = [c[0] for c in corners.values()]
+        ys = [-c[1] for c in corners.values()]
+        span = max(max(xs) - min(xs), max(ys) - min(ys), 1e-6)
+
+        padding = 6
+        scale = (min(rect.width, rect.height) - padding * 2) / span
+        cx, cy = rect.centerx, rect.centery
+
+        def project(c: Tuple[float, float, float]) -> Tuple[int, int]:
+            return (int(cx + c[0] * scale), int(cy - c[1] * scale))
+
+        top_color = tuple(max(0, v - 50) for v in rock.color)
+        bottom_color = tuple(max(0, v - 70) for v in rock.color)
+        side_color = tuple(max(0, v - 25) for v in rock.color)
+        base_color = rock.color
+
+        faces = (
+            (top_color, ((-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1))),
+            (bottom_color, ((-1, -1, 1), (1, -1, 1), (1, -1, -1), (-1, -1, -1))),
+            (side_color, ((-1, -1, -1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1))),
+            (side_color, ((1, -1, 1), (1, -1, -1), (1, 1, -1), (1, 1, 1))),
+            (base_color, ((-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1))),
+            (base_color, ((1, -1, 1), (-1, -1, 1), (-1, 1, 1), (1, 1, 1))),
+        )
+
+        def face_depth(indices: Tuple[Tuple[int, int, int], ...]) -> float:
+            return sum(corners[index][2] for index in indices)
+
+        for color, indices in sorted(faces, key=lambda face: face_depth(face[1]), reverse=True):
+            points = [project(corners[index]) for index in indices]
+            pygame.draw.polygon(surface, color, points)
+            pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, points, 1)
 
     @staticmethod
     def draw_compass(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, left_bound: int) -> None:

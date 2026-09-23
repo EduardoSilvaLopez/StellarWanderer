@@ -166,6 +166,7 @@ def main() -> None:
                 1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),
                 1 if keys[pygame.K_w] else (-1 if keys[pygame.K_s] else 0)
             )
+        player_module.current_player.ship.laser.update_aim()
         if (keys[pygame.K_SPACE]):
             player_module.current_player.ship.laser.fire()
             if (player_module.current_player.ship.laser.hitting_rock):

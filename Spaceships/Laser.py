@@ -17,6 +17,7 @@ class Laser:
         self.ship = ship
         self.firing = False
         self.hitting_rock: Optional[Rock] = None
+        self.targeted_rock: Optional[Rock] = None
         self.length = Laser.MAX_LENGTH
         self.start_x = 0.0
         self.start_y = 0.0
@@ -25,10 +26,11 @@ class Laser:
         self.end_y = 0.0
         self.end_z = 0.0
 
-    def fire(self) -> None:
-        """Fire the laser, calculate where it starts and ends based on the ship's position and orientation."""
-        self.firing = True
-
+    def update_aim(self) -> None:
+        """Recompute the beam's start/end points and the currently targeted rock
+        from the ship's current position and orientation. Called once per frame
+        regardless of whether the laser is actually firing, so UI elements (like
+        the scanner) can show what's in the crosshair at all times."""
         # Compute laser endpoint: forward vector is (sin(θ), 0, cos(θ))
         orientation = math.radians(self.ship.owner.orientation)
         forward_x = math.sin(orientation)
@@ -39,51 +41,50 @@ class Laser:
         self.start_y = self.ship.owner.position.y - Laser.POSITION_OFFSET
         self.start_z = self.ship.owner.position.z + forward_z * 5.0
 
-        self.end_x = self.ship.owner.position.x + self.ship.laser.length * forward_x
+        self.end_x = self.ship.owner.position.x + self.length * forward_x
         self.end_y = self.ship.owner.position.y - Laser.POSITION_OFFSET
-        self.end_z = self.ship.owner.position.z + self.ship.laser.length * forward_z
+        self.end_z = self.ship.owner.position.z + self.length * forward_z
 
-        # Find out rocks hit by the laser and adjust the endpoint if necessary
+        # Find out which rock, if any, is currently in the beam's path.
         hit_rock_tuple = self.get_hit_rock(self.ship.owner.position.km2.parent_world)
 
-        # Adjust endpoint to the closest rock hit, if any
         if hit_rock_tuple:
-            self.hitting_rock = hit_rock_tuple[0]
+            self.targeted_rock = hit_rock_tuple[0]
             closest_t = hit_rock_tuple[1]
 
             # Adjust the endpoint to the intersection point using the t-value
             # The intersection point is: start + t * (end - start)
             self.end_x = self.start_x + closest_t * (self.end_x - self.start_x)
             self.end_z = self.start_z + closest_t * (self.end_z - self.start_z)
-         
+        else:
+            self.targeted_rock = None
+
+    def fire(self) -> None:
+        """Start firing the laser; damage applies to whatever is currently targeted."""
+        self.firing = True
+        self.hitting_rock = self.targeted_rock
+
     def cease_fire(self) -> None:
         if (not self.firing):
             return
         self.firing = False
-        self.start_x = 0
-        self.start_y = 0
-        self.start_z = 0
-        self.end_x = 0
-        self.end_y = 0
-        self.end_z = 0
+        self.hitting_rock = None
 
     def get_hit_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
-        ''' Returns not only the rock but its t_value'''
-        if (not self.firing):
-            return None
+        ''' Returns the closest rock currently in the beam's path, and its t_value, regardless of firing state.'''
         if (self.ship.owner.position.km2.parent_world != world):
             raise ValueError("Laser's ship is not in the provided world.")
         if (self.ship.owner.position.y < 0):
             raise ValueError("Laser's ship is below the surface of the world.")
-        if self.ship.owner.position.y - self.ship.laser.length > 100:
+        if self.ship.owner.position.y - self.length > 100:
             return None
 
-        # First, exclude fully irrelevant.km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.
+        # First, exclude fully irrelevant km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.
         relevant_km2 = []
         for km2 in world.km2s:
-            if km2.longitude <= self.ship.owner.position.x - self.ship.laser.length - km2.SIZE or km2.longitude >= self.ship.owner.position.x + self.ship.laser.length:
+            if km2.longitude <= self.ship.owner.position.x - self.length - km2.SIZE or km2.longitude >= self.ship.owner.position.x + self.length:
                 continue  # km2 is too far in longitude
-            if km2.latitude <= self.ship.owner.position.z - self.ship.laser.length - km2.SIZE or km2.latitude >= self.ship.owner.position.z + self.ship.laser.length:
+            if km2.latitude <= self.ship.owner.position.z - self.length - km2.SIZE or km2.latitude >= self.ship.owner.position.z + self.length:
                 continue  # km2 is too far in latitude
             relevant_km2.append(km2)
 
