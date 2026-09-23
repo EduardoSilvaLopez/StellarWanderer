@@ -247,12 +247,37 @@ class Cockpit:
         label = label_font.render('SCANNER', True, ACCENT_DIM)
         surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 6)))
 
-        pygame.draw.rect(surface, READOUT_BG, rect)
-        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, rect, 2)
+        Cockpit._draw_beveled_panel(surface, rect)
 
         rock = player.ship.laser.targeted_rock
         if rock is not None:
             Cockpit._draw_scanned_rock(surface, rect, player, rock)
+
+    @staticmethod
+    def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect) -> None:
+        """Draw a recessed instrument screen: a raised bezel frame around a
+        sunken readout, lit from the top-left (bezel highlight top/left,
+        shadow bottom/right; screen shadow top/left, inner highlight
+        bottom/right) instead of a single flat border line.
+        """
+        depth = max(2, rect.width // 24)
+        outer = rect.inflate(depth * 2, depth * 2)
+
+        pygame.draw.rect(surface, CONSOLE, outer)
+
+        # Bezel: raised, so light catches top/left and shadow falls bottom/right.
+        pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.right - 1, outer.top), depth)
+        pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.left, outer.bottom - 1), depth)
+        pygame.draw.line(surface, HULL_DARK, (outer.left, outer.bottom - depth), (outer.right - 1, outer.bottom - depth), depth)
+        pygame.draw.line(surface, HULL_DARK, (outer.right - depth, outer.top), (outer.right - depth, outer.bottom - 1), depth)
+
+        # Screen: sunken, so the shading is reversed — shadow top/left, a thin lit ridge bottom/right.
+        pygame.draw.rect(surface, READOUT_BG, rect)
+        pygame.draw.line(surface, HULL_DARK, rect.topleft, (rect.right - 1, rect.top), 2)
+        pygame.draw.line(surface, HULL_DARK, rect.topleft, (rect.left, rect.bottom - 1), 2)
+        pygame.draw.line(surface, HULL_EDGE_COLOR, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1), 1)
+        pygame.draw.line(surface, HULL_EDGE_COLOR, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1), 1)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, rect, 1)
 
     @staticmethod
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:
@@ -293,7 +318,7 @@ class Cockpit:
         ys = [-c[1] for c in corners.values()]
         span = max(max(xs) - min(xs), max(ys) - min(ys), 1e-6)
 
-        padding = 6
+        padding = max(10, int(min(rect.width, rect.height) * 0.18))
         scale = (min(rect.width, rect.height) - padding * 2) / span
         cx, cy = rect.centerx, rect.centery
 
