@@ -85,7 +85,8 @@ New release! As the alterations are now saved and recovered.
 
 ### 2026-09-23 (8/8), 1h45' + 11:00 - 11:15
 
-Stuck at: too rapid movement provokes no environment.
+Stuck at: too rapid movement provokes no environment -> Resolved.
+Starting to set mines.
 
 ## ToDo
 
