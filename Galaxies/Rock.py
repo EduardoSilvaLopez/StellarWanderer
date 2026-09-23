@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging; logger = logging.getLogger(__name__)
+from random import Random
 
 from datetime import datetime, timedelta
 from math import sqrt
@@ -27,7 +28,8 @@ class Rock(Updatable):
         self.z = latitude
         self.orientation = my_random.random() * 180 - 90
         self.tilt = my_random.random() * 45
-        self.initial_color = (40 + my_random.randint(0, 32), 40 + my_random.randint(0, 32), 40 + my_random.randint(0, 32))
+        self.composition = my_random.random()
+        self.initial_color = self.calculate_initial_color(my_random)
         self.temperature = 0.0
         self.adjust_color()
 
@@ -119,6 +121,27 @@ class Rock(Updatable):
         update_queue.add(self)
         logger.info(f"Rock will be updated again, at {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
+    def is_ore_rich(self) -> bool:
+        return self.composition >= 0.95
+
+    def calculate_initial_color(self, my_random: Random) -> tuple:
+        # Ore-rich are yellow-ish
+        if self.is_ore_rich():
+            base_r = int(100 * self.composition) + my_random.randint(0, 8)
+            base_g = int(100 * self.composition) + my_random.randint(0, 8)
+            base_b = 16 + my_random.randint(0, 8)
+        else:
+            base_r = 48 + my_random.randint(0, 32)
+            base_g = 48 + my_random.randint(0, 32)
+            base_b = 32 + my_random.randint(0, 48)
+
+        return (base_r, base_g, base_b)
+
+    def adjust_color(self) -> Rock:
+        temperature_increase = int(sqrt(self.temperature))
+        self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
+        return self
+
     def increase_temperature(self, delta_time: float, game_date_time: datetime) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
@@ -126,10 +149,4 @@ class Rock(Updatable):
         self.adjust_color()
         if self.next_update_at is None:
             self.start_updating(game_date_time) # First time we just get ready anyway.
-        return self
-
-    def adjust_color(self) -> Rock:
-        temperature_increase = int(sqrt(self.temperature))
-        self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
-
         return self
