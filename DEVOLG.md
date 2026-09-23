@@ -83,8 +83,9 @@ Stuck in the new singleton strategy, which creates lots of problems, damn it.
 
 New release! As the alterations are now saved and recovered.
 
-Extra time: 10:00 - 11:00 + 15:45 - 
+### 2026-09-23 (8/8), 1h45' + 11:00 - 11:15
 
+Stuck at: too rapid movement provokes no environment.
 
 ## ToDo
 

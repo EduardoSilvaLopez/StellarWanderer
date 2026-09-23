@@ -1,6 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from cmath import pi
 import math
@@ -28,7 +27,7 @@ class Player:
         self.ship.laser.firing = False  # Laser firing (SPACE held)
 
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
-        self.position.Km2 = None
+        self.position.km2 = None
         self.position.x = 0
         self.position.y = 0
         self.position.z = 0
@@ -37,16 +36,16 @@ class Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
         environment.current_world.update_surroundings(0, 0, gem.GameEnvironment.EPOCH)
-        central_km2 = next(km2 for km2 in environment.current_world.Km2s if km2.longitude == 0 and km2.latitude == 0)
-        self.position.Km2 = central_km2
-        self.position.x = self.position.Km2.longitude + 500
+        central_km2 = next(km2 for km2 in environment.current_world.km2s if km2.longitude == 0 and km2.latitude == 0)
+        self.position.km2 = central_km2
+        self.position.x = self.position.km2.longitude + 500
         self.position.y = 10
-        self.position.z = self.position.Km2.latitude + 500
+        self.position.z = self.position.km2.latitude + 500
         return self
 
     def position_in_km2(self, km2: Km2, x: int, y: int, z: int) -> Player:
         ''' Set the player in a specific Km2 and coordinates.'''
-        self.position.Km2 = km2
+        self.position.km2 = km2
         self.position.x = x
         self.position.y = y
         self.position.z = z
@@ -74,14 +73,14 @@ class Player:
             latitude_change: float
             ) -> Player:
         self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
-        new_km2 = self.find_km2_in(self.position.Km2.parent_world)
-        if new_km2 != self.position.Km2:
-            self.position.Km2 = new_km2
-            self.position.Km2.parent_world.update_surroundings(
-                self.position.Km2.longitude,
-                self.position.Km2.latitude,
+        new_km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
+        if new_km2 is None or new_km2 != self.position.km2:
+            gem.current_environment.current_world.update_surroundings(
+                self.position.x,
+                self.position.z,
                 gem.current_environment.date_time
                 )
+        self.position.km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
         return self
 
     def update_coordinates(self, delta_time: float, longitude_change: float, altitude_change: float, latitude_change: float) -> Player:
@@ -107,10 +106,10 @@ class Player:
             change_in_mts = longitude_change * self.ship.RIGHT_LEFT_SPEED * delta_time
             self.position.x += change_in_mts
 
-            if self.position.x < -pi * self.position.Km2.parent_world.radius:
-                self.position.x += pi * self.position.Km2.parent_world.radius * 2
-            elif self.position.x > pi * self.position.Km2.parent_world.radius:
-                self.position.x -= pi * self.position.Km2.parent_world.radius * 2
+            if self.position.x < -pi * self.position.km2.parent_world.radius:
+                self.position.x += pi * self.position.km2.parent_world.radius * 2
+            elif self.position.x > pi * self.position.km2.parent_world.radius:
+                self.position.x -= pi * self.position.km2.parent_world.radius * 2
 
         # Update altitude, clamp between MIN and MAX
         if altitude_change != 0:
@@ -127,24 +126,9 @@ class Player:
             self.position.z += change_in_mts
 
             self.position.z = max(
-                -pi * self.position.Km2.parent_world.radius / 2,
-                min(pi * self.position.Km2.parent_world.radius / 2, self.position.z)
+                -pi * self.position.km2.parent_world.radius / 2,
+                min(pi * self.position.km2.parent_world.radius / 2, self.position.z)
             )
         return self
-
-    def find_km2_in(self, world: World) -> Km2:
-        """
-        Find the right Km2 for the player based on their current position.
-        """
-        new_longitude = (self.position.x // Km2.SIZE) * Km2.SIZE
-        new_latitude = (self.position.z // Km2.SIZE) * Km2.SIZE
-        if (self.position.Km2 and self.position.Km2.longitude == new_longitude and self.position.Km2.latitude == new_latitude):
-            return self.position.Km2  # No change in Km2
-
-        new_km2 = next((km2 for km2 in world.Km2s if km2.longitude == new_longitude and km2.latitude == new_latitude), None)
-        if new_km2:
-            return new_km2
-        else:
-            raise Exception(f"Km2 at longitude {new_longitude} and latitude {new_latitude} not found in world. This should not happen if update_surroundings is called.")
 
 current_player: Player = None

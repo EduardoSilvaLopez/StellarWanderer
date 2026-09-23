@@ -62,7 +62,7 @@ class OpenGLGui:
 
     def _rocks(self, environment: GameEnvironment, player: Player) -> List[Rock]:
         rocks: List[Rock] = []
-        for km2 in environment.current_world.Km2s:
+        for km2 in environment.current_world.km2s:
             if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
                 km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
                 rocks.extend(km2.rocks)

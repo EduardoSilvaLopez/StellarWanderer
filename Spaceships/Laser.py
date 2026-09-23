@@ -44,7 +44,7 @@ class Laser:
         self.end_z = self.ship.owner.position.z + self.ship.laser.length * forward_z
 
         # Find out rocks hit by the laser and adjust the endpoint if necessary
-        hit_rock_tuple = self.get_hit_rock(self.ship.owner.position.Km2.parent_world)
+        hit_rock_tuple = self.get_hit_rock(self.ship.owner.position.km2.parent_world)
 
         # Adjust endpoint to the closest rock hit, if any
         if hit_rock_tuple:
@@ -71,16 +71,16 @@ class Laser:
         ''' Returns not only the rock but its t_value'''
         if (not self.firing):
             return None
-        if (self.ship.owner.position.Km2.parent_world != world):
+        if (self.ship.owner.position.km2.parent_world != world):
             raise ValueError("Laser's ship is not in the provided world.")
         if (self.ship.owner.position.y < 0):
             raise ValueError("Laser's ship is below the surface of the world.")
         if self.ship.owner.position.y - self.ship.laser.length > 100:
             return None
 
-        # First, exclude fully irrelevant Km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.
+        # First, exclude fully irrelevant.km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.
         relevant_km2 = []
-        for km2 in world.Km2s:
+        for km2 in world.km2s:
             if km2.longitude <= self.ship.owner.position.x - self.ship.laser.length - km2.SIZE or km2.longitude >= self.ship.owner.position.x + self.ship.laser.length:
                 continue  # km2 is too far in longitude
             if km2.latitude <= self.ship.owner.position.z - self.ship.laser.length - km2.SIZE or km2.latitude >= self.ship.owner.position.z + self.ship.laser.length:

@@ -113,8 +113,8 @@ class Cockpit:
         coord_x = cluster_left + bar_w + int(w * 0.035)
         world_y = cluster_top + int(height * 0.02)
 
-        world_name = player.position.Km2.parent_world.name
-        star_name = player.position.Km2.parent_world.parent_orbit.parent_stellar_system.name
+        world_name = player.position.km2.parent_world.name
+        star_name = player.position.km2.parent_world.parent_orbit.parent_stellar_system.name
         stellar_label = world_name + ", " + star_name + " System"
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
@@ -186,7 +186,7 @@ class Cockpit:
             h: Window height
             player: Player object with position and world info
         """
-        world = player.position.Km2.parent_world
+        world = player.position.km2.parent_world
         radius = world.radius
 
         # Header with world name

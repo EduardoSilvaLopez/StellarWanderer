@@ -77,11 +77,14 @@ class World:
             None
             )
 
-    def update_surroundings(self, longitude: int, latitude: int, game_date_time: datetime) -> None:
+    def update_surroundings(self, center_lon: int, center_lat: int, game_date_time: datetime) -> None:
         """
         1. Ensure the surroundings of a point exist and are updated.
         2. Ensure everything else loaded is *not longer* updated.
         """
+        longitude = (center_lon // Km2.SIZE) * Km2.SIZE
+        latitude = (center_lat // Km2.SIZE) * Km2.SIZE
+
         to_stop_updating: List[Km2] = self.km2s.copy()
 
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
@@ -102,8 +105,9 @@ class World:
                 tgt_Km2.start_updating_rocks(game_date_time)
 
         for tgt_Km2 in to_stop_updating:
-            if not tgt_Km2.is_altered:
-                continue
-            tgt_Km2.stop_updating_rocks()
+            if tgt_Km2.is_altered:
+                tgt_Km2.stop_updating_rocks()
+            else:
+                self.km2s.remove(tgt_Km2)
 
-        logger.debug(f"The surroundings have now {len(self.km2s)} Km2")
+        logger.debug(f"The world has not {len(self.km2s)} Km2 loaded.")

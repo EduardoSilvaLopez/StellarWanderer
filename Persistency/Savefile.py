@@ -43,8 +43,8 @@ class Savefile:
                     load_object['player']['world.degrees_in_orbit']
                     )
         gem.current_environment.current_world.update_surroundings(
-            load_object['player']['km2.longitude'],
-            load_object['player']['km2.latitude'],
+            load_object['player']['x'],
+            load_object['player']['z'],
             game_date_time
             )
 
@@ -54,7 +54,7 @@ class Savefile:
         pem.current_player.position.x = load_object['player']['x']
         pem.current_player.position.y = load_object['player']['y']
         pem.current_player.position.z = load_object['player']['z']
-        pem.current_player.position.Km2 = pem.current_player.find_km2_in(gem.current_environment.current_world)
+        pem.current_player.position.km2 = gem.current_environment.current_world.get_km2_at(pem.current_player.position.x, pem.current_player.position.z)
 
     @staticmethod
     def load_last() -> None:
@@ -99,13 +99,11 @@ class Savefile:
             , 'player': {
                 'time_scale': player.time_scale,
                 'orientation': player.orientation,
-                'stellar_system.x': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.x,
-                'stellar_system.y': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.y,
-                'stellar_system.z': player.position.Km2.parent_world.parent_orbit.parent_stellar_system.z,
-                'orbit.distance_from_star': player.position.Km2.parent_world.parent_orbit.distance_from_star,
-                'world.degrees_in_orbit': player.position.Km2.parent_world.degrees_in_orbit,
-                'km2.longitude': player.position.Km2.longitude,
-                'km2.latitude': player.position.Km2.latitude,
+                'stellar_system.x': environment.current_world.parent_orbit.parent_stellar_system.x,
+                'stellar_system.y': environment.current_world.parent_orbit.parent_stellar_system.y,
+                'stellar_system.z': environment.current_world.parent_orbit.parent_stellar_system.z,
+                'orbit.distance_from_star': environment.current_world.parent_orbit.distance_from_star,
+                'world.degrees_in_orbit': environment.current_world.degrees_in_orbit,
                 'x': player.position.x,
                 'y': player.position.y,
                 'z': player.position.z
