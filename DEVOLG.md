@@ -89,7 +89,6 @@ Stuck at: too rapid movement provokes no environment.
 
 ## ToDo
 
-- World map (only a rectangle, first)
 - Set mines: Proof of concept essentially finished. They allow to collect "ore" when you laser them.
 - Make and show the sun.
 - Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player.
