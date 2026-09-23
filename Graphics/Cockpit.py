@@ -90,7 +90,8 @@ class Cockpit:
         # Altitude bar (vertical level indicator)
         bar_w = int(w * 0.028)
         bar_h = cluster_height
-        pygame.draw.rect(surface, READOUT_BG, (cluster_left, cluster_top, bar_w, bar_h))
+        bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_h)
+        Cockpit._draw_beveled_panel(surface, bar_rect)
 
         # Calculate altitude fraction (0-1) based on player position
         from Player import Player
@@ -100,11 +101,13 @@ class Cockpit:
         altitude_fraction = (player.position.y - min_altitude) / altitude_range
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
 
-        filled = int(bar_h * altitude_fraction)
+        # Fill sits inset within the sunken bar, clear of the bevel lines.
+        fill_pad = 3
+        filled = int((bar_h - fill_pad * 2) * altitude_fraction)
         pygame.draw.rect(
-            surface, ACCENT, (cluster_left, cluster_top + bar_h - filled, bar_w, filled)
+            surface, ACCENT,
+            (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
-        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, (cluster_left, cluster_top, bar_w, bar_h), 2)
 
         # Altitude label
         alt_label = label_font.render('ALT', True, ACCENT_DIM)
@@ -151,8 +154,7 @@ class Cockpit:
         # Centre multi-function display.
         mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
         mfd.center = (w // 2, top + int(height * 0.44))
-        pygame.draw.rect(surface, READOUT_BG, mfd)
-        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, mfd, 2)
+        Cockpit._draw_beveled_panel(surface, mfd)
 
         Cockpit.draw_world_map(surface, fonts, mfd, h, player)
 
@@ -186,14 +188,10 @@ class Cockpit:
         )
         surface.blit(world_name_text, world_name_text.get_rect(midtop=(mfd.centerx, mfd.top + 5)))
 
-        # Map area below header
+        # Map area below header — sits on the beveled mfd screen drawn by the caller.
         map_area = mfd.inflate(-8, 0)
         map_area.top = mfd.top + world_name_text.get_height() + 9
         map_area.height = mfd.bottom - 5 - map_area.top
-
-        # Draw map background and border
-        pygame.draw.rect(surface, READOUT_BG, map_area)
-        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, map_area, 1)
 
         # World bounds rectangle (normalized to map area)
         # Longitude: -π*radius to +π*radius (horizontal)
