@@ -65,9 +65,9 @@ class Km2:
     def stop_updating_rocks(self) -> None:
         for rock in self.rocks:
             rock.stop_updating()
-        logger.info("Stop updating: ", self.longitude, " ", self.latitude)
+        logger.info(f"Stop updating: {self.longitude} {self.latitude}")
 
     def start_updating_rocks(self, update_time: datetime) -> None:
         for rock in self.rocks:
             rock.start_updating(update_time)
-        logger.info("Start updating: ", self.longitude, " ", self.latitude)
+        logger.info(f"Start updating: {self.longitude} {self.latitude}")

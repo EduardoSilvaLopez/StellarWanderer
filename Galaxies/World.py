@@ -13,7 +13,7 @@ class World:
 
     EARTHLIKE_RADIUS_AVERAGE = 5000000
     EARTHLIKE_RADIUS_SIGMA = 1000000
-    SURROUNDINGS_RADIUS = 3
+    SURROUNDINGS_RADIUS = 2
 
     def __init__(self, parent_orbit: int, degrees_in_orbit: float, saved_alterations: dict) -> None:
         self.parent_orbit = parent_orbit
@@ -23,7 +23,7 @@ class World:
         self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
-        self.Km2s: List[Km2] = []
+        self.km2s: List[Km2] = []
 
         self.is_altered = False
         self.saved_alterations = None
@@ -47,7 +47,7 @@ class World:
     def get_alterations(self) -> Optional[dict]:
         alterations = dict()
         if self.is_altered:
-            for km2 in self.Km2s:
+            for km2 in self.km2s:
                 if km2.is_altered:
                     alterations[km2.get_alterations_key()] = km2.get_alterations()
         if alterations == {}:
@@ -68,31 +68,42 @@ class World:
         
         return name.capitalize()
 
+    def get_km2_at(self, longitude: float, latitude: float) -> Optional[Km2]:
+        """Find the right Km2 for a given point... if it exists."""
+        new_longitude = (longitude // Km2.SIZE) * Km2.SIZE
+        new_latitude = (latitude // Km2.SIZE) * Km2.SIZE
+        return next(
+            (km2 for km2 in self.km2s if km2.longitude == new_longitude and km2.latitude == new_latitude),
+            None
+            )
+
     def update_surroundings(self, longitude: int, latitude: int, game_date_time: datetime) -> None:
-        """Ensure the surroundings of the player exist and are updated."""
+        """
+        1. Ensure the surroundings of a point exist and are updated.
+        2. Ensure everything else loaded is *not longer* updated.
+        """
+        to_stop_updating: List[Km2] = self.km2s.copy()
+
         for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
             for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
                 target_longitude = longitude + lon_delta * Km2.SIZE
                 target_latitude = latitude + lat_delta * Km2.SIZE
                 tgt_Km2 = next(
-                    (km2 for km2 in self.Km2s if km2.longitude == target_longitude and km2.latitude == target_latitude),
+                    (km2 for km2 in self.km2s if km2.longitude == target_longitude and km2.latitude == target_latitude),
                     None
                     )
-
-                if (lon_delta == -World.SURROUNDINGS_RADIUS
-                    or lon_delta == World.SURROUNDINGS_RADIUS
-                    or lat_delta == -World.SURROUNDINGS_RADIUS
-                    or lat_delta == World.SURROUNDINGS_RADIUS
-                    ):
-                    # "Destruction" ring
-                    if tgt_Km2 is None: continue
-                    tgt_Km2.stop_updating_rocks()
+                if tgt_Km2 is None:
+                    new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
+                    self.km2s.append(new_Km2)
+                    continue
                 else:
-                    if tgt_Km2 is None:
-                        new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
-                        self.Km2s.append(new_Km2)
-                        continue
-                    if not tgt_Km2.is_altered: continue
-                    tgt_Km2.start_updating_rocks(game_date_time)
+                    to_stop_updating.remove(tgt_Km2)
+                if not tgt_Km2.is_altered: continue
+                tgt_Km2.start_updating_rocks(game_date_time)
 
-        logger.debug("The surroundings have now ", len(self.Km2s), " Km2")
+        for tgt_Km2 in to_stop_updating:
+            if not tgt_Km2.is_altered:
+                continue
+            tgt_Km2.stop_updating_rocks()
+
+        logger.debug(f"The surroundings have now {len(self.km2s)} Km2")
