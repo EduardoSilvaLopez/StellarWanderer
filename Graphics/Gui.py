@@ -6,21 +6,28 @@ The panel on the upper right is the ship clock — it starts at
 500-01-01 00:00:00 and advances one second per real second.
 """
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
+import pygame
 from .DeepSpace import DeepSpace
 from .Stars import Stars
 from .NearestWorld import NearestWorld
 from .Cockpit import Cockpit
 from .Constants import SPACE_COLOR
 
+if TYPE_CHECKING:
+    from Player import Player
+    from GameEnvironment import GameEnvironment
+
 
 class Gui:
     """Main cockpit graphics orchestrator."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the GUI with a starfield."""
         self.stars = Stars.make_starfield()
 
-    def draw(self, surface, fonts, environment, player):
+    def draw(self, surface: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
         """Draw the complete cockpit view.
 
         Renders in order:
@@ -48,7 +55,7 @@ class Gui:
         Cockpit.draw(surface, fonts, w, h, player, environment.date_time, player.time_scale)
 
 
-def draw(surface, fonts, environment, player):
+def draw(surface: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
     """Legacy interface for backward compatibility.
 
     Creates a Gui instance and draws the scene.

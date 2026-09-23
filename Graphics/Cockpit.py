@@ -1,19 +1,25 @@
 """Cockpit instrumentation: canopy, console, and clock."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 import math
 import pygame
+from datetime import datetime
 from .Constants import (
     CONSOLE_EDGE_COLOR, CONSOLE_TOP, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     HULL_COLOR, HULL_DARK, HULL_EDGE_COLOR, STRUT, CONSOLE, CONSOLE_EDGE_COLOR,
     ACCENT, ACCENT_DIM, AMBER, READOUT_BG
 )
 
+if TYPE_CHECKING:
+    from Player import Player
+
 
 class Cockpit:
     """Renders cockpit instrumentation: hull, console, and clock."""
 
     @staticmethod
-    def draw(surface, fonts, w, h, player, date_time, time_scale):
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime, time_scale: int) -> None:
         """Draw all cockpit elements.
 
         Args:
@@ -30,7 +36,7 @@ class Cockpit:
         Cockpit.draw_ship_clock(surface, fonts, date_time, time_scale, w, h)
 
     @staticmethod
-    def draw_canopy(surface, w, h):
+    def draw_canopy(surface: pygame.Surface, w: int, h: int) -> None:
         """Draw hull frame: top rail, two A-pillars, and struts between panes."""
         top = int(h * CANOPY_TOP)
         bottom = int(h * CONSOLE_TOP)
@@ -62,7 +68,7 @@ class Cockpit:
             pygame.draw.line(surface, HULL_EDGE_COLOR, strut[0], strut[3], 1)
 
     @staticmethod
-    def draw_console(surface, fonts, w, h, player):
+    def draw_console(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
         """Draw instrument panel below the windshield."""
         top = int(h * CONSOLE_TOP)
         height = h - top
@@ -170,7 +176,7 @@ class Cockpit:
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
 
     @staticmethod
-    def draw_world_map(surface, fonts, mfd, h, player):
+    def draw_world_map(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, player: Player) -> None:
         """Draw a world map showing player position.
 
         Args:
@@ -226,12 +232,12 @@ class Cockpit:
         player_y = int(inner_area.top + (1 - norm_lat) * inner_area.height)  # Flip Y (top=max latitude)
 
         # Draw player position as a brilliant dot
-        dot_radius = max(2, int(h * 0.006))
+        dot_radius = max(2, int(h * 0.003))
         pygame.draw.circle(surface, ACCENT, (player_x, player_y), dot_radius)
         pygame.draw.circle(surface, (255, 255, 255), (player_x, player_y), max(1, dot_radius - 1))
 
     @staticmethod
-    def draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, left_bound):
+    def draw_compass(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, left_bound: int) -> None:
         """Draw a north-up compass dial with a needle showing the player's heading.
 
         The dial stays fixed with 'N' at the top; the needle rotates to point
@@ -284,7 +290,7 @@ class Cockpit:
         pygame.draw.circle(surface, ACCENT, center, max(2, int(h * 0.006)))
 
     @staticmethod
-    def draw_ship_clock(surface, fonts, date_time, time_scale, w, h):
+    def draw_ship_clock(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int) -> None:
         """Draw clock panel mounted on the upper right of the cockpit."""
         digit_font = fonts.get(max(14, int(h * 0.030)), bold=True)
         label_font = fonts.get(max(9, int(h * 0.016)))
@@ -319,12 +325,12 @@ class Cockpit:
         surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
     @staticmethod
-    def format_ship_time(moment):
+    def format_ship_time(moment: datetime) -> str:
         """Format ISO 8601 layout without zero-padding the year, e.g. '500-01-01 00:00:00'."""
         return (f'{moment.year}-{moment.month:02d}-{moment.day:02d} '
                 f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 
     @staticmethod
-    def format_time_scale(scale):
+    def format_time_scale(scale: int) -> str:
         """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'."""
         return f'x{scale:,}'.replace(',', ' ')

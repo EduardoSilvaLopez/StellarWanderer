@@ -1,5 +1,7 @@
 """OpenGL-backed frame composition for the cockpit view."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, List, Any
 import pygame
 from OpenGL import GL
 
@@ -11,18 +13,23 @@ from .Rocks import Rocks
 from .Laser import Laser
 from .Stars import Stars
 
+if TYPE_CHECKING:
+    from Player import Player
+    from GameEnvironment import GameEnvironment
+    from Galaxies.Rock import Rock
+
 
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stars = Stars.make_starfield()
-        self.world_surface = None
-        self.overlay_surface = None
-        self.world_texture = None
-        self.overlay_texture = None
+        self.world_surface: Optional[pygame.Surface] = None
+        self.overlay_surface: Optional[pygame.Surface] = None
+        self.world_texture: Optional[int] = None
+        self.overlay_texture: Optional[int] = None
 
-    def draw(self, screen, fonts, environment, player):
+    def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
         """Render one complete frame into the active OpenGL window."""
         width, height = screen.get_size()
         self._ensure_surfaces(width, height)
@@ -53,24 +60,24 @@ class OpenGLGui:
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
 
-    def _rocks(self, environment, player):
-        rocks = []
+    def _rocks(self, environment: GameEnvironment, player: Player) -> List[Rock]:
+        rocks: List[Rock] = []
         for km2 in environment.current_world.Km2s:
             if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
                 km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
                 rocks.extend(km2.rocks)
         return rocks
 
-    def _ensure_surfaces(self, width, height):
+    def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
         if self.world_surface is None or self.world_surface.get_size() != size:
             self.world_surface = pygame.Surface(size).convert()
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
-            self.world_texture = self._make_texture(*size)
-            self.overlay_texture = self._make_texture(*size)
+            self.world_texture = self._make_texture(width, height)
+            self.overlay_texture = self._make_texture(width, height)
 
     @staticmethod
-    def _make_texture(width, height):
+    def _make_texture(width: int, height: int) -> int:
         texture = GL.glGenTextures(1)
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
@@ -84,7 +91,7 @@ class OpenGLGui:
         return texture
 
     @staticmethod
-    def _draw_texture(surface, texture, blend=False):
+    def _draw_texture(surface: pygame.Surface, texture: int, blend: bool = False) -> None:
         width, height = surface.get_size()
         # Keep Pygame's top-to-bottom row order for the top-left screen quad.
         pixels = pygame.image.tostring(surface, 'RGBA', False)

@@ -1,5 +1,6 @@
 """Deep space background rendering."""
 
+from __future__ import annotations
 import pygame
 from .Constants import SPACE_COLOR, CONSOLE_TOP
 
@@ -8,7 +9,7 @@ class DeepSpace:
     """Renders the deep space background through the canopy."""
 
     @staticmethod
-    def draw(surface, w, h):
+    def draw(surface: pygame.Surface, w: int, h: int) -> None:
         """Draw space background.
 
         Args:

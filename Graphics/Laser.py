@@ -1,17 +1,22 @@
 """Depth-tested OpenGL laser beam rendering."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, Tuple
 import math
 
 from OpenGL import GL, GLU
 
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
 
+if TYPE_CHECKING:
+    from Player import Player
+
 
 class Laser:
     """Render the laser beam using the OpenGL depth buffer for occlusion."""
 
     @staticmethod
-    def draw(width, height, player):
+    def draw(width: int, height: int, player: Player) -> None:
         """Draw the laser beam if the player is firing.
 
         Laser is a straight line from player position extending 500 meters
@@ -57,7 +62,7 @@ class Laser:
         # render nothing). The fix: draw a proper rectangular tube — 4 side
         # quads, each combining BOTH the "right" and "up" offsets — so every
         # face has real extent in both screen dimensions.
-        def corner(cx, cy, cz, right_sign, up_sign):
+        def corner(cx: float, cy: float, cz: float, right_sign: int, up_sign: int) -> Tuple[float, float, float]:
             return (
                 cx + right_x * half_size * right_sign,
                 cy + half_size * up_sign,

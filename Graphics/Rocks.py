@@ -1,17 +1,23 @@
 """Depth-tested OpenGL rock rendering."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Tuple
 import math
 
 from OpenGL import GL, GLU
 
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
 
+if TYPE_CHECKING:
+    from Player import Player
+    from Galaxies.Rock import Rock
+
 
 class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
     @staticmethod
-    def draw(width, height, player, rocks):
+    def draw(width: int, height: int, player: Player, rocks: List[Rock]) -> None:
         """Draw all cube faces in a perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
@@ -53,7 +59,7 @@ class Rocks:
         GL.glPopMatrix()
 
     @staticmethod
-    def _draw_ground(player):
+    def _draw_ground(player: Player) -> None:
         """Populate depth for the local surface without changing its color."""
         extent = MAX_DEPTH
         x0 = player.position.x - extent
@@ -71,7 +77,7 @@ class Rocks:
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
 
     @staticmethod
-    def _draw_rock(rock):
+    def _draw_rock(rock: Rock) -> None:
         half = rock.size / 2.0
 
         # Rocks are tilted around their own local Z axis by rock.tilt degrees,
@@ -85,13 +91,11 @@ class Rocks:
         cos_o = math.cos(orientation)
         sin_o = math.sin(orientation)
 
-        def corner(sign_x, sign_y, sign_z):
+        def corner(sign_x: int, sign_y: int, sign_z: int) -> Tuple[float, float, float]:
             local_x, local_y, local_z = sign_x * half, sign_y * half, sign_z * half
-            # Apply tilt (rotation around the local Z axis): affects (x, y).
             x1 = local_x * cos_t - local_y * sin_t
             y1 = local_x * sin_t + local_y * cos_t
             z1 = local_z
-            # Apply orientation (rotation around the Y axis): affects (x, z).
             x2 = x1 * cos_o + z1 * sin_o
             z2 = -x1 * sin_o + z1 * cos_o
             return (rock.x + x2, rock.y + y1, rock.z + z2)

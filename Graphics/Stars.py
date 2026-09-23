@@ -1,5 +1,7 @@
 """Starfield rendering."""
 
+from __future__ import annotations
+from typing import List, Tuple
 import random
 import math
 import pygame
@@ -10,7 +12,7 @@ class Stars:
     """Renders stars visible through the canopy."""
 
     @staticmethod
-    def make_starfield(count=STAR_COUNT, seed=STAR_SEED):
+    def make_starfield(count: int = STAR_COUNT, seed: int = STAR_SEED) -> List[Tuple[float, float, int, int]]:
         """Generate a starfield as (nx, ny, radius, brightness), normalised to canopy area.
 
         Args:
@@ -21,16 +23,15 @@ class Stars:
             List of star tuples (nx, ny, radius, brightness)
         """
         rng = random.Random(seed)
-        stars = []
+        stars: List[Tuple[float, float, int, int]] = []
         for _ in range(count):
             brightness = rng.randint(70, 255)
-            # Bias small: a few bright stars read better than a uniform wash.
             radius = 1 if rng.random() < 0.82 else 2
             stars.append((rng.random(), rng.random(), radius, brightness))
         return stars
 
     @staticmethod
-    def draw(surface, stars, w, h, orientation=0.0):
+    def draw(surface: pygame.Surface, stars: List[Tuple[float, float, int, int]], w: int, h: int, orientation: float = 0.0) -> None:
         """Draw stars as points or small circles.
 
         Args:

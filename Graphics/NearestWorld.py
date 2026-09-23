@@ -1,11 +1,18 @@
 """Planet surface and rocks rendering."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Tuple, Any
 import math
 import pygame
 from .Constants import (
     CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON_COLOR,
     ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP, MAX_DEPTH
 )
+
+if TYPE_CHECKING:
+    from Player import Player
+    from GameEnvironment import GameEnvironment
+    from Galaxies.Rock import Rock
 
 
 class NearestWorld:
@@ -14,7 +21,7 @@ class NearestWorld:
     ROCK_DEPTH_PERSPECTIVE = 0.5
 
     @staticmethod
-    def draw(surface, w, h, environment, player):
+    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
         """Draw planet surface and rocks.
 
         Args:
@@ -35,7 +42,7 @@ class NearestWorld:
         NearestWorld.draw_rocks(surface, w, h, player, rocks)
 
     @staticmethod
-    def draw_surface(surface, w, h, environment, player):
+    def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
         """Draw planet surface and horizon.
 
         Planet is not fitted to viewport; its screen radius is the projected
@@ -75,7 +82,7 @@ class NearestWorld:
         )
 
     @staticmethod
-    def draw_rocks(surface, w, h, player, rocks):
+    def draw_rocks(surface: pygame.Surface, w: int, h: int, player: Player, rocks: List[Rock]) -> None:
         """Draw rocks from the current world chunk as cubes on the surface.
 
         Each cube's 8 corners are projected individually through a pinhole-camera
@@ -99,14 +106,14 @@ class NearestWorld:
 
         depth_factor = NearestWorld.ROCK_DEPTH_PERSPECTIVE
 
-        def project(cx, cy, cz, horizontal_depth):
+        def project(cx: float, cy: float, cz: float, horizontal_depth: float) -> Tuple[float, float]:
             """Project a corner with damped horizontal depth perspective."""
             blended_depth = horizontal_depth + depth_factor * (cz - horizontal_depth)
             screen_x = w / 2 + focal_length_px * cx / blended_depth
             screen_y = horizon_y - focal_length_px * cy / cz
             return (screen_x, screen_y)
 
-        def camera_coordinates(world_x, world_z):
+        def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
             """Convert world coordinates to offsets relative to the ship's heading."""
             offset_x = world_x - player_x
             offset_z = world_z - player_z
@@ -189,7 +196,7 @@ class NearestWorld:
                  [(1, 0, 1), (0, 0, 1), (0, 1, 1), (1, 1, 1)]),
             ]
 
-            def face_depth(face):
+            def face_depth(face: Tuple[Any, Any, Any, List[Tuple[int, int, int]]]) -> float:
                 return sum(corner_depths[index] for index in face[3])
 
             for face, color, edge_width, _ in sorted(faces, key=face_depth, reverse=True):
