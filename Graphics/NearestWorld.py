@@ -130,10 +130,10 @@ class NearestWorld:
         for rock in rocks:
             half = rock.size / 2.0
             near_depths = [
-                camera_coordinates(rock.x - half, rock.z - half)[1],
-                camera_coordinates(rock.x + half, rock.z - half)[1],
-                camera_coordinates(rock.x - half, rock.z + half)[1],
-                camera_coordinates(rock.x + half, rock.z + half)[1],
+                camera_coordinates(rock.longitude - half, rock.latitude - half)[1],
+                camera_coordinates(rock.longitude + half, rock.latitude - half)[1],
+                camera_coordinates(rock.longitude - half, rock.latitude + half)[1],
+                camera_coordinates(rock.longitude + half, rock.latitude + half)[1],
             ]
             z0 = min(near_depths)
             if z0 <= NEAR_CLIP or z0 > MAX_DEPTH:
@@ -145,11 +145,11 @@ class NearestWorld:
         for z0, rock, half in visible_rocks:
             # Build the actual axis-aligned cube in world space. Its dimensions
             # stay fixed while the camera orientation changes.
-            x0, x1 = rock.x - half, rock.x + half
-            z0_world, z1_world = rock.z - half, rock.z + half
+            x0, x1 = rock.longitude - half, rock.longitude + half
+            z0_world, z1_world = rock.latitude - half, rock.latitude + half
             y0, y1 = 0.0, rock.size
             cy0, cy1 = y0 - player_y, y1 - player_y
-            _, center_depth = camera_coordinates(rock.x, rock.z)
+            _, center_depth = camera_coordinates(rock.longitude, rock.latitude)
 
             # Project the 8 corners and retain depth for face sorting.
             corners = {}
@@ -243,7 +243,7 @@ class NearestWorld:
         # Gather ore fields with their center depth, for far-to-near draw order.
         visible_fields = []
         for ore_field in ore_fields:
-            center_cx, center_cz = camera_coordinates(ore_field.x, ore_field.z)
+            center_cx, center_cz = camera_coordinates(ore_field.longitude, ore_field.latitude)
             if center_cz <= NEAR_CLIP or center_cz > MAX_DEPTH:
                 continue
             visible_fields.append((center_cz, ore_field, center_cx, center_cz))
