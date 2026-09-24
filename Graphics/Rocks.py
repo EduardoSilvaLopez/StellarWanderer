@@ -11,13 +11,17 @@ from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DE
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
+    from Galaxies.OreField import OreField
 
 
 class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
+    ORE_FIELD_SEGMENTS = 24
+    ORE_FIELD_HEIGHT = 0.05  # Small offset above the ground to avoid z-fighting.
+
     @staticmethod
-    def draw(width: int, height: int, player: Player, rocks: List[Rock]) -> None:
+    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField]) -> None:
         """Draw all cube faces in a perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
@@ -49,6 +53,9 @@ class Rocks:
         GL.glDepthMask(GL.GL_TRUE)
         Rocks._draw_ground(player)
 
+        for ore_field in ore_fields:
+            Rocks._draw_ore_field(ore_field)
+
         for rock in rocks:
             Rocks._draw_rock(rock)
 
@@ -77,6 +84,20 @@ class Rocks:
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
 
     @staticmethod
+    def _draw_ore_field(ore_field: OreField) -> None:
+        """Draw a flat circle on the ground marking an ore field's extent."""
+        y = Rocks.ORE_FIELD_HEIGHT
+        GL.glColor3ub(*ore_field.color)
+        GL.glBegin(GL.GL_TRIANGLE_FAN)
+        GL.glVertex3f(ore_field.longitude, y, ore_field.latitude)
+        for i in range(Rocks.ORE_FIELD_SEGMENTS + 1):
+            angle = 2.0 * math.pi * i / Rocks.ORE_FIELD_SEGMENTS
+            x = ore_field.longitude + ore_field.radius * math.cos(angle)
+            z = ore_field.latitude + ore_field.radius * math.sin(angle)
+            GL.glVertex3f(x, y, z)
+        GL.glEnd()
+
+    @staticmethod
     def _draw_rock(rock: Rock) -> None:
         half = rock.size / 2.0
 
@@ -98,7 +119,7 @@ class Rocks:
             z1 = local_z
             x2 = x1 * cos_o + z1 * sin_o
             z2 = -x1 * sin_o + z1 * cos_o
-            return (rock.x + x2, rock.y + y1, rock.z + z2)
+            return (rock.longitude + x2, rock.altitude + y1, rock.latitude + z2)
 
         c000 = corner(-1, -1, -1)
         c100 = corner(+1, -1, -1)

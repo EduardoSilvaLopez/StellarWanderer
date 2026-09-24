@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
     from Galaxies.Rock import Rock
+    from Galaxies.OreField import OreField
 
 
 class OpenGLGui:
@@ -55,7 +56,7 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.world_surface, self.world_texture)
-        Rocks.draw(width, height, player, self._rocks(environment, player))
+        Rocks.draw(width, height, player, self._rocks(environment, player), self._ore_fields(environment, player))
         Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
@@ -67,6 +68,14 @@ class OpenGLGui:
                 km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
                 rocks.extend(km2.rocks)
         return rocks
+
+    def _ore_fields(self, environment: GameEnvironment, player: Player) -> List[OreField]:
+        ore_fields: List[OreField] = []
+        for km2 in environment.current_world.km2s:
+            if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
+                km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
+                ore_fields.extend(km2.ore_fields)
+        return ore_fields
 
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
