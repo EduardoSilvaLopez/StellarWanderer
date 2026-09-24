@@ -111,7 +111,7 @@ class Cockpit:
 
         # Altitude label
         alt_label = label_font.render('ALT', True, ACCENT_DIM)
-        surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 12)))
+        surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))
 
         # World name (displayed above coordinates)
         coord_x = cluster_left + bar_w + int(w * 0.035)
@@ -250,6 +250,11 @@ class Cockpit:
         rock = player.ship.laser.targeted_rock
         if rock is not None:
             Cockpit._draw_scanned_rock(surface, rect, player, rock)
+            if rock.is_ore_rich():
+                bevel_depth = max(2, rect.width // 24)
+                purity_font = fonts.get(max(9, int(h * 0.017)))
+                purity_text = purity_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
+                surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
 
     @staticmethod
     def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect) -> None:
