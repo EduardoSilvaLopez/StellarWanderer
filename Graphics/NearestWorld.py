@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
     from Galaxies.Rock import Rock
+    from Galaxies.OreField import OreField
 
 
 class NearestWorld:
@@ -35,10 +36,13 @@ class NearestWorld:
 
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
+        ore_fields = []
         for km2 in environment.current_world.km2s:
             if (km2.longitude - km2.SIZE*2 <= player.position.x < km2.longitude + km2.SIZE*2 and
                 km2.latitude - km2.SIZE*2 <= player.position.z < km2.latitude + km2.SIZE*2):
                 rocks.extend(km2.rocks)
+                ore_fields.extend(km2.ore_fields)
+        NearestWorld.draw_ore_fields(surface, w, h, player, ore_fields)
         NearestWorld.draw_rocks(surface, w, h, player, rocks)
 
     @staticmethod
@@ -202,3 +206,62 @@ class NearestWorld:
             for face, color, edge_width, _ in sorted(faces, key=face_depth, reverse=True):
                 pygame.draw.polygon(surface, color, face)
                 pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, face, edge_width)
+
+    @staticmethod
+    def draw_ore_fields(surface: pygame.Surface, w: int, h: int, player: Player, ore_fields: List[OreField]) -> None:
+        """Draw ore fields as circles on the planet surface.
+
+        Ore fields are 2D circles centered at (x, z) on the ground (y=0),
+        projected using the same perspective as rocks.
+        """
+        view_h = int(h * CONSOLE_TOP)
+
+        player_x = player.position.x
+        player_z = player.position.z
+        player_y = player.position.y
+        orientation = math.radians(player.orientation)
+        sin_orientation = math.sin(orientation)
+        cos_orientation = math.cos(orientation)
+
+        focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
+        horizon_y = int(view_h * 0.52)
+
+        def project(cx: float, cy: float, cz: float) -> Tuple[float, float]:
+            """Project a point onto the screen."""
+            screen_x = w / 2 + focal_length_px * cx / cz
+            screen_y = horizon_y - focal_length_px * cy / cz
+            return (screen_x, screen_y)
+
+        def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
+            """Convert world coordinates to offsets relative to the ship's heading."""
+            offset_x = world_x - player_x
+            offset_z = world_z - player_z
+            right = offset_x * cos_orientation - offset_z * sin_orientation
+            forward = offset_x * sin_orientation + offset_z * cos_orientation
+            return right, forward
+
+        # Gather ore fields with their center depth, for far-to-near draw order.
+        visible_fields = []
+        for ore_field in ore_fields:
+            center_cx, center_cz = camera_coordinates(ore_field.x, ore_field.z)
+            if center_cz <= NEAR_CLIP or center_cz > MAX_DEPTH:
+                continue
+            visible_fields.append((center_cz, ore_field, center_cx, center_cz))
+
+        visible_fields.sort(key=lambda item: item[0], reverse=True)  # far first
+
+        for depth, ore_field, center_cx, center_cz in visible_fields:
+            # Project center and edge point to get radius on screen
+            center_screen = project(center_cx, -player_y, center_cz)
+
+            # Get a point on the edge perpendicular to the view direction
+            edge_cx = center_cx + ore_field.radius
+            edge_screen = project(edge_cx, -player_y, center_cz)
+
+            # Screen radius is the distance from center to edge projection
+            radius_px = abs(edge_screen[0] - center_screen[0])
+
+            if radius_px >= 1:
+                pygame.draw.circle(surface, ore_field.color,
+                                 (int(center_screen[0]), int(center_screen[1])),
+                                 max(1, int(radius_px)))
