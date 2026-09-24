@@ -5,9 +5,7 @@ import glob
 import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
-from  Galaxies.Galaxy import Galaxy
-from  Galaxies.World import World
-from  Galaxies.Km2 import Km2
+from Spaceships.Ship import Ship
 import GameEnvironment as gem
 import Player as pem
 
@@ -55,6 +53,8 @@ class Savefile:
         pem.current_player.position.y = load_object['player']['y']
         pem.current_player.position.z = load_object['player']['z']
         pem.current_player.position.km2 = gem.current_environment.current_world.get_km2_at(pem.current_player.position.x, pem.current_player.position.z)
+
+        pem.current_player.ship = Ship.load(pem.current_player, load_object['player']['ship'])
 
     @staticmethod
     def load_last() -> None:
@@ -106,7 +106,8 @@ class Savefile:
                 'world.degrees_in_orbit': environment.current_world.degrees_in_orbit,
                 'x': player.position.x,
                 'y': player.position.y,
-                'z': player.position.z
+                'z': player.position.z,
+                'ship': player.ship.serialize()
             }
         }
         file_name = str(environment.date_time)

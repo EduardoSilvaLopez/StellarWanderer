@@ -82,6 +82,14 @@ class Cockpit:
         label_font = fonts.get(max(9, int(h * 0.017)))
         world_font = fonts.get(max(12, int(h * 0.024)))
 
+        # Right edge is reserved for the CARGO list; the compass/mfd/scanner
+        # cluster lays itself out within the narrower `layout_w` band so it
+        # shifts left to make room instead of overlapping the new panel.
+        cargo_width = int(w * 0.16)
+        cargo_gap = int(w * 0.02)
+        cargo_margin = int(w * 0.03)
+        layout_w = w - cargo_width - cargo_gap - cargo_margin
+
         # Left cluster: altitude bar and position coordinates.
         cluster_left = int(w * 0.02)
         cluster_top = top + int(height * 0.24)
@@ -149,17 +157,23 @@ class Cockpit:
         # Orientation compass: fixed "N" at top, needle rotates to show heading.
         # Widest coordinate label reserves the space the text block actually needs.
         text_right = coord_x + max(longitude_text.get_width(), latitude_text.get_width(), orientation_text.get_width())
-        Cockpit.draw_compass(surface, fonts, w, h, player, cluster_top, cluster_height, text_right)
+        Cockpit.draw_compass(surface, fonts, layout_w, h, player, cluster_top, cluster_height, text_right)
 
         # Centre multi-function display.
-        mfd = pygame.Rect(0, 0, int(w * 0.24), int(height * 0.56))
-        mfd.center = (w // 2, top + int(height * 0.44))
+        mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
+        mfd.center = (layout_w // 2, top + int(height * 0.44))
         Cockpit._draw_beveled_panel(surface, mfd)
 
         Cockpit.draw_world_map(surface, fonts, mfd, h, player)
 
         # Right cluster: scanner readout.
-        Cockpit.draw_scanner(surface, fonts, w, h, player, cluster_top, cluster_height, mfd.right)
+        Cockpit.draw_scanner(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
+
+        # CARGO list: hold contents, in the strip reserved on the right.
+        cargo_rect = pygame.Rect(0, 0, cargo_width, cluster_height)
+        cargo_rect.top = cluster_top
+        cargo_rect.right = w - cargo_margin
+        Cockpit.draw_cargo(surface, fonts, h, player, cargo_rect)
 
         # Indicator lights along the bottom.
         light = max(4, int(height * 0.045))
@@ -257,13 +271,32 @@ class Cockpit:
                 surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
 
     @staticmethod
-    def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect) -> None:
+    def draw_cargo(surface: pygame.Surface, fonts: Any, h: int, player: Player, rect: pygame.Rect) -> None:
+        """Draw the CARGO list: one line per hold element, name and quantity."""
+        label_font = fonts.get(max(9, int(h * 0.017)))
+        label = label_font.render('CARGO', True, ACCENT_DIM)
+        surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 12)))
+
+        Cockpit._draw_beveled_panel(surface, rect, depth=4)
+
+        line_font = fonts.get(max(9, int(h * 0.017)))
+        pad = max(6, rect.width // 16)
+        line_spacing = line_font.get_height() + max(2, int(h * 0.006))
+        line_y = rect.top + pad
+        for element, quantity in player.ship.cargo_hold.content.items():
+            line = line_font.render(f'{element.name}: {quantity}', True, ACCENT)
+            surface.blit(line, (rect.left + pad, line_y))
+            line_y += line_spacing
+
+    @staticmethod
+    def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None) -> None:
         """Draw a recessed instrument screen: a raised bezel frame around a
         sunken readout, lit from the top-left (bezel highlight top/left,
         shadow bottom/right; screen shadow top/left, inner highlight
         bottom/right) instead of a single flat border line.
         """
-        depth = max(2, rect.width // 24)
+        if depth is None:
+            depth = max(2, rect.width // 24)
         outer = rect.inflate(depth * 2, depth * 2)
 
         pygame.draw.rect(surface, CONSOLE, outer)

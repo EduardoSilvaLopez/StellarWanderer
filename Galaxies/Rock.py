@@ -24,9 +24,9 @@ class Rock(Updatable):
         self.parent_km2 = parent_Km2
         my_random = random.Random(parent_Km2.seed + latitude + longitude)
         self.size = abs(my_random.gauss(0, 10))
-        self.x = longitude
-        self.y = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
-        self.z = latitude
+        self.longitude = longitude
+        self.altitude = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
+        self.latitude = latitude
         self.orientation = my_random.random() * 180 - 90
         self.tilt = my_random.random() * 45
         self.composition = my_random.random()
@@ -47,7 +47,7 @@ class Rock(Updatable):
 
                 self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
                 update_queue.add(self)
-                logger.info(f"Altered rock loaded at {self.x}, {self.z} with temperature {self.temperature}°. Queue size: {len(update_queue._queue)}")
+                logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
     def set_last_updated(self, new_date_time: datetime) -> Rock:
         self.last_updated_at = new_date_time
@@ -56,7 +56,7 @@ class Rock(Updatable):
         return self
 
     def get_alterations_key(self) -> str:
-        return str(self.x) + ' ' + str(self.z)
+        return str(self.longitude) + ' ' + str(self.latitude)
 
     def get_alterations(self) -> dict:
         '''The change, expressed as dictionary.'''
@@ -111,7 +111,7 @@ class Rock(Updatable):
 
         self.next_update_at = None
         update_queue.remove(self)
-        logger.info(f"Rock won't be updated anymore, at ({self.x}, {self.z}). Queue size: {len(update_queue._queue)}")
+        logger.info(f"Rock won't be updated anymore, at ({self.longitude}, {self.latitude}). Queue size: {len(update_queue._queue)}")
 
     def start_updating(self, update_time: datetime) -> None:
         if not self.get_alterations():

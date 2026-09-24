@@ -127,9 +127,9 @@ class Laser:
         sin_o = math.sin(orientation)
 
         def to_local(world_x: float, world_y: float, world_z: float) -> Tuple[float, float, float]:
-            dx = world_x - rock.x
-            dy = world_y - rock.y
-            dz = world_z - rock.z
+            dx = world_x - rock.longitude
+            dy = world_y - rock.altitude
+            dz = world_z - rock.latitude
             x1 = dx * cos_o - dz * sin_o
             z1 = dx * sin_o + dz * cos_o
             y1 = dy

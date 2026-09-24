@@ -90,16 +90,25 @@ Starting to set mines. Plan:
 1) Rocks get a "composition". It is only a [0.0, 1.0[ range.
 2) A new composition ("ore rich") gives a reserved color palette (yellow-ish)
 3) Rocks near and in front of the ship are presented in a scanner, together with "size" and "ore" %.
+4) Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("molten").
 
 Extra time: 1h15' + 18:15 - 19:45
 Next: deleted rocks get removed, even if the alteration remains... tricky. Where do I store it?
 
-Extra time: 2h15' + 13:00 - 15:00
-
-4) Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("molten").
+Extra time: 4h15' + 18:45 - 20:00 = 5h30'
 5) The player gets an inventory: mines and ore.
+
 6) Mines can be placed. It position and orientation come from the ship.
-7) Once placed, mines start accumulating ore, depending on if they are in an ore field.
+- Game environment's status message with timer.
+- Initial message: "Welcome, commander."
+- On "M": Check if there is an ore field 100 mtrs in front of the player. If not, warning dialog.
+- On "M: If there is, and the player has no mines, 'You have no mines'.
+- On "M: Status message to confirm ([Enter]/[Escape])
+- On "M -> Escape": Erase status message.
+- On "M -> Enter": Reduce the number of mines by one.
+- On "M -> Enter": Create the "Mines" object in the Km2.
+- Show the mines. Textures?
+7) Once placed, mines start accumulating ore.
 8) "Laser" the mine collects the ore.
 
 ## ToDo

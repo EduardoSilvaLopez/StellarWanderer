@@ -13,8 +13,8 @@ class OreField:
 
     def __init__(self):
         self.parent_km2: Km2 = None
-        self.x: int = 0
-        self.z: int = 0
+        self.longitude: int = 0
+        self.latitude: int = 0
         self.radius: float = 0.0
         self.initial_ore: int = 0
         self.remaining_ore: int = 0
@@ -26,10 +26,10 @@ class OreField:
     def generate_new(original_rock: Rock):
         result = OreField()
         result.parent_km2 = original_rock.parent_km2
-        result.x = original_rock.x
-        result.z = original_rock.z
+        result.longitude = original_rock.longitude
+        result.latitude = original_rock.latitude
         result.radius = 0.5 * original_rock.size**1.5
-        result.remaining_ore = result.initial_ore = int(original_rock.ore_per_m3() * original_rock.size**3)
+        result.initial_ore = result.remaining_ore = int(original_rock.ore_per_m3() * original_rock.size**3)
         result.color = result.initial_color = original_rock.initial_color
         return result
 
@@ -37,8 +37,8 @@ class OreField:
     def generate_loaded(parent_km2: Km2, serialized_dict: dict) -> OreField:
         result = OreField()
         result.parent_km2 = parent_km2
-        result.x = serialized_dict['x']
-        result.z = serialized_dict['z']
+        result.longitude = serialized_dict['longitude']
+        result.latitude = serialized_dict['latitude']
         result.radius = serialized_dict['radius']
         result.initial_ore = serialized_dict['initial_ore']
         result.remaining_ore = serialized_dict['remaining_ore']
@@ -49,8 +49,8 @@ class OreField:
 
     def serialize(self) -> dict:
         return {
-            'x': self.x,
-            'z': self.z,
+            'longitude': self.longitude,
+            'latitude': self.latitude,
             'radius': self.radius,
             'initial_ore': self.initial_ore,
             'remaining_ore': self.remaining_ore,
