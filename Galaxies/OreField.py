@@ -39,13 +39,34 @@ class OreField:
         result.parent_km2 = parent_km2
         result.x = serialized_dict['x']
         result.z = serialized_dict['z']
+        result.radius = serialized_dict.get('radius', 0.0)
+        result.initial_ore = serialized_dict.get('initial_ore', 0)
+        result.remaining_ore = serialized_dict.get('remaining_ore', 0)
         result.mines = []
+        # Restore color from serialized data, or regenerate if not present (backwards compat)
+        if 'color' in serialized_dict:
+            result.color = tuple(serialized_dict['color'])
+            result.initial_color = tuple(serialized_dict.get('initial_color', serialized_dict['color']))
+        else:
+            import random as rand
+            field_seed = (result.x + result.z + parent_km2.seed) % 1000000007
+            field_random = rand.Random(field_seed)
+            result.color = result.initial_color = (
+                100 + field_random.randint(0, 55),
+                100 + field_random.randint(0, 55),
+                16 + field_random.randint(0, 8)
+            )
         return result
 
     def serialize(self) -> dict:
         return {
             'x': self.x,
-            'z': self.z
+            'z': self.z,
+            'radius': self.radius,
+            'initial_ore': self.initial_ore,
+            'remaining_ore': self.remaining_ore,
+            'initial_color': self.initial_color,
+            'color': self.color
             }
 
     def extract(self, time_diff: float) -> int:
