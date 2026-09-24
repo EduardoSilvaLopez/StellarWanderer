@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
 from Galaxies.World import World
@@ -9,14 +9,14 @@ if TYPE_CHECKING:
 class Orbit:
 
     def __init__(self, parent_stellar_system: StellarSystem, distance_from_star: int, saved_alterations: dict) -> None:
-        self.parent_stellar_system = parent_stellar_system
-        self.distance_from_star = distance_from_star
-        self.seed = (self.distance_from_star + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
-        self.worlds = []
+        self.parent_stellar_system: StellarSystem = parent_stellar_system
+        self.distance_from_star: int = distance_from_star
+        self.seed: int = (self.distance_from_star + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.worlds: List[World] = []
 
-        self.is_altered = False
-        self.saved_alterations = None
-        alterations_key = self.get_alterations_key()
+        self.is_altered: bool = False
+        self.saved_alterations: Optional[dict] = None
+        alterations_key: str = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)

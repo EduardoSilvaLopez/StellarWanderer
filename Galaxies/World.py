@@ -4,9 +4,12 @@ import logging; logger = logging.getLogger(__name__)
 
 import random
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
+
+if TYPE_CHECKING:
+    from Galaxies.Orbit import Orbit
 from Galaxies.Km2 import Km2
 
 class World:
@@ -16,24 +19,24 @@ class World:
     SURROUNDINGS_RADIUS = 2
 
     def __init__(self, parent_orbit: int, degrees_in_orbit: float, saved_alterations: dict) -> None:
-        self.parent_orbit = parent_orbit
-        self.degrees_in_orbit = degrees_in_orbit
-        self.seed = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
-        my_random = random.Random(self.seed)
-        self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
+        self.parent_orbit: Orbit = parent_orbit
+        self.degrees_in_orbit: int = degrees_in_orbit
+        self.seed: int = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
+        my_random: random.Random = random.Random(self.seed)
+        self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         self.km2s: List[Km2] = []
 
-        self.is_altered = False
-        self.saved_alterations = None
-        alterations_key = self.get_alterations_key()
+        self.is_altered: bool = False
+        self.saved_alterations: Optional[dict] = None
+        alterations_key: str = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.name = self.generate_name(my_random)
+        self.name: str = self.generate_name(my_random)
 
     def set_altered(self) -> World:
         self.is_altered = True
@@ -45,7 +48,7 @@ class World:
         return str(self.degrees_in_orbit)
 
     def get_alterations(self) -> Optional[dict]:
-        alterations = dict()
+        alterations: Optional[dict] = dict()
         if self.is_altered:
             for km2 in self.km2s:
                 if km2.is_altered:
@@ -77,13 +80,13 @@ class World:
             None
             )
 
-    def update_surroundings(self, center_lon: int, center_lat: int, game_date_time: datetime) -> None:
+    def update_surroundings(self, center_lon: float, center_lat: float, game_date_time: datetime) -> None:
         """
         1. Ensure the surroundings of a point exist and are updated.
         2. Ensure everything else loaded is *not longer* updated.
         """
-        longitude = (center_lon // Km2.SIZE) * Km2.SIZE
-        latitude = (center_lat // Km2.SIZE) * Km2.SIZE
+        longitude: int = int((center_lon // Km2.SIZE) * Km2.SIZE)
+        latitude: int = int((center_lat // Km2.SIZE) * Km2.SIZE)
 
         to_stop_updating: List[Km2] = self.km2s.copy()
 
@@ -110,4 +113,4 @@ class World:
             else:
                 self.km2s.remove(tgt_Km2)
 
-        logger.debug(f"The world has not {len(self.km2s)} Km2 loaded.")
+        logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")

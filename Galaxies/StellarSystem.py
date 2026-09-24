@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import random
 import Galaxies.Constants
@@ -11,23 +11,23 @@ class StellarSystem:
 
     def __init__(self, parent_galaxy: Galaxy, x: int, y: int, z: int, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
-        self.parent_galaxy = parent_galaxy
-        self.x = x
-        self.y = y
-        self.z = z
-        self.seed = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
-        my_random = random.Random(self.seed)
-        self.orbits = []
+        self.parent_galaxy: Galaxy = parent_galaxy
+        self.x: int = x
+        self.y: int = y
+        self.z: int = z
+        self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
+        my_random: random.Random = random.Random(self.seed)
+        self.orbits: List[Orbit] = []
 
-        self.is_altered = False
-        self.saved_alterations = None
-        alterations_key = self.get_alterations_key()
+        self.is_altered: bool = False
+        self.saved_alterations: Optional[dict] = None
+        alterations_key: str = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.name = self.generate_name(my_random)
+        self.name: str = self.generate_name(my_random)
 
     def set_altered(self) -> StellarSystem:
         self.is_altered = True

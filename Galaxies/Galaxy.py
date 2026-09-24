@@ -1,12 +1,14 @@
+from typing import List, Optional
+
 from Galaxies.StellarSystem import StellarSystem
 
 class Galaxy():
 
     def __init__(self, seeds_delta: int, saved_alterations: dict) -> None:
-        self.seed = seeds_delta # The galaxy's seed is just the seed_delta from the user.
-        self.stellar_systems = []
-        self.saved_alterations = saved_alterations
-        self.is_altered = saved_alterations is not None and saved_alterations != {}
+        self.seed: int = seeds_delta # The galaxy's seed is just the seed_delta from the user.
+        self.stellar_systems: List[StellarSystem] = []
+        self.saved_alterations: Optional[dict] = saved_alterations
+        self.is_altered: bool = saved_alterations is not None and saved_alterations != {}
 
     def set_altered(self) -> Galaxy:
         self.is_altered = True

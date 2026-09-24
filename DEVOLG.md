@@ -85,18 +85,22 @@ New release! As the alterations are now saved and recovered.
 
 ### 2026-09-23 (8/8), 1h45' + 11:00 - 11:15
 
-Pause: 30'
-
 Stuck at: too rapid movement provokes no environment -> Resolved.
 Starting to set mines. Plan:
-- Rocks get a "composition". It is only a [0.0, 1.0[ range.
-- A new composition ("ore rich") gives a reserved color palette (yellow-ish)
-- Rocks near and in front of the ship are presented in a scanner, together with "size" and "ore" %.
-- Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("gone").
-- The player gets an inventory: mines and ore.
-- Mines can be placed. It position and orientation come from the ship.
-- Once placed, mines start accumulating ore, depending on if they are in an ore field.
-- "Laser" the mine collects the ore.
+1) Rocks get a "composition". It is only a [0.0, 1.0[ range.
+2) A new composition ("ore rich") gives a reserved color palette (yellow-ish)
+3) Rocks near and in front of the ship are presented in a scanner, together with "size" and "ore" %.
+
+Extra time: 1h15' + 18:15 - 19:45
+Next: deleted rocks get removed, even if the alteration remains... tricky. Where do I store it?
+
+Extra time: 2h15' + 13:00 - 15:00
+
+4) Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("molten").
+5) The player gets an inventory: mines and ore.
+6) Mines can be placed. It position and orientation come from the ship.
+7) Once placed, mines start accumulating ore, depending on if they are in an ore field.
+8) "Laser" the mine collects the ore.
 
 ## ToDo
 

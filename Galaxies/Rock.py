@@ -17,6 +17,7 @@ class Rock(Updatable):
     TEMP_RISE_RATE = 1000.0 # Temp. raise for a 1 square cube rock in 1 second.
     TEMP_COOLING_PERIOD = 60 # Once every minute.
     TEMP_COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature.
+    TEMP_MAX = 10000.0 # Boom.
 
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
         import random
@@ -122,7 +123,19 @@ class Rock(Updatable):
         logger.info(f"Rock will be updated again, at {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
     def is_ore_rich(self) -> bool:
-        return self.composition >= 0.95
+        return self.composition > 0.95
+
+    def get_purity(self) -> float:
+        '''Not a percentage of how much ore, but a percentile of the distribution.'''
+        if not self.is_ore_rich():
+            return 0.0
+        return 20*(self.composition - 0.95)
+
+    def ore_per_m3(self) -> float:
+        '''Ore (in Kg) per cubic meter of rock. 100% pure would be ~2,500,000,000 Kg. Normal is 2 Kg :D'''
+        if not self.is_ore_rich():
+            return 0.0
+        return min(2500000000, 1/(1.0 - self.get_purity()))
 
     def calculate_initial_color(self, my_random: Random) -> tuple:
         # Ore-rich are yellow-ish
@@ -145,6 +158,11 @@ class Rock(Updatable):
     def increase_temperature(self, delta_time: float, game_date_time: datetime) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
+
+        if (self.temperature >= Rock.TEMP_MAX):
+            self.temperature = 0.0
+            self.parent_km2.melt_rock(self)
+            return
 
         self.adjust_color()
         if self.next_update_at is None:
