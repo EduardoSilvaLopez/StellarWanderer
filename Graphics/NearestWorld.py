@@ -251,15 +251,20 @@ class NearestWorld:
         visible_fields.sort(key=lambda item: item[0], reverse=True)  # far first
 
         for depth, ore_field, center_cx, center_cz in visible_fields:
-            # Project center and edge point to get radius on screen
+            # Project center and edge point to get radius on screen.
+            # Apply radius in world space before camera rotation.
             center_screen = project(center_cx, -player_y, center_cz)
 
-            # Get a point on the edge perpendicular to the view direction
-            edge_cx = center_cx + ore_field.radius
-            edge_screen = project(edge_cx, -player_y, center_cz)
+            # Project a point at the field's edge (world space: longitude + radius)
+            edge_world_cx, edge_world_cz = camera_coordinates(
+                ore_field.longitude + ore_field.radius, ore_field.latitude
+            )
+            edge_screen = project(edge_world_cx, -player_y, edge_world_cz)
 
             # Screen radius is the distance from center to edge projection
-            radius_px = abs(edge_screen[0] - center_screen[0])
+            dx = edge_screen[0] - center_screen[0]
+            dy = edge_screen[1] - center_screen[1]
+            radius_px = math.sqrt(dx * dx + dy * dy)
 
             if radius_px >= 1:
                 pygame.draw.circle(surface, ore_field.color,
