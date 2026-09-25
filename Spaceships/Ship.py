@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
 
-from Galaxies import OreField, OreMine
+from Galaxies.OreField import OreField
+from Galaxies.OreMine import OreMine
 import GameEnvironment as gem
 from Spaceships.CargoHold import CargoHold
 from Spaceships.Laser import Laser
@@ -62,7 +63,8 @@ class Ship(Updatable):
         player_lon: float = self.owner.position.x
         player_lat: float = self.owner.position.z
         player_orientation: float = self.owner.orientation
-        relevant_km2s: List[Km2] = List[Km2]()
+        from Galaxies.Km2 import Km2
+        relevant_km2s: List[Km2] = list()
         from Galaxies.Km2 import Km2
         for km2 in self.owner.position.km2.parent_world.km2s:
             if (km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude\
@@ -75,7 +77,6 @@ class Ship(Updatable):
 
         # Cancel if hitting a rock.
         hitting_a_rock = False
-        from Galaxies.Km2 import Km2
         for km2 in relevant_km2s:
             for rock in km2.rocks:
                 if sqrt((rock.longitude - player_lon)**2 + (rock.latitude - player_lat)**2).real >= 100:
@@ -112,4 +113,4 @@ class Ship(Updatable):
             self.set_notification("No ore field here.")
             return
 
-        targeted_field.mines.append(OreMine(targeted_field, front_lon, front_lat))
+        targeted_field.mines.append(OreMine(targeted_field, front_lon, front_lat, player_orientation))

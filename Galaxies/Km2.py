@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import logging
-
-from Galaxies.OreField import OreField; logger = logging.getLogger(__name__)
+import logging; logger = logging.getLogger(__name__)
 
 import datetime
 import random
 from typing import List, TYPE_CHECKING, Optional
 
+from Updating.Updatable import Updatable
+
 import Galaxies.Constants
 from Galaxies.Rock import Rock
-from Updating.Updatable import Updatable
+from Galaxies.OreField import OreField
 
 if TYPE_CHECKING:
     from Galaxies.World import World

@@ -7,21 +7,21 @@ import math
 from OpenGL import GL, GLU
 
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
+from .OreFields import OreFields
+from .OreMines import OreMines
 
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
     from Galaxies.OreField import OreField
+    from Galaxies.OreMine import OreMine
 
 
 class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
-    ORE_FIELD_SEGMENTS = 24
-    ORE_FIELD_HEIGHT = 0.05  # Small offset above the ground to avoid z-fighting.
-
     @staticmethod
-    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField]) -> None:
+    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField], mines: List[OreMine]) -> None:
         """Draw all cube faces in a perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
@@ -53,8 +53,8 @@ class Rocks:
         GL.glDepthMask(GL.GL_TRUE)
         Rocks._draw_ground(player)
 
-        for ore_field in ore_fields:
-            Rocks._draw_ore_field(ore_field)
+        OreFields.draw(ore_fields)
+        OreMines.draw(mines)
 
         for rock in rocks:
             Rocks._draw_rock(rock)
@@ -82,20 +82,6 @@ class Rocks:
         GL.glVertex3f(x0, 0.0, z1)
         GL.glEnd()
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
-
-    @staticmethod
-    def _draw_ore_field(ore_field: OreField) -> None:
-        """Draw a flat circle on the ground marking an ore field's extent."""
-        y = Rocks.ORE_FIELD_HEIGHT
-        GL.glColor3ub(*ore_field.color)
-        GL.glBegin(GL.GL_TRIANGLE_FAN)
-        GL.glVertex3f(ore_field.longitude, y, ore_field.latitude)
-        for i in range(Rocks.ORE_FIELD_SEGMENTS + 1):
-            angle = 2.0 * math.pi * i / Rocks.ORE_FIELD_SEGMENTS
-            x = ore_field.longitude + ore_field.radius * math.cos(angle)
-            z = ore_field.latitude + ore_field.radius * math.sin(angle)
-            GL.glVertex3f(x, y, z)
-        GL.glEnd()
 
     @staticmethod
     def _draw_rock(rock: Rock) -> None:

@@ -98,7 +98,7 @@ Next: deleted rocks get removed, even if the alteration remains... tricky. Where
 Extra time: 4h15' + 18:45 - 20:00 = 5h30'
 5) The player gets an inventory: mines and ore.
 
-### 2026-09-25 (1/9), 5h30' + 16:00 -
+### 2026-09-25 (1/9), 5h30' + 16:00 - 17:45, 18:00 -
 
 6) Mines can be placed. It position and orientation come from the ship.
 - Game environment's status message with timer.

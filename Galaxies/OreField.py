@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import logging; logger = logging.getLogger(__name__)
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from Galaxies.Km2 import Km2
     from Galaxies.Rock import Rock
-    from Galaxies.OreMine import OreMine
 
 class OreField:
     EXTRACTION_PER_SECOND: float = 1 / 3600 # One Kg per hour, later depends on mine.
 
     def __init__(self):
+        from Galaxies.OreMine import OreMine
         self.parent_km2: Km2 = None
         self.longitude: int = 0
         self.latitude: int = 0
@@ -21,7 +21,7 @@ class OreField:
         self.remaining_ore: int = 0
         self.initial_color: tuple = (0, 0, 0)
         self.color: tuple = (0, 0, 0)
-        self.mines: List[OreMine] = List[OreMine]()
+        self.mines: List[OreMine] = list()
 
     @staticmethod
     def generate_new(original_rock: Rock):
@@ -45,7 +45,12 @@ class OreField:
         result.remaining_ore = serialized_dict['remaining_ore']
         result.initial_color = tuple(serialized_dict['initial_color'])
         result.color = tuple(serialized_dict['color'])
-        result.mines = []
+
+        result.mines = serialized_dict.get('mines') if serialized_dict is not None else None
+        if result.mines and len(result.mines) > 0:
+            for mine_attributes in result.mines:
+                result.mines.append(OreMine(result, saved_attributes=mine_attributes))
+        
         return result
 
     def serialize(self) -> dict:
@@ -56,7 +61,8 @@ class OreField:
             'initial_ore': self.initial_ore,
             'remaining_ore': self.remaining_ore,
             'initial_color': self.initial_color,
-            'color': self.color
+            'color': self.color,
+            'mines': [m.serialize() for m in self.mines]
             }
 
     def extract(self, time_diff: float) -> int:
