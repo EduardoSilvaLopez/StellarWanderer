@@ -8,6 +8,7 @@ Controls:
     Q          turn counterclockwise (speed depends on time scale)
     E          turn clockwise (speed depends on time scale)
     SPACE      fire the laser
+    M          place mine
     Esc        quit
 """
 
@@ -141,7 +142,9 @@ def main() -> None:
                     update_queue.clear()
                     Savefile.load_last()
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
-                        # Handle continuous altitude adjustment with numpad +/- (time-scale dependent)
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_m:
+                    player_module.current_player.ship.set_mine_pressed()
             elif event.type == pygame.VIDEORESIZE:
                 size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
                 screen = pygame.display.set_mode(

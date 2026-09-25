@@ -175,8 +175,13 @@ class Cockpit:
         cargo_rect.right = w - cargo_margin
         Cockpit.draw_cargo(surface, fonts, h, player, cargo_rect)
 
-        # Indicator lights along the bottom.
+        # Notification bar at the bottom.
         light = max(4, int(height * 0.045))
+        notification_height = int(height * 0.12)
+        notification_y = h - light * 2 - notification_height
+        Cockpit.draw_notification(surface, fonts, w, notification_y, notification_height, player)
+
+        # Indicator lights along the bottom.
         for i in range(10):
             x = int(w * 0.06 + i * light * 2.2)
             color = AMBER if i in (3, 7) else ACCENT_DIM
@@ -287,6 +292,21 @@ class Cockpit:
             line = line_font.render(f'{element.name}: {quantity}', True, ACCENT)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing
+
+    @staticmethod
+    def draw_notification(surface: pygame.Surface, fonts: Any, w: int, y: int, height: int, player: Player) -> None:
+        """Draw a full-width notification bar at the bottom with red text."""
+        # Draw background and border
+        rect = pygame.Rect(0, y, w, height)
+        pygame.draw.rect(surface, READOUT_BG, rect)
+        pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, rect, 1)
+
+        # Render notification text in red, centered vertically with left padding
+        text_font = fonts.get(max(10, int(height * 0.6)))
+        pad = max(8, int(w * 0.02))
+        notification_text = text_font.render(player.ship.notification, True, (255, 64, 64))
+        text_rect = notification_text.get_rect(midleft=(rect.left + pad, rect.centery))
+        surface.blit(notification_text, text_rect)
 
     @staticmethod
     def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None) -> None:

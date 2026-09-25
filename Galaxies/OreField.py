@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from Galaxies.Km2 import Km2
     from Galaxies.Rock import Rock
+    from Galaxies.OreMine import OreMine
 
 class OreField:
     EXTRACTION_PER_SECOND: float = 1 / 3600 # One Kg per hour, later depends on mine.
@@ -20,7 +21,7 @@ class OreField:
         self.remaining_ore: int = 0
         self.initial_color: tuple = (0, 0, 0)
         self.color: tuple = (0, 0, 0)
-        self.mines: List = None
+        self.mines: List[OreMine] = List[OreMine]()
 
     @staticmethod
     def generate_new(original_rock: Rock):

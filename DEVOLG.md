@@ -98,9 +98,12 @@ Next: deleted rocks get removed, even if the alteration remains... tricky. Where
 Extra time: 4h15' + 18:45 - 20:00 = 5h30'
 5) The player gets an inventory: mines and ore.
 
+### 2026-09-25 (1/9), 5h30' + 16:00 -
+
 6) Mines can be placed. It position and orientation come from the ship.
 - Game environment's status message with timer.
 - Initial message: "Welcome, commander."
+
 - On "M": Check if there is an ore field 100 mtrs in front of the player. If not, warning dialog.
 - On "M: If there is, and the player has no mines, 'You have no mines'.
 - On "M: Status message to confirm ([Enter]/[Escape])
