@@ -544,11 +544,8 @@ class Cockpit:
         in degrees, clockwise from north). Sized to fit between left_bound
         (the coordinate text block) and the centre multi-function display.
         """
-        mfd_left = w // 2 - int(w * 0.24) // 2
-        margin = int(w * 0.05)
-        available = max(0, (mfd_left - margin) - (left_bound + margin))
-
-        radius = max(10, min(int(cluster_height * 0.95), available // 2))
+        margin = int(w * 0.04)
+        radius = max(10, int(cluster_height * 0.5))
         center = (left_bound + margin + radius, cluster_top + cluster_height // 2)
 
         pygame.draw.circle(surface, READOUT_BG, center, radius)
