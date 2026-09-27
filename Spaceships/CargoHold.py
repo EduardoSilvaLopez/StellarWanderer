@@ -16,7 +16,7 @@ class CargoHold:
     def __init__(self, ship: Ship) -> None:
         self.parent_ship: Ship = ship
         self.content: dict = {
-            self.CargoElement.MINES: 0,
+            self.CargoElement.MINES: 5,
             self.CargoElement.ORE: 0
         }
 

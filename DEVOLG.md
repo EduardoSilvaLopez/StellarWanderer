@@ -55,7 +55,7 @@ silently, which looks like something we do only when we abandon the world. A mem
 Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
 - Did not test if they are SAVED even if war away.
 
-### 2026-09-18 (5/8), extra day, 11:00-12:45, 16:00-17:00
+### 2026-09-18 (5/8)
 
 Rocks have tilt, they are also more buried.
 
@@ -67,7 +67,7 @@ My whole strategy means unvisited altered rocks are not updated to the game time
 I have to update anyway, there is no 'updating window' - or - I must save the 'last changed at' on every object.
 ... this prolly includes separating the children from the date_time in the alteration dictionaries anyway.
 
-### 2026-09-21 (6/8), 12:45 - 14:15 + 14:30 - 15:00
+### 2026-09-21 (6/8)
 
 Still stuck with the update problematic. I need a new strategy. A clear one, and a *SCALABLE* one. Keeping all altered objects in the world updating is, let us be honest, not scalable.
 
@@ -79,11 +79,11 @@ Extra time: 20:00 - 21:30
 
 Stuck in the new singleton strategy, which creates lots of problems, damn it.
 
-### 2026-09-22 (7/8), 9:30 - 10:00
+### 2026-09-22 (7/8)
 
 New release! As the alterations are now saved and recovered.
 
-### 2026-09-23 (8/8), 1h45' + 11:00 - 11:15
+### 2026-09-23 (8/8)
 
 Stuck at: too rapid movement provokes no environment -> Resolved.
 Starting to set mines. Plan:
@@ -92,29 +92,16 @@ Starting to set mines. Plan:
 3) Rocks near and in front of the ship are presented in a scanner, together with "size" and "ore" %.
 4) Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("molten").
 
-Extra time: 1h15' + 18:15 - 19:45
-Next: deleted rocks get removed, even if the alteration remains... tricky. Where do I store it?
-
-Extra time: 4h15' + 18:45 - 20:00 = 5h30'
+On extra time
 5) The player gets an inventory: mines and ore.
-
-### 2026-09-25 (1/9), 5h30' + 16:00 - 17:45, 18:00 -
-
 6) Mines can be placed. It position and orientation come from the ship.
-- Game environment's status message with timer.
-- Initial message: "Welcome, commander."
-
-- On "M": Check if there is an ore field 100 mtrs in front of the player. If not, warning dialog.
-- On "M: If there is, and the player has no mines, 'You have no mines'.
-- On "M: Status message to confirm ([Enter]/[Escape])
-- On "M -> Escape": Erase status message.
-- On "M -> Enter": Reduce the number of mines by one.
-- On "M -> Enter": Create the "Mines" object in the Km2.
-- Show the mines. Textures?
 7) Once placed, mines start accumulating ore.
 8) "Laser" the mine collects the ore.
 
-## ToDo
+Extra time: +6h45'
+
+### 2026-09-27 (1/9) 11:30 - 
+Here. The mine did not seem to update correctly after absent.
 
 - Set mines: Proof of concept essentially finished. They allow to collect "ore" when you laser them.
 - Make and show the sun.

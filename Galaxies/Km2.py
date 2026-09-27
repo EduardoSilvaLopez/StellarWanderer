@@ -93,14 +93,22 @@ class Km2:
 
         return alterations
 
-    def stop_updating_rocks(self) -> None:
+    def stop_updating(self) -> None:
         for rock in self.rocks:
             rock.stop_updating()
+
+        for mine in (m for field in self.ore_fields for m in field.mines):
+            mine.update(None)
+
         logger.info(f"Stop updating: {self.longitude} {self.latitude}")
 
-    def start_updating_rocks(self, update_time: datetime) -> None:
+    def start_updating(self, update_time: datetime) -> None:
         for rock in self.rocks:
             rock.start_updating(update_time)
+
+        for mine in (m for field in self.ore_fields for m in field.mines):
+            mine.update(update_time)
+
         logger.info(f"Start updating: {self.longitude} {self.latitude}")
 
     def melt_rock(self, tgt_rock: Rock) -> Km2:

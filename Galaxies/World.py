@@ -105,11 +105,11 @@ class World:
                 else:
                     to_stop_updating.remove(tgt_Km2)
                 if not tgt_Km2.is_altered: continue
-                tgt_Km2.start_updating_rocks(game_date_time)
+                tgt_Km2.start_updating(game_date_time)
 
         for tgt_Km2 in to_stop_updating:
             if tgt_Km2.is_altered:
-                tgt_Km2.stop_updating_rocks()
+                tgt_Km2.stop_updating()
             else:
                 self.km2s.remove(tgt_Km2)
 

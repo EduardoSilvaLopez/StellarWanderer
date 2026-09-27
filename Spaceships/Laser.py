@@ -1,23 +1,28 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import math
 if TYPE_CHECKING:
     from Spaceships.Ship import Ship
     from Galaxies.World import World
+    from Galaxies.Km2 import Km2
     from Galaxies.Rock import Rock
+    from Galaxies.OreMine import OreMine
 
 
 class Laser:
     MAX_LENGTH = 500  # metres
     POSITION_OFFSET = 5  # metres, offset from camera to avoid culling
     TEMP_RISE_RATE = 1000.0  # degrees per second, rate at which rock temperature rises when hit by laser, when the rock is 1 cubic meter.
+    MINE_RADIUS = 2.0  # metres, must match the mine's rendered geometry.
+    MINE_HEIGHT = 8.0  # metres, must match the mine's rendered geometry.
 
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
         self.firing = False
         self.hitting_rock: Optional[Rock] = None
         self.targeted_rock: Optional[Rock] = None
+        self.targeted_mine: Optional[OreMine] = None
         self.length = Laser.MAX_LENGTH
         self.start_x = 0.0
         self.start_y = 0.0
@@ -45,12 +50,23 @@ class Laser:
         self.end_y = self.ship.owner.position.y - Laser.POSITION_OFFSET
         self.end_z = self.ship.owner.position.z + self.length * forward_z
 
-        # Find out which rock, if any, is currently in the beam's path.
-        hit_rock_tuple = self.get_hit_rock(self.ship.owner.position.km2.parent_world)
+        # Find out which rock and which mine, if any, are currently in the
+        # beam's path, then keep only whichever is closest — the nearer one
+        # occludes the other.
+        world = self.ship.owner.position.km2.parent_world
+        hit_rock_tuple = self.get_hit_rock(world)
+        hit_mine_tuple = self.get_hit_mine(world)
 
+        candidates = []
         if hit_rock_tuple:
-            self.targeted_rock = hit_rock_tuple[0]
-            closest_t = hit_rock_tuple[1]
+            candidates.append(('rock', hit_rock_tuple[0], hit_rock_tuple[1]))
+        if hit_mine_tuple:
+            candidates.append(('mine', hit_mine_tuple[0], hit_mine_tuple[1]))
+
+        if candidates:
+            kind, target, closest_t = min(candidates, key=lambda candidate: candidate[2])
+            self.targeted_rock = target if kind == 'rock' else None
+            self.targeted_mine = target if kind == 'mine' else None
 
             # Adjust the endpoint to the intersection point using the t-value
             # The intersection point is: start + t * (end - start)
@@ -58,11 +74,26 @@ class Laser:
             self.end_z = self.start_z + closest_t * (self.end_z - self.start_z)
         else:
             self.targeted_rock = None
+            self.targeted_mine = None
 
     def fire(self) -> None:
+        from Galaxies.OreMine import OreMine
+        from Spaceships.CargoHold import CargoHold
+        from Player import Player
+
         """Start firing the laser; damage applies to whatever is currently targeted."""
-        self.firing = True
         self.hitting_rock = self.targeted_rock
+
+        '''If no rock but a mine, transfer the ore to the ship.'''
+        if not self.hitting_rock and self.is_mine_hit:
+            player: Player = self.ship.owner
+            world: World = player.position.km2.parent_world
+            tgt_mine: OreMine = self.get_hit_mine(world)
+            if tgt_mine is not None and tgt_mine[0].content > 0:
+                self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += tgt_mine[0].content
+                tgt_mine[0].content = 0
+
+        self.firing = not self.is_mine_hit
 
     def cease_fire(self) -> None:
         if (not self.firing):
@@ -70,16 +101,15 @@ class Laser:
         self.firing = False
         self.hitting_rock = None
 
-    def get_hit_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
-        ''' Returns the closest rock currently in the beam's path, and its t_value, regardless of firing state.'''
+    def _relevant_km2(self, world: World) -> List[Km2]:
+        '''Exclude fully irrelevant km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.'''
         if (self.ship.owner.position.km2.parent_world != world):
             raise ValueError("Laser's ship is not in the provided world.")
         if (self.ship.owner.position.y < 0):
             raise ValueError("Laser's ship is below the surface of the world.")
         if self.ship.owner.position.y - self.length > 100:
-            return None
+            return []
 
-        # First, exclude fully irrelevant km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.
         relevant_km2 = []
         for km2 in world.km2s:
             if km2.longitude <= self.ship.owner.position.x - self.length - km2.SIZE or km2.longitude >= self.ship.owner.position.x + self.length:
@@ -87,6 +117,11 @@ class Laser:
             if km2.latitude <= self.ship.owner.position.z - self.length - km2.SIZE or km2.latitude >= self.ship.owner.position.z + self.length:
                 continue  # km2 is too far in latitude
             relevant_km2.append(km2)
+        return relevant_km2
+
+    def get_hit_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
+        ''' Returns the closest rock currently in the beam's path, and its t_value, regardless of firing state.'''
+        relevant_km2 = self._relevant_km2(world)
 
         # Analyse each rock to see if it is hit by the laser. This is a more precise check.
         # Return the one with the minimum t_value.
@@ -98,6 +133,19 @@ class Laser:
                 hit_rock = rock
                 hit_at_t_value = t_value
         return (hit_rock, hit_at_t_value) if hit_rock else None
+
+    def get_hit_mine(self, world: World) -> Optional[Tuple[OreMine, float]]:
+        ''' Returns the closest ore mine currently in the beam's path, and its t_value, regardless of firing state.'''
+        relevant_km2 = self._relevant_km2(world)
+
+        hit_mine = None
+        hit_at_t_value = self.MAX_LENGTH
+        for mine in (mine for km2 in relevant_km2 for field in km2.ore_fields for mine in field.mines):
+            t_value = self.is_mine_hit(mine)
+            if t_value is not None and t_value < hit_at_t_value:
+                hit_mine = mine
+                hit_at_t_value = t_value
+        return (hit_mine, hit_at_t_value) if hit_mine else None
 
     def is_rock_hit(self, rock: Rock) -> Optional[float]:
         """Determine if the laser hits a rock and return the t-value of the intersection.
@@ -191,6 +239,56 @@ class Laser:
 
         # If t_min <= t_max, the line segment intersects the box
         # Return t_min (the distance along the laser where it enters the box)
+        if t_min <= t_max:
+            return t_min
+        return None
+
+    def is_mine_hit(self, mine: OreMine) -> Optional[float]:
+        """Determine if the laser hits an ore mine and return the t-value of the intersection.
+
+        Mines are vertical cylinders of radius MINE_RADIUS and height MINE_HEIGHT,
+        standing on the ground (y in [0, MINE_HEIGHT]) at (mine.longitude, mine.latitude).
+        Being rotationally symmetric, no un-rotation is needed, unlike rocks.
+        """
+        start_x = self.start_x - mine.longitude
+        start_z = self.start_z - mine.latitude
+        dx = (self.end_x - mine.longitude) - start_x
+        dz = (self.end_z - mine.latitude) - start_z
+        dy = self.end_y - self.start_y
+
+        t_min = 0.0
+        t_max = 1.0
+
+        # Circular cross-section (XZ plane): solve |start + t*d|^2 = radius^2.
+        a = dx * dx + dz * dz
+        b = 2.0 * (start_x * dx + start_z * dz)
+        c = start_x * start_x + start_z * start_z - self.MINE_RADIUS ** 2
+        if abs(a) > 1e-9:
+            discriminant = b * b - 4.0 * a * c
+            if discriminant < 0:
+                return None
+            sqrt_discriminant = math.sqrt(discriminant)
+            t1 = (-b - sqrt_discriminant) / (2.0 * a)
+            t2 = (-b + sqrt_discriminant) / (2.0 * a)
+            t_min = max(t_min, t1)
+            t_max = min(t_max, t2)
+        else:
+            # Ray doesn't move across the circle; check if its (fixed) position is within radius.
+            if c > 0:
+                return None
+
+        # Height bounds (Y axis).
+        if abs(dy) > 1e-9:
+            t1 = (0.0 - self.start_y) / dy
+            t2 = (self.MINE_HEIGHT - self.start_y) / dy
+            if t1 > t2:
+                t1, t2 = t2, t1
+            t_min = max(t_min, t1)
+            t_max = min(t_max, t2)
+        else:
+            if self.start_y < 0.0 or self.start_y > self.MINE_HEIGHT:
+                return None
+
         if t_min <= t_max:
             return t_min
         return None

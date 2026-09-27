@@ -8,12 +8,15 @@ from datetime import datetime
 from .Constants import (
     CONSOLE_EDGE_COLOR, CONSOLE_TOP, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     HULL_COLOR, HULL_DARK, HULL_EDGE_COLOR, STRUT, CONSOLE, CONSOLE_EDGE_COLOR,
-    ACCENT, ACCENT_DIM, AMBER, READOUT_BG, ROCK_EDGE_COLOR
+    ACCENT, ACCENT_DIM, AMBER, READOUT_BG, ROCK_EDGE_COLOR,
+    MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT,
+    MINE_WARNING_A, MINE_CAP_COLOR,
 )
 
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
+    from Galaxies.OreMine import OreMine
 
 
 class Cockpit:
@@ -248,9 +251,10 @@ class Cockpit:
     def draw_scanner(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
         """Draw a square scanner readout on the right cluster.
 
-        Mirrors whatever rock is currently in the laser's crosshair (whether or
-        not the laser is actually firing), scaled to fill the square but kept
-        at the same relative orientation and color the player sees ahead.
+        Mirrors whatever rock or ore mine is currently in the laser's
+        crosshair (whether or not the laser is actually firing), scaled to
+        fill the square but kept at the same relative orientation and color
+        the player sees ahead. Rocks take priority if somehow both are set.
         """
         margin = int(w * 0.04)
         available = max(0, (w - margin) - (mfd_right + margin))
@@ -267,6 +271,7 @@ class Cockpit:
         Cockpit._draw_beveled_panel(surface, rect)
 
         rock = player.ship.laser.targeted_rock
+        mine = player.ship.laser.targeted_mine
         if rock is not None:
             Cockpit._draw_scanned_rock(surface, rect, player, rock)
             if rock.is_ore_rich():
@@ -274,6 +279,12 @@ class Cockpit:
                 purity_font = fonts.get(max(9, int(h * 0.017)))
                 purity_text = purity_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
                 surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
+        elif mine is not None:
+            Cockpit._draw_scanned_mine(surface, rect, mine)
+            bevel_depth = max(2, rect.width // 24)
+            content_font = fonts.get(max(9, int(h * 0.017)))
+            content_text = content_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
+            surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
 
     @staticmethod
     def draw_cargo(surface: pygame.Surface, fonts: Any, h: int, player: Player, rect: pygame.Rect) -> None:
@@ -402,6 +413,40 @@ class Cockpit:
             points = [project(corners[index]) for index in indices]
             pygame.draw.polygon(surface, color, points)
             pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, points, 1)
+
+    @staticmethod
+    def _draw_scanned_mine(surface: pygame.Surface, rect: pygame.Rect, mine: OreMine) -> None:
+        """Render a simplified elevation icon of `mine` inside `rect`, echoing
+        the hull/accent/hazard-stripe look of the mine's 3D textured render.
+        """
+        padding = max(6, int(min(rect.width, rect.height) * 0.12))
+        body_width = int((rect.width - padding * 2) * 0.6)
+        cap_height = max(4, int(body_width * 0.28))
+        body_top = rect.top + padding
+        body_left = rect.centerx - body_width // 2
+        body_height = (rect.height - padding * 2) - cap_height
+
+        body_rect = pygame.Rect(body_left, body_top + cap_height // 2, body_width, body_height)
+        pygame.draw.rect(surface, MINE_HULL_COLOR, body_rect)
+        # Darker/lighter vertical bands fake the cylinder's curved shading.
+        pygame.draw.rect(surface, MINE_HULL_DARK, (body_rect.left, body_rect.top, body_rect.width // 3, body_rect.height))
+        pygame.draw.rect(surface, MINE_HULL_LIGHT, (body_rect.right - body_rect.width // 6, body_rect.top, body_rect.width // 6, body_rect.height))
+
+        # Top cap: an ellipse suggesting the circular cross-section.
+        top_cap_rect = pygame.Rect(body_left, body_top, body_width, cap_height)
+        pygame.draw.ellipse(surface, MINE_CAP_COLOR, top_cap_rect)
+        pygame.draw.ellipse(surface, MINE_HULL_DARK, top_cap_rect, 1)
+
+        # Glowing accent band.
+        band_y = body_rect.top + int(body_rect.height * 0.42)
+        pygame.draw.rect(surface, MINE_ACCENT, (body_rect.left, band_y, body_rect.width, max(2, body_rect.height // 20)))
+
+        # Hazard stripe near the base.
+        stripe_h = max(3, body_rect.height // 14)
+        stripe_y = body_rect.bottom - stripe_h - 4
+        pygame.draw.rect(surface, MINE_WARNING_A, (body_rect.left, stripe_y, body_rect.width, stripe_h))
+
+        pygame.draw.rect(surface, MINE_HULL_DARK, body_rect, 1)
 
     @staticmethod
     def draw_compass(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, left_bound: int) -> None:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-import logging; logger = logging.getLogger(__name__)
+import logging
+logger = logging.getLogger(__name__)
+
+from Galaxies.OreMine import OreMine
 
 from typing import TYPE_CHECKING, List, Optional
 
@@ -46,11 +49,9 @@ class OreField:
         result.initial_color = tuple(serialized_dict['initial_color'])
         result.color = tuple(serialized_dict['color'])
 
-        result.mines = serialized_dict.get('mines') if serialized_dict is not None else None
-        if result.mines and len(result.mines) > 0:
-            for mine_attributes in result.mines:
-                result.mines.append(OreMine(result, saved_attributes=mine_attributes))
-        
+        list_of_mines = serialized_dict.get('mines')
+        result.mines = [OreMine(result, saved_attributes=mine_dict) for mine_dict in list_of_mines]
+                
         return result
 
     def serialize(self) -> dict:
@@ -65,5 +66,7 @@ class OreField:
             'mines': [m.serialize() for m in self.mines]
             }
 
-    def extract(self, time_diff: float) -> int:
-        extracted = min(self.remaining_ore, int(time_diff * OreField.EXTRACTION_PER_SECOND))
+    def extract(self, amount: int) -> int:
+        result = min(self.remaining_ore, amount)
+        self.remaining_ore -= result
+        return result
