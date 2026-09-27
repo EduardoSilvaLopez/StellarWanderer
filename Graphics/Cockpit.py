@@ -37,17 +37,27 @@ class Cockpit:
                 image = pygame.image.load(texture_path)
                 textured = pygame.transform.scale(image, (w, h))
 
-                # Apply gradient darkening: left side dark, right side normal
-                gradient = pygame.Surface((w, h), pygame.SRCALPHA)
-                for x in range(w):
-                    # Gradient: 0 (fully opaque black) on left to 1 (fully transparent) on right
-                    alpha = int(255 * (x / w))
-                    pygame.draw.line(gradient, (0, 0, 0, alpha), (x, 0), (x, h))
+                # Create a copy to avoid modifying cached texture dimensions
+                result = textured.copy()
 
-                textured.blit(gradient, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                Cockpit._cockpit_background = textured
+                # Apply gradient darkening: left side dark, right side normal
+                gradient_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+                for x in range(w):
+                    # Alpha: 180 on left (dark), 0 on right (transparent)
+                    alpha = int(180 * (1.0 - x / w))
+                    color = (0, 0, 0, alpha)
+                    pygame.draw.line(gradient_overlay, color, (x, 0), (x, h), 1)
+
+                result.blit(gradient_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                Cockpit._cockpit_background = result
             except (pygame.error, FileNotFoundError) as e:
-                raise RuntimeError(f"Failed to load cockpit background texture from {texture_path}: {e}")
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to load cockpit background texture from {texture_path}: {e}")
+                # Create fallback solid color surface
+                fallback = pygame.Surface((w, h))
+                fallback.fill((40, 50, 60))
+                Cockpit._cockpit_background = fallback
         return Cockpit._cockpit_background
 
     @staticmethod
@@ -77,8 +87,9 @@ class Cockpit:
 
         # Windshield background texture
         background = Cockpit._get_cockpit_background(w, h)
-        windshield_bg = background.subsurface((0, 0, w, top))
-        surface.blit(windshield_bg, (0, 0))
+        windshield_area = pygame.Rect(0, 0, w, top)
+        windshield_scaled = pygame.transform.scale(background, (w, top))
+        surface.blit(windshield_scaled, (0, 0))
 
         # Top rail.
         pygame.draw.rect(surface, HULL_COLOR, (0, 0, w, top))
@@ -112,8 +123,8 @@ class Cockpit:
 
         # Draw textured background
         background = Cockpit._get_cockpit_background(w, h)
-        console_bg = background.subsurface((0, top, w, height))
-        surface.blit(console_bg, (0, top))
+        console_scaled = pygame.transform.scale(background, (w, height))
+        surface.blit(console_scaled, (0, top))
 
         pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (0, top), (w, top), 2)
         # Shadowed lip under the windshield, so the console reads as tilted away.
