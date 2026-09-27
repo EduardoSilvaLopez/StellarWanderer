@@ -35,20 +35,19 @@ class Cockpit:
             texture_path = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'cockpit_background.png')
             try:
                 image = pygame.image.load(texture_path)
-                textured = pygame.transform.scale(image, (w, h))
+                result = pygame.transform.scale(image, (w, h))
 
-                # Create a copy to avoid modifying cached texture dimensions
-                result = textured.copy()
-
-                # Apply gradient darkening: left side dark, right side normal
-                gradient_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+                # Apply gradient darkening: left side dark, right side normal.
+                # A grayscale multiply gradient (dark gray -> white) scales each
+                # RGB channel down proportionally; a black/alpha overlay would
+                # zero the RGB entirely under BLEND_RGBA_MULT instead.
+                gradient_overlay = pygame.Surface((w, h))
+                min_brightness = 90  # left edge: ~35% brightness
                 for x in range(w):
-                    # Alpha: 180 on left (dark), 0 on right (transparent)
-                    alpha = int(180 * (1.0 - x / w))
-                    color = (0, 0, 0, alpha)
-                    pygame.draw.line(gradient_overlay, color, (x, 0), (x, h), 1)
+                    brightness = int(min_brightness + (255 - min_brightness) * (x / w))
+                    pygame.draw.line(gradient_overlay, (brightness, brightness, brightness), (x, 0), (x, h), 1)
 
-                result.blit(gradient_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                result.blit(gradient_overlay, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
                 Cockpit._cockpit_background = result
             except (pygame.error, FileNotFoundError) as e:
                 import logging
@@ -59,6 +58,46 @@ class Cockpit:
                 fallback.fill((40, 50, 60))
                 Cockpit._cockpit_background = fallback
         return Cockpit._cockpit_background
+
+    _windshield_frame_texture: Optional[pygame.Surface] = None
+
+    @staticmethod
+    def _get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
+        """Cockpit texture masked to the windshield's opaque frame shapes
+        (top rail, A-pillars, struts) only — the glass panes between them
+        stay transparent so the 3D scene keeps showing through.
+        """
+        if Cockpit._windshield_frame_texture is None:
+            top = int(h * CANOPY_TOP)
+            bottom = int(h * CONSOLE_TOP)
+            top_inset = w * CANOPY_TOP_INSET
+            bottom_inset = w * CANOPY_BOTTOM_INSET
+
+            mask = pygame.Surface((w, h), pygame.SRCALPHA)
+
+            pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, w, top))
+
+            left = [(0, 0), (top_inset, top), (bottom_inset, bottom), (0, bottom)]
+            right = [(w, 0), (w - top_inset, top), (w - bottom_inset, bottom), (w, bottom)]
+            for pillar in (left, right):
+                points = [(int(x), int(y)) for x, y in pillar]
+                pygame.draw.polygon(mask, (255, 255, 255, 255), points)
+
+            for frac in (1 / 3, 2 / 3):
+                half = max(2, int(w * 0.004))
+                x_top = top_inset + (w - 2 * top_inset) * frac
+                x_bottom = bottom_inset + (w - 2 * bottom_inset) * frac
+                strut = [
+                    (int(x_top - half), top), (int(x_top + half), top),
+                    (int(x_bottom + half), bottom), (int(x_bottom - half), bottom),
+                ]
+                pygame.draw.polygon(mask, (255, 255, 255, 255), strut)
+
+            frame_texture = Cockpit._get_cockpit_background(w, h).convert_alpha()
+            # Keep RGB, zero the alpha wherever the mask is transparent.
+            frame_texture.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            Cockpit._windshield_frame_texture = frame_texture
+        return Cockpit._windshield_frame_texture
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime, time_scale: int) -> None:
@@ -85,14 +124,13 @@ class Cockpit:
         top_inset = w * CANOPY_TOP_INSET
         bottom_inset = w * CANOPY_BOTTOM_INSET
 
-        # Windshield background texture
-        background = Cockpit._get_cockpit_background(w, h)
-        windshield_area = pygame.Rect(0, 0, w, top)
-        windshield_scaled = pygame.transform.scale(background, (w, top))
-        surface.blit(windshield_scaled, (0, 0))
+        # Hull frame shapes (rail, pillars, struts), filled with the cockpit
+        # texture masked to their silhouette — the glass panes between them
+        # are left untouched so the 3D scene shows through.
+        frame_texture = Cockpit._get_windshield_frame_texture(w, h)
+        surface.blit(frame_texture, (0, 0))
 
-        # Top rail.
-        pygame.draw.rect(surface, HULL_COLOR, (0, 0, w, top))
+        # Top rail edge.
         pygame.draw.line(surface, HULL_EDGE_COLOR, (0, top - 1), (w, top - 1), 2)
 
         # A-pillars, angling inward as they rise.
@@ -100,7 +138,6 @@ class Cockpit:
         right = [(w, 0), (w - top_inset, top), (w - bottom_inset, bottom), (w, bottom)]
         for pillar in (left, right):
             points = [(int(x), int(y)) for x, y in pillar]
-            pygame.draw.polygon(surface, HULL_COLOR, points)
             pygame.draw.lines(surface, HULL_EDGE_COLOR, False, points[1:3], 2)
 
         # Two vertical struts splitting the windshield into three panes.
@@ -112,7 +149,6 @@ class Cockpit:
                 (int(x_top - half), top), (int(x_top + half), top),
                 (int(x_bottom + half), bottom), (int(x_bottom - half), bottom),
             ]
-            pygame.draw.polygon(surface, STRUT, strut)
             pygame.draw.line(surface, HULL_EDGE_COLOR, strut[0], strut[3], 1)
 
     @staticmethod
