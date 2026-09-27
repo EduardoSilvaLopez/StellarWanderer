@@ -1,8 +1,9 @@
 """Cockpit instrumentation: canopy, console, and clock."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Any, Tuple, Optional
 import math
+import os
 import pygame
 from datetime import datetime
 from .Constants import (
@@ -21,6 +22,20 @@ if TYPE_CHECKING:
 
 class Cockpit:
     """Renders cockpit instrumentation: hull, console, and clock."""
+
+    _cockpit_background: Optional[pygame.Surface] = None
+
+    @staticmethod
+    def _get_cockpit_background(w: int, h: int) -> pygame.Surface:
+        """Load and cache the cockpit background texture, scaled to window dimensions."""
+        if Cockpit._cockpit_background is None:
+            texture_path = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'cockpit_background.png')
+            try:
+                image = pygame.image.load(texture_path)
+                Cockpit._cockpit_background = pygame.transform.scale(image, (w, h))
+            except (pygame.error, FileNotFoundError) as e:
+                raise RuntimeError(f"Failed to load cockpit background texture from {texture_path}: {e}")
+        return Cockpit._cockpit_background
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime, time_scale: int) -> None:
@@ -77,7 +92,11 @@ class Cockpit:
         top = int(h * CONSOLE_TOP)
         height = h - top
 
-        pygame.draw.rect(surface, CONSOLE, (0, top, w, height))
+        # Draw textured background
+        background = Cockpit._get_cockpit_background(w, h)
+        console_bg = background.subsurface((0, top, w, height))
+        surface.blit(console_bg, (0, top))
+
         pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (0, top), (w, top), 2)
         # Shadowed lip under the windshield, so the console reads as tilted away.
         pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))
