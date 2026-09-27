@@ -548,7 +548,7 @@ class Cockpit:
         margin = int(w * 0.05)
         available = max(0, (mfd_left - margin) - (left_bound + margin))
 
-        radius = max(10, min(int(cluster_height * 0.32), available // 2))
+        radius = max(10, min(int(cluster_height * 0.95), available // 2))
         center = (left_bound + margin + radius, cluster_top + cluster_height // 2)
 
         pygame.draw.circle(surface, READOUT_BG, center, radius)
