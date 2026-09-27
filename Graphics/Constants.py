@@ -48,3 +48,6 @@ import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
+LOCAL_STAR_MIN_RADIUS_PX = 1  # floor so a distant/small star never vanishes to 0px
+LOCAL_STAR_HALO_WIDTH_PX = 4  # extra radius of the semi-transparent glow ring around the star
+LOCAL_STAR_HALO_ALPHA = 90    # 0-255

@@ -35,13 +35,13 @@ class StellarSystem:
         base_color: tuple = None
         radius: int = 0
         if color_code <= 0.75: #M, red dwarf
-            base_color = (255, 0, 0)
+            base_color = (255, 64, 64)
             radius = int(200000000 * (0.4 + 1.2 * rnd.random()))
         elif color_code <= 0.88: #K, Orange.
-            base_color = (255, 165, 0)
+            base_color = (255, 192, 64)
             radius = int(550000000 * (0.9 + 0.2 * rnd.random()))
         elif color_code <= 0.96: #G, Yellow.
-            base_color = (255, 255, 0)
+            base_color = (255, 255, 64)
             radius = int(700000000 * (0.95 + 0.1 * rnd.random()))
         elif color_code <= 0.99: #F, yellow-white
             base_color = (255, 255, 224)
@@ -50,10 +50,10 @@ class StellarSystem:
             base_color = (255, 255, 255)
             radius = int(1300000000 * (0.75 + 0.5 * rnd.random()))
         elif color_code <= 0.999999: #B, Blue-white
-            base_color = (224, 224, 255)
+            base_color = (192, 192, 255)
             radius = int(3500000000 * (0.85 + 0.3 * rnd.random()))
         else: #0, Blue
-            base_color = (0, 0, 255)
+            base_color = (64, 64, 255)
             radius = int(10500000000 * (0.3 + 0.6 * rnd.random()))
         color_variation = (
             -16 + rnd.randint(0, 32),

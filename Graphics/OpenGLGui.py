@@ -8,6 +8,7 @@ from OpenGL import GL
 from .Constants import SPACE_COLOR
 from .Cockpit import Cockpit
 from .DeepSpace import DeepSpace
+from .LocalStar import LocalStar
 from .NearestWorld import NearestWorld
 from .Rocks import Rocks
 from .Laser import Laser
@@ -39,6 +40,7 @@ class OpenGLGui:
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
         Stars.draw(self.world_surface, self.stars, width, height, player.orientation)
+        LocalStar.draw(self.world_surface, width, height, environment, player)
         NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
 
         self.overlay_surface.fill((0, 0, 0, 0))

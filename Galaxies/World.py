@@ -2,23 +2,27 @@ from __future__ import annotations
 
 import logging; logger = logging.getLogger(__name__)
 
+import math
 import random
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import Galaxies.Constants
 
 if TYPE_CHECKING:
     from Galaxies.Orbit import Orbit
+    from Player import Player
 
 from Galaxies.Km2 import Km2
+
+Vector3 = Tuple[float, float, float]
 
 class World:
 
     EARTHLIKE_RADIUS_AVERAGE = 5000000
     EARTHLIKE_RADIUS_SIGMA = 1000000
     EARTHLIKE_ROTATION_AVERAGE_F = 1.0 / (60 * 60 * 24)
-    EARTHLIKE_ROTATION_SIGMA_F = 1
+    EARTHLIKE_ROTATION_SIGMA_F = 0.2 / (60 * 60 * 24)
     SURROUNDINGS_RADIUS = 2
 
     def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
@@ -30,9 +34,9 @@ class World:
         self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
-        self.rotation_period: int = 1 / my_random.gauss(World.EARTHLIKE_ROTATION_AVERAGE_F, World.EARTHLIKE_ROTATION_SIGMA_F)
-        self.current_orbital_position: float = 0.0
-        self.current_spin_angle = 0.0
+        self.rotation_period: float = 1 / my_random.gauss(World.EARTHLIKE_ROTATION_AVERAGE_F, World.EARTHLIKE_ROTATION_SIGMA_F)
+        # Cached because it only depends on distance_from_star, which never changes.
+        self.year_duration_seconds: float = 365.2425 * 24 * 60 * 60 * (self.parent_orbit.distance_from_star / 1.496e11) ** (3 / 2)
         self.km2s: List[Km2] = []
 
         self.is_altered: bool = False
@@ -41,16 +45,7 @@ class World:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
-            game_date_time = self.saved_alterations['date_time'] = saved_alterations['date_time']
-
-            from GameEnvironment import GameEnvironment
-            year_duration_in_years = (parent_orbit.distance_from_star / (1.496*10**11))**(3 / 2)
-            year_duration = 365.2425 * 24 * 60 * 60 * year_duration_in_years
-            seconds_passed_of_year = (game_date_time - GameEnvironment.EPOCH).total_seconds() % year_duration
-            portion_of_year_passed = seconds_passed_of_year / year_duration
-            self.current_orbital_position = 360 * portion_of_year_passed
-            self.current_spin_angle = 0.0
-
+            self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         self.name: str = self.generate_name(my_random)
 
@@ -131,12 +126,62 @@ class World:
 
         logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
 
-    def calculate_stellar_position() -> tuple:
-        """ Calculates the position of the center of the planet at this moment, using the distance_from_star of
-        it orbit and the current_orbital_position. The star's system of coordinates works as follows:
-        - X is the direction from the star to the world in EPOCH.
-        - Y is the clockwise perpendicular in the plane of the orbit.
-        - The planet rotates along this axis too.
-        - Z is the same direction as +x / north / high latitude locally.
+    def calculate_stellar_position(self, player: Player, current_datetime: datetime) -> Vector3:
+        """Position of this world's star relative to `player`, in the player's local
+        east/up/north tangent-plane frame (meters), before any heading rotation.
+
+        Works in a free-standing, star-centered basis X=(1,0,0), Y=(0,1,0), Z=(0,0,1),
+        where Z is the world's rotation axis (no axial tilt) and X is the direction from
+        the star to the world at GameEnvironment.EPOCH. Orbital motion and the world's own
+        spin are both clockwise as seen from +Z ("north"); longitude increasing (east)
+        follows the same rotational sense as spin.
         """
-        pass
+        orbital_angle = self._orbital_angle_rad(current_datetime)
+        spin_angle = self._spin_angle_rad(current_datetime)
+
+        world_center = World._scale(self.parent_orbit.distance_from_star, (math.cos(orbital_angle), -math.sin(orbital_angle), 0.0))
+
+        total_azimuth = spin_angle + player.position.x / self.radius
+        latitude_angle = player.position.z / self.radius
+
+        azimuthal_direction = (-math.cos(total_azimuth), math.sin(total_azimuth), 0.0)
+        up_hat = World._add(
+            World._scale(math.cos(latitude_angle), azimuthal_direction),
+            World._scale(math.sin(latitude_angle), (0.0, 0.0, 1.0)),
+        )
+        east_hat = (math.sin(total_azimuth), math.cos(total_azimuth), 0.0)
+        north_hat = (
+            math.sin(latitude_angle) * math.cos(total_azimuth),
+            -math.sin(latitude_angle) * math.sin(total_azimuth),
+            math.cos(latitude_angle),
+        )
+
+        player_position = World._add(world_center, World._scale(self.radius + player.position.y, up_hat))
+        relative = World._scale(-1.0, player_position)
+
+        return (World._dot(relative, east_hat), World._dot(relative, up_hat), World._dot(relative, north_hat))
+
+    def _orbital_angle_rad(self, current_datetime: datetime) -> float:
+        elapsed_seconds = self._elapsed_seconds(current_datetime)
+        return math.tau * (elapsed_seconds % self.year_duration_seconds) / self.year_duration_seconds
+
+    def _spin_angle_rad(self, current_datetime: datetime) -> float:
+        elapsed_seconds = self._elapsed_seconds(current_datetime)
+        return math.tau * (elapsed_seconds % self.rotation_period) / self.rotation_period
+
+    @staticmethod
+    def _elapsed_seconds(current_datetime: datetime) -> float:
+        from GameEnvironment import GameEnvironment
+        return (current_datetime - GameEnvironment.EPOCH).total_seconds()
+
+    @staticmethod
+    def _scale(factor: float, v: Vector3) -> Vector3:
+        return (factor * v[0], factor * v[1], factor * v[2])
+
+    @staticmethod
+    def _add(a: Vector3, b: Vector3) -> Vector3:
+        return (a[0] + b[0], a[1] + b[1], a[2] + b[2])
+
+    @staticmethod
+    def _dot(a: Vector3, b: Vector3) -> float:
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
