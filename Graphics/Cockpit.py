@@ -423,8 +423,11 @@ class Cockpit:
 
         if w is not None and h is not None:
             background = Cockpit._get_cockpit_background(w, h)
-            texture_portion = pygame.transform.scale(background, (outer.width, outer.height))
-            surface.blit(texture_portion, outer)
+            try:
+                texture_portion = background.subsurface((outer.left, outer.top, outer.width, outer.height))
+                surface.blit(texture_portion, outer)
+            except (ValueError, pygame.error):
+                pygame.draw.rect(surface, CONSOLE, outer)
         else:
             pygame.draw.rect(surface, CONSOLE, outer)
 
