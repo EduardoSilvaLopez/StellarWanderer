@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
-from GameEnvironment import GameEnvironment
 
 if TYPE_CHECKING:
     from Galaxies.Orbit import Orbit
@@ -40,6 +39,7 @@ class World:
             self.saved_alterations = saved_alterations.get(alterations_key)
             game_date_time = self.saved_alterations['date_time'] = saved_alterations['date_time']
 
+            from GameEnvironment import GameEnvironment
             year_duration = 365.2425 * 24 * 60 * 60 * (parent_orbit.distance_from_star / (1.496*10**8))**(3 / 2)
             portion_of_full_year_passed = (game_date_time - GameEnvironment.EPOCH).total_seconds() % year_duration
             self.current_orbital_position = 360 * portion_of_full_year_passed
