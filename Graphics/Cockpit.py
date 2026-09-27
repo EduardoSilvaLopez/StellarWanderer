@@ -249,10 +249,11 @@ class Cockpit:
         compass_left_bound = cluster_left + bar_w + int(w * 0.15)
         Cockpit.draw_compass(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
 
-        # Centre multi-function display.
+        # Centre multi-function display — shifted right by 1/3 of its width.
         mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
-        mfd.center = (layout_w // 2, top + int(height * 0.44))
-        Cockpit._draw_beveled_panel(surface, mfd)
+        mfd.centerx = layout_w // 2 + mfd.width // 3
+        mfd.centery = top + int(height * 0.44)
+        Cockpit._draw_beveled_panel(surface, mfd, w=w, h=h)
 
         Cockpit.draw_world_map(surface, fonts, mfd, h, player)
 
@@ -407,17 +408,25 @@ class Cockpit:
         surface.blit(notification_text, text_rect)
 
     @staticmethod
-    def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None) -> None:
+    def _draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None, w: int | None = None, h: int | None = None) -> None:
         """Draw a recessed instrument screen: a raised bezel frame around a
         sunken readout, lit from the top-left (bezel highlight top/left,
         shadow bottom/right; screen shadow top/left, inner highlight
         bottom/right) instead of a single flat border line.
+
+        When w and h are provided, the bezel background uses the cockpit texture
+        instead of a solid color.
         """
         if depth is None:
             depth = max(2, rect.width // 24)
         outer = rect.inflate(depth * 2, depth * 2)
 
-        pygame.draw.rect(surface, CONSOLE, outer)
+        if w is not None and h is not None:
+            background = Cockpit._get_cockpit_background(w, h)
+            texture_portion = pygame.transform.scale(background, (outer.width, outer.height))
+            surface.blit(texture_portion, outer)
+        else:
+            pygame.draw.rect(surface, CONSOLE, outer)
 
         # Bezel: raised, so light catches top/left and shadow falls bottom/right.
         pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.right - 1, outer.top), depth)
