@@ -208,8 +208,10 @@ class Cockpit:
         alt_label = label_font.render('ALT', True, ACCENT_DIM)
         surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))
 
-        # World name (displayed above coordinates)
-        coord_x = cluster_left + bar_w + int(w * 0.035)
+        # World name (displayed above coordinates). Text sits close to the
+        # altitude bar; the compass keeps its own reference point below so
+        # moving this text doesn't shift the compass.
+        coord_x = cluster_left + bar_w + int(w * 0.012)
         world_y = cluster_top + int(height * 0.02)
 
         world_name = player.position.km2.parent_world.name
@@ -242,9 +244,13 @@ class Cockpit:
         surface.blit(orientation_text, (coord_x, coord_y))
 
         # Orientation compass: fixed "N" at top, needle rotates to show heading.
-        # Widest coordinate label reserves the space the text block actually needs.
-        text_right = coord_x + max(longitude_text.get_width(), latitude_text.get_width(), orientation_text.get_width())
-        Cockpit.draw_compass(surface, fonts, layout_w, h, player, cluster_top, cluster_height, text_right)
+        # Kept at its own fixed reference point (independent of coord_x) so
+        # moving the position text closer to the altitude bar doesn't drag
+        # the compass along with it.
+        compass_left_bound = cluster_left + bar_w + int(w * 0.035) + max(
+            longitude_text.get_width(), latitude_text.get_width(), orientation_text.get_width()
+        )
+        Cockpit.draw_compass(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
 
         # Centre multi-function display.
         mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
