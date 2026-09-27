@@ -40,7 +40,7 @@ class Orbit:
             return None
         return alterations
 
-    def add_world(self, degrees_in_orbit: float) -> World:
-        new_world = World(self, degrees_in_orbit, self.saved_alterations)
+    def add_world(self, initial_degrees_in_orbit: int) -> World:
+        new_world = World(self, initial_degrees_in_orbit, self.saved_alterations)
         self.worlds.append(new_world)
         return new_world

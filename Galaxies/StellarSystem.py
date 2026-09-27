@@ -17,7 +17,7 @@ class StellarSystem:
         self.z: int = z
         self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
-        (self.color, self.size) = self.generate_star_type(my_random)
+        self.color, self.radius = self.generate_star_type(my_random)
         self.orbits: List[Orbit] = []
 
         self.is_altered: bool = False
@@ -33,27 +33,28 @@ class StellarSystem:
     def generate_star_type(self, rnd: random.Random) -> tuple:
         color_code = rnd.random()
         base_color: tuple = None
+        radius: int = 0
         if color_code <= 0.75: #M, red dwarf
             base_color = (255, 0, 0)
-            radius = 200000000 * (0.4 + 1.2 * rnd.random())
+            radius = int(200000000 * (0.4 + 1.2 * rnd.random()))
         elif color_code <= 0.88: #K, Orange.
             base_color = (255, 165, 0)
-            radius = 550000000 * (0.9 + 0.2 * rnd.random())
+            radius = int(550000000 * (0.9 + 0.2 * rnd.random()))
         elif color_code <= 0.96: #G, Yellow.
             base_color = (255, 255, 0)
-            radius = 700000000 * (0.95 + 0.1 * rnd.random())
+            radius = int(700000000 * (0.95 + 0.1 * rnd.random()))
         elif color_code <= 0.99: #F, yellow-white
             base_color = (255, 255, 224)
-            radius = 880000000 * (0.9 + 0.2 * rnd.random())
+            radius = int(880000000 * (0.9 + 0.2 * rnd.random()))
         elif color_code <= 0.997: #A, White
             base_color = (255, 255, 255)
-            radius = 1300000000 * (0.75 + 0.5 * rnd.random())
+            radius = int(1300000000 * (0.75 + 0.5 * rnd.random()))
         elif color_code <= 0.999999: #B, Blue-white
             base_color = (224, 224, 255)
-            radius = 3500000000 * (0.85 + 0.3 * rnd.random())
+            radius = int(3500000000 * (0.85 + 0.3 * rnd.random()))
         else: #0, Blue
             base_color = (0, 0, 255)
-            radius = 10500000000 * (0.3 + 0.6 * rnd.random())
+            radius = int(10500000000 * (0.3 + 0.6 * rnd.random()))
         color_variation = (
             -16 + rnd.randint(0, 32),
             -16 + rnd.randint(0, 32),

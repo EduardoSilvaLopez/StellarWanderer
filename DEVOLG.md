@@ -98,10 +98,28 @@ On extra time
 7) Once placed, mines start accumulating ore.
 8) "Laser" the mine collects the ore.
 
-Extra time: +6h45'
+### 2026-09-27 (1/9)
+Here. The mine did not seem to update correctly after absent... corrected.
 
-### 2026-09-27 (1/9) 11:30 - 
-Here. The mine did not seem to update correctly after absent.
+MAKE AND MOVE THE SUN
+1) Create the size and color of the sun.
+2) Create and update the position of the world - here. Created, but not updated during gameplay.
+
+Extra time: +7h00' + 17:45-
+
+My specs to the AI:
+I want to show the star around which the world is orbiting, in the sky, for the player. This is a complex task. I have divided it in these packages:
+1) Define and use a "stellar" system of coordinates for the local star. The origin of coordinates is the center of the star. The +x direction is towards the initial position of the world in its orbit (which is then at x = +world.parent_orbit.distance_from_star ), y perpendicular on the plane of the orbit and z towards the north pole of the planet.
+2) Calculate the position of the planet in this system of coordinates, taking in consideration that it is now in a new position of its circular orbit, determined by world.current_orbital_position, which shows the degrees, the planet moving in clockwise direction as seen from the north.
+3) Calculate the position of the player in this new system of coordinates, taking in account that "longitude" represents actually the meters moved *in the equator* of a spherical planet, and "latitude" the meters moved *from that point of the equator* north and south. Handling this allows to convert both numbers into a point in a sphere. I accept that this is not how the real longitude works.
+4) Take in account that the world rotates along the north / south axis (which is the same as defined by the orbital plane - there is no tilt ) and that initially the  point of the surface represented locally by (0,0) was directly pointing towards the star, that is: in the EPOCH time, the star was directly over the player, and the player was in the equator.
+5) Once the position of the player relative to the star is established, use this to find out the position of the star relative to the player, taking in account that he is over a sphere, with his own "z" representing the direction towards the center of the planet, and the "x" and "z" representing the existing (pseudo) longitude and latitude.
+6) Once the position of the star relative to the player is established, draw the star in the right scale, using its "color" and "radius".
+
+Evaluate this way to split the task, ask questions required to resolve it, and propose a place to write the logic (in contrast to "current player's view") in "Galaxies" instead of "Graphic", as these are "facts about the world" which belong in the model and not in the Graphic namespace.
+
+3) Transform the player coordinates and orientation into stellar coordinates.
+4) Use this data to represent the sun in the right position.
 
 - Set mines: Proof of concept essentially finished. They allow to collect "ore" when you laser them.
 - Make and show the sun.

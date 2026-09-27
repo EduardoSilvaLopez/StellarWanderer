@@ -19,6 +19,7 @@ class GameEnvironment:
             .add_stellar_system(26000, 0, 0)\
             .add_orbit(150000000000)\
             .add_world(180)
+            #Warning: while generating a new star, remember to check that the orbits are farther than the radius.
         logger.info(f"Initial planet's radius: {self.current_world.radius}")
 
     @staticmethod

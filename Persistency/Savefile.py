@@ -38,7 +38,7 @@ class Savefile:
             ).add_orbit(
                 load_object['player']['orbit.distance_from_star']
                 ).add_world(
-                    load_object['player']['world.degrees_in_orbit']
+                    load_object['player']['world.initial_degrees_in_orbit']
                     )
         gem.current_environment.current_world.update_surroundings(
             load_object['player']['x'],
@@ -103,7 +103,7 @@ class Savefile:
                 'stellar_system.y': environment.current_world.parent_orbit.parent_stellar_system.y,
                 'stellar_system.z': environment.current_world.parent_orbit.parent_stellar_system.z,
                 'orbit.distance_from_star': environment.current_world.parent_orbit.distance_from_star,
-                'world.degrees_in_orbit': environment.current_world.degrees_in_orbit,
+                'world.initial_degrees_in_orbit': environment.current_world.initial_degrees_in_orbit,
                 'x': player.position.x,
                 'y': player.position.y,
                 'z': player.position.z,

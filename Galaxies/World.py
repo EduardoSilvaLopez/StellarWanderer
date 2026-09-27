@@ -17,6 +17,8 @@ class World:
 
     EARTHLIKE_RADIUS_AVERAGE = 5000000
     EARTHLIKE_RADIUS_SIGMA = 1000000
+    EARTHLIKE_ROTATION_AVERAGE_F = 1.0 / (60 * 60 * 24)
+    EARTHLIKE_ROTATION_SIGMA_F = 1
     SURROUNDINGS_RADIUS = 2
 
     def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
@@ -28,7 +30,9 @@ class World:
         self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
+        self.rotation_period: int = 1 / my_random.gauss(World.EARTHLIKE_ROTATION_AVERAGE_F, World.EARTHLIKE_ROTATION_SIGMA_F)
         self.current_orbital_position: float = 0.0
+        self.current_spin_angle = 0.0
         self.km2s: List[Km2] = []
 
         self.is_altered: bool = False
@@ -40,9 +44,13 @@ class World:
             game_date_time = self.saved_alterations['date_time'] = saved_alterations['date_time']
 
             from GameEnvironment import GameEnvironment
-            year_duration = 365.2425 * 24 * 60 * 60 * (parent_orbit.distance_from_star / (1.496*10**8))**(3 / 2)
-            portion_of_full_year_passed = (game_date_time - GameEnvironment.EPOCH).total_seconds() % year_duration
-            self.current_orbital_position = 360 * portion_of_full_year_passed
+            year_duration_in_years = (parent_orbit.distance_from_star / (1.496*10**11))**(3 / 2)
+            year_duration = 365.2425 * 24 * 60 * 60 * year_duration_in_years
+            seconds_passed_of_year = (game_date_time - GameEnvironment.EPOCH).total_seconds() % year_duration
+            portion_of_year_passed = seconds_passed_of_year / year_duration
+            self.current_orbital_position = 360 * portion_of_year_passed
+            self.current_spin_angle = 0.0
+
 
         self.name: str = self.generate_name(my_random)
 
@@ -122,3 +130,13 @@ class World:
                 self.km2s.remove(tgt_Km2)
 
         logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
+
+    def calculate_stellar_position() -> tuple:
+        """ Calculates the position of the center of the planet at this moment, using the distance_from_star of
+        it orbit and the current_orbital_position. The star's system of coordinates works as follows:
+        - X is the direction from the star to the world in EPOCH.
+        - Y is the clockwise perpendicular in the plane of the orbit.
+        - The planet rotates along this axis too.
+        - Z is the same direction as +x / north / high latitude locally.
+        """
+        pass
