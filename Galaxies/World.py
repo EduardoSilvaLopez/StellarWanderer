@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
-import GameEnvironment
+from GameEnvironment import GameEnvironment
 
 if TYPE_CHECKING:
     from Galaxies.Orbit import Orbit
