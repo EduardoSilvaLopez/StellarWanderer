@@ -27,12 +27,25 @@ class Cockpit:
 
     @staticmethod
     def _get_cockpit_background(w: int, h: int) -> pygame.Surface:
-        """Load and cache the cockpit background texture, scaled to window dimensions."""
+        """Load, scale, and apply gradient darkening to cockpit texture.
+
+        Left side gradually darkened, right side normal brightness.
+        """
         if Cockpit._cockpit_background is None:
             texture_path = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'cockpit_background.png')
             try:
                 image = pygame.image.load(texture_path)
-                Cockpit._cockpit_background = pygame.transform.scale(image, (w, h))
+                textured = pygame.transform.scale(image, (w, h))
+
+                # Apply gradient darkening: left side dark, right side normal
+                gradient = pygame.Surface((w, h), pygame.SRCALPHA)
+                for x in range(w):
+                    # Gradient: 0 (fully opaque black) on left to 1 (fully transparent) on right
+                    alpha = int(255 * (x / w))
+                    pygame.draw.line(gradient, (0, 0, 0, alpha), (x, 0), (x, h))
+
+                textured.blit(gradient, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                Cockpit._cockpit_background = textured
             except (pygame.error, FileNotFoundError) as e:
                 raise RuntimeError(f"Failed to load cockpit background texture from {texture_path}: {e}")
         return Cockpit._cockpit_background
@@ -61,6 +74,11 @@ class Cockpit:
         bottom = int(h * CONSOLE_TOP)
         top_inset = w * CANOPY_TOP_INSET
         bottom_inset = w * CANOPY_BOTTOM_INSET
+
+        # Windshield background texture
+        background = Cockpit._get_cockpit_background(w, h)
+        windshield_bg = background.subsurface((0, 0, w, top))
+        surface.blit(windshield_bg, (0, 0))
 
         # Top rail.
         pygame.draw.rect(surface, HULL_COLOR, (0, 0, w, top))
