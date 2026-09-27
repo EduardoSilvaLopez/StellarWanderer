@@ -244,12 +244,9 @@ class Cockpit:
         surface.blit(orientation_text, (coord_x, coord_y))
 
         # Orientation compass: fixed "N" at top, needle rotates to show heading.
-        # Kept at its own fixed reference point (independent of coord_x) so
-        # moving the position text closer to the altitude bar doesn't drag
-        # the compass along with it.
-        compass_left_bound = cluster_left + bar_w + int(w * 0.035) + max(
-            longitude_text.get_width(), latitude_text.get_width(), orientation_text.get_width()
-        )
+        # Position compass at a fixed distance from the altitude bar, independent
+        # of text widths, so it doesn't shift when orientation digit count changes.
+        compass_left_bound = cluster_left + bar_w + int(w * 0.15)
         Cockpit.draw_compass(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
 
         # Centre multi-function display.
