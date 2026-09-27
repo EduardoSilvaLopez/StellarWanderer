@@ -7,9 +7,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
+import GameEnvironment
 
 if TYPE_CHECKING:
     from Galaxies.Orbit import Orbit
+
 from Galaxies.Km2 import Km2
 
 class World:
@@ -18,14 +20,16 @@ class World:
     EARTHLIKE_RADIUS_SIGMA = 1000000
     SURROUNDINGS_RADIUS = 2
 
-    def __init__(self, parent_orbit: int, degrees_in_orbit: float, saved_alterations: dict) -> None:
+    def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
         self.parent_orbit: Orbit = parent_orbit
-        self.degrees_in_orbit: int = degrees_in_orbit
-        self.seed: int = (self.degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.initial_degrees_in_orbit: int = initial_degrees_in_orbit
+        self.seed: int = (self.initial_degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
+
         self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
         while self.radius <= 0:
             self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
+        self.current_orbital_position: float = 0.0
         self.km2s: List[Km2] = []
 
         self.is_altered: bool = False
@@ -34,7 +38,11 @@ class World:
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
-            self.saved_alterations['date_time'] = saved_alterations['date_time']
+            game_date_time = self.saved_alterations['date_time'] = saved_alterations['date_time']
+
+            year_duration = 365.2425 * 24 * 60 * 60 * (parent_orbit.distance_from_star / (1.496*10**8))**(3 / 2)
+            portion_of_full_year_passed = (game_date_time - GameEnvironment.EPOCH).total_seconds() % year_duration
+            self.current_orbital_position = 360 * portion_of_full_year_passed
 
         self.name: str = self.generate_name(my_random)
 
@@ -45,7 +53,7 @@ class World:
         return self
 
     def get_alterations_key(self) -> str:
-        return str(self.degrees_in_orbit)
+        return str(self.initial_degrees_in_orbit)
 
     def get_alterations(self) -> Optional[dict]:
         alterations: Optional[dict] = dict()
