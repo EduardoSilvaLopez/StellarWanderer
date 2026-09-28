@@ -104,26 +104,16 @@ Here. The mine did not seem to update correctly after absent... corrected.
 MAKE AND MOVE THE SUN
 1) Create the size and color of the sun.
 2) Create and update the position of the world - here. Created, but not updated during gameplay.
-
-Extra time: +7h00' + 17:45-
-
-My specs to the AI:
-I want to show the star around which the world is orbiting, in the sky, for the player. This is a complex task. I have divided it in these packages:
-1) Define and use a "stellar" system of coordinates for the local star. The origin of coordinates is the center of the star. The +x direction is towards the initial position of the world in its orbit (which is then at x = +world.parent_orbit.distance_from_star ), y perpendicular on the plane of the orbit and z towards the north pole of the planet.
-2) Calculate the position of the planet in this system of coordinates, taking in consideration that it is now in a new position of its circular orbit, determined by world.current_orbital_position, which shows the degrees, the planet moving in clockwise direction as seen from the north.
-3) Calculate the position of the player in this new system of coordinates, taking in account that "longitude" represents actually the meters moved *in the equator* of a spherical planet, and "latitude" the meters moved *from that point of the equator* north and south. Handling this allows to convert both numbers into a point in a sphere. I accept that this is not how the real longitude works.
-4) Take in account that the world rotates along the north / south axis (which is the same as defined by the orbital plane - there is no tilt ) and that initially the  point of the surface represented locally by (0,0) was directly pointing towards the star, that is: in the EPOCH time, the star was directly over the player, and the player was in the equator.
-5) Once the position of the player relative to the star is established, use this to find out the position of the star relative to the player, taking in account that he is over a sphere, with his own "z" representing the direction towards the center of the planet, and the "x" and "z" representing the existing (pseudo) longitude and latitude.
-6) Once the position of the star relative to the player is established, draw the star in the right scale, using its "color" and "radius".
-
-Evaluate this way to split the task, ask questions required to resolve it, and propose a place to write the logic (in contrast to "current player's view") in "Galaxies" instead of "Graphic", as these are "facts about the world" which belong in the model and not in the Graphic namespace.
-
 3) Transform the player coordinates and orientation into stellar coordinates.
 4) Use this data to represent the sun in the right position.
 
-- Set mines: Proof of concept essentially finished. They allow to collect "ore" when you laser them.
-- Make and show the sun.
-- Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player.
+Extra time: +8h30' + 12:00 -
+5) Adjust distance from star to star type, to make the star more visible :) . Ok, it does not work bcs it is not realistic in all fucking games worldwide :D .
+
+Rocks look strange in the north pole. Trying to correct this.
+
+BACKLOG
+- Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
 - Create and show the planet and all its moons, establishing the initial world as one of them.
 - Create the concept of "attached" world, which determines how to interpret the coordinates of the ship. Make a manual detach / attack possible in a buffer zone.
 - Move the moons around their orbit, moving the ship with the attached world only. If none, as the coordinates are relative to the sun, it is "left behind".

@@ -35,13 +35,13 @@ class StellarSystem:
         base_color: tuple = None
         radius: int = 0
         if color_code <= 0.75: #M, red dwarf
-            base_color = (255, 64, 64)
+            base_color = (255, 96, 96)
             radius = int(200000000 * (0.4 + 1.2 * rnd.random()))
-        elif color_code <= 0.88: #K, Orange.
-            base_color = (255, 192, 64)
+        elif color_code <= 0.88: #K, Orange-ish.
+            base_color = (255, 192, 128)
             radius = int(550000000 * (0.9 + 0.2 * rnd.random()))
-        elif color_code <= 0.96: #G, Yellow.
-            base_color = (255, 255, 64)
+        elif color_code <= 0.96: #G, Yellow(-ish)
+            base_color = (255, 255, 128)
             radius = int(700000000 * (0.95 + 0.1 * rnd.random()))
         elif color_code <= 0.99: #F, yellow-white
             base_color = (255, 255, 224)
@@ -53,7 +53,7 @@ class StellarSystem:
             base_color = (192, 192, 255)
             radius = int(3500000000 * (0.85 + 0.3 * rnd.random()))
         else: #0, Blue
-            base_color = (64, 64, 255)
+            base_color = (96, 96, 255)
             radius = int(10500000000 * (0.3 + 0.6 * rnd.random()))
         color_variation = (
             -16 + rnd.randint(0, 32),
@@ -98,7 +98,7 @@ class StellarSystem:
 
         return name.capitalize()
 
-    def add_orbit(self, distance_from_star: int) -> Orbit:
-        new_orbit = Orbit(self, distance_from_star, self.saved_alterations)
+    def add_orbit(self, number: float) -> Orbit:
+        new_orbit = Orbit(self, number, self.saved_alterations)
         self.orbits.append(new_orbit)
         return new_orbit

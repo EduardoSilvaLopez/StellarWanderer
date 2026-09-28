@@ -36,7 +36,7 @@ class Savefile:
             load_object['player']['stellar_system.y'],
             load_object['player']['stellar_system.z']
             ).add_orbit(
-                load_object['player']['orbit.distance_from_star']
+                float(load_object['player']['orbit.number'])
                 ).add_world(
                     load_object['player']['world.initial_degrees_in_orbit']
                     )
@@ -102,7 +102,7 @@ class Savefile:
                 'stellar_system.x': environment.current_world.parent_orbit.parent_stellar_system.x,
                 'stellar_system.y': environment.current_world.parent_orbit.parent_stellar_system.y,
                 'stellar_system.z': environment.current_world.parent_orbit.parent_stellar_system.z,
-                'orbit.distance_from_star': environment.current_world.parent_orbit.distance_from_star,
+                'orbit.number': environment.current_world.parent_orbit.number,
                 'world.initial_degrees_in_orbit': environment.current_world.initial_degrees_in_orbit,
                 'x': player.position.x,
                 'y': player.position.y,
