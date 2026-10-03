@@ -113,7 +113,7 @@ class Cockpit:
             time_scale: Time acceleration factor
         """
         Cockpit.draw_canopy(surface, w, h)
-        Cockpit.draw_console(surface, fonts, w, h, player)
+        Cockpit.draw_console(surface, fonts, w, h, player, date_time)
         Cockpit.draw_ship_clock(surface, fonts, date_time, time_scale, w, h)
 
     @staticmethod
@@ -152,7 +152,7 @@ class Cockpit:
             pygame.draw.line(surface, HULL_EDGE_COLOR, strut[0], strut[3], 1)
 
     @staticmethod
-    def draw_console(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
+    def draw_console(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
         """Draw instrument panel below the windshield."""
         top = int(h * CONSOLE_TOP)
         height = h - top
@@ -224,23 +224,23 @@ class Cockpit:
         coord_y = world_y + world_text.get_height() + int(height * 0.04)
         line_spacing = int(height * 0.06)
 
-        # Altitude (Y coordinate)
-        altitude_text = label_font.render(f'Altitude: {int(player.position.y)}', True, ACCENT)
+        # Altitude (Y coordinate), with its velocity component
+        altitude_text = label_font.render(f'Altitude: {int(player.position.y)} Δ{int(player.velocity.y)}', True, ACCENT)
         surface.blit(altitude_text, (coord_x, coord_y))
 
-        # Longitude (X coordinate)
+        # Longitude (X coordinate), with its velocity component
         coord_y += line_spacing
-        longitude_text = label_font.render(f'Longitude: {int(player.position.x)}', True, ACCENT)
+        longitude_text = label_font.render(f'Longitude: {int(player.position.x)} Δ{int(player.velocity.x)}', True, ACCENT)
         surface.blit(longitude_text, (coord_x, coord_y))
 
-        # Latitude (Z coordinate)
+        # Latitude (Z coordinate), with its velocity component
         coord_y += line_spacing
-        latitude_text = label_font.render(f'Latitude: {int(player.position.z)}', True, ACCENT)
+        latitude_text = label_font.render(f'Latitude: {int(player.position.z)} Δ{int(player.velocity.z)}', True, ACCENT)
         surface.blit(latitude_text, (coord_x, coord_y))
 
         # Orientation (heading in degrees)
         coord_y += line_spacing
-        orientation_text = label_font.render(f'Orientation: {int(player.orientation)}°', True, ACCENT)
+        orientation_text = label_font.render(f'Orientation: {int(player.orientation)}° Δ{int(player.velocity.angular)}', True, ACCENT)
         surface.blit(orientation_text, (coord_x, coord_y))
 
         # Orientation compass: fixed "N" at top, needle rotates to show heading.
@@ -255,7 +255,7 @@ class Cockpit:
         mfd.centery = top + int(height * 0.44)
         Cockpit._draw_beveled_panel(surface, mfd, w=w, h=h)
 
-        Cockpit.draw_world_map(surface, fonts, mfd, h, player)
+        Cockpit.draw_world_map(surface, fonts, mfd, h, player, date_time)
 
         # Right cluster: scanner readout.
         Cockpit.draw_scanner(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
@@ -279,7 +279,7 @@ class Cockpit:
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
 
     @staticmethod
-    def draw_world_map(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, player: Player) -> None:
+    def draw_world_map(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, player: Player, date_time: datetime) -> None:
         """Draw a world map showing player position.
 
         Args:
@@ -288,15 +288,32 @@ class Cockpit:
             mfd: Rectangle for the multi-function display
             h: Window height
             player: Player object with position and world info
+            date_time: Current in-game date/time, for local year/day progress
         """
         world = player.position.km2.parent_world
         radius = world.radius
 
-        # Header with world name
+        # Header with world name, flanked by local year/day progress.
         world_name_text = fonts.render_to_fit(
             world.name, ACCENT, mfd.width - 12, max(9, int(h * 0.017))
         )
-        surface.blit(world_name_text, world_name_text.get_rect(midtop=(mfd.centerx, mfd.top + 5)))
+        name_rect = world_name_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
+        surface.blit(world_name_text, name_rect)
+
+        side_font_size = max(8, int(h * 0.013))
+        side_gap = max(6, int(h * 0.008))
+        year_percent = int(100 * world.local_year_fraction(date_time))
+        day_percent = int(100 * world.local_day_fraction(date_time))
+
+        year_text = fonts.render_to_fit(
+            f'Local Y: {year_percent}%', ACCENT_DIM, max(20, name_rect.left - mfd.left - side_gap), side_font_size
+        )
+        surface.blit(year_text, year_text.get_rect(midright=(name_rect.left - side_gap, name_rect.centery)))
+
+        day_text = fonts.render_to_fit(
+            f'Local D: {day_percent}%', ACCENT_DIM, max(20, mfd.right - name_rect.right - side_gap), side_font_size
+        )
+        surface.blit(day_text, day_text.get_rect(midleft=(name_rect.right + side_gap, name_rect.centery)))
 
         # Map area below header — sits on the beveled mfd screen drawn by the caller.
         map_area = mfd.inflate(-8, 0)

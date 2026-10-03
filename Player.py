@@ -20,10 +20,10 @@ class Player:
     TIME_SCALE_STEP = 10
 
     def __init__(self) -> None:
-        self.time_scale = 1  # Default time scale
-        self.orientation = 0.0  # Degrees clockwise from north
+        self.time_scale: int = 1  # Default time scale
+        self.orientation: float = 0.0  # Degrees clockwise from north
 
-        self.ship = Ship(self)
+        self.ship: Ship = Ship(self)
         self.ship.laser.firing = False  # Laser firing (SPACE held)
 
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
@@ -31,6 +31,11 @@ class Player:
         self.position.x = 0
         self.position.y = 0
         self.position.z = 0
+        self.velocity = type('Velocity', (object,), {})()  # Create a simple object to hold velocity attributes
+        self.velocity.x = 0.0
+        self.velocity.y = 0.0
+        self.velocity.z = 0.0
+        self.velocity.angular = 0.0
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
@@ -51,6 +56,44 @@ class Player:
         self.position.z = z
         return self
 
+    def serialize(self) -> dict:
+        return {
+            'time_scale': self.time_scale,
+            'orientation': self.orientation,
+            'stellar_system.x': self.position.km2.parent_world.parent_orbit.parent_stellar_system.x,
+            'stellar_system.y': self.position.km2.parent_world.parent_orbit.parent_stellar_system.y,
+            'stellar_system.z': self.position.km2.parent_world.parent_orbit.parent_stellar_system.z,
+            'orbit.number': self.position.km2.parent_world.parent_orbit.number,
+            'world.initial_degrees_in_orbit': self.position.km2.parent_world.initial_degrees_in_orbit,
+            'position.x': self.position.x,
+            'position.y': self.position.y,
+            'position.z': self.position.z,
+            'velocity.x': self.velocity.x,
+            'velocity.y': self.velocity.y,
+            'velocity.z': self.velocity.z,
+            'velocity.angular': self.velocity.angular,
+            'ship': self.ship.serialize()        
+        }
+
+    @staticmethod
+    def deserialize(loaded_attributes: dict) -> Player:
+        result = Player()
+        result.time_scale = loaded_attributes['time_scale']
+        result.orientation = loaded_attributes.get('orientation', 0.0)
+        result.position.x = loaded_attributes['position.x']
+        result.position.y = loaded_attributes['position.y']
+        result.position.z = loaded_attributes['position.z']
+        result.velocity.x = loaded_attributes['velocity.x']
+        result.velocity.y = loaded_attributes['velocity.y']
+        result.velocity.z = loaded_attributes['velocity.z']
+        result.velocity.angular = loaded_attributes['velocity.angular']
+        result.position.km2 = gem.current_environment.current_world\
+            .get_km2_at(result.position.x, result.position.z)
+
+        result.ship = Ship.load(result, loaded_attributes['ship'])
+        return result
+
+
     def increase_time_scale(self) -> Player:
         self.time_scale = min(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MAX)
         return self
@@ -59,20 +102,35 @@ class Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         return self
 
-    def update_orientation(self, delta_time: float, counterclockwise: int, clockwise: int) -> Player:
-        """Rotate the ship using game seconds elapsed since the last frame."""
-        direction = clockwise - counterclockwise
-        self.orientation = (self.orientation + direction * self.ship.ROTATION_SPEED * delta_time) % 360
+    def update_angular_velocity(self, delta_time: float, counterclockwise: int, clockwise: int, braking: bool = False) -> Player:
+        """Rotate the ship with inertia: Q/E set angular acceleration, not angular speed.
+
+        Angular speed (deg/s) is stored in self.velocity.angular and capped at
+        ship.MAX_ANGULAR_SPEED. Braking overrides Q/E and decelerates angular
+        speed toward zero at ship.ANGULAR_ACC, never overshooting.
+        """
+        if braking:
+            speed = abs(self.velocity.angular)
+            if speed > 0:
+                decel = min(self.ship.ANGULAR_ACC * delta_time, speed)
+                self.velocity.angular -= math.copysign(decel, self.velocity.angular)
+        else:
+            direction = clockwise - counterclockwise
+            self.velocity.angular += direction * self.ship.ANGULAR_ACC * delta_time
+
+        self.velocity.angular = max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, self.velocity.angular))
+        self.orientation = (self.orientation + self.velocity.angular * delta_time) % 360
         return self
 
-    def update_position(
+    def update_velocity(
             self,
             delta_time: float,
-            longitude_change: float,
-            altitude_change: float,
-            latitude_change: float
+            longitude_accel_input: float,
+            altitude_accel_input: float,
+            latitude_accel_input: float,
+            braking: bool = False
             ) -> Player:
-        self.update_coordinates(delta_time, longitude_change, altitude_change, latitude_change)
+        self.update_coordinates(delta_time, longitude_accel_input, altitude_accel_input, latitude_accel_input, braking)
         new_km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
         if new_km2 is None or new_km2 != self.position.km2:
             gem.current_environment.current_world.update_surroundings(
@@ -83,52 +141,71 @@ class Player:
         self.position.km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
         return self
 
-    def update_coordinates(self, delta_time: float, longitude_change: float, altitude_change: float, latitude_change: float) -> Player:
+    def update_coordinates(self, delta_time: float, longitude_accel_input: float, altitude_accel_input: float, latitude_accel_input: float, braking: bool = False) -> Player:
         """
-        Update the player's position based on ship-relative controls.
-        
+        Update the player's velocity and position based on ship-relative controls.
+
+        All movement is inertial: thrust keys set acceleration, not velocity
+        directly. Holding a key keeps speeding the ship up along that direction;
+        releasing it leaves the ship drifting at whatever velocity it has
+        accumulated in self.velocity (m/s), with no drag.
+
+        Braking (S) overrides all thrust keys: instead of acceleration, it
+        applies up to ship.BRAKE_ACC m/s^2 opposing the current velocity in
+        all three axes (horizontal + vertical), never overshooting past zero.
+
         Args:
             delta_time: Time elapsed in game seconds
-            altitude_change: Change in altitude (1 for increase, -1 for decrease, 0 for no change)
-            longitude_change: Ship-relative right movement (1 for right, -1 for left, 0 for no movement)
-            latitude_change: Change in latitude (1 for increase, -1 for decrease, 0 for no change)
+            longitude_accel_input: Ship-relative right thrust (1 right, -1 left, 0 none)
+            altitude_accel_input: Vertical thrust (1 up, -1 down, 0 none)
+            latitude_accel_input: Ship-relative forward thrust (1 forward, -1 backward, 0 none)
+            braking: If True, ignore all accel inputs and decelerate all axes to zero instead
         """
-        orientation = math.radians(self.orientation)
-        sin_orientation = math.sin(orientation)
-        cos_orientation = math.cos(orientation)
-        local_right = longitude_change
-        local_forward = latitude_change
-        longitude_change = local_right * cos_orientation + local_forward * sin_orientation
-        latitude_change = -local_right * sin_orientation + local_forward * cos_orientation
+        if braking:
+            speed = math.hypot(self.velocity.x, self.velocity.y, self.velocity.z)
+            if speed > 0:
+                decel = min(self.ship.BRAKE_ACC * delta_time, speed)
+                scale = (speed - decel) / speed
+                self.velocity.x *= scale
+                self.velocity.y *= scale
+                self.velocity.z *= scale
+        else:
+            orientation = math.radians(self.orientation)
+            sin_orientation = math.sin(orientation)
+            cos_orientation = math.cos(orientation)
+            local_right = longitude_accel_input
+            local_forward = latitude_accel_input
+            world_accel_x = local_right * cos_orientation + local_forward * sin_orientation
+            world_accel_z = -local_right * sin_orientation + local_forward * cos_orientation
+
+            self.velocity.x += world_accel_x * self.ship.RIGHT_LEFT_ACC * delta_time
+            self.velocity.y += altitude_accel_input * self.ship.UP_DOWN_ACC * delta_time
+            self.velocity.z += world_accel_z * self.ship.FORWARD_BACKWARD_ACC * delta_time
 
         # Update longitude, east to west of viceversa crossing the anti-meridian.
-        if longitude_change != 0:
-            change_in_mts = longitude_change * self.ship.RIGHT_LEFT_SPEED * delta_time
-            self.position.x += change_in_mts
-
-            if self.position.x < -pi * self.position.km2.parent_world.radius:
-                self.position.x += pi * self.position.km2.parent_world.radius * 2
-            elif self.position.x > pi * self.position.km2.parent_world.radius:
-                self.position.x -= pi * self.position.km2.parent_world.radius * 2
+        self.position.x += self.velocity.x * delta_time
+        if self.position.x < -pi * self.position.km2.parent_world.radius:
+            self.position.x += pi * self.position.km2.parent_world.radius * 2
+        elif self.position.x > pi * self.position.km2.parent_world.radius:
+            self.position.x -= pi * self.position.km2.parent_world.radius * 2
 
         # Update altitude, clamp between MIN and MAX
-        if altitude_change != 0:
-            change_in_mts = altitude_change * self.ship.UP_DOWN_SPEED * delta_time
-            
-            self.position.y = max(
-                self.ship.HEIGHT, 
-                min(self.MAX_ALTITUDE, self.position.y + change_in_mts)
-            )
+        self.position.y += self.velocity.y * delta_time
+        self.position.y = max(
+            self.ship.HEIGHT,
+            min(self.MAX_ALTITUDE, self.position.y)
+        )
 
         # Update latitude, clamping between the north and south poles.
-        if latitude_change != 0:
-            change_in_mts = latitude_change * self.ship.FORWARD_BACKWARD_SPEED * delta_time
-            self.position.z += change_in_mts
+        self.position.z += self.velocity.z * delta_time
+        self.position.z = max(
+            -pi * self.position.km2.parent_world.radius / 2,
+            min(pi * self.position.km2.parent_world.radius / 2, self.position.z)
+        )
 
-            self.position.z = max(
-                -pi * self.position.km2.parent_world.radius / 2,
-                min(pi * self.position.km2.parent_world.radius / 2, self.position.z)
-            )
+        # Constrain vertical velocity: can't descend faster than current altitude
+        # (prevents ship from accelerating into ground arbitrarily fast).
+        self.velocity.y = max(-(self.position.y - self.ship.HEIGHT), self.velocity.y)
         return self
 
 current_player: Player = None

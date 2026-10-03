@@ -16,10 +16,12 @@ if TYPE_CHECKING:
 class Ship(Updatable):
     HEIGHT = 10 # meters, up to the camera
 
-    UP_DOWN_SPEED = 1  # meters per second
-    RIGHT_LEFT_SPEED = 10  # meters per second
-    FORWARD_BACKWARD_SPEED = 10  # meters per second
-    ROTATION_SPEED = 10  # degrees per game second
+    UP_DOWN_ACC = 5.0  # meters per second squared
+    RIGHT_LEFT_ACC = 10  # meters per second squared
+    FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
+    ANGULAR_ACC = 10.0  # degrees per second squared
+    MAX_ANGULAR_SPEED = 90.0  # degrees per second
+    BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 
     def __init__(self, owner: Player) -> None:
         self.owner = owner

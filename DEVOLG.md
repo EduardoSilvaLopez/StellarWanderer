@@ -129,10 +129,24 @@ Oktoberfest. Remaining extra time +3h30'
 
 Oktoberfest. Remaining extra time +1h15'
 
-11:00
+11:00 - 
+
+Inertial movement:
+- WASD inertial movement.
+- (extra) Give % of year and day in the world map.
+- Show the velocity in WASX.
+- Substitude D with X.
+- D brings the ship to stop.
+- Include angular movement.
+- Include altitude (avoiding crash).
 
 BACKLOG
 - Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
+2. ⁠Trigger bind / unbind from planet.
+3. ⁠On unbind, give the current velocity of the planet, and change to stellar coordinates. Planet is still represented, as a sphere.
+4. ⁠Nearest planet watched for altitude to bind.
+5. ⁠Bind.
+6. ⁠Create more than one orbit, each with planet.
 - Create and show the planet and all its moons, establishing the initial world as one of them.
 - Create the concept of "attached" world, which determines how to interpret the coordinates of the ship. Make a manual detach / attack possible in a buffer zone.
 - Move the moons around their orbit, moving the ship with the attached world only. If none, as the coordinates are relative to the sun, it is "left behind".

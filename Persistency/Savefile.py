@@ -41,20 +41,12 @@ class Savefile:
                     load_object['player']['world.initial_degrees_in_orbit']
                     )
         gem.current_environment.current_world.update_surroundings(
-            load_object['player']['x'],
-            load_object['player']['z'],
+            load_object['player']['position.x'],
+            load_object['player']['position.z'],
             game_date_time
             )
 
-        pem.current_player = pem.Player()
-        pem.current_player.time_scale = load_object['player']['time_scale']
-        pem.current_player.orientation = load_object['player'].get('orientation', 0.0)
-        pem.current_player.position.x = load_object['player']['x']
-        pem.current_player.position.y = load_object['player']['y']
-        pem.current_player.position.z = load_object['player']['z']
-        pem.current_player.position.km2 = gem.current_environment.current_world.get_km2_at(pem.current_player.position.x, pem.current_player.position.z)
-
-        pem.current_player.ship = Ship.load(pem.current_player, load_object['player']['ship'])
+        pem.current_player = pem.Player.deserialize(load_object['player'])
 
     @staticmethod
     def load_last() -> None:
@@ -96,19 +88,7 @@ class Savefile:
                 'date_time': str(environment.date_time),
                 'galaxy_alterations': gem.current_environment.galaxy.get_alterations()
             }
-            , 'player': {
-                'time_scale': player.time_scale,
-                'orientation': player.orientation,
-                'stellar_system.x': environment.current_world.parent_orbit.parent_stellar_system.x,
-                'stellar_system.y': environment.current_world.parent_orbit.parent_stellar_system.y,
-                'stellar_system.z': environment.current_world.parent_orbit.parent_stellar_system.z,
-                'orbit.number': environment.current_world.parent_orbit.number,
-                'world.initial_degrees_in_orbit': environment.current_world.initial_degrees_in_orbit,
-                'x': player.position.x,
-                'y': player.position.y,
-                'z': player.position.z,
-                'ship': player.ship.serialize()
-            }
+            , 'player': player.serialize()
         }
         file_name = str(environment.date_time)
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]

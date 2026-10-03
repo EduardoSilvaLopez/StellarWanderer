@@ -161,13 +161,21 @@ class World:
 
         return (World._dot(relative, east_hat), World._dot(relative, up_hat), World._dot(relative, north_hat))
 
-    def _orbital_angle_rad(self, current_datetime: datetime) -> float:
+    def local_year_fraction(self, current_datetime: datetime) -> float:
+        """Fraction of this world's orbit completed since EPOCH, in [0, 1)."""
         elapsed_seconds = self._elapsed_seconds(current_datetime)
-        return math.tau * (elapsed_seconds % self.year_duration_seconds) / self.year_duration_seconds
+        return (elapsed_seconds % self.year_duration_seconds) / self.year_duration_seconds
+
+    def local_day_fraction(self, current_datetime: datetime) -> float:
+        """Fraction of this world's current spin (day) completed, in [0, 1)."""
+        elapsed_seconds = self._elapsed_seconds(current_datetime)
+        return (elapsed_seconds % self.rotation_period) / self.rotation_period
+
+    def _orbital_angle_rad(self, current_datetime: datetime) -> float:
+        return math.tau * self.local_year_fraction(current_datetime)
 
     def _spin_angle_rad(self, current_datetime: datetime) -> float:
-        elapsed_seconds = self._elapsed_seconds(current_datetime)
-        return math.tau * (elapsed_seconds % self.rotation_period) / self.rotation_period
+        return math.tau * self.local_day_fraction(current_datetime)
 
     @staticmethod
     def _elapsed_seconds(current_datetime: datetime) -> float:
