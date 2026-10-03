@@ -30,7 +30,7 @@ class OreMines:
     _mine_texture_id: Optional[int] = None
 
     @staticmethod
-    def draw(mines: List[OreMine]) -> None:
+    def draw(mines: List[OreMine], player_x: float, player_z: float) -> None:
         """Draw every mine, within the camera transform set up by the caller.
 
         Side walls (textured) are drawn for all mines first, then texturing
@@ -44,21 +44,25 @@ class OreMines:
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glBindTexture(GL.GL_TEXTURE_2D, OreMines._get_mine_texture())
         for mine in mines:
-            OreMines._draw_mine_side(mine)
+            OreMines._draw_mine_side(mine, player_x, player_z)
         GL.glDisable(GL.GL_TEXTURE_2D)
 
         for mine in mines:
-            OreMines._draw_mine_caps(mine)
+            OreMines._draw_mine_caps(mine, player_x, player_z)
 
     @staticmethod
-    def _mine_circle_points(mine: OreMine, y: float) -> List[Tuple[float, float, float, float]]:
-        """World-space (x, y, z, u) points around a mine's circumference.
+    def _mine_circle_points(mine: OreMine, y: float, player_x: float, player_z: float) -> List[Tuple[float, float, float, float]]:
+        """Camera-relative (x, y, z, u) points around a mine's circumference.
 
         Rotated by the mine's orientation using the same convention as
-        Rocks._draw_rock (no tilt term — mines stand vertical).
+        Rocks._draw_rock (no tilt term — mines stand vertical). Longitude/
+        latitude are made relative to the player here, in double precision,
+        before reaching glVertex3f — see the comment in Rocks.draw() for why.
         """
         orientation = math.radians(getattr(mine, 'orientation', 0.0))
         cos_o, sin_o = math.cos(orientation), math.sin(orientation)
+        relative_longitude = mine.longitude - player_x
+        relative_latitude = mine.latitude - player_z
         points = []
         for i in range(MINE_SEGMENTS + 1):
             frac = i / MINE_SEGMENTS
@@ -67,15 +71,15 @@ class OreMines:
             local_z = MINE_RADIUS * math.sin(angle)
             x2 = local_x * cos_o + local_z * sin_o
             z2 = -local_x * sin_o + local_z * cos_o
-            points.append((mine.longitude + x2, y, mine.latitude + z2, frac))
+            points.append((relative_longitude + x2, y, relative_latitude + z2, frac))
         return points
 
     @staticmethod
-    def _draw_mine_side(mine: OreMine) -> None:
+    def _draw_mine_side(mine: OreMine, player_x: float, player_z: float) -> None:
         base_y = MINE_BASE_HEIGHT
         top_y = base_y + MINE_HEIGHT
-        base_pts = OreMines._mine_circle_points(mine, base_y)
-        top_pts = OreMines._mine_circle_points(mine, top_y)
+        base_pts = OreMines._mine_circle_points(mine, base_y, player_x, player_z)
+        top_pts = OreMines._mine_circle_points(mine, top_y, player_x, player_z)
 
         GL.glBegin(GL.GL_QUAD_STRIP)
         for (bx, by, bz, u), (tx, ty, tz, _) in zip(base_pts, top_pts):
@@ -86,17 +90,19 @@ class OreMines:
         GL.glEnd()
 
     @staticmethod
-    def _draw_mine_caps(mine: OreMine) -> None:
+    def _draw_mine_caps(mine: OreMine, player_x: float, player_z: float) -> None:
         base_y = MINE_BASE_HEIGHT
         top_y = base_y + MINE_HEIGHT
+        relative_longitude = mine.longitude - player_x
+        relative_latitude = mine.latitude - player_z
 
         GL.glColor3ub(*MINE_CAP_COLOR)
         for y, reverse in ((top_y, False), (base_y, True)):
-            points = OreMines._mine_circle_points(mine, y)
+            points = OreMines._mine_circle_points(mine, y, player_x, player_z)
             if reverse:
                 points = list(reversed(points))
             GL.glBegin(GL.GL_TRIANGLE_FAN)
-            GL.glVertex3f(mine.longitude, y, mine.latitude)
+            GL.glVertex3f(relative_longitude, y, relative_latitude)
             for x, py, z, _ in points:
                 GL.glVertex3f(x, py, z)
             GL.glEnd()

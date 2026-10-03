@@ -47,17 +47,26 @@ class Rocks:
         # +Z forward basis while rotating the camera clockwise.
         GL.glRotatef(player.orientation, 0.0, 1.0, 0.0)
         GL.glScalef(1.0, 1.0, -1.0)
-        GL.glTranslatef(-player.position.x, -player.position.y, -player.position.z)
+        # X/Z are NOT translated here: at large enough world coordinates (far
+        # from the origin), glTranslatef's float32 truncation would already
+        # have destroyed sub-meter precision before the GPU ever sees it.
+        # Instead, every vertex below is made camera-relative in Python
+        # (double precision) before being handed to glVertex3f, so only
+        # small, already-precise offsets ever get truncated to float32.
+        # Y doesn't need this treatment: player.position.y is bounded to
+        # [ship.HEIGHT, Player.MAX_ALTITUDE] = [10, 20000], far too small for
+        # float32 to meaningfully round.
+        GL.glTranslatef(0.0, -player.position.y, 0.0)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)
-        Rocks._draw_ground(player)
+        Rocks._draw_ground()
 
-        OreFields.draw(ore_fields)
-        OreMines.draw(mines)
+        OreFields.draw(ore_fields, player.position.x, player.position.z)
+        OreMines.draw(mines, player.position.x, player.position.z)
 
         for rock in rocks:
-            Rocks._draw_rock(rock)
+            Rocks._draw_rock(rock, player.position.x, player.position.z)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)
@@ -66,25 +75,26 @@ class Rocks:
         GL.glPopMatrix()
 
     @staticmethod
-    def _draw_ground(player: Player) -> None:
-        """Populate depth for the local surface without changing its color."""
+    def _draw_ground() -> None:
+        """Populate depth for the local surface without changing its color.
+
+        Always centred on the camera (player X/Z is applied via the
+        camera-relative vertex convention, not baked into these vertices),
+        so this needs no player position at all.
+        """
         extent = MAX_DEPTH
-        x0 = player.position.x - extent
-        x1 = player.position.x + extent
-        z0 = player.position.z - extent
-        z1 = player.position.z + extent
 
         GL.glColorMask(GL.GL_FALSE, GL.GL_FALSE, GL.GL_FALSE, GL.GL_FALSE)
         GL.glBegin(GL.GL_QUADS)
-        GL.glVertex3f(x0, 0.0, z0)
-        GL.glVertex3f(x1, 0.0, z0)
-        GL.glVertex3f(x1, 0.0, z1)
-        GL.glVertex3f(x0, 0.0, z1)
+        GL.glVertex3f(-extent, 0.0, -extent)
+        GL.glVertex3f(extent, 0.0, -extent)
+        GL.glVertex3f(extent, 0.0, extent)
+        GL.glVertex3f(-extent, 0.0, extent)
         GL.glEnd()
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
 
     @staticmethod
-    def _draw_rock(rock: Rock) -> None:
+    def _draw_rock(rock: Rock, player_x: float, player_z: float) -> None:
         half = rock.size / 2.0
 
         # Rocks are tilted around their own local Z axis by rock.tilt degrees,
@@ -98,6 +108,12 @@ class Rocks:
         cos_o = math.cos(orientation)
         sin_o = math.sin(orientation)
 
+        # Subtract the player's position here, in double precision, before
+        # these coordinates ever reach a float32 glVertex3f call — see the
+        # comment in draw() for why.
+        relative_longitude = rock.longitude - player_x
+        relative_latitude = rock.latitude - player_z
+
         def corner(sign_x: int, sign_y: int, sign_z: int) -> Tuple[float, float, float]:
             local_x, local_y, local_z = sign_x * half, sign_y * half, sign_z * half
             x1 = local_x * cos_t - local_y * sin_t
@@ -105,7 +121,7 @@ class Rocks:
             z1 = local_z
             x2 = x1 * cos_o + z1 * sin_o
             z2 = -x1 * sin_o + z1 * cos_o
-            return (rock.longitude + x2, rock.altitude + y1, rock.latitude + z2)
+            return (relative_longitude + x2, rock.altitude + y1, relative_latitude + z2)
 
         c000 = corner(-1, -1, -1)
         c100 = corner(+1, -1, -1)

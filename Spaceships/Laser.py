@@ -85,7 +85,7 @@ class Laser:
         self.hitting_rock = self.targeted_rock
 
         '''If no rock but a mine, transfer the ore to the ship.'''
-        if not self.hitting_rock and self.is_mine_hit:
+        if not self.hitting_rock and self.targeted_mine:
             player: Player = self.ship.owner
             world: World = player.position.km2.parent_world
             tgt_mine: OreMine = self.get_hit_mine(world)
@@ -93,7 +93,7 @@ class Laser:
                 self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += tgt_mine[0].content
                 tgt_mine[0].content = 0
 
-        self.firing = not self.is_mine_hit
+        self.firing = not self.targeted_mine
 
     def cease_fire(self) -> None:
         if (not self.firing):

@@ -634,7 +634,7 @@ class Cockpit:
 
     @staticmethod
     def format_ship_time(moment: datetime) -> str:
-        """Format ISO 8601 layout without zero-padding the year, e.g. '500-01-01 00:00:00'."""
+        """Format ISO 8601 layout without zero-padding the year, e.g. '700-01-01 00:00:00'."""
         return (f'{moment.year}-{moment.month:02d}-{moment.day:02d} '
                 f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 

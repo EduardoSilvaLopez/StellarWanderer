@@ -6,7 +6,7 @@ from Galaxies.Galaxy import Galaxy
 logger = logging.getLogger(__name__)
 
 class GameEnvironment:
-    EPOCH = datetime.datetime(500, 1, 1)
+    EPOCH = datetime.datetime(700, 1, 1)
 
     def __init__(self, galactic_seed: int, date_time: datetime.datetime, saved_alterations: Optional[dict]) -> None:
         self.date_time = date_time

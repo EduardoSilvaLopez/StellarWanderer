@@ -42,7 +42,10 @@ class Laser:
         GL.glLoadIdentity()
         GL.glRotatef(player.orientation, 0.0, 1.0, 0.0)
         GL.glScalef(1.0, 1.0, -1.0)
-        GL.glTranslatef(-player.position.x, -player.position.y, -player.position.z)
+        # X/Z made camera-relative on the CPU (double precision) instead of via
+        # glTranslatef, to avoid float32 truncation at large world coordinates
+        # — see the matching comment in Rocks.draw() for why.
+        GL.glTranslatef(0.0, -player.position.y, 0.0)
 
         # Perpendicular vector (right): rotate forward 90° in XZ plane
         orientation = math.radians(player.orientation)
@@ -64,9 +67,9 @@ class Laser:
         # face has real extent in both screen dimensions.
         def corner(cx: float, cy: float, cz: float, right_sign: int, up_sign: int) -> Tuple[float, float, float]:
             return (
-                cx + right_x * half_size * right_sign,
+                (cx - player.position.x) + right_x * half_size * right_sign,
                 cy + half_size * up_sign,
-                cz + right_z * half_size * right_sign,
+                (cz - player.position.z) + right_z * half_size * right_sign,
             )
 
         s_tr = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, 1)

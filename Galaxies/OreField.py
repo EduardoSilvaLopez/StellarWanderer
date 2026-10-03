@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import random
 logger = logging.getLogger(__name__)
 
 from Galaxies.OreMine import OreMine
@@ -24,6 +25,7 @@ class OreField:
         self.remaining_ore: int = 0
         self.initial_color: tuple = (0, 0, 0)
         self.color: tuple = (0, 0, 0)
+        self.orientation: float = 0.0
         self.mines: List[OreMine] = list()
 
     @staticmethod
@@ -34,7 +36,11 @@ class OreField:
         result.latitude = original_rock.latitude
         result.radius = 0.5 * original_rock.size**1.5
         result.initial_ore = result.remaining_ore = int(original_rock.ore_per_m3() * original_rock.size**3)
-        result.color = result.initial_color = original_rock.initial_color
+        result.color = result.initial_color = tuple(min(255, value + 50) for value in original_rock.initial_color)
+
+        my_random = random.Random(original_rock.parent_km2.seed + original_rock.latitude + original_rock.longitude + result.radius)
+        result.orientation = my_random.random() * 360.0
+        
         return result
 
     @staticmethod
@@ -48,6 +54,7 @@ class OreField:
         result.remaining_ore = serialized_dict['remaining_ore']
         result.initial_color = tuple(serialized_dict['initial_color'])
         result.color = tuple(serialized_dict['color'])
+        result.orientation = serialized_dict['orientation']
 
         list_of_mines = serialized_dict.get('mines')
         result.mines = [OreMine(result, saved_attributes=mine_dict) for mine_dict in list_of_mines]
@@ -63,6 +70,7 @@ class OreField:
             'remaining_ore': self.remaining_ore,
             'initial_color': self.initial_color,
             'color': self.color,
+            'orientation': self.orientation,
             'mines': [m.serialize() for m in self.mines]
             }
 

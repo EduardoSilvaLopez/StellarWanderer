@@ -4,7 +4,7 @@
 Learn modern technologies by building a prototype of a game I always dreamed about.
 
 ## Mission
-Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype for a solo space game with realistic dimensions (time included), which implies never saving the world itself but only the changes caused by the player. The setting is the “world after the disaster” of my sci-fi concept, in the year 500.
+Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype for a solo space game with realistic dimensions (time included), which implies never saving the world itself but only the changes caused by the player. The setting is the “world after the disaster” of my sci-fi concept, in the year 700.
 
 ## Log
 
@@ -107,10 +107,29 @@ MAKE AND MOVE THE SUN
 3) Transform the player coordinates and orientation into stellar coordinates.
 4) Use this data to represent the sun in the right position.
 
-Extra time: +8h30' + 12:00 -
+On extra time:
 5) Adjust distance from star to star type, to make the star more visible :) . Ok, it does not work bcs it is not realistic in all fucking games worldwide :D .
+Rocks look strange in the north pole. Trying to correct this: Looks corrected, test still.
 
-Rocks look strange in the north pole. Trying to correct this.
+Extra time: +10h15'
+
+### 2026-09-28 (2/9)
+
+Oktoberfest. Remaining extra time +8h
+
+### 2026-09-29 (3/9)
+
+Oktoberfest. Remaining extra time +5h45'
+
+### 2026-09-30 (3/9)
+
+Oktoberfest. Remaining extra time +3h30'
+
+### 2026-10-01 (3/9)
+
+Oktoberfest. Remaining extra time +1h15'
+
+11:00
 
 BACKLOG
 - Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
