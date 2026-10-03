@@ -12,6 +12,7 @@ class StellarSystem:
     def __init__(self, parent_galaxy: Galaxy, x: int, y: int, z: int, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
         self.parent_galaxy: Galaxy = parent_galaxy
+        self.entity_name: str = 'Those-Who-Share'
         self.x: int = x
         self.y: int = y
         self.z: int = z

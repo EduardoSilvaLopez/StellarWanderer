@@ -212,16 +212,23 @@ class Cockpit:
         # altitude bar; the compass keeps its own reference point below so
         # moving this text doesn't shift the compass.
         coord_x = cluster_left + bar_w + int(w * 0.012)
-        world_y = cluster_top + int(height * 0.02)
+        world_y = cluster_top - 40
 
+        # World and star name (top label)
+        stellar_system = player.position.km2.parent_world.parent_orbit.parent_stellar_system
         world_name = player.position.km2.parent_world.name
-        star_name = player.position.km2.parent_world.parent_orbit.parent_stellar_system.name
+        star_name = stellar_system.name
         stellar_label = world_name + ", " + star_name + " System"
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
 
-        # Position coordinates displayed below world name
-        coord_y = world_y + world_text.get_height() + int(height * 0.04)
+        # System entity label below world name (same size and style)
+        entity_text = world_font.render(stellar_system.entity_name, True, ACCENT)
+        entity_y = world_y + world_text.get_height() + int(height * 0.005)
+        surface.blit(entity_text, (coord_x, entity_y))
+
+        # Position coordinates displayed below entity name
+        coord_y = entity_y + entity_text.get_height() + int(height * 0.04)
         line_spacing = int(height * 0.06)
 
         # Altitude (Y coordinate), with its velocity component
