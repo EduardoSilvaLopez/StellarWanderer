@@ -129,9 +129,7 @@ Oktoberfest. Remaining extra time +3h30'
 
 Oktoberfest. Remaining extra time +1h15'
 
-11:00 - 13:30
-
-Inertial movement:
+INERTIAL MOVEMENT:
 - WASD inertial movement.
 - (extra) Give % of year and day in the world map.
 - Show the velocity in WASX.
@@ -140,15 +138,25 @@ Inertial movement:
 - Include angular movement.
 - Include altitude (avoiding crash).
 
+11:00 - 13:30 + 18:00 - 
+
 ABANDON THE WORLD:
-- Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
-- ⁠Trigger bind / unbind from planet.
-* ⁠On unbind, give the current velocity of the planet, and change to stellar coordinates. Planet is still represented, as a sphere.
-* ⁠Nearest planet watched for altitude to bind.
-* ⁠Bind.
-* ⁠Create more than one orbit, each with planet.
+Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
 
-
+- Change altitude meter to make it relative to radius, the max on radius. 
+- On altitude over radial distance, stop generating Km2's (check they are generated again if back down).
+- Trigger "unbind" when alt = radius. Just log it.
+- Trigger "bind" when alt = radius / 2. Just log it.
+- Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
+- Alt bar, orientation and world map disappear when unbound - and back.
+- Altitude, latitude and longitude are renamed to x/y/z when unbound - and back.
+- Calculate and log the position and velocity of the planet on unbind and bind.
+- Calculate and log the position of the planet every 10 seconds (will be eliminated later?)
+- 3 and 9 now tilt, not increase / decrease z. Tilt is shown when unbound, is set to zero on binding.
+- x / y / z are recalculated on unbinding: the position is recalculated (cylinder-to-real-long-lat, then to x-y-z, then world to stellar), the velocity is recalculated (also what x / y / z means) to add the one of the planet at that instant.
+- Altitude, latitude and longitude are recalculated on binding: the position is recalculated (stellar to world, then to real long-lat, then to cylinder long-lat), the velocity is recalculated to substract the one of the planet at that instant.
+- ⁠Create more than one orbit, each with one world.
+- Show the other planets in the sky.
 
 BACKLOG
 - PLANETS AND MOONS

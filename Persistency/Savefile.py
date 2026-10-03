@@ -41,6 +41,7 @@ class Savefile:
                     load_object['player']['world.initial_degrees_in_orbit']
                     )
         gem.current_environment.current_world.update_surroundings(
+            load_object['player']['position.y'],
             load_object['player']['position.x'],
             load_object['player']['position.z'],
             game_date_time

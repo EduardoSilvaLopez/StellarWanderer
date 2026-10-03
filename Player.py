@@ -10,10 +10,6 @@ if TYPE_CHECKING:
     from Galaxies.World import World
 
 class Player:
-    # Altitude boundaries (in meters)
-    MAX_ALTITUDE = 20000
-    # Base altitude change rate: 1 meter per second at time scale 1
-
     # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
@@ -40,7 +36,7 @@ class Player:
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.update_surroundings(0, 0, gem.GameEnvironment.EPOCH)
+        environment.current_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
         central_km2 = next(km2 for km2 in environment.current_world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = self.position.km2.longitude + 500
@@ -134,6 +130,7 @@ class Player:
         new_km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
         if new_km2 is None or new_km2 != self.position.km2:
             gem.current_environment.current_world.update_surroundings(
+                self.position.y,
                 self.position.x,
                 self.position.z,
                 gem.current_environment.date_time
@@ -184,23 +181,24 @@ class Player:
 
         # Update longitude, east to west of viceversa crossing the anti-meridian.
         self.position.x += self.velocity.x * delta_time
-        if self.position.x < -pi * self.position.km2.parent_world.radius:
-            self.position.x += pi * self.position.km2.parent_world.radius * 2
-        elif self.position.x > pi * self.position.km2.parent_world.radius:
-            self.position.x -= pi * self.position.km2.parent_world.radius * 2
+        radius = gem.current_environment.current_world.radius
+        if self.position.x < -pi * radius:
+            self.position.x += pi * radius * 2
+        elif self.position.x > pi * radius:
+            self.position.x -= pi * radius * 2
 
-        # Update altitude, clamp between MIN and MAX
+        # Update altitude, clamp between MIN and MAX (max altitude = world radius)
         self.position.y += self.velocity.y * delta_time
         self.position.y = max(
             self.ship.HEIGHT,
-            min(self.MAX_ALTITUDE, self.position.y)
+            min(radius, self.position.y)
         )
 
         # Update latitude, clamping between the north and south poles.
         self.position.z += self.velocity.z * delta_time
         self.position.z = max(
-            -pi * self.position.km2.parent_world.radius / 2,
-            min(pi * self.position.km2.parent_world.radius / 2, self.position.z)
+            -pi * radius / 2,
+            min(pi * radius / 2, self.position.z)
         )
 
         # Constrain vertical velocity: can't descend faster than current altitude

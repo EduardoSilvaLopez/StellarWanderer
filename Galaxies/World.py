@@ -23,7 +23,7 @@ class World:
     EARTHLIKE_RADIUS_SIGMA = 1000000
     EARTHLIKE_ROTATION_AVERAGE_F = 1.0 / (60 * 60 * 24)
     EARTHLIKE_ROTATION_SIGMA_F = 0.2 / (60 * 60 * 24)
-    SURROUNDINGS_RADIUS = 2
+    SURROUNDINGS_RADIUS = 2 * Km2.SIZE
 
     def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
         self.parent_orbit: Orbit = parent_orbit
@@ -91,7 +91,7 @@ class World:
             None
             )
 
-    def update_surroundings(self, center_lon: float, center_lat: float, game_date_time: datetime) -> None:
+    def update_surroundings(self, center_alt: float, center_lon: float, center_lat: float, game_date_time: datetime) -> None:
         """
         1. Ensure the surroundings of a point exist and are updated.
         2. Ensure everything else loaded is *not longer* updated.
@@ -101,22 +101,24 @@ class World:
 
         to_stop_updating: List[Km2] = self.km2s.copy()
 
-        for lon_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
-            for lat_delta in range(-World.SURROUNDINGS_RADIUS, World.SURROUNDINGS_RADIUS + 1):
-                target_longitude = longitude + lon_delta * Km2.SIZE
-                target_latitude = latitude + lat_delta * Km2.SIZE
-                tgt_Km2 = next(
-                    (km2 for km2 in self.km2s if km2.longitude == target_longitude and km2.latitude == target_latitude),
-                    None
-                    )
-                if tgt_Km2 is None:
-                    new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
-                    self.km2s.append(new_Km2)
-                    continue
-                else:
-                    to_stop_updating.remove(tgt_Km2)
-                if not tgt_Km2.is_altered: continue
-                tgt_Km2.start_updating(game_date_time)
+        if (center_alt <= World.SURROUNDINGS_RADIUS):
+            surrounding_chunks = World.SURROUNDINGS_RADIUS // Km2.SIZE
+            for lon_delta in range(-surrounding_chunks, surrounding_chunks + 1):
+                for lat_delta in range(-surrounding_chunks, surrounding_chunks + 1):
+                    target_longitude = longitude + lon_delta * Km2.SIZE
+                    target_latitude = latitude + lat_delta * Km2.SIZE
+                    tgt_Km2 = next(
+                        (km2 for km2 in self.km2s if km2.longitude == target_longitude and km2.latitude == target_latitude),
+                        None
+                        )
+                    if tgt_Km2 is None:
+                        new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
+                        self.km2s.append(new_Km2)
+                        continue
+                    else:
+                        to_stop_updating.remove(tgt_Km2)
+                    if not tgt_Km2.is_altered: continue
+                    tgt_Km2.start_updating(game_date_time)
 
         for tgt_Km2 in to_stop_updating:
             if tgt_Km2.is_altered:

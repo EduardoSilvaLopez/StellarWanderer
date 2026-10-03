@@ -36,6 +36,10 @@ class Laser:
         from the ship's current position and orientation. Called once per frame
         regardless of whether the laser is actually firing, so UI elements (like
         the scanner) can show what's in the crosshair at all times."""
+        # ATM, no Km2 means not bound or too high, means no aim.
+        if self.ship.owner.position.km2 is None:
+            return
+
         # Compute laser endpoint: forward vector is (sin(θ), 0, cos(θ))
         orientation = math.radians(self.ship.owner.orientation)
         forward_x = math.sin(orientation)
