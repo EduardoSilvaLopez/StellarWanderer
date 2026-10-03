@@ -45,7 +45,7 @@ CONSOLE_TOP = 0.66
 
 # View and rendering
 import math
-VIEW_VERTICAL_FOV_RADIANS = math.radians(60)
+VIEW_VERTICAL_FOV_RADIANS = math.radians(40)  # was 60; narrowed ~1/3 to better match real eye-to-screen viewing angle
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
 LOCAL_STAR_MIN_RADIUS_PX = 1  # floor so a distant/small star never vanishes to 0px
