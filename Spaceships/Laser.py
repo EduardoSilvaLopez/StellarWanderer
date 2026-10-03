@@ -57,7 +57,8 @@ class Laser:
         # Find out which rock and which mine, if any, are currently in the
         # beam's path, then keep only whichever is closest — the nearer one
         # occludes the other.
-        world = self.ship.owner.position.km2.parent_world
+        import GameEnvironment as gem
+        world = gem.current_environment.nearest_world
         hit_rock_tuple = self.get_hit_rock(world)
         hit_mine_tuple = self.get_hit_mine(world)
 
@@ -81,17 +82,15 @@ class Laser:
             self.targeted_mine = None
 
     def fire(self) -> None:
-        from Galaxies.OreMine import OreMine
         from Spaceships.CargoHold import CargoHold
-        from Player import Player
+        import GameEnvironment as gem
 
         """Start firing the laser; damage applies to whatever is currently targeted."""
         self.hitting_rock = self.targeted_rock
 
         '''If no rock but a mine, transfer the ore to the ship.'''
         if not self.hitting_rock and self.targeted_mine:
-            player: Player = self.ship.owner
-            world: World = player.position.km2.parent_world
+            world: World = gem.current_environment.nearest_world
             tgt_mine: OreMine = self.get_hit_mine(world)
             if tgt_mine is not None and tgt_mine[0].content > 0:
                 self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += tgt_mine[0].content
@@ -107,8 +106,6 @@ class Laser:
 
     def _relevant_km2(self, world: World) -> List[Km2]:
         '''Exclude fully irrelevant km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.'''
-        if (self.ship.owner.position.km2.parent_world != world):
-            raise ValueError("Laser's ship is not in the provided world.")
         if (self.ship.owner.position.y < 0):
             raise ValueError("Laser's ship is below the surface of the world.")
         if self.ship.owner.position.y - self.length > 100:

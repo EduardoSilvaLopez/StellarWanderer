@@ -27,7 +27,7 @@ class WorldMap:
             date_time: Current in-game date/time, for local year/day progress
         """
         import GameEnvironment as gem
-        world = gem.current_environment.current_world
+        world = gem.current_environment.nearest_world
         radius = world.radius
 
         # Header with world name, flanked by local year/day progress.

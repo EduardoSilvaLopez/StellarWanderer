@@ -121,11 +121,11 @@ Oktoberfest. Remaining extra time +8h
 
 Oktoberfest. Remaining extra time +5h45'
 
-### 2026-09-30 (3/9)
+### 2026-09-30 (4/9)
 
 Oktoberfest. Remaining extra time +3h30'
 
-### 2026-10-01 (3/9)
+### 2026-10-01 (5/9)
 
 Oktoberfest. Remaining extra time +1h15'
 
@@ -138,15 +138,15 @@ INERTIAL MOVEMENT:
 - Include angular movement.
 - Include altitude (avoiding crash).
 
-11:00 - 13:30 + 18:00 - 
-
 ABANDON THE WORLD:
 Move away from world. This includes the sphere-to-rectangle transformation and the disappearance of the "environment" for the player when they are too high. Also to tilt the ship.
-
 - Change altitude meter to make it relative to radius, the max on radius. 
 - On altitude over radial distance, stop generating Km2's (check they are generated again if back down).
 - Trigger "unbind" when alt = radius. Just log it.
 - Trigger "bind" when alt = radius / 2. Just log it.
+
+Extra time: +5h30'
+
 - Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
 - Alt bar, orientation and world map disappear when unbound - and back.
 - Altitude, latitude and longitude are renamed to x/y/z when unbound - and back.

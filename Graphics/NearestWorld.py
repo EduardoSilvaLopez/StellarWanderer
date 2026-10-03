@@ -37,7 +37,7 @@ class NearestWorld:
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
         ore_fields = []
-        for km2 in environment.current_world.km2s:
+        for km2 in environment.nearest_world.km2s:
             if (km2.longitude - km2.SIZE*2 <= player.position.x < km2.longitude + km2.SIZE*2 and
                 km2.latitude - km2.SIZE*2 <= player.position.z < km2.latitude + km2.SIZE*2):
                 rocks.extend(km2.rocks)
@@ -55,7 +55,7 @@ class NearestWorld:
         visible curvature.
         """
         view_h = int(h * CONSOLE_TOP)
-        planet_radius = environment.current_world.radius
+        planet_radius = environment.nearest_world.radius
         observer_radius = planet_radius + player.position.y
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
@@ -136,7 +136,7 @@ class NearestWorld:
                 camera_coordinates(rock.longitude + half, rock.latitude + half)[1],
             ]
             z0 = min(near_depths)
-            if z0 <= NEAR_CLIP or z0 > environment.current_world.SURROUNDINGS_RADIUS:
+            if z0 <= NEAR_CLIP or z0 > environment.nearest_world.SURROUNDINGS_RADIUS:
                 continue
             visible_rocks.append((z0, rock, half))
 
@@ -244,7 +244,7 @@ class NearestWorld:
         visible_fields = []
         for ore_field in ore_fields:
             center_cx, center_cz = camera_coordinates(ore_field.longitude, ore_field.latitude)
-            if center_cz <= NEAR_CLIP or center_cz > environment.current_world.SURROUNDINGS_RADIUS:
+            if center_cz <= NEAR_CLIP or center_cz > environment.nearest_world.SURROUNDINGS_RADIUS:
                 continue
             visible_fields.append((center_cz, ore_field, center_cx, center_cz))
 

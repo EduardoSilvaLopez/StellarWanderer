@@ -26,7 +26,7 @@ class LocalStar:
         horizon or on the far side of the planet — no explicit day/night
         check needed here.
         """
-        world = environment.current_world
+        world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
 
         local_east, local_up, local_north = world.calculate_stellar_position(player, environment.date_time)

@@ -166,7 +166,7 @@ def main() -> None:
         # control acceleration in all axes, so the ship keeps drifting on its
         # last velocity until thrust (or boundary clamp) changes it. Holding S
         # brakes instead, overriding all thrust keys in all three axes.
-        player_module.current_player.update_velocity(
+        player_module.current_player.update_position_and_velocity(
             dt * player_module.current_player.time_scale,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
             1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),

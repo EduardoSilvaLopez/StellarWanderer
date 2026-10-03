@@ -12,15 +12,15 @@ class GameEnvironment:
         self.date_time = date_time
         if (saved_alterations): saved_alterations['date_time'] = date_time
         self.galaxy = Galaxy(galactic_seed, saved_alterations)
-        self.current_world = None
+        self.nearest_world = None
 
     def generate_default(self) -> None:
-        self.current_world = self.galaxy\
+        self.nearest_world = self.galaxy\
             .add_stellar_system(26000, 0, 0)\
             .add_orbit(3.0)\
             .add_world(180)
             #Warning: while generating a new star, remember to check that the orbits are farther than the radius.
-        logger.info(f"Initial planet's radius: {self.current_world.radius}")
+        logger.info(f"Initial planet's radius: {self.nearest_world.radius}")
 
     @staticmethod
     def new_game(seed: int) -> None:

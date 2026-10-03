@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Optional
 
 from cmath import pi
 import math
+import logging; logger = logging.getLogger(__name__)
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
@@ -23,6 +24,7 @@ class Player:
         self.ship.laser.firing = False  # Laser firing (SPACE held)
 
         self.position = type('Position', (object,), {})()  # Create a simple object to hold position attributes
+        self.is_bound: bool = False
         self.position.km2 = None
         self.position.x = 0
         self.position.y = 0
@@ -36,8 +38,9 @@ class Player:
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
-        environment.current_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
-        central_km2 = next(km2 for km2 in environment.current_world.km2s if km2.longitude == 0 and km2.latitude == 0)
+        self.is_bound = True
+        environment.nearest_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
+        central_km2 = next(km2 for km2 in environment.nearest_world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = self.position.km2.longitude + 500
         self.position.y = 10
@@ -53,14 +56,16 @@ class Player:
         return self
 
     def serialize(self) -> dict:
+        world = gem.current_environment.nearest_world
         return {
             'time_scale': self.time_scale,
             'orientation': self.orientation,
-            'stellar_system.x': self.position.km2.parent_world.parent_orbit.parent_stellar_system.x,
-            'stellar_system.y': self.position.km2.parent_world.parent_orbit.parent_stellar_system.y,
-            'stellar_system.z': self.position.km2.parent_world.parent_orbit.parent_stellar_system.z,
-            'orbit.number': self.position.km2.parent_world.parent_orbit.number,
-            'world.initial_degrees_in_orbit': self.position.km2.parent_world.initial_degrees_in_orbit,
+            'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
+            'stellar_system.y': world.parent_orbit.parent_stellar_system.y,
+            'stellar_system.z': world.parent_orbit.parent_stellar_system.z,
+            'orbit.number': world.parent_orbit.number,
+            'world.initial_degrees_in_orbit': world.initial_degrees_in_orbit,
+            'is_bound': self.is_bound,
             'position.x': self.position.x,
             'position.y': self.position.y,
             'position.z': self.position.z,
@@ -83,8 +88,11 @@ class Player:
         result.velocity.y = loaded_attributes['velocity.y']
         result.velocity.z = loaded_attributes['velocity.z']
         result.velocity.angular = loaded_attributes['velocity.angular']
-        result.position.km2 = gem.current_environment.current_world\
-            .get_km2_at(result.position.x, result.position.z)
+        result.is_bound = loaded_attributes['is_bound']
+
+        if result.is_bound:
+            result.position.km2 = gem.current_environment.nearest_world\
+                .get_km2_at(result.position.x, result.position.z)
 
         result.ship = Ship.load(result, loaded_attributes['ship'])
         return result
@@ -118,7 +126,7 @@ class Player:
         self.orientation = (self.orientation + self.velocity.angular * delta_time) % 360
         return self
 
-    def update_velocity(
+    def update_position_and_velocity(
             self,
             delta_time: float,
             longitude_accel_input: float,
@@ -127,15 +135,25 @@ class Player:
             braking: bool = False
             ) -> Player:
         self.update_coordinates(delta_time, longitude_accel_input, altitude_accel_input, latitude_accel_input, braking)
-        new_km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
+        world = gem.current_environment.nearest_world
+        if self.is_bound and self.position.y > world.radius: # Local coordinates
+            self.unbind_to(world)
+        # elif not self.is_bound and (self.position.x**2 + self.position.y**2 + self.position.z**2) < (1.5*world.radius)**2:
+        elif not self.is_bound and self.position.y <= 0.5 * world.radius: # TEMPORARY - until stellar coordinates implemented.
+            self.bind_to(world)
+
+        if not self.is_bound:
+            return self
+        
+        new_km2 = gem.current_environment.nearest_world.get_km2_at(self.position.x, self.position.z)
         if new_km2 is None or new_km2 != self.position.km2:
-            gem.current_environment.current_world.update_surroundings(
+            gem.current_environment.nearest_world.update_surroundings(
                 self.position.y,
                 self.position.x,
                 self.position.z,
                 gem.current_environment.date_time
                 )
-        self.position.km2 = gem.current_environment.current_world.get_km2_at(self.position.x, self.position.z)
+        self.position.km2 = gem.current_environment.nearest_world.get_km2_at(self.position.x, self.position.z)
         return self
 
     def update_coordinates(self, delta_time: float, longitude_accel_input: float, altitude_accel_input: float, latitude_accel_input: float, braking: bool = False) -> Player:
@@ -181,18 +199,15 @@ class Player:
 
         # Update longitude, east to west of viceversa crossing the anti-meridian.
         self.position.x += self.velocity.x * delta_time
-        radius = gem.current_environment.current_world.radius
+        radius = gem.current_environment.nearest_world.radius
         if self.position.x < -pi * radius:
             self.position.x += pi * radius * 2
         elif self.position.x > pi * radius:
             self.position.x -= pi * radius * 2
 
-        # Update altitude, clamp between MIN and MAX (max altitude = world radius)
+        # Update altitude, there is a MIN
         self.position.y += self.velocity.y * delta_time
-        self.position.y = max(
-            self.ship.HEIGHT,
-            min(radius, self.position.y)
-        )
+        self.position.y = max(self.ship.HEIGHT, self.position.y)
 
         # Update latitude, clamping between the north and south poles.
         self.position.z += self.velocity.z * delta_time
@@ -204,6 +219,16 @@ class Player:
         # Constrain vertical velocity: can't descend faster than current altitude
         # (prevents ship from accelerating into ground arbitrarily fast).
         self.velocity.y = max(-(self.position.y - self.ship.HEIGHT), self.velocity.y)
+        return self
+
+    def bind_to(self, world: World) -> Player:
+        logger.info(f"Arriving {world.name}.")
+        self.is_bound = True
+        return self
+
+    def unbind_to(self, world: World) -> Player:
+        logger.info(f"Leaving {world.name}.")
+        self.is_bound = False
         return self
 
 current_player: Player = None

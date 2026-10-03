@@ -31,7 +31,7 @@ class Savefile:
             )
         logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
-        gem.current_environment.current_world = gem.current_environment.galaxy.add_stellar_system(
+        gem.current_environment.nearest_world = gem.current_environment.galaxy.add_stellar_system(
             load_object['player']['stellar_system.x'],
             load_object['player']['stellar_system.y'],
             load_object['player']['stellar_system.z']
@@ -40,7 +40,7 @@ class Savefile:
                 ).add_world(
                     load_object['player']['world.initial_degrees_in_orbit']
                     )
-        gem.current_environment.current_world.update_surroundings(
+        gem.current_environment.nearest_world.update_surroundings(
             load_object['player']['position.y'],
             load_object['player']['position.x'],
             load_object['player']['position.z'],

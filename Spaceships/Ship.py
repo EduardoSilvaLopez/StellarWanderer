@@ -67,8 +67,9 @@ class Ship(Updatable):
         player_orientation: float = self.owner.orientation
         from Galaxies.Km2 import Km2
         relevant_km2s: List[Km2] = list()
-        from Galaxies.Km2 import Km2
-        for km2 in self.owner.position.km2.parent_world.km2s:
+        import GameEnvironment as gem
+        world = gem.current_environment.nearest_world
+        for km2 in world.km2s:
             if (km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude\
                 and (1 + km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude:
                 continue

@@ -92,7 +92,7 @@ class Console:
         draw_beveled_panel(surface, bar_rect)
 
         import GameEnvironment as gem
-        max_altitude = gem.current_environment.current_world.radius
+        max_altitude = gem.current_environment.nearest_world.radius
         min_altitude = player.ship.HEIGHT
         altitude_range = max_altitude - min_altitude
         altitude_fraction = (player.position.y - min_altitude) / altitude_range
@@ -124,8 +124,8 @@ class Console:
 
         # World and system labels
         import GameEnvironment as gem
-        stellar_system = gem.current_environment.current_world.parent_orbit.parent_stellar_system
-        world_name = gem.current_environment.current_world.name
+        stellar_system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
+        world_name = gem.current_environment.nearest_world.name
         star_name = stellar_system.name
         stellar_label = world_name + ", " + star_name + " System"
         world_text = world_font.render(stellar_label, True, ACCENT)
