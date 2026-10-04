@@ -46,21 +46,20 @@ class Console:
         cluster_height = int(height * 0.46)
 
         # Draw altitude bar and location info
-        Console._draw_altitude_bar(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
+        if player.is_bound:
+            Console._draw_altitude_bar(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
         Console._draw_location_info(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
 
-        # Compass
         bar_w = int(w * 0.028)
         compass_left_bound = cluster_left + bar_w + int(w * 0.15)
-        Compass.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
-
-        # World map (MFD)
         mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
         mfd.centerx = layout_w // 2 + mfd.width // 3
         mfd.centery = top + int(height * 0.44)
-        draw_beveled_panel(surface, mfd, w=w, h=h)
 
-        WorldMap.draw(surface, fonts, mfd, h, player, date_time)
+        if player.is_bound:
+            Compass.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
+            draw_beveled_panel(surface, mfd, w=w, h=h)
+            WorldMap.draw(surface, fonts, mfd, h, player, date_time)
 
         # Scanner
         Scanner.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
@@ -139,17 +138,23 @@ class Console:
         coord_y = entity_y + entity_text.get_height() + int(height * 0.04)
         line_spacing = int(height * 0.06)
 
-        altitude_text = label_font.render(f'Altitude: {int(player.position.y)} Δ{int(player.velocity.y)}', True, ACCENT)
-        surface.blit(altitude_text, (coord_x, coord_y))
+        if player.is_bound:
+            axis_lines = [
+                ('Altitude', player.position.y, player.velocity.y),
+                ('Longitude', player.position.x, player.velocity.x),
+                ('Latitude', player.position.z, player.velocity.z),
+            ]
+        else:
+            axis_lines = [
+                ('x', player.position.x, player.velocity.x),
+                ('y', player.position.y, player.velocity.y),
+                ('z', player.position.z, player.velocity.z),
+            ]
 
-        coord_y += line_spacing
-        longitude_text = label_font.render(f'Longitude: {int(player.position.x)} Δ{int(player.velocity.x)}', True, ACCENT)
-        surface.blit(longitude_text, (coord_x, coord_y))
+        for label, position, velocity in axis_lines:
+            line_text = label_font.render(f'{label}: {int(position)} Δ{int(velocity)}', True, ACCENT)
+            surface.blit(line_text, (coord_x, coord_y))
+            coord_y += line_spacing
 
-        coord_y += line_spacing
-        latitude_text = label_font.render(f'Latitude: {int(player.position.z)} Δ{int(player.velocity.z)}', True, ACCENT)
-        surface.blit(latitude_text, (coord_x, coord_y))
-
-        coord_y += line_spacing
         orientation_text = label_font.render(f'Orientation: {int(player.orientation)}° Δ{int(player.velocity.angular)}', True, ACCENT)
         surface.blit(orientation_text, (coord_x, coord_y))

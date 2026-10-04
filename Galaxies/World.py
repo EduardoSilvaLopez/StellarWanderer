@@ -96,6 +96,8 @@ class World:
         1. Ensure the surroundings of a point exist and are updated.
         2. Ensure everything else loaded is *not longer* updated.
         """
+        count_before = len(self.km2s)
+
         longitude: int = int((center_lon // Km2.SIZE) * Km2.SIZE)
         latitude: int = int((center_lat // Km2.SIZE) * Km2.SIZE)
 
@@ -126,24 +128,34 @@ class World:
             else:
                 self.km2s.remove(tgt_Km2)
 
-        logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
+        if count_before != len(self.km2s):
+            logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
 
-    def calculate_stellar_position(self, player: Player, current_datetime: datetime) -> Vector3:
-        """Position of this world's star relative to `player`, in the player's local
-        east/up/north tangent-plane frame (meters), before any heading rotation.
+    def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
+        """Position of this world relative to its star, in the orbital frame (meters).
 
-        Works in a free-standing, star-centered basis X=(1,0,0), Y=(0,1,0), Z=(0,0,1),
-        where Z is the world's rotation axis (no axial tilt) and X is the direction from
-        the star to the world at GameEnvironment.EPOCH. Orbital motion and the world's own
-        spin are both clockwise as seen from +Z ("north"); longitude increasing (east)
-        follows the same rotational sense as spin.
+        x points from the star towards the world at EPOCH, y lies in the orbital plane
+        in the direction of motion at EPOCH, and z is perpendicular to the plane, positive
+        when the orbit is clockwise seen from above.
         """
         orbital_angle = self._orbital_angle_rad(current_datetime)
-        spin_angle = self._spin_angle_rad(current_datetime)
+        distance = self.parent_orbit.distance_from_star
+        return (distance * math.cos(orbital_angle), distance * math.sin(orbital_angle), 0.0)
 
-        world_center = World._scale(self.parent_orbit.distance_from_star, (math.cos(orbital_angle), -math.sin(orbital_angle), 0.0))
+    def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
+        """Velocity of this world relative to its star (meters per second), in the frame of calculate_stellar_position.
 
-        total_azimuth = spin_angle + player.position.x / self.radius
+        Assumes a circular orbit. The vector is tangent to the orbit; its length is the orbital speed.
+        """
+        orbital_angle = self._orbital_angle_rad(current_datetime)
+        angular_speed = math.tau / self.year_duration_seconds
+        speed = self.parent_orbit.distance_from_star * angular_speed
+        logger.info(f"DEBUG-WORLD-VEL distance={self.parent_orbit.distance_from_star} year_duration_seconds={self.year_duration_seconds} speed={speed} orbital_angle={orbital_angle}")
+        return (-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
+
+    def surface_basis(self, player: Player, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
+        """East, up and north unit vectors at `player`'s surface point, in the star-centered basis."""
+        total_azimuth = self._spin_angle_rad(current_datetime) + player.position.x / self.radius
         latitude_angle = player.position.z / self.radius
 
         azimuthal_direction = (-math.cos(total_azimuth), math.sin(total_azimuth), 0.0)
@@ -157,6 +169,23 @@ class World:
             -math.sin(latitude_angle) * math.sin(total_azimuth),
             math.cos(latitude_angle),
         )
+        return east_hat, up_hat, north_hat
+
+    def calculate_star_position(self, player: Player, current_datetime: datetime) -> Vector3:
+        """Position of this world's star relative to `player`, in the player's local
+        east/up/north tangent-plane frame (meters), before any heading rotation.
+
+        Works in a free-standing, star-centered basis X=(1,0,0), Y=(0,1,0), Z=(0,0,1),
+        where Z is the world's rotation axis (no axial tilt) and X is the direction from
+        the star to the world at GameEnvironment.EPOCH. Y is opposite to the orbital motion
+        at EPOCH, the sign convention of this local basis. Orbital motion and the world's own
+        spin are both clockwise as seen from +Z ("north"); longitude increasing (east)
+        follows the same rotational sense as spin.
+        """
+        stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
+        world_center = (stellar_x, -stellar_y, stellar_z)
+
+        east_hat, up_hat, north_hat = self.surface_basis(player, current_datetime)
 
         player_position = World._add(world_center, World._scale(self.radius + player.position.y, up_hat))
         relative = World._scale(-1.0, player_position)

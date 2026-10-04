@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING, Optional
 
 from cmath import pi
 import math
-import logging; logger = logging.getLogger(__name__)
+import logging
+
+from Galaxies.World import Vector3; logger = logging.getLogger(__name__)
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
@@ -222,13 +224,62 @@ class Player:
         return self
 
     def bind_to(self, world: World) -> Player:
-        logger.info(f"Arriving {world.name}.")
+        logger.info(f"Arriving to {world.name}.")
+
+        world_pos: tuple = world.calculate_stellar_position(gem.current_environment.date_time)
+        player_pos: tuple = self.calculate_stellar_position(world, world_pos)
+        logger.info(f"Stellar positions:")
+        logger.info(f"             |        X        |        Y        |        Z")
+        logger.info(f"        World|  {world_pos[0]}  |  {world_pos[1]}  |  {world_pos[2]}")
+        logger.info(f"       Player|  {player_pos[0]}  |  {player_pos[1]}  |  {player_pos[2]}")
+
         self.is_bound = True
         return self
 
     def unbind_to(self, world: World) -> Player:
         logger.info(f"Leaving {world.name}.")
+
+        world_pos: Vector3 = world.calculate_stellar_position(gem.current_environment.date_time)
+        player_pos: Vector3 = self.calculate_stellar_position(world, world_pos)
+        logger.info(f"Stellar positions:")
+        logger.info(f"             |        X        |        Y        |        Z")
+        logger.info(f"        World|  {world_pos[0]}  |  {world_pos[1]}  |  {world_pos[2]}")
+        logger.info(f"       Player|  {player_pos[0]}  |  {player_pos[1]}  |  {player_pos[2]}")
+
+        world_vel: Vector3 = world.calculate_stellar_velocity(gem.current_environment.date_time)
+        player_vel: Vector3 = self.calculate_stellar_velocity(world, world_vel)
+        logger.info(f"Stellar velocities:")
+        logger.info(f"             |        X        |        Y        |        Z")
+        logger.info(f"        World|  {world_vel[0]}  |  {world_vel[1]}  |  {world_vel[2]}")
+        logger.info(f"       Player|  {player_vel[0]}  |  {player_vel[1]}  |  {player_vel[2]}")
+
         self.is_bound = False
         return self
+
+    def calculate_stellar_position(self, world: World, world_pos: Vector3) -> Vector3:
+        _, up_hat, _ = world.surface_basis(self, gem.current_environment.date_time)
+        distance_from_centre = world.radius + self.position.y
+        offset_x, offset_y, offset_z = (component * distance_from_centre for component in up_hat)
+        # The star-centred basis has Y opposite to the orbital motion, so Y is negated here.
+        return (world_pos[0] + offset_x, world_pos[1] - offset_y, world_pos[2] + offset_z)
+
+    def calculate_stellar_velocity(self, world: World, world_vel: Vector3) -> Vector3:
+        east_hat, up_hat, north_hat = world.surface_basis(self, gem.current_environment.date_time)
+        latitude_angle = self.position.z / world.radius
+        spin_speed = math.tau / world.rotation_period * (world.radius + self.position.y) * math.cos(latitude_angle)
+        logger.info(f"DEBUG-VEL pos=({self.position.x}, {self.position.y}, {self.position.z}) vel=({self.velocity.x}, {self.velocity.y}, {self.velocity.z}) "
+                    f"radius={world.radius} rotation_period={world.rotation_period} latitude_angle={latitude_angle} spin_speed={spin_speed} "
+                    f"east_hat={east_hat} up_hat={up_hat} north_hat={north_hat} is_bound={self.is_bound}")
+
+        # Star-centred basis: Y is opposite to the orbital motion, so world_vel's Y is negated first.
+        world_vel_basis = (world_vel[0], -world_vel[1], world_vel[2])
+        total = [
+            world_vel_basis[i]
+            + (spin_speed + self.velocity.x) * east_hat[i]
+            + self.velocity.y * up_hat[i]
+            + self.velocity.z * north_hat[i]
+            for i in range(3)
+        ]
+        return (total[0], -total[1], total[2])
 
 current_player: Player = None

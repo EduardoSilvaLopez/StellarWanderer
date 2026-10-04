@@ -29,7 +29,7 @@ class LocalStar:
         world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
 
-        local_east, local_up, local_north = world.calculate_stellar_position(player, environment.date_time)
+        local_east, local_up, local_north = world.calculate_star_position(player, environment.date_time)
 
         orientation = math.radians(player.orientation)
         sin_o, cos_o = math.sin(orientation), math.cos(orientation)
