@@ -6,7 +6,7 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
+from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, PLANET_GRAY
 from .OreFields import OreFields
 from .OreMines import OreMines
 
@@ -76,7 +76,7 @@ class Rocks:
 
     @staticmethod
     def _draw_ground() -> None:
-        """Populate depth for the local surface without changing its color.
+        """Draw the local surface in the planet colour, populating depth for rocks to sit on.
 
         Always centred on the camera (player X/Z is applied via the
         camera-relative vertex convention, not baked into these vertices),
@@ -84,14 +84,13 @@ class Rocks:
         """
         extent = MAX_DEPTH
 
-        GL.glColorMask(GL.GL_FALSE, GL.GL_FALSE, GL.GL_FALSE, GL.GL_FALSE)
+        GL.glColor3ub(*PLANET_GRAY)
         GL.glBegin(GL.GL_QUADS)
         GL.glVertex3f(-extent, 0.0, -extent)
         GL.glVertex3f(extent, 0.0, -extent)
         GL.glVertex3f(extent, 0.0, extent)
         GL.glVertex3f(-extent, 0.0, extent)
         GL.glEnd()
-        GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
 
     @staticmethod
     def _draw_rock(rock: Rock, player_x: float, player_z: float) -> None:

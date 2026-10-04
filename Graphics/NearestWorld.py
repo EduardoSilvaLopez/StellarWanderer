@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Tuple, Any
 import math
 import pygame
 from .Constants import (
-    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY, PLANET_HORIZON_COLOR,
+    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY,
     ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
 )
 
@@ -47,43 +47,36 @@ class NearestWorld:
 
     @staticmethod
     def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
-        """Draw planet surface and horizon.
+        """Draw the planet below the horizon as seen from the player's altitude.
 
-        Planet is not fitted to viewport; its screen radius is the projected
-        angular radius seen by the observer. Large planets produce an enormous
-        off-screen circle and a nearly flat horizon, while small planets show
-        visible curvature.
+        The camera looks horizontally, so the planet's centre lies straight down,
+        off the bottom of the view. A pixel shows the planet when its view ray is
+        within the sphere's angular radius of straight down. With sy measured below
+        the horizon and sx sideways, that is sx^2 <= sy^2 * tan^2(a) - f^2, where a
+        is the angular radius and f the focal length.
         """
         view_h = int(h * CONSOLE_TOP)
-        planet_radius = environment.nearest_world.radius
-        observer_radius = planet_radius + player.position.y
+        world_radius = environment.nearest_world.radius
+        distance_to_center = world_radius + player.position.y
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
-        angular_radius = math.asin(planet_radius / observer_radius)
-        planet_radius_px = focal_length_px * math.tan(angular_radius)
+
+        sin_angular = min(world_radius / distance_to_center, 0.9999)
+        tan_angular = math.tan(math.asin(sin_angular))
 
         horizon_y = int(view_h * 0.5)
-        planet_center = (w // 2, int(horizon_y + planet_radius_px))
+        center_x = w / 2
 
-        pygame.draw.circle(
-            surface,
-            PLANET_GRAY,
-            planet_center,
-            max(1, int(planet_radius_px)),
-        )
-        pygame.draw.arc(
-            surface,
-            PLANET_HORIZON_COLOR,
-            pygame.Rect(
-                int(planet_center[0] - planet_radius_px),
-                int(planet_center[1] - planet_radius_px),
-                int(planet_radius_px * 2),
-                int(planet_radius_px * 2),
-            ),
-            math.pi,
-            math.tau,
-            2,
-        )
+        def clamp_x(x: float) -> int:
+            return int(max(-w, min(2 * w, x)))
+
+        for y in range(horizon_y + 1, view_h):
+            sy = y - horizon_y
+            half_sq = (sy * tan_angular) ** 2 - focal_length_px ** 2
+            if half_sq <= 0:
+                continue
+            half = math.sqrt(half_sq)
+            pygame.draw.line(surface, PLANET_GRAY, (clamp_x(center_x - half), y), (clamp_x(center_x + half), y))
 
     @staticmethod
     def draw_rocks(surface: pygame.Surface, w: int, h: int, player: Player, rocks: List[Rock], environment: GameEnvironment) -> None:

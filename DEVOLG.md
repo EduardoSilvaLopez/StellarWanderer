@@ -146,6 +146,7 @@ Move away from world. This includes the sphere-to-rectangle transformation and t
 - Trigger "bind" when alt = radius / 2. Just log it.
 
 Extra time: +5h30'
+Start: 13:30 - 
 
 - Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
 - Alt bar, orientation and world map disappear when unbound - and back.
