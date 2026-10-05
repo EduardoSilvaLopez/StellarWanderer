@@ -153,14 +153,15 @@ Big leap but it does not work right now as intended: the movements are not corre
 
 Extra time: 5h15'
 
-- Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
 - Alt bar, orientation and world map disappear when unbound - and back.
 - Altitude, latitude and longitude are renamed to x/y/z when unbound - and back.
 - Calculate and log the position and velocity of the planet on unbind and bind.
-- Calculate and log the position of the planet every 10 seconds (will be eliminated later?)
-- 3 and 9 now tilt, not increase / decrease z. Tilt is shown when unbound, is set to zero on binding.
 - x / y / z are recalculated on unbinding: the position is recalculated (cylinder-to-real-long-lat, then to x-y-z, then world to stellar), the velocity is recalculated (also what x / y / z means) to add the one of the planet at that instant.
 - Altitude, latitude and longitude are recalculated on binding: the position is recalculated (stellar to world, then to real long-lat, then to cylinder long-lat), the velocity is recalculated to substract the one of the planet at that instant.
+- New controls to roll, pitch and yawn when unbound.
+
+- Move the world.
+- Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
 - ⁠Create more than one orbit, each with one world.
 - Show the other planets in the sky.
 

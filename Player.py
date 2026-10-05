@@ -40,6 +40,7 @@ class Player:
         self.velocity.z = 0.0
         self.velocity.yaw = 0.0
         self.velocity.pitch = 0.0
+        self.velocity.roll = 0.0
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
@@ -82,6 +83,7 @@ class Player:
             'attitude.up': list(self.up),
             'attitude.forward': list(self.forward),
             'velocity.pitch': self.velocity.pitch,
+            'velocity.roll': self.velocity.roll,
             'ship': self.ship.serialize()
         }
 
@@ -100,6 +102,7 @@ class Player:
         result.up = tuple(loaded_attributes['attitude.up'])
         result.forward = tuple(loaded_attributes['attitude.forward'])
         result.velocity.pitch = loaded_attributes['velocity.pitch']
+        result.velocity.roll = loaded_attributes.get('velocity.roll', 0.0)
         result.is_bound = loaded_attributes['is_bound']
 
         if result.is_bound:
@@ -140,6 +143,9 @@ class Player:
 
     def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Player:
         """Pitch the ship with inertia, about its right axis, like update_yaw does for yaw."""
+        if not self.is_bound:
+            return self
+
         if braking:
             speed = abs(self.velocity.pitch)
             if speed > 0:
@@ -153,6 +159,25 @@ class Player:
         self._pitch(math.radians(self.velocity.pitch * delta_time))
         return self
 
+    def update_roll(self, delta_time: float, roll_left: int, roll_right: int, braking: bool = False) -> Player:
+        """Roll the ship with inertia, about its forward axis."""
+
+        if not self.is_bound:
+            return self
+
+        if braking:
+            speed = abs(self.velocity.roll)
+            if speed > 0:
+                decel = min(self.ship.ANGULAR_ACC * delta_time, speed)
+                self.velocity.roll -= math.copysign(decel, self.velocity.roll)
+        else:
+            direction = roll_right - roll_left
+            self.velocity.roll += direction * self.ship.ANGULAR_ACC * delta_time
+
+        self.velocity.roll = max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, self.velocity.roll))
+        self._roll(math.radians(self.velocity.roll * delta_time))
+        return self
+
     def _yaw(self, angle: float) -> None:
         cos_a, sin_a = math.cos(angle), math.sin(angle)
         forward, right = self.forward, self.right
@@ -164,6 +189,12 @@ class Player:
         forward, up = self.forward, self.up
         self.forward = tuple(cos_a * f + sin_a * u for f, u in zip(forward, up))
         self.up = tuple(cos_a * u - sin_a * f for u, f in zip(up, forward))
+
+    def _roll(self, angle: float) -> None:
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        right, up = self.right, self.up
+        self.right = tuple(cos_a * r + sin_a * u for r, u in zip(right, up))
+        self.up = tuple(cos_a * u - sin_a * r for u, r in zip(up, right))
 
     @property
     def yaw(self) -> float:
@@ -331,6 +362,7 @@ class Player:
         self.forward = (math.sin(yaw), 0.0, math.cos(yaw))
         self.velocity.yaw = 0.0
         self.velocity.pitch = 0.0
+        self.velocity.roll = 0.0
 
         logger.info(f"Positions:")
         logger.info(f"               |        X        |        Y        |        Z")

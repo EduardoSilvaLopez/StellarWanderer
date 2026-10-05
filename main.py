@@ -3,10 +3,12 @@
 Controls:
     Keypad +   compress time 10x further, up to 1 000 000 s/s
     Keypad -   step back down, no slower than 1 s/s
-    Numpad +   increase altitude (speed depends on time scale)
-    Numpad -   decrease altitude (speed depends on time scale)
-    Q          turn counterclockwise (speed depends on time scale)
-    E          turn clockwise (speed depends on time scale)
+    W/X        thrust forward/backward
+    A/D        thrust left/right
+    Numpad 8/2 pitch up/down (unbound only)
+    Numpad 4/6 yaw left/right
+    Q/E        roll left/right
+    S          brake (linear and rotational)
     SPACE      fire the laser
     M          place mine
     Esc        quit
@@ -156,27 +158,41 @@ def main() -> None:
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
         keys = pygame.key.get_pressed()
-        player_module.current_player.update_yaw(
-            dt * player_module.current_player.time_scale,
+        player = player_module.current_player
+
+        # Yaw: Numpad 4 (left) and 6 (right)
+        player.update_yaw(
+            dt * player.time_scale,
+            1 if keys[pygame.K_KP_4] else 0,
+            1 if keys[pygame.K_KP_6] else 0,
+            keys[pygame.K_s]
+        )
+
+        # Pitch: Numpad 8 (up) and 2 (down), only while unbound
+        player.update_pitch(
+            dt * player.time_scale,
+            1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
+            1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
+            keys[pygame.K_s]
+        )
+
+        # Roll: Q (left) and E (right), only while unbound
+        player.update_roll(
+            dt * player.time_scale,
             1 if keys[pygame.K_q] else 0,
             1 if keys[pygame.K_e] else 0,
             keys[pygame.K_s]
         )
-        player = player_module.current_player
-        player.update_pitch(
-            dt * player.time_scale,
-            1 if (keys[pygame.K_KP_9] and not player.is_bound) else 0,
-            1 if (keys[pygame.K_KP_3] and not player.is_bound) else 0,
-            keys[pygame.K_s]
-        )
-        # Always update position, even with no thrust keys held: W/A/D/X/KP_9/KP_3 now
+
+        # Always update position, even with no thrust keys held: W/A/D/X/KP_8/KP_2 now
         # control acceleration in all axes, so the ship keeps drifting on its
         # last velocity until thrust (or boundary clamp) changes it. Holding S
-        # brakes instead, overriding all thrust keys in all three axes.
-        player_module.current_player.update_position_and_velocity(
-            dt * player_module.current_player.time_scale,
+        # brakes instead, overriding all thrust keys in all three axes and stopping
+        # all rotations (yaw, pitch, roll).
+        player.update_position_and_velocity(
+            dt * player.time_scale,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
-            (1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0)) if player.is_bound else 0,
+            (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if player.is_bound else 0,
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )

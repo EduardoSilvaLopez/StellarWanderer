@@ -40,11 +40,13 @@ def generate_default(self) -> None:
 
 ## Ship Attitude and Controls
 
-Use these names consistently; do not introduce synonyms.
+Use these names consistently; do not introduce synonyms. Three rotation axes:
 
-- **Yaw**: rotation about the ship's up axis (Q/E). `Player.yaw` is the heading in degrees clockwise from north, derived from the forward axis. `Player.velocity.yaw` is the yaw rate in degrees per second.
-- **Pitch**: rotation about the ship's right axis (K9 nose up, K3 nose down, only while unbound). `Player.pitch_angle(world, t)` is the nose-up angle above the local horizon. `Player.velocity.pitch` is the pitch rate.
-- **Attitude**: the ship's right, up and forward axes, stored as `Player.right`, `Player.up` and `Player.forward` in the active frame (surface when bound, stellar when unbound). This is the source of truth; yaw and pitch are derived from it or applied to it.
+- **Yaw**: rotation about the ship's up axis (Numpad 4 left, 6 right). `Player.yaw` is the heading in degrees clockwise from north, derived from the forward axis. `Player.velocity.yaw` is the yaw rate in degrees per second.
+- **Pitch**: rotation about the ship's right axis (Numpad 8 up, 2 down; only while unbound). `Player.pitch_angle(world, t)` is the nose-up angle above the local horizon. `Player.velocity.pitch` is the pitch rate.
+- **Roll**: rotation about the ship's forward axis (Q left, E right). `Player.velocity.roll` is the roll rate in degrees per second.
+- **Attitude**: the ship's right, up and forward axes, stored as `Player.right`, `Player.up` and `Player.forward` in the active frame (surface when bound, stellar when unbound). This is the source of truth; yaw, pitch and roll are derived from it or applied to it.
+- Braking (S) decelerates linear velocity in all three axes and all rotation rates (yaw, pitch, roll) to zero.
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
 
