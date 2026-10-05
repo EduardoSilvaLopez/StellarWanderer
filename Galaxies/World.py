@@ -153,10 +153,10 @@ class World:
         logger.info(f"DEBUG-WORLD-VEL distance={self.parent_orbit.distance_from_star} year_duration_seconds={self.year_duration_seconds} speed={speed} orbital_angle={orbital_angle}")
         return (-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
 
-    def surface_basis(self, player: Player, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
-        """East, up and north unit vectors at `player`'s surface point, in the star-centered basis."""
-        total_azimuth = self._spin_angle_rad(current_datetime) + player.position.x / self.radius
-        latitude_angle = player.position.z / self.radius
+    def surface_basis(self, longitude: float, latitude: float, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
+        """East, up and north unit vectors at a surface point, in the star-centered basis."""
+        total_azimuth = self._spin_angle_rad(current_datetime) + longitude / self.radius
+        latitude_angle = latitude / self.radius
 
         azimuthal_direction = (-math.cos(total_azimuth), math.sin(total_azimuth), 0.0)
         up_hat = World._add(
@@ -170,6 +170,21 @@ class World:
             math.cos(latitude_angle),
         )
         return east_hat, up_hat, north_hat
+
+    def surface_vector_to_stellar(self, vector: Vector3, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+        """Express a direction given in surface (east, up, north) components in stellar coordinates."""
+        east_hat, up_hat, north_hat = self.surface_basis(longitude, latitude, current_datetime)
+        star_basis = World._add(
+            World._add(World._scale(vector[0], east_hat), World._scale(vector[1], up_hat)),
+            World._scale(vector[2], north_hat),
+        )
+        return (star_basis[0], -star_basis[1], star_basis[2])
+
+    def stellar_vector_to_surface(self, vector: Vector3, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+        """Express a stellar direction in surface (east, up, north) components."""
+        east_hat, up_hat, north_hat = self.surface_basis(longitude, latitude, current_datetime)
+        star_basis = (vector[0], -vector[1], vector[2])
+        return (World._dot(star_basis, east_hat), World._dot(star_basis, up_hat), World._dot(star_basis, north_hat))
 
     def calculate_star_position(self, player: Player, current_datetime: datetime) -> Vector3:
         """Position of this world's star relative to `player`, in the player's local
@@ -185,12 +200,40 @@ class World:
         stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
         world_center = (stellar_x, -stellar_y, stellar_z)
 
-        east_hat, up_hat, north_hat = self.surface_basis(player, current_datetime)
+        east_hat, up_hat, north_hat = self.surface_basis(player.position.x, player.position.z, current_datetime)
 
         player_position = World._add(world_center, World._scale(self.radius + player.position.y, up_hat))
         relative = World._scale(-1.0, player_position)
 
         return (World._dot(relative, east_hat), World._dot(relative, up_hat), World._dot(relative, north_hat))
+
+    def stellar_to_surface_position(self, stellar_pos: Vector3, current_datetime: datetime) -> Vector3:
+        """Inverse of Player.calculate_stellar_position: (longitude, altitude, latitude) for a stellar position."""
+        stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
+        relative = (stellar_pos[0] - stellar_x, -stellar_pos[1] + stellar_y, stellar_pos[2] - stellar_z)
+
+        distance = math.sqrt(World._dot(relative, relative))
+        up_hat = World._scale(1.0 / distance, relative)
+        latitude_angle = math.atan2(up_hat[2], math.hypot(up_hat[0], up_hat[1]))
+        total_azimuth = math.atan2(up_hat[1], -up_hat[0])
+
+        spin_angle = self._spin_angle_rad(current_datetime)
+        longitude = self.radius * ((total_azimuth - spin_angle + math.pi) % math.tau - math.pi)
+        return (longitude, distance - self.radius, self.radius * latitude_angle)
+
+    def stellar_to_surface_velocity(self, stellar_vel: Vector3, longitude: float, altitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+        """Inverse of Player.calculate_stellar_velocity: (east, up, north) velocity for a stellar velocity."""
+        east_hat, up_hat, north_hat = self.surface_basis(longitude, latitude, current_datetime)
+        world_vel_x, world_vel_y, world_vel_z = self.calculate_stellar_velocity(current_datetime)
+        relative = (stellar_vel[0] - world_vel_x, -stellar_vel[1] + world_vel_y, stellar_vel[2] - world_vel_z)
+
+        latitude_angle = latitude / self.radius
+        spin_speed = math.tau / self.rotation_period * (self.radius + altitude) * math.cos(latitude_angle)
+        return (
+            World._dot(relative, east_hat) - spin_speed,
+            World._dot(relative, up_hat),
+            World._dot(relative, north_hat),
+        )
 
     def local_year_fraction(self, current_datetime: datetime) -> float:
         """Fraction of this world's orbit completed since EPOCH, in [0, 1)."""

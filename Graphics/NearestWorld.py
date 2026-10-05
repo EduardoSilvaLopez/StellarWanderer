@@ -57,26 +57,70 @@ class NearestWorld:
         """
         view_h = int(h * CONSOLE_TOP)
         world_radius = environment.nearest_world.radius
-        distance_to_center = world_radius + player.position.y
+        distance_to_center = world_radius + player.altitude_above_surface(environment.nearest_world)
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
 
         sin_angular = min(world_radius / distance_to_center, 0.9999)
-        tan_angular = math.tan(math.asin(sin_angular))
+        cos_angular = math.sqrt(1.0 - sin_angular * sin_angular)
 
-        horizon_y = int(view_h * 0.5)
+        down_right, down_up, down_forward = player.camera_components(
+            player.direction_down(environment.nearest_world, environment.date_time)
+        )
+        nadir_x, nadir_y, nadir_z = down_right, -down_up, down_forward
+
         center_x = w / 2
+        centre_y = view_h * 0.5
+        focal = focal_length_px
+        cos_sq = cos_angular * cos_angular
 
         def clamp_x(x: float) -> int:
             return int(max(-w, min(2 * w, x)))
 
-        for y in range(horizon_y + 1, view_h):
-            sy = y - horizon_y
-            half_sq = (sy * tan_angular) ** 2 - focal_length_px ** 2
-            if half_sq <= 0:
-                continue
-            half = math.sqrt(half_sq)
-            pygame.draw.line(surface, PLANET_GRAY, (clamp_x(center_x - half), y), (clamp_x(center_x + half), y))
+        def visible_spans(sy: float) -> list:
+            """Screen x offsets (from centre) inside the planet's disc on row sy."""
+            a_term = nadir_y * sy + nadir_z * focal
+            a = nadir_x * nadir_x - cos_sq
+            b = 2.0 * nadir_x * a_term
+            c = a_term * a_term - cos_sq * (sy * sy + focal * focal)
+            if abs(a) < 1e-12:
+                if abs(b) < 1e-12:
+                    spans = [(-math.inf, math.inf)] if c >= 0 else []
+                else:
+                    root = -c / b
+                    spans = [(root, math.inf)] if b > 0 else [(-math.inf, root)]
+            else:
+                disc = b * b - 4.0 * a * c
+                if a < 0:
+                    if disc < 0:
+                        return []
+                    root = math.sqrt(disc)
+                    spans = [tuple(sorted(((-b - root) / (2 * a), (-b + root) / (2 * a))))]
+                elif disc < 0:
+                    spans = [(-math.inf, math.inf)]
+                else:
+                    root = math.sqrt(disc)
+                    low, high = sorted(((-b - root) / (2 * a), (-b + root) / (2 * a)))
+                    spans = [(-math.inf, low), (high, math.inf)]
+
+            if abs(nadir_x) < 1e-12:
+                allowed = (-math.inf, math.inf) if a_term > 0 else None
+            elif nadir_x > 0:
+                allowed = (-a_term / nadir_x, math.inf)
+            else:
+                allowed = (-math.inf, -a_term / nadir_x)
+            if allowed is None:
+                return []
+            clipped = []
+            for lo, hi in spans:
+                lo, hi = max(lo, allowed[0]), min(hi, allowed[1])
+                if lo < hi:
+                    clipped.append((lo, hi))
+            return clipped
+
+        for y in range(view_h):
+            for lo, hi in visible_spans(y - centre_y):
+                pygame.draw.line(surface, PLANET_GRAY, (clamp_x(center_x + lo), y), (clamp_x(center_x + hi), y))
 
     @staticmethod
     def draw_rocks(surface: pygame.Surface, w: int, h: int, player: Player, rocks: List[Rock], environment: GameEnvironment) -> None:
@@ -94,9 +138,9 @@ class NearestWorld:
         player_x = player.position.x
         player_z = player.position.z
         player_y = player.position.y
-        orientation = math.radians(player.orientation)
-        sin_orientation = math.sin(orientation)
-        cos_orientation = math.cos(orientation)
+        yaw = math.radians(player.yaw)
+        sin_yaw = math.sin(yaw)
+        cos_yaw = math.cos(yaw)
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
         horizon_y = int(view_h * 0.52)
@@ -114,8 +158,8 @@ class NearestWorld:
             """Convert world coordinates to offsets relative to the ship's heading."""
             offset_x = world_x - player_x
             offset_z = world_z - player_z
-            right = offset_x * cos_orientation - offset_z * sin_orientation
-            forward = offset_x * sin_orientation + offset_z * cos_orientation
+            right = offset_x * cos_yaw - offset_z * sin_yaw
+            forward = offset_x * sin_yaw + offset_z * cos_yaw
             return right, forward
 
         # Gather rocks with their near-face depth, for far-to-near draw order.
@@ -137,7 +181,7 @@ class NearestWorld:
 
         for z0, rock, half in visible_rocks:
             # Build the actual axis-aligned cube in world space. Its dimensions
-            # stay fixed while the camera orientation changes.
+            # stay fixed while the camera yaw changes.
             x0, x1 = rock.longitude - half, rock.longitude + half
             z0_world, z1_world = rock.latitude - half, rock.latitude + half
             y0, y1 = 0.0, rock.size
@@ -212,9 +256,9 @@ class NearestWorld:
         player_x = player.position.x
         player_z = player.position.z
         player_y = player.position.y
-        orientation = math.radians(player.orientation)
-        sin_orientation = math.sin(orientation)
-        cos_orientation = math.cos(orientation)
+        yaw = math.radians(player.yaw)
+        sin_yaw = math.sin(yaw)
+        cos_yaw = math.cos(yaw)
 
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
         horizon_y = int(view_h * 0.52)
@@ -229,8 +273,8 @@ class NearestWorld:
             """Convert world coordinates to offsets relative to the ship's heading."""
             offset_x = world_x - player_x
             offset_z = world_z - player_z
-            right = offset_x * cos_orientation - offset_z * sin_orientation
-            forward = offset_x * sin_orientation + offset_z * cos_orientation
+            right = offset_x * cos_yaw - offset_z * sin_yaw
+            forward = offset_x * sin_yaw + offset_z * cos_yaw
             return right, forward
 
         # Gather ore fields with their center depth, for far-to-near draw order.

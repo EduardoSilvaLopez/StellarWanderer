@@ -43,10 +43,8 @@ class Rocks:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        # OpenGL looks down -Z; preserve the game's +X screen-right and
-        # +Z forward basis while rotating the camera clockwise.
-        GL.glRotatef(player.orientation, 0.0, 1.0, 0.0)
-        GL.glScalef(1.0, 1.0, -1.0)
+        # Maps the ship's right/up/forward axes onto OpenGL's eye axes (looking down -Z).
+        GL.glMultMatrixf(player.camera_matrix())
         # X/Z are NOT translated here: at large enough world coordinates (far
         # from the origin), glTranslatef's float32 truncation would already
         # have destroyed sub-meter precision before the GPU ever sees it.

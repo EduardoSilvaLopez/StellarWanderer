@@ -145,8 +145,13 @@ Move away from world. This includes the sphere-to-rectangle transformation and t
 - Trigger "unbind" when alt = radius. Just log it.
 - Trigger "bind" when alt = radius / 2. Just log it.
 
-Extra time: +5h30'
-Start: 13:30 - 14:30
+### 2026-10-04
+
+Big leap but it does not work right now as intended: the movements are not correct, "s" does not reduce pitch. q/r should change the orientation relative to ship current left-right-forward-backward plane (it does not). left-right-forward-backward should also be relative to the ships orientation and pitch.
+
+### 2026-10-05
+
+Extra time: 5h15'
 
 - Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
 - Alt bar, orientation and world map disappear when unbound - and back.

@@ -156,10 +156,17 @@ def main() -> None:
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
         keys = pygame.key.get_pressed()
-        player_module.current_player.update_angular_velocity(
+        player_module.current_player.update_yaw(
             dt * player_module.current_player.time_scale,
             1 if keys[pygame.K_q] else 0,
             1 if keys[pygame.K_e] else 0,
+            keys[pygame.K_s]
+        )
+        player = player_module.current_player
+        player.update_pitch(
+            dt * player.time_scale,
+            1 if (keys[pygame.K_KP_9] and not player.is_bound) else 0,
+            1 if (keys[pygame.K_KP_3] and not player.is_bound) else 0,
             keys[pygame.K_s]
         )
         # Always update position, even with no thrust keys held: W/A/D/X/KP_9/KP_3 now
@@ -169,7 +176,7 @@ def main() -> None:
         player_module.current_player.update_position_and_velocity(
             dt * player_module.current_player.time_scale,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
-            1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0),
+            (1 if keys[pygame.K_KP_9] else (-1 if keys[pygame.K_KP_3] else 0)) if player.is_bound else 0,
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )

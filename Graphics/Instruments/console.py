@@ -156,5 +156,5 @@ class Console:
             surface.blit(line_text, (coord_x, coord_y))
             coord_y += line_spacing
 
-        orientation_text = label_font.render(f'Orientation: {int(player.orientation)}° Δ{int(player.velocity.angular)}', True, ACCENT)
-        surface.blit(orientation_text, (coord_x, coord_y))
+        yaw_text = label_font.render(f'Yaw: {int(player.yaw)}° Δ{int(player.velocity.yaw)}', True, ACCENT)
+        surface.blit(yaw_text, (coord_x, coord_y))

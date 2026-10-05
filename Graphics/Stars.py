@@ -5,7 +5,7 @@ from typing import List, Tuple
 import random
 import math
 import pygame
-from .Constants import STAR_COUNT, STAR_SEED, CONSOLE_TOP
+from .Constants import STAR_COUNT, STAR_SEED, CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS
 
 
 class Stars:
@@ -31,7 +31,7 @@ class Stars:
         return stars
 
     @staticmethod
-    def draw(surface: pygame.Surface, stars: List[Tuple[float, float, int, int]], w: int, h: int, orientation: float = 0.0) -> None:
+    def draw(surface: pygame.Surface, stars: List[Tuple[float, float, int, int]], w: int, h: int, yaw: float = 0.0, pitch: float = 0.0) -> None:
         """Draw stars as points or small circles.
 
         Args:
@@ -39,11 +39,14 @@ class Stars:
             stars: List of star tuples from make_starfield()
             w: Window width
             h: Window height
+            yaw: Ship heading in degrees
+            pitch: Ship pitch in degrees, positive nose up
         """
         view_h = int(h * CONSOLE_TOP)
-        angle = math.radians(-orientation)
+        angle = math.radians(-yaw)
         sin_angle = math.sin(angle)
         cos_angle = math.cos(angle)
+        pitch_shift = view_h * 0.5 * math.tan(math.radians(pitch)) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
 
         for nx, ny, radius, brightness in stars:
             centered_x = nx - 0.5
@@ -51,7 +54,7 @@ class Stars:
             rotated_x = centered_x * cos_angle + centered_y * sin_angle
             rotated_y = -centered_x * sin_angle + centered_y * cos_angle
             x = int((rotated_x + 0.5) * w)
-            y = int((rotated_y + 0.5) * view_h)
+            y = int((rotated_y + 0.5) * view_h + pitch_shift)
 
             if not (0 <= x < w and 0 <= y < view_h):
                 continue

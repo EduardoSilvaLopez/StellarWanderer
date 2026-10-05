@@ -62,7 +62,7 @@ class Scanner:
         player currently sees it from, normalized to a unit cube so every
         rock — regardless of true size or distance — fills the square.
         """
-        view = math.radians(player.orientation)
+        view = math.radians(player.yaw)
         cos_view, sin_view = math.cos(view), math.sin(view)
 
         tilt = math.radians(rock.tilt)

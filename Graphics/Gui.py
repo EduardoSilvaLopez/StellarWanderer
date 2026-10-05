@@ -48,7 +48,7 @@ class Gui:
 
         # Draw space and celestial objects
         DeepSpace.draw(surface, w, h)
-        Stars.draw(surface, self.stars, w, h, player.orientation)
+        Stars.draw(surface, self.stars, w, h, player.yaw)
         NearestWorld.draw(surface, w, h, environment, player)
 
         # Draw cockpit frame and instruments

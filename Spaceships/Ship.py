@@ -60,11 +60,14 @@ class Ship(Updatable):
         if self.cargo_hold.content[CargoHold.CargoElement.MINES] <= 0:
             self.set_notification("No mines available.")
             return
+        if not self.owner.is_bound:
+            self.set_notification("Mines can only be placed on a world.")
+            return
 
         # Check if rocks nearby.
         player_lon: float = self.owner.position.x
         player_lat: float = self.owner.position.z
-        player_orientation: float = self.owner.orientation
+        player_yaw: float = self.owner.yaw
         from Galaxies.Km2 import Km2
         relevant_km2s: List[Km2] = list()
         import GameEnvironment as gem
@@ -87,7 +90,7 @@ class Ship(Updatable):
                 delta_x = rock.longitude - player_lon
                 delta_z = rock.latitude - player_lat
                 bearing = math.degrees(math.atan2(delta_x, delta_z))
-                angle_diff = abs(player_orientation - bearing)
+                angle_diff = abs(player_yaw - bearing)
                 angle_diff = min(angle_diff, 360 - angle_diff)
                 if angle_diff > 45:
                     continue
@@ -101,7 +104,7 @@ class Ship(Updatable):
 
         # Cancel if no ore field.
         front_distance = 50
-        radians = math.radians(player_orientation)
+        radians = math.radians(player_yaw)
         front_lon = player_lon + front_distance * math.sin(radians)
         front_lat = player_lat + front_distance * math.cos(radians)
         targeted_field: OreField = None
@@ -116,5 +119,5 @@ class Ship(Updatable):
             self.set_notification("No ore field here.")
             return
 
-        targeted_field.mines.append(OreMine(targeted_field, front_lon, front_lat, player_orientation))
+        targeted_field.mines.append(OreMine(targeted_field, front_lon, front_lat, player_yaw))
         self.cargo_hold.content[CargoHold.CargoElement.MINES] -= 1

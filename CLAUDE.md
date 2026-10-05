@@ -38,6 +38,16 @@ def generate_default(self) -> None:
 - `GameLogging/`: Logging config (Constants, Setup)
 - `Updating/`: Time-based updates (UpdateQueue, Updatable)
 
+## Ship Attitude and Controls
+
+Use these names consistently; do not introduce synonyms.
+
+- **Yaw**: rotation about the ship's up axis (Q/E). `Player.yaw` is the heading in degrees clockwise from north, derived from the forward axis. `Player.velocity.yaw` is the yaw rate in degrees per second.
+- **Pitch**: rotation about the ship's right axis (K9 nose up, K3 nose down, only while unbound). `Player.pitch_angle(world, t)` is the nose-up angle above the local horizon. `Player.velocity.pitch` is the pitch rate.
+- **Attitude**: the ship's right, up and forward axes, stored as `Player.right`, `Player.up` and `Player.forward` in the active frame (surface when bound, stellar when unbound). This is the source of truth; yaw and pitch are derived from it or applied to it.
+- Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
+- Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
+
 ## Dependencies
 
 - `pygame-ce`: Window, input, OpenGL context

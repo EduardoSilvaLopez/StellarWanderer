@@ -33,17 +33,19 @@ class Laser:
 
     def update_aim(self) -> None:
         """Recompute the beam's start/end points and the currently targeted rock
-        from the ship's current position and orientation. Called once per frame
+        from the ship's current position and yaw. Called once per frame
         regardless of whether the laser is actually firing, so UI elements (like
         the scanner) can show what's in the crosshair at all times."""
         # ATM, no Km2 means not bound or too high, means no aim.
-        if self.ship.owner.position.km2 is None:
+        if not self.ship.owner.is_bound or self.ship.owner.position.km2 is None:
+            self.targeted_rock = None
+            self.targeted_mine = None
             return
 
         # Compute laser endpoint: forward vector is (sin(θ), 0, cos(θ))
-        orientation = math.radians(self.ship.owner.orientation)
-        forward_x = math.sin(orientation)
-        forward_z = math.cos(orientation)
+        yaw = math.radians(self.ship.owner.yaw)
+        forward_x = math.sin(yaw)
+        forward_z = math.cos(yaw)
 
         # Offset start point slightly ahead and below camera to avoid culling
         self.start_x = self.ship.owner.position.x + forward_x * 5.0

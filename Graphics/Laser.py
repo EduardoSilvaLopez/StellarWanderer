@@ -40,17 +40,16 @@ class Laser:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GL.glRotatef(player.orientation, 0.0, 1.0, 0.0)
-        GL.glScalef(1.0, 1.0, -1.0)
+        GL.glMultMatrixf(player.camera_matrix())
         # X/Z made camera-relative on the CPU (double precision) instead of via
         # glTranslatef, to avoid float32 truncation at large world coordinates
         # — see the matching comment in Rocks.draw() for why.
         GL.glTranslatef(0.0, -player.position.y, 0.0)
 
         # Perpendicular vector (right): rotate forward 90° in XZ plane
-        orientation = math.radians(player.orientation)
-        right_x = math.cos(orientation)
-        right_z = -math.sin(orientation)
+        yaw = math.radians(player.yaw)
+        right_x = math.cos(yaw)
+        right_z = -math.sin(yaw)
 
         # Laser beam cross-section half-size, in meters
         half_size = 0.5

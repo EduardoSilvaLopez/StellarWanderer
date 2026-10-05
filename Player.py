@@ -5,7 +5,7 @@ from cmath import pi
 import math
 import logging
 
-from Galaxies.World import Vector3; logger = logging.getLogger(__name__)
+from Galaxies.World import World, Vector3; logger = logging.getLogger(__name__)
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
@@ -17,10 +17,13 @@ class Player:
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
+    BIND_RADIUS_MULTIPLE = 1.5
 
     def __init__(self) -> None:
         self.time_scale: int = 1  # Default time scale
-        self.orientation: float = 0.0  # Degrees clockwise from north
+        self.right: Vector3 = (1.0, 0.0, 0.0)
+        self.up: Vector3 = (0.0, 1.0, 0.0)
+        self.forward: Vector3 = (0.0, 0.0, 1.0)
 
         self.ship: Ship = Ship(self)
         self.ship.laser.firing = False  # Laser firing (SPACE held)
@@ -35,7 +38,8 @@ class Player:
         self.velocity.x = 0.0
         self.velocity.y = 0.0
         self.velocity.z = 0.0
-        self.velocity.angular = 0.0
+        self.velocity.yaw = 0.0
+        self.velocity.pitch = 0.0
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.World import World
@@ -61,7 +65,6 @@ class Player:
         world = gem.current_environment.nearest_world
         return {
             'time_scale': self.time_scale,
-            'orientation': self.orientation,
             'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
             'stellar_system.y': world.parent_orbit.parent_stellar_system.y,
             'stellar_system.z': world.parent_orbit.parent_stellar_system.z,
@@ -74,22 +77,29 @@ class Player:
             'velocity.x': self.velocity.x,
             'velocity.y': self.velocity.y,
             'velocity.z': self.velocity.z,
-            'velocity.angular': self.velocity.angular,
-            'ship': self.ship.serialize()        
+            'velocity.yaw': self.velocity.yaw,
+            'attitude.right': list(self.right),
+            'attitude.up': list(self.up),
+            'attitude.forward': list(self.forward),
+            'velocity.pitch': self.velocity.pitch,
+            'ship': self.ship.serialize()
         }
 
     @staticmethod
     def deserialize(loaded_attributes: dict) -> Player:
         result = Player()
         result.time_scale = loaded_attributes['time_scale']
-        result.orientation = loaded_attributes.get('orientation', 0.0)
         result.position.x = loaded_attributes['position.x']
         result.position.y = loaded_attributes['position.y']
         result.position.z = loaded_attributes['position.z']
         result.velocity.x = loaded_attributes['velocity.x']
         result.velocity.y = loaded_attributes['velocity.y']
         result.velocity.z = loaded_attributes['velocity.z']
-        result.velocity.angular = loaded_attributes['velocity.angular']
+        result.velocity.yaw = loaded_attributes['velocity.yaw']
+        result.right = tuple(loaded_attributes['attitude.right'])
+        result.up = tuple(loaded_attributes['attitude.up'])
+        result.forward = tuple(loaded_attributes['attitude.forward'])
+        result.velocity.pitch = loaded_attributes['velocity.pitch']
         result.is_bound = loaded_attributes['is_bound']
 
         if result.is_bound:
@@ -108,25 +118,90 @@ class Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         return self
 
-    def update_angular_velocity(self, delta_time: float, counterclockwise: int, clockwise: int, braking: bool = False) -> Player:
-        """Rotate the ship with inertia: Q/E set angular acceleration, not angular speed.
+    def update_yaw(self, delta_time: float, counterclockwise: int, clockwise: int, braking: bool = False) -> Player:
+        """Yaw the ship with inertia: Q/E set yaw acceleration, not yaw rate.
 
-        Angular speed (deg/s) is stored in self.velocity.angular and capped at
-        ship.MAX_ANGULAR_SPEED. Braking overrides Q/E and decelerates angular
+        Yaw rate (deg/s) is stored in self.velocity.yaw and capped at
+        ship.MAX_ANGULAR_SPEED. Braking overrides Q/E and decelerates yaw
         speed toward zero at ship.ANGULAR_ACC, never overshooting.
         """
         if braking:
-            speed = abs(self.velocity.angular)
+            speed = abs(self.velocity.yaw)
             if speed > 0:
                 decel = min(self.ship.ANGULAR_ACC * delta_time, speed)
-                self.velocity.angular -= math.copysign(decel, self.velocity.angular)
+                self.velocity.yaw -= math.copysign(decel, self.velocity.yaw)
         else:
             direction = clockwise - counterclockwise
-            self.velocity.angular += direction * self.ship.ANGULAR_ACC * delta_time
+            self.velocity.yaw += direction * self.ship.ANGULAR_ACC * delta_time
 
-        self.velocity.angular = max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, self.velocity.angular))
-        self.orientation = (self.orientation + self.velocity.angular * delta_time) % 360
+        self.velocity.yaw = max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, self.velocity.yaw))
+        self._yaw(math.radians(self.velocity.yaw * delta_time))
         return self
+
+    def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Player:
+        """Pitch the ship with inertia, about its right axis, like update_yaw does for yaw."""
+        if braking:
+            speed = abs(self.velocity.pitch)
+            if speed > 0:
+                decel = min(self.ship.ANGULAR_ACC * delta_time, speed)
+                self.velocity.pitch -= math.copysign(decel, self.velocity.pitch)
+        else:
+            direction = nose_up - nose_down
+            self.velocity.pitch += direction * self.ship.ANGULAR_ACC * delta_time
+
+        self.velocity.pitch = max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, self.velocity.pitch))
+        self._pitch(math.radians(self.velocity.pitch * delta_time))
+        return self
+
+    def _yaw(self, angle: float) -> None:
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        forward, right = self.forward, self.right
+        self.forward = tuple(cos_a * f + sin_a * r for f, r in zip(forward, right))
+        self.right = tuple(cos_a * r - sin_a * f for r, f in zip(right, forward))
+
+    def _pitch(self, angle: float) -> None:
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        forward, up = self.forward, self.up
+        self.forward = tuple(cos_a * f + sin_a * u for f, u in zip(forward, up))
+        self.up = tuple(cos_a * u - sin_a * f for u, f in zip(up, forward))
+
+    @property
+    def yaw(self) -> float:
+        """Heading in degrees clockwise from north, from the ship's forward axis."""
+        return math.degrees(math.atan2(self.forward[0], self.forward[2])) % 360
+
+    def pitch_angle(self, world: World, current_datetime: datetime) -> float:
+        """Nose-up angle in degrees above the local horizon."""
+        up_reference = World._scale(-1.0, self.direction_down(world, current_datetime))
+        return math.degrees(math.asin(max(-1.0, min(1.0, World._dot(self.forward, up_reference)))))
+
+    def direction_down(self, world: World, current_datetime: datetime) -> Vector3:
+        """Unit vector from the ship towards the planet's surface, in the active frame."""
+        if self.is_bound:
+            return (0.0, -1.0, 0.0)
+        centre = world.calculate_stellar_position(current_datetime)
+        offset = (centre[0] - self.position.x, centre[1] - self.position.y, centre[2] - self.position.z)
+        length = math.hypot(*offset)
+        return (offset[0] / length, offset[1] / length, offset[2] / length)
+
+    def direction_to_star(self, world: World, current_datetime: datetime) -> Vector3:
+        if self.is_bound:
+            return world.calculate_star_position(self, current_datetime)
+        return (-self.position.x, -self.position.y, -self.position.z)
+
+    def camera_components(self, vector: Vector3) -> Vector3:
+        """Components of a direction along the ship's right, up and forward axes."""
+        return (World._dot(vector, self.right), World._dot(vector, self.up), World._dot(vector, self.forward))
+
+    def camera_matrix(self) -> list:
+        """Column-major 4x4 for glMultMatrixf, mapping the ship's axes to OpenGL's eye axes."""
+        rows = (self.right, self.up, (-self.forward[0], -self.forward[1], -self.forward[2]))
+        return [
+            rows[0][0], rows[1][0], rows[2][0], 0.0,
+            rows[0][1], rows[1][1], rows[2][1], 0.0,
+            rows[0][2], rows[1][2], rows[2][2], 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ]
 
     def update_position_and_velocity(
             self,
@@ -138,10 +213,9 @@ class Player:
             ) -> Player:
         self.update_coordinates(delta_time, longitude_accel_input, altitude_accel_input, latitude_accel_input, braking)
         world = gem.current_environment.nearest_world
-        if self.is_bound and self.position.y > world.radius: # Local coordinates
+        if self.is_bound and self.position.y > world.radius:
             self.unbind_to(world)
-        # elif not self.is_bound and (self.position.x**2 + self.position.y**2 + self.position.z**2) < (1.5*world.radius)**2:
-        elif not self.is_bound and self.position.y <= 0.5 * world.radius: # TEMPORARY - until stellar coordinates implemented.
+        elif not self.is_bound and self._distance_to_world_centre(world) <= Player.BIND_RADIUS_MULTIPLE * world.radius:
             self.bind_to(world)
 
         if not self.is_bound:
@@ -186,18 +260,34 @@ class Player:
                 self.velocity.x *= scale
                 self.velocity.y *= scale
                 self.velocity.z *= scale
-        else:
-            orientation = math.radians(self.orientation)
-            sin_orientation = math.sin(orientation)
-            cos_orientation = math.cos(orientation)
+        elif self.is_bound:
+            yaw = math.radians(self.yaw)
+            sin_yaw = math.sin(yaw)
+            cos_yaw = math.cos(yaw)
             local_right = longitude_accel_input
             local_forward = latitude_accel_input
-            world_accel_x = local_right * cos_orientation + local_forward * sin_orientation
-            world_accel_z = -local_right * sin_orientation + local_forward * cos_orientation
+            world_accel_x = local_right * cos_yaw + local_forward * sin_yaw
+            world_accel_z = -local_right * sin_yaw + local_forward * cos_yaw
 
             self.velocity.x += world_accel_x * self.ship.RIGHT_LEFT_ACC * delta_time
             self.velocity.y += altitude_accel_input * self.ship.UP_DOWN_ACC * delta_time
             self.velocity.z += world_accel_z * self.ship.FORWARD_BACKWARD_ACC * delta_time
+        else:
+            accel = tuple(
+                longitude_accel_input * self.ship.RIGHT_LEFT_ACC * r
+                + latitude_accel_input * self.ship.FORWARD_BACKWARD_ACC * f
+                + altitude_accel_input * self.ship.UP_DOWN_ACC * u
+                for r, f, u in zip(self.right, self.forward, self.up)
+            )
+            self.velocity.x += accel[0] * delta_time
+            self.velocity.y += accel[1] * delta_time
+            self.velocity.z += accel[2] * delta_time
+
+        if not self.is_bound:
+            self.position.x += self.velocity.x * delta_time
+            self.position.y += self.velocity.y * delta_time
+            self.position.z += self.velocity.z * delta_time
+            return self
 
         # Update longitude, east to west of viceversa crossing the anti-meridian.
         self.position.x += self.velocity.x * delta_time
@@ -226,15 +316,39 @@ class Player:
     def bind_to(self, world: World) -> Player:
         logger.info(f"Arriving to {world.name}.")
 
-        world_pos: tuple = world.calculate_stellar_position(gem.current_environment.date_time)
-        player_pos: tuple = self.calculate_stellar_position(world, world_pos)
-        logger.info(f"Stellar positions:")
+        current_datetime = gem.current_environment.date_time
+        stellar_pos: Vector3 = (self.position.x, self.position.y, self.position.z)
+        stellar_vel: Vector3 = (self.velocity.x, self.velocity.y, self.velocity.z)
+        longitude, altitude, latitude = world.stellar_to_surface_position(stellar_pos, current_datetime)
+        surface_vel = world.stellar_to_surface_velocity(stellar_vel, longitude, altitude, latitude, current_datetime)
+
+        self.position.x, self.position.y, self.position.z = longitude, altitude, latitude
+        self.velocity.x, self.velocity.y, self.velocity.z = surface_vel
+        self.right, self.up, self.forward = (
+            world.stellar_vector_to_surface(axis, longitude, latitude, current_datetime)
+            for axis in (self.right, self.up, self.forward)
+        )
+
+        logger.info(f"Positions:")
+        logger.info(f"               |        X        |        Y        |        Z")
+        logger.info(f"World (stellar)|  {stellar_pos[0]}  |  {stellar_pos[1]}  |  {stellar_pos[2]}")
+        logger.info(f" Player (local)|  {longitude}  |  {altitude}  |  {latitude}")
+
+        logger.info(f"Velocities:")
         logger.info(f"             |        X        |        Y        |        Z")
-        logger.info(f"        World|  {world_pos[0]}  |  {world_pos[1]}  |  {world_pos[2]}")
-        logger.info(f"       Player|  {player_pos[0]}  |  {player_pos[1]}  |  {player_pos[2]}")
+        logger.info(f"        World|  {stellar_pos[0]}  |  {stellar_pos[1]}  |  {stellar_pos[2]}")
+        logger.info(f"       Player|  {surface_vel[0]}  |  {surface_vel[1]}  |  {surface_vel[2]}")
 
         self.is_bound = True
         return self
+
+    def _distance_to_world_centre(self, world: World) -> float:
+        return math.dist((self.position.x, self.position.y, self.position.z), world.calculate_stellar_position(gem.current_environment.date_time))
+
+    def altitude_above_surface(self, world: World) -> float:
+        if self.is_bound:
+            return self.position.y
+        return self._distance_to_world_centre(world) - world.radius
 
     def unbind_to(self, world: World) -> Player:
         logger.info(f"Leaving {world.name}.")
@@ -253,18 +367,26 @@ class Player:
         logger.info(f"        World|  {world_vel[0]}  |  {world_vel[1]}  |  {world_vel[2]}")
         logger.info(f"       Player|  {player_vel[0]}  |  {player_vel[1]}  |  {player_vel[2]}")
 
+        current_datetime = gem.current_environment.date_time
+        longitude, latitude = self.position.x, self.position.z
+        self.right, self.up, self.forward = (
+            world.surface_vector_to_stellar(axis, longitude, latitude, current_datetime)
+            for axis in (self.right, self.up, self.forward)
+        )
+        self.position.x, self.position.y, self.position.z = player_pos
+        self.velocity.x, self.velocity.y, self.velocity.z = player_vel
         self.is_bound = False
         return self
 
     def calculate_stellar_position(self, world: World, world_pos: Vector3) -> Vector3:
-        _, up_hat, _ = world.surface_basis(self, gem.current_environment.date_time)
+        _, up_hat, _ = world.surface_basis(self.position.x, self.position.z, gem.current_environment.date_time)
         distance_from_centre = world.radius + self.position.y
         offset_x, offset_y, offset_z = (component * distance_from_centre for component in up_hat)
         # The star-centred basis has Y opposite to the orbital motion, so Y is negated here.
         return (world_pos[0] + offset_x, world_pos[1] - offset_y, world_pos[2] + offset_z)
 
     def calculate_stellar_velocity(self, world: World, world_vel: Vector3) -> Vector3:
-        east_hat, up_hat, north_hat = world.surface_basis(self, gem.current_environment.date_time)
+        east_hat, up_hat, north_hat = world.surface_basis(self.position.x, self.position.z, gem.current_environment.date_time)
         latitude_angle = self.position.z / world.radius
         spin_speed = math.tau / world.rotation_period * (world.radius + self.position.y) * math.cos(latitude_angle)
         logger.info(f"DEBUG-VEL pos=({self.position.x}, {self.position.y}, {self.position.z}) vel=({self.velocity.x}, {self.velocity.y}, {self.velocity.z}) "

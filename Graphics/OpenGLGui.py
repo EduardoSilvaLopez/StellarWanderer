@@ -39,7 +39,10 @@ class OpenGLGui:
 
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
-        Stars.draw(self.world_surface, self.stars, width, height, player.orientation)
+        Stars.draw(
+            self.world_surface, self.stars, width, height, player.yaw,
+            player.pitch_angle(environment.nearest_world, environment.date_time),
+        )
         LocalStar.draw(self.world_surface, width, height, environment, player)
         NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
 
@@ -59,13 +62,14 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.world_surface, self.world_texture)
-        Rocks.draw(
-            width, height, player,
-            self._rocks(environment, player),
-            self._ore_fields(environment, player),
-            self._ore_mines(environment, player),
-        )
-        Laser.draw(width, height, player)
+        if player.is_bound:
+            Rocks.draw(
+                width, height, player,
+                self._rocks(environment, player),
+                self._ore_fields(environment, player),
+                self._ore_mines(environment, player),
+            )
+            Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
 

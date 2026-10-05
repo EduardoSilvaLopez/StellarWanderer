@@ -18,7 +18,7 @@ class Compass:
         """Draw the compass dial.
 
         The dial stays fixed with 'N' at the top; the needle rotates to point
-        in the direction the player is currently facing (player.orientation is
+        in the direction the player is currently facing (player.yaw is
         in degrees, clockwise from north). Sized to fit between left_bound
         (the coordinate text block) and the centre multi-function display.
         """
@@ -44,7 +44,7 @@ class Compass:
             surface.blit(label_surf, label_surf.get_rect(center=label_pos))
 
         # Needle: points toward the player's current heading.
-        heading = math.radians(player.orientation)
+        heading = math.radians(player.yaw)
         dir_x, dir_y = math.sin(heading), -math.cos(heading)
         perp_x, perp_y = math.cos(heading), math.sin(heading)
 

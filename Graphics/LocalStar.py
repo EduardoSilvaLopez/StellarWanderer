@@ -9,6 +9,8 @@ from .Constants import (
     LOCAL_STAR_HALO_WIDTH_PX, LOCAL_STAR_HALO_ALPHA,
 )
 
+from Galaxies.World import World
+
 if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
@@ -29,24 +31,20 @@ class LocalStar:
         world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
 
-        local_east, local_up, local_north = world.calculate_star_position(player, environment.date_time)
+        star_vector = player.direction_to_star(world, environment.date_time)
+        right, cam_up, cam_forward = player.camera_components(star_vector)
 
-        orientation = math.radians(player.orientation)
-        sin_o, cos_o = math.sin(orientation), math.cos(orientation)
-        right = local_east * cos_o - local_north * sin_o
-        forward = local_east * sin_o + local_north * cos_o
-
-        if forward <= NEAR_CLIP:
+        if cam_forward <= NEAR_CLIP:
             return
 
         view_h = int(h * CONSOLE_TOP)
         focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
         horizon_y = int(view_h * 0.5)
 
-        screen_x = w / 2 + focal_length_px * right / forward
-        screen_y = horizon_y - focal_length_px * local_up / forward
+        screen_x = w / 2 + focal_length_px * right / cam_forward
+        screen_y = horizon_y - focal_length_px * cam_up / cam_forward
 
-        distance = math.sqrt(local_east ** 2 + local_up ** 2 + local_north ** 2)
+        distance = math.sqrt(World._dot(star_vector, star_vector))
         angular_radius = math.atan(star.radius / distance)
         star_radius_px = max(LOCAL_STAR_MIN_RADIUS_PX, int(focal_length_px * angular_radius))
         halo_radius_px = star_radius_px + LOCAL_STAR_HALO_WIDTH_PX

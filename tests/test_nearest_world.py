@@ -23,10 +23,10 @@ class RockRendererTests(unittest.TestCase):
     def tearDown(self):
         pygame.quit()
 
-    def make_player(self, x=0.0, z=0.0, orientation=0.0):
+    def make_player(self, x=0.0, z=0.0, yaw=0.0):
         return SimpleNamespace(
             position=SimpleNamespace(x=x, y=10.0, z=z),
-            orientation=orientation,
+            yaw=yaw,
         )
 
     def make_rock(self, x, z, size=20.0):
@@ -72,7 +72,7 @@ class RockRendererTests(unittest.TestCase):
         )) / 2
 
     def test_north_view_has_top_and_front_faces_only(self):
-        player = self.make_player(orientation=0.0)
+        player = self.make_player(yaw=0.0)
         rock = self.make_rock(0.0, 300.0)
 
         polygons, _ = self.render(player, rock)
@@ -86,8 +86,8 @@ class RockRendererTests(unittest.TestCase):
         left_x, left_z = self.world_position(315.0, -100.0, 300.0)
         right_x, right_z = self.world_position(315.0, 100.0, 300.0)
 
-        left_polygons, _ = self.render(self.make_player(orientation=315.0), self.make_rock(left_x, left_z))
-        right_polygons, _ = self.render(self.make_player(orientation=315.0), self.make_rock(right_x, right_z))
+        left_polygons, _ = self.render(self.make_player(yaw=315.0), self.make_rock(left_x, left_z))
+        right_polygons, _ = self.render(self.make_player(yaw=315.0), self.make_rock(right_x, right_z))
 
         self.assertEqual(6, len(left_polygons))
         self.assertEqual(6, len(right_polygons))
@@ -97,7 +97,7 @@ class RockRendererTests(unittest.TestCase):
         self.assertIn(lateral_color, [color for color, _ in right_polygons])
 
     def test_north_facing_off_center_cube_shows_lateral_side(self):
-        player = self.make_player(orientation=0.0)
+        player = self.make_player(yaw=0.0)
         rock = self.make_rock(100.0, 300.0, size=40.0)
 
         polygons, _ = self.render(player, rock)
@@ -107,7 +107,7 @@ class RockRendererTests(unittest.TestCase):
         self.assertIn(lateral_color, [color for color, _ in polygons])
 
     def test_large_rock_far_left_keeps_both_visible_faces(self):
-        player = self.make_player(orientation=0.0)
+        player = self.make_player(yaw=0.0)
         rock = self.make_rock(-300.0, 300.0, size=200.0)
 
         polygons, _ = self.render(player, rock)
@@ -118,7 +118,7 @@ class RockRendererTests(unittest.TestCase):
         self.assertIn(tuple(max(0, value - 25) for value in self.ROCK_COLOR), colors)
 
     def test_exact_large_left_rock_keeps_both_faces_visible_on_surface(self):
-        player = self.make_player(orientation=0.0)
+        player = self.make_player(yaw=0.0)
         rock = self.make_rock(-300.0, 300.0, size=200.0)
         self.surface.fill((0, 0, 0))
 
@@ -213,7 +213,7 @@ class RockRendererTests(unittest.TestCase):
         self.assertTrue(all(count > 100 for count in colors.values()))
 
     def test_rotated_cube_has_moderated_near_far_perspective(self):
-        player = self.make_player(orientation=315.0)
+        player = self.make_player(yaw=315.0)
         rock = self.make_rock(0.0, 300.0, size=40.0)
 
         polygons, _ = self.render(player, rock)
@@ -226,7 +226,7 @@ class RockRendererTests(unittest.TestCase):
         self.assertLess(ratio, 1.5)
 
     def test_rotated_cube_keeps_both_lateral_faces_visible(self):
-        player = self.make_player(orientation=315.0)
+        player = self.make_player(yaw=315.0)
         left_x, left_z = self.world_position(315.0, -180.0, 300.0)
         right_x, right_z = self.world_position(315.0, 180.0, 300.0)
 
