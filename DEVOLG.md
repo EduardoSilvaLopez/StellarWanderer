@@ -149,7 +149,7 @@ Move away from world. This includes the sphere-to-rectangle transformation and t
 
 Big leap but it does not work right now as intended: the movements are not correct, "s" does not reduce pitch. q/r should change the orientation relative to ship current left-right-forward-backward plane (it does not). left-right-forward-backward should also be relative to the ships orientation and pitch.
 
-### 2026-10-05
+### 2026-10-05 17:45 - 
 
 Extra time: 5h15'
 

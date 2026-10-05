@@ -143,7 +143,7 @@ class Player:
 
     def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Player:
         """Pitch the ship with inertia, about its right axis, like update_yaw does for yaw."""
-        if not self.is_bound:
+        if self.is_bound:
             return self
 
         if braking:
@@ -162,7 +162,7 @@ class Player:
     def update_roll(self, delta_time: float, roll_left: int, roll_right: int, braking: bool = False) -> Player:
         """Roll the ship with inertia, about its forward axis."""
 
-        if not self.is_bound:
+        if self.is_bound:
             return self
 
         if braking:

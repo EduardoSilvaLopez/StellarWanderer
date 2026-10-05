@@ -13,6 +13,7 @@ from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
 from .notification import Notification
+from .binding_meter import BindingMeter
 
 if TYPE_CHECKING:
     from Player import Player
@@ -48,6 +49,8 @@ class Console:
         # Draw altitude bar and location info
         if player.is_bound:
             Console._draw_altitude_bar(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
+        else:
+            BindingMeter.draw(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
         Console._draw_location_info(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
 
         bar_w = int(w * 0.028)
