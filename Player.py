@@ -284,13 +284,19 @@ class Player:
             braking: If True, ignore all accel inputs and decelerate all axes to zero instead
         """
         if braking:
-            speed = math.hypot(self.velocity.x, self.velocity.y, self.velocity.z)
+            world = gem.current_environment.nearest_world
+            if self.is_bound or self._distance_to_world_centre(world) >= 2 * world.radius:
+                reference: Vector3 = (0.0, 0.0, 0.0)
+            else:
+                reference = world.calculate_stellar_velocity(gem.current_environment.date_time)
+            relative = [v - r for v, r in zip((self.velocity.x, self.velocity.y, self.velocity.z), reference)]
+            speed = math.hypot(*relative)
             if speed > 0:
                 decel = min(self.ship.BRAKE_ACC * delta_time, speed)
                 scale = (speed - decel) / speed
-                self.velocity.x *= scale
-                self.velocity.y *= scale
-                self.velocity.z *= scale
+                self.velocity.x = reference[0] + relative[0] * scale
+                self.velocity.y = reference[1] + relative[1] * scale
+                self.velocity.z = reference[2] + relative[2] * scale
         elif self.is_bound:
             yaw = math.radians(self.yaw)
             sin_yaw = math.sin(yaw)
@@ -380,6 +386,14 @@ class Player:
     def _distance_to_world_centre(self, world: World) -> float:
         return math.dist((self.position.x, self.position.y, self.position.z), world.calculate_stellar_position(gem.current_environment.date_time))
 
+    def speed_relative_to_world(self, world: World) -> float:
+        """Speed relative to the world, in m/s. While bound the velocity is already surface-relative."""
+        velocity = (self.velocity.x, self.velocity.y, self.velocity.z)
+        if self.is_bound:
+            return math.hypot(*velocity)
+        world_velocity = world.calculate_stellar_velocity(gem.current_environment.date_time)
+        return math.dist(velocity, world_velocity)
+
     def altitude_above_surface(self, world: World) -> float:
         if self.is_bound:
             return self.position.y
@@ -424,9 +438,6 @@ class Player:
         east_hat, up_hat, north_hat = world.surface_basis(self.position.x, self.position.z, gem.current_environment.date_time)
         latitude_angle = self.position.z / world.radius
         spin_speed = math.tau / world.rotation_period * (world.radius + self.position.y) * math.cos(latitude_angle)
-        logger.info(f"DEBUG-VEL pos=({self.position.x}, {self.position.y}, {self.position.z}) vel=({self.velocity.x}, {self.velocity.y}, {self.velocity.z}) "
-                    f"radius={world.radius} rotation_period={world.rotation_period} latitude_angle={latitude_angle} spin_speed={spin_speed} "
-                    f"east_hat={east_hat} up_hat={up_hat} north_hat={north_hat} is_bound={self.is_bound}")
 
         # Star-centred basis: Y is opposite to the orbital motion, so world_vel's Y is negated first.
         world_vel_basis = (world_vel[0], -world_vel[1], world_vel[2])

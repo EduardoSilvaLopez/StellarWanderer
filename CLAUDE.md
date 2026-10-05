@@ -46,9 +46,15 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - **Pitch**: rotation about the ship's right axis (Numpad 8 up, 2 down; only while unbound). `Player.pitch_angle(world, t)` is the nose-up angle above the local horizon. `Player.velocity.pitch` is the pitch rate.
 - **Roll**: rotation about the ship's forward axis (Q left, E right). `Player.velocity.roll` is the roll rate in degrees per second.
 - **Attitude**: the ship's right, up and forward axes, stored as `Player.right`, `Player.up` and `Player.forward` in the active frame (surface when bound, stellar when unbound). This is the source of truth; yaw, pitch and roll are derived from it or applied to it.
-- Braking (S) decelerates linear velocity in all three axes and all rotation rates (yaw, pitch, roll) to zero.
+- Braking (S) decelerates linear velocity in all three axes and all rotation rates (yaw, pitch, roll) to zero. While unbound, linear braking is relative to the star, except within 2 world radii of the nearest world's centre (the binding meter below full), where it is relative to that world.
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
+
+## World Orbit
+
+- A world's stellar position and velocity are pure functions of game time (`World.calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`.
+- The world is not put in `UpdateQueue`, because its state is derived, not stored. Use the queue only for work that mutates state at intervals.
+- Do not add per-call logging to these functions; they run every frame while unbound.
 
 ## Dependencies
 

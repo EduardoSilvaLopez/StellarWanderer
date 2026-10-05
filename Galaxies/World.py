@@ -150,7 +150,6 @@ class World:
         orbital_angle = self._orbital_angle_rad(current_datetime)
         angular_speed = math.tau / self.year_duration_seconds
         speed = self.parent_orbit.distance_from_star * angular_speed
-        logger.info(f"DEBUG-WORLD-VEL distance={self.parent_orbit.distance_from_star} year_duration_seconds={self.year_duration_seconds} speed={speed} orbital_angle={orbital_angle}")
         return (-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
 
     def surface_basis(self, longitude: float, latitude: float, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:

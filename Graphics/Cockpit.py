@@ -7,6 +7,7 @@ from datetime import datetime
 from .Instruments.canopy import Canopy
 from .Instruments.console import Console
 from .Instruments.clock import Clock
+from .Instruments.crosshair import Crosshair
 
 if TYPE_CHECKING:
     from Player import Player
@@ -29,5 +30,6 @@ class Cockpit:
             time_scale: Time acceleration factor
         """
         Canopy.draw(surface, w, h)
+        Crosshair.draw(surface, w, h)
         Console.draw(surface, fonts, w, h, player, date_time)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)

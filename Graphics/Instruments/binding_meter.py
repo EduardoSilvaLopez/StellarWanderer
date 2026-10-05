@@ -23,14 +23,18 @@ class BindingMeter:
         world = gem.current_environment.nearest_world
 
         bar_w = int(w * 0.028)
-        bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, cluster_height)
+        label_font = fonts.get(max(9, int(h * 0.017)))
+        row_height = label_font.get_height() + 2
+        bar_height = cluster_height - row_height * 4
+
+        bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_height)
         draw_beveled_panel(surface, bar_rect)
 
         distance_fraction = player.altitude_above_surface(world) / world.radius
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
-        inner_height = cluster_height - fill_pad * 2
+        inner_height = bar_height - fill_pad * 2
         filled = int(inner_height * distance_fraction)
         pygame.draw.rect(
             surface, ACCENT,
@@ -40,6 +44,23 @@ class BindingMeter:
         mark_y = bar_rect.bottom - fill_pad - inner_height // 2
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 
-        label_font = fonts.get(max(9, int(h * 0.017)))
         label = label_font.render('NEAREST', True, ACCENT_DIM)
         surface.blit(label, label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))
+
+        centre_dist = int(player.altitude_above_surface(world) + world.radius)
+
+        row_y = bar_rect.bottom + 2
+        dist_label = label_font.render('Distance', True, ACCENT_DIM)
+        surface.blit(dist_label, dist_label.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
+
+        row_y += row_height
+        centre_text = label_font.render(f'{centre_dist}', True, ACCENT)
+        surface.blit(centre_text, centre_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
+
+        row_y += row_height
+        speed_label = label_font.render('Speed', True, ACCENT_DIM)
+        surface.blit(speed_label, speed_label.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
+
+        row_y += row_height
+        speed_text = label_font.render(f'{int(player.speed_relative_to_world(world))}', True, ACCENT)
+        surface.blit(speed_text, speed_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))

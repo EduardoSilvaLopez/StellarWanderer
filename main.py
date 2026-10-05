@@ -171,8 +171,8 @@ def main() -> None:
         # Pitch: Numpad 8 (up) and 2 (down), only while unbound
         player.update_pitch(
             dt * player.time_scale,
-            1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
             1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
+            1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
             keys[pygame.K_s]
         )
 
