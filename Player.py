@@ -324,10 +324,13 @@ class Player:
 
         self.position.x, self.position.y, self.position.z = longitude, altitude, latitude
         self.velocity.x, self.velocity.y, self.velocity.z = surface_vel
-        self.right, self.up, self.forward = (
-            world.stellar_vector_to_surface(axis, longitude, latitude, current_datetime)
-            for axis in (self.right, self.up, self.forward)
-        )
+        forward_surface = world.stellar_vector_to_surface(self.forward, longitude, latitude, current_datetime)
+        yaw = math.atan2(forward_surface[0], forward_surface[2])
+        self.right = (math.cos(yaw), 0.0, -math.sin(yaw))
+        self.up = (0.0, 1.0, 0.0)
+        self.forward = (math.sin(yaw), 0.0, math.cos(yaw))
+        self.velocity.yaw = 0.0
+        self.velocity.pitch = 0.0
 
         logger.info(f"Positions:")
         logger.info(f"               |        X        |        Y        |        Z")
