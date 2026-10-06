@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, BINDING_MARK_RED
-from .common import draw_beveled_panel
+from ..Constants import ACCENT, ACCENT_DIM, BINDING_MARK_RED, BINDING_NEAR_GREEN
+from .common import draw_beveled_panel, format_compact_distance
 
 if TYPE_CHECKING:
     from Player import Player
@@ -25,9 +25,12 @@ class BindingMeter:
         bar_w = int(w * 0.028)
         label_font = fonts.get(max(9, int(h * 0.017)))
         row_height = label_font.get_height() + 2
-        bar_height = cluster_height - row_height * 4
+        label_top = cluster_top - 46
+        bar_top = label_top + label_font.get_height() + 6
+        group_bottom = cluster_top + cluster_height + 22
+        bar_height = group_bottom - bar_top - row_height * 4 - 2
 
-        bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_height)
+        bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
         draw_beveled_panel(surface, bar_rect)
 
         distance_fraction = player.altitude_above_surface(world) / world.radius
@@ -44,10 +47,11 @@ class BindingMeter:
         mark_y = bar_rect.bottom - fill_pad - inner_height // 2
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 
-        label = label_font.render('NEAREST', True, ACCENT_DIM)
-        surface.blit(label, label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))
+        near_world = player.altitude_above_surface(world) < world.radius
+        label = label_font.render('NEAREST', True, BINDING_NEAR_GREEN if near_world else ACCENT_DIM)
+        surface.blit(label, label.get_rect(midtop=(cluster_left + bar_w // 2, label_top)))
 
-        centre_dist = int(player.altitude_above_surface(world) + world.radius)
+        centre_dist = format_compact_distance(player.altitude_above_surface(world) + world.radius)
 
         row_y = bar_rect.bottom + 2
         dist_label = label_font.render('Distance', True, ACCENT_DIM)

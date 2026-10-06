@@ -7,13 +7,14 @@ from datetime import datetime
 from ..Constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
-from .common import get_cockpit_background, draw_beveled_panel
+from .common import get_cockpit_background, draw_beveled_panel, format_compact_distance
 from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
 from .notification import Notification
 from .binding_meter import BindingMeter
+from .radar import Radar
 
 if TYPE_CHECKING:
     from Player import Player
@@ -63,6 +64,9 @@ class Console:
             Compass.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
             draw_beveled_panel(surface, mfd, w=w, h=h)
             WorldMap.draw(surface, fonts, mfd, h, player, date_time)
+        else:
+            draw_beveled_panel(surface, mfd, depth=3, w=w, h=h)
+            Radar.draw(surface, fonts, h, mfd, player, date_time)
 
         # Scanner
         Scanner.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
@@ -121,7 +125,7 @@ class Console:
         world_font = fonts.get(max(12, int(h * 0.024)))
 
         bar_w = int(w * 0.028)
-        coord_x = cluster_left + bar_w + int(w * 0.012)
+        coord_x = cluster_left + bar_w + int(w * 0.03)
         world_y = cluster_top - 40
 
         # World and system labels
@@ -155,9 +159,21 @@ class Console:
             ]
 
         for label, position, velocity in axis_lines:
-            line_text = label_font.render(f'{label}: {int(position)} Δ{int(velocity)}', True, ACCENT)
+            if player.is_bound:
+                text = f'{label}: {int(position)} Δ{int(velocity)}'
+            else:
+                text = f'{label}: {format_compact_distance(position)}  Δ{int(velocity)}'
+            line_text = label_font.render(text, True, ACCENT)
             surface.blit(line_text, (coord_x, coord_y))
             coord_y += line_spacing
 
-        yaw_text = label_font.render(f'Yaw: {int(player.yaw)}° Δ{int(player.velocity.yaw)}', True, ACCENT)
-        surface.blit(yaw_text, (coord_x, coord_y))
+        world = gem.current_environment.nearest_world
+        date_time = gem.current_environment.date_time
+        attitude_lines = (
+            f'Yaw: {int(player.yaw)}° Δ{int(player.velocity.yaw)}',
+            f'Pitch: {int(player.pitch_angle(world, date_time))}° Δ{int(player.velocity.pitch)}',
+            f'Roll: {int(player.roll_angle(world, date_time))}° Δ{int(player.velocity.roll)}',
+        )
+        for text in attitude_lines:
+            surface.blit(label_font.render(text, True, ACCENT), (coord_x, coord_y))
+            coord_y += line_spacing

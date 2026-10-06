@@ -69,7 +69,7 @@ class OpenGLGui:
                 self._ore_fields(environment, player),
                 self._ore_mines(environment, player),
             )
-            Laser.draw(width, height, player)
+        Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
 

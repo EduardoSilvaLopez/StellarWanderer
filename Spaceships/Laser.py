@@ -36,8 +36,22 @@ class Laser:
         from the ship's current position and yaw. Called once per frame
         regardless of whether the laser is actually firing, so UI elements (like
         the scanner) can show what's in the crosshair at all times."""
-        # ATM, no Km2 means not bound or too high, means no aim.
-        if not self.ship.owner.is_bound or self.ship.owner.position.km2 is None:
+        owner = self.ship.owner
+        if not owner.is_bound:
+            # Nothing can be in range while unbound. The beam is stored relative to
+            # the ship, along its attitude axes (below the camera, like when bound).
+            self.targeted_rock = None
+            self.targeted_mine = None
+            self.start_x, self.start_y, self.start_z = (
+                f * 5.0 - u * Laser.POSITION_OFFSET for f, u in zip(owner.forward, owner.up)
+            )
+            self.end_x, self.end_y, self.end_z = (
+                f * self.length - u * Laser.POSITION_OFFSET for f, u in zip(owner.forward, owner.up)
+            )
+            return
+
+        # No Km2 while bound means too high, means no aim.
+        if owner.position.km2 is None:
             self.targeted_rock = None
             self.targeted_mine = None
             return

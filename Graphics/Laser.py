@@ -44,12 +44,18 @@ class Laser:
         # X/Z made camera-relative on the CPU (double precision) instead of via
         # glTranslatef, to avoid float32 truncation at large world coordinates
         # — see the matching comment in Rocks.draw() for why.
-        GL.glTranslatef(0.0, -player.position.y, 0.0)
-
-        # Perpendicular vector (right): rotate forward 90° in XZ plane
-        yaw = math.radians(player.yaw)
-        right_x = math.cos(yaw)
-        right_z = -math.sin(yaw)
+        if player.is_bound:
+            GL.glTranslatef(0.0, -player.position.y, 0.0)
+            # Perpendicular vector (right): rotate forward 90° in XZ plane
+            yaw = math.radians(player.yaw)
+            right_axis = (math.cos(yaw), 0.0, -math.sin(yaw))
+            up_axis = (0.0, 1.0, 0.0)
+            origin = (player.position.x, 0.0, player.position.z)
+        else:
+            # Unbound the beam is stored relative to the ship, along its own axes.
+            right_axis = player.right
+            up_axis = player.up
+            origin = (0.0, 0.0, 0.0)
 
         # Laser beam cross-section half-size, in meters
         half_size = 0.5
@@ -65,10 +71,9 @@ class Laser:
         # quads, each combining BOTH the "right" and "up" offsets — so every
         # face has real extent in both screen dimensions.
         def corner(cx: float, cy: float, cz: float, right_sign: int, up_sign: int) -> Tuple[float, float, float]:
-            return (
-                (cx - player.position.x) + right_x * half_size * right_sign,
-                cy + half_size * up_sign,
-                (cz - player.position.z) + right_z * half_size * right_sign,
+            return tuple(
+                centre - base + right * half_size * right_sign + up * half_size * up_sign
+                for centre, base, right, up in zip((cx, cy, cz), origin, right_axis, up_axis)
             )
 
         s_tr = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, 1)

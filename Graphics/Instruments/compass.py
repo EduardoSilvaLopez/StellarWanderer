@@ -24,7 +24,7 @@ class Compass:
         """
         margin = int(w * 0.04)
         radius = max(10, int(cluster_height * 0.5))
-        center = (left_bound + margin + radius, cluster_top + cluster_height // 2)
+        center = (left_bound + margin + radius + int(radius * 0.2), cluster_top + cluster_height // 2)
 
         pygame.draw.circle(surface, READOUT_BG, center, radius)
         pygame.draw.circle(surface, CONSOLE_EDGE_COLOR, center, radius, 2)

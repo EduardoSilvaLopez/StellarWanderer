@@ -206,6 +206,11 @@ class Player:
         up_reference = World._scale(-1.0, self.direction_down(world, current_datetime))
         return math.degrees(math.asin(max(-1.0, min(1.0, World._dot(self.forward, up_reference)))))
 
+    def roll_angle(self, world: World, current_datetime: datetime) -> float:
+        """Right-wing-down angle in degrees relative to the local horizon."""
+        up_reference = World._scale(-1.0, self.direction_down(world, current_datetime))
+        return math.degrees(math.atan2(-World._dot(self.right, up_reference), World._dot(self.up, up_reference)))
+
     def direction_down(self, world: World, current_datetime: datetime) -> Vector3:
         """Unit vector from the ship towards the planet's surface, in the active frame."""
         if self.is_bound:

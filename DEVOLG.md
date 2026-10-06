@@ -149,9 +149,7 @@ Move away from world. This includes the sphere-to-rectangle transformation and t
 
 Big leap but it does not work right now as intended: the movements are not correct, "s" does not reduce pitch. q/r should change the orientation relative to ship current left-right-forward-backward plane (it does not). left-right-forward-backward should also be relative to the ships orientation and pitch.
 
-### 2026-10-05 17:45 - 
-
-Extra time: 5h15'
+### 2026-10-05
 
 - Alt bar, orientation and world map disappear when unbound - and back.
 - Altitude, latitude and longitude are renamed to x/y/z when unbound - and back.
@@ -159,9 +157,12 @@ Extra time: 5h15'
 - x / y / z are recalculated on unbinding: the position is recalculated (cylinder-to-real-long-lat, then to x-y-z, then world to stellar), the velocity is recalculated (also what x / y / z means) to add the one of the planet at that instant.
 - Altitude, latitude and longitude are recalculated on binding: the position is recalculated (stellar to world, then to real long-lat, then to cylinder long-lat), the velocity is recalculated to substract the one of the planet at that instant.
 - New controls to roll, pitch and yawn when unbound.
+- Move the world. Make approximation playable (break relative to planet).
+- Binding bar shows the current distance-to-nearest-planet, velocity, radius and binding altitude.
 
-- Move the world.
-- Alt bar shows the current distance-to-nearest-planet, and its radius and binding altitude.
+Extra time: 6h00'
+### 2026-10-06 19:45-
+
 - ⁠Create more than one orbit, each with one world.
 - Show the other planets in the sky.
 

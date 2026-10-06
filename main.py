@@ -201,7 +201,7 @@ def main() -> None:
             player_module.current_player.ship.laser.fire()
             if (player_module.current_player.ship.laser.hitting_rock):
                 player_module.current_player.ship.laser.hitting_rock.increase_temperature(
-                    elapsed, gem.current_environment.date_time
+                    dt * player_module.current_player.time_scale, gem.current_environment.date_time
                     )
         elif (player_module.current_player.ship.laser.firing):
             player_module.current_player.ship.laser.cease_fire()

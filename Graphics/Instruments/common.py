@@ -13,6 +13,17 @@ from ..Constants import (
 _cockpit_background: Optional[pygame.Surface] = None
 _windshield_frame_texture: Optional[pygame.Surface] = None
 
+COMPACT_DISTANCE_UNITS = (('m', 1.0), ('Km', 1e3), ('Mm', 1e6), ('Gm', 1e9), ('Tm', 1e12), ('Pm', 1e15))
+
+
+def format_compact_distance(meters: float) -> str:
+    """Compact format: whole metres below 10^6, then Km, Mm, Gm, Tm and Pm (the last unit), each rounded."""
+    for symbol, scale in COMPACT_DISTANCE_UNITS:
+        value = round(meters / scale)
+        if abs(value) < 1_000_000 or symbol == 'Pm':
+            return f'{value} {symbol}'
+    return f'{value} {symbol}'
+
 
 def get_cockpit_background(w: int, h: int) -> pygame.Surface:
     """Load, scale, and apply gradient darkening to cockpit texture.

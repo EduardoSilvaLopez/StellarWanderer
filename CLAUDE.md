@@ -48,6 +48,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - **Attitude**: the ship's right, up and forward axes, stored as `Player.right`, `Player.up` and `Player.forward` in the active frame (surface when bound, stellar when unbound). This is the source of truth; yaw, pitch and roll are derived from it or applied to it.
 - Braking (S) decelerates linear velocity in all three axes and all rotation rates (yaw, pitch, roll) to zero. While unbound, linear braking is relative to the star, except within 2 world radii of the nearest world's centre (the binding meter below full), where it is relative to that world.
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
+- Location-info readouts show yaw, pitch and roll as angle plus rate (Δ, deg/s). `Player.pitch_angle` and `Player.roll_angle` are relative to the local horizon, positive nose up and right wing down.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
 
 ## World Orbit
@@ -55,6 +56,11 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - A world's stellar position and velocity are pure functions of game time (`World.calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`.
 - The world is not put in `UpdateQueue`, because its state is derived, not stored. Use the queue only for work that mutates state at intervals.
 - Do not add per-call logging to these functions; they run every frame while unbound.
+
+## Radar
+
+- Shown only while unbound, in the centre console panel where the world map is drawn while bound (`Graphics/Instruments/radar.py`).
+- It lists the star and every world of the system within 100 AU. The ellipse is the ship's forward/right plane (forward at the top). The foot of each bar is the object's projection on that plane, with in-plane distance on a log scale from 100 km (centre) to 100 AU (edge). The bar runs along the ship's up axis: white upwards when above the plane, gray downwards when below, with a log length on the same scale. The dot at its tip is the star's own colour or light brown for a world.
 
 ## Dependencies
 
