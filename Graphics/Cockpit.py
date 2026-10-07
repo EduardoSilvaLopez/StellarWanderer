@@ -8,6 +8,7 @@ from .Instruments.canopy import Canopy
 from .Instruments.console import Console
 from .Instruments.clock import Clock
 from .Instruments.crosshair import Crosshair
+from .Instruments.political_info import PoliticalInfo
 from .ObjectLabels import ObjectLabels
 
 if TYPE_CHECKING:
@@ -34,5 +35,6 @@ class Cockpit:
         Canopy.draw(surface, w, h)
         Crosshair.draw(surface, w, h)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player)
+        PoliticalInfo.draw(surface, fonts, w, h, player)
         Console.draw(surface, fonts, w, h, player, date_time)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)
