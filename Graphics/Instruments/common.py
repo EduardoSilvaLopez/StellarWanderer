@@ -47,12 +47,19 @@ def view_geometry(h: int, horizon_fraction: float = 0.5) -> Tuple[int, int, floa
 
 def project_to_camera(player: Player, vector: Vector3, w: int, horizon_y: int, focal_length_px: float) -> Optional[Tuple[float, float]]:
     """Pinhole-project a direction (in the frame consumed by player.camera_components)
-    onto the screen. Returns None if the direction is behind the near-clip plane."""
+    onto the screen. Returns None if the direction is behind the near-clip plane, or
+    grazing it at a wide angle: an object can be just past NEAR_CLIP in front of the
+    camera but have a huge sideways offset (e.g. a world many AU away, nearly
+    perpendicular to the view), which would otherwise project to a screen coordinate
+    large enough to overflow pygame's Rect."""
     right, cam_up, cam_forward = player.camera_components(vector)
     if cam_forward <= NEAR_CLIP:
         return None
     screen_x = w / 2 + focal_length_px * right / cam_forward
     screen_y = horizon_y - focal_length_px * cam_up / cam_forward
+    off_screen_margin = 10 * w
+    if abs(screen_x - w / 2) > off_screen_margin or abs(screen_y - horizon_y) > off_screen_margin:
+        return None
     return screen_x, screen_y
 
 
