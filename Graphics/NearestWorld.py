@@ -1,13 +1,13 @@
 """Planet surface and rocks rendering."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Tuple, Any
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 import math
 import pygame
 from .Constants import (
-    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, PLANET_GRAY,
-    ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
+    PLANET_GRAY, ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
 )
+from Graphics.Instruments.common import view_geometry
 
 if TYPE_CHECKING:
     from Player import Player
@@ -55,11 +55,9 @@ class NearestWorld:
         the horizon and sx sideways, that is sx^2 <= sy^2 * tan^2(a) - f^2, where a
         is the angular radius and f the focal length.
         """
-        view_h = int(h * CONSOLE_TOP)
+        view_h, centre_y, focal_length_px = view_geometry(h)
         world_radius = environment.nearest_world.radius
         distance_to_center = world_radius + player.altitude_above_surface(environment.nearest_world)
-
-        focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
 
         sin_angular = min(world_radius / distance_to_center, 0.9999)
         cos_angular = math.sqrt(1.0 - sin_angular * sin_angular)
@@ -70,7 +68,6 @@ class NearestWorld:
         nadir_x, nadir_y, nadir_z = down_right, -down_up, down_forward
 
         center_x = w / 2
-        centre_y = view_h * 0.5
         focal = focal_length_px
         cos_sq = cos_angular * cos_angular
 
@@ -123,6 +120,31 @@ class NearestWorld:
                 pygame.draw.line(surface, PLANET_GRAY, (clamp_x(center_x + lo), y), (clamp_x(center_x + hi), y))
 
     @staticmethod
+    def _camera_coordinates(world_x: float, world_z: float, player_x: float, player_z: float, sin_yaw: float, cos_yaw: float) -> Tuple[float, float]:
+        """Yaw-only rotation of a world (x, z) offset into ship-relative (right, forward).
+        While bound the ship only yaws (never pitches/rolls), so this 2-axis rotation is
+        used instead of the full 3D player.camera_components for rocks/ore fields."""
+        offset_x = world_x - player_x
+        offset_z = world_z - player_z
+        right = offset_x * cos_yaw - offset_z * sin_yaw
+        forward = offset_x * sin_yaw + offset_z * cos_yaw
+        return right, forward
+
+    @staticmethod
+    def _project_bound(cx: float, cy: float, cz: float, w: int, horizon_y: int, focal_length_px: float,
+                        horizontal_depth: Optional[float] = None, depth_factor: float = 0.0) -> Tuple[float, float]:
+        """Pinhole-project ship-relative (right, up, forward) coordinates while bound.
+        draw_rocks passes horizontal_depth (a cube's center forward-depth) and depth_factor
+        (ROCK_DEPTH_PERSPECTIVE) for its damped near/far perspective; draw_ore_fields calls
+        with the defaults, which reduce to a plain project(cx, cy, cz)."""
+        if horizontal_depth is None:
+            horizontal_depth = cz
+        blended_depth = horizontal_depth + depth_factor * (cz - horizontal_depth)
+        screen_x = w / 2 + focal_length_px * cx / blended_depth
+        screen_y = horizon_y - focal_length_px * cy / cz
+        return screen_x, screen_y
+
+    @staticmethod
     def draw_rocks(surface: pygame.Surface, w: int, h: int, player: Player, rocks: List[Rock], environment: GameEnvironment) -> None:
         """Draw rocks from the current world chunk as cubes on the surface.
 
@@ -133,7 +155,7 @@ class NearestWorld:
         matching lateral face, and size falls off with true forward depth rather
         than straight-line distance.
         """
-        view_h = int(h * CONSOLE_TOP)
+        _, horizon_y, focal_length_px = view_geometry(h, horizon_fraction=0.52)
 
         player_x = player.position.x
         player_z = player.position.z
@@ -142,25 +164,10 @@ class NearestWorld:
         sin_yaw = math.sin(yaw)
         cos_yaw = math.cos(yaw)
 
-        focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
-        horizon_y = int(view_h * 0.52)
-
         depth_factor = NearestWorld.ROCK_DEPTH_PERSPECTIVE
 
-        def project(cx: float, cy: float, cz: float, horizontal_depth: float) -> Tuple[float, float]:
-            """Project a corner with damped horizontal depth perspective."""
-            blended_depth = horizontal_depth + depth_factor * (cz - horizontal_depth)
-            screen_x = w / 2 + focal_length_px * cx / blended_depth
-            screen_y = horizon_y - focal_length_px * cy / cz
-            return (screen_x, screen_y)
-
         def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
-            """Convert world coordinates to offsets relative to the ship's heading."""
-            offset_x = world_x - player_x
-            offset_z = world_z - player_z
-            right = offset_x * cos_yaw - offset_z * sin_yaw
-            forward = offset_x * sin_yaw + offset_z * cos_yaw
-            return right, forward
+            return NearestWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
 
         # Gather rocks with their near-face depth, for far-to-near draw order.
         visible_rocks = []
@@ -195,8 +202,9 @@ class NearestWorld:
                 for iy, cy in ((0, cy0), (1, cy1)):
                     for iz, world_z in ((0, z0_world), (1, z1_world)):
                         corner_cx, corner_cz = camera_coordinates(world_x, world_z)
-                        corners[(ix, iy, iz)] = project(
-                            corner_cx, cy, corner_cz, center_depth
+                        corners[(ix, iy, iz)] = NearestWorld._project_bound(
+                            corner_cx, cy, corner_cz, w, horizon_y, focal_length_px,
+                            horizontal_depth=center_depth, depth_factor=depth_factor
                         )
                         corner_depths[(ix, iy, iz)] = corner_cz
 
@@ -251,7 +259,7 @@ class NearestWorld:
         Ore fields are 2D circles centered at (x, z) on the ground (y=0),
         projected using the same perspective as rocks.
         """
-        view_h = int(h * CONSOLE_TOP)
+        _, horizon_y, focal_length_px = view_geometry(h, horizon_fraction=0.52)
 
         player_x = player.position.x
         player_z = player.position.z
@@ -260,22 +268,11 @@ class NearestWorld:
         sin_yaw = math.sin(yaw)
         cos_yaw = math.cos(yaw)
 
-        focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
-        horizon_y = int(view_h * 0.52)
-
         def project(cx: float, cy: float, cz: float) -> Tuple[float, float]:
-            """Project a point onto the screen."""
-            screen_x = w / 2 + focal_length_px * cx / cz
-            screen_y = horizon_y - focal_length_px * cy / cz
-            return (screen_x, screen_y)
+            return NearestWorld._project_bound(cx, cy, cz, w, horizon_y, focal_length_px)
 
         def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
-            """Convert world coordinates to offsets relative to the ship's heading."""
-            offset_x = world_x - player_x
-            offset_z = world_z - player_z
-            right = offset_x * cos_yaw - offset_z * sin_yaw
-            forward = offset_x * sin_yaw + offset_z * cos_yaw
-            return right, forward
+            return NearestWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
 
         # Gather ore fields with their center depth, for far-to-near draw order.
         visible_fields = []

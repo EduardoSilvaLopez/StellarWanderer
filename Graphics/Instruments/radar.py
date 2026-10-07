@@ -5,12 +5,11 @@ from datetime import datetime
 from typing import Any, List, Tuple, TYPE_CHECKING
 import math
 import pygame
+from Vector3 import Vector3
 from ..Constants import ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR
 
 if TYPE_CHECKING:
     from Player import Player
-
-Vector3 = Tuple[float, float, float]
 
 
 class Radar:
@@ -42,7 +41,7 @@ class Radar:
         """Stellar-frame position and colour of the star and of every world in its system."""
         import GameEnvironment as gem
         system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
-        found: List[Tuple[Vector3, Tuple[int, int, int]]] = [((0.0, 0.0, 0.0), system.color)]
+        found: List[Tuple[Vector3, Tuple[int, int, int]]] = [(Vector3(0.0, 0.0, 0.0), system.color)]
         for orbit in system.orbits:
             for world in orbit.worlds:
                 found.append((world.calculate_stellar_position(date_time), RADAR_WORLD_COLOR))
@@ -62,14 +61,14 @@ class Radar:
             (centre_x - horizontal_radius, centre_y - vertical_radius, horizontal_radius * 2, vertical_radius * 2), 1
         )
 
-        position = (player.position.x, player.position.y, player.position.z)
+        position = player.position.as_vector()
         previous_clip = surface.get_clip()
         surface.set_clip(rect.inflate(-2, -2))
 
         projected = []
         for object_position, colour in Radar.objects(date_time):
-            relative = tuple(o - p for o, p in zip(object_position, position))
-            if math.hypot(*relative) > Radar.MAX_DISTANCE:
+            relative = object_position - position
+            if relative.length() > Radar.MAX_DISTANCE:
                 continue
             right, up, forward = player.camera_components(relative)
             in_plane = Radar.log_fraction(math.hypot(right, forward))

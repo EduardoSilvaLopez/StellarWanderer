@@ -1,5 +1,4 @@
 from __future__ import annotations
-from cmath import sqrt
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
@@ -85,7 +84,7 @@ class Ship(Updatable):
         hitting_a_rock = False
         for km2 in relevant_km2s:
             for rock in km2.rocks:
-                if sqrt((rock.longitude - player_lon)**2 + (rock.latitude - player_lat)**2).real >= 100:
+                if math.hypot(rock.longitude - player_lon, rock.latitude - player_lat) >= 100:
                     continue
                 delta_x = rock.longitude - player_lon
                 delta_z = rock.latitude - player_lat
@@ -111,7 +110,7 @@ class Ship(Updatable):
         closest_distance = float('inf')
         for km2 in relevant_km2s:
             for field in km2.ore_fields:
-                distance_to_field = math.sqrt((field.longitude - front_lon)**2 + (field.latitude - front_lat)**2)
+                distance_to_field = math.hypot(field.longitude - front_lon, field.latitude - front_lat)
                 if distance_to_field < field.radius and distance_to_field < closest_distance:
                     targeted_field = field
                     closest_distance = distance_to_field

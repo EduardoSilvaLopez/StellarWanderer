@@ -29,7 +29,6 @@ import Player as player_module
 from Persistency.Savefile import Savefile
 from Persistency.StartDialog import StartDialog
 from Graphics.OpenGLGui import OpenGLGui
-from Graphics.Stars import Stars
 from Updating.UpdateQueue import update_queue
 
 WINDOW_TITLE = 'Stellar Wanderer'

@@ -12,7 +12,6 @@ from .LocalStar import LocalStar
 from .NearestWorld import NearestWorld
 from .Rocks import Rocks
 from .Laser import Laser
-from .Stars import Stars
 
 if TYPE_CHECKING:
     from Player import Player
@@ -26,7 +25,6 @@ class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass."""
 
     def __init__(self) -> None:
-        self.stars = Stars.make_starfield()
         self.world_surface: Optional[pygame.Surface] = None
         self.overlay_surface: Optional[pygame.Surface] = None
         self.world_texture: Optional[int] = None
@@ -39,10 +37,6 @@ class OpenGLGui:
 
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
-        Stars.draw(
-            self.world_surface, self.stars, width, height, player.yaw,
-            player.pitch_angle(environment.nearest_world, environment.date_time),
-        )
         LocalStar.draw(self.world_surface, width, height, environment, player)
         NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
 

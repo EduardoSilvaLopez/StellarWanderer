@@ -1,13 +1,19 @@
 """Shared utilities and texture caching for cockpit instruments."""
 
 from __future__ import annotations
+import math
 import os
 import pygame
-from typing import Optional
+from typing import Optional, Tuple, TYPE_CHECKING
+from Vector3 import Vector3
 from ..Constants import (
     CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     CONSOLE, HULL_EDGE_COLOR, HULL_DARK, READOUT_BG, CONSOLE_EDGE_COLOR,
+    VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP,
 )
+
+if TYPE_CHECKING:
+    from Player import Player
 
 
 _cockpit_background: Optional[pygame.Surface] = None
@@ -23,6 +29,31 @@ def format_compact_distance(meters: float) -> str:
         if abs(value) < 1_000_000 or symbol == 'Pm':
             return f'{value} {symbol}'
     return f'{value} {symbol}'
+
+
+def view_geometry(h: int, horizon_fraction: float = 0.5) -> Tuple[int, int, float]:
+    """(view_h, horizon_y, focal_length_px) for a view of window height h.
+
+    horizon_fraction places the horizon within view_h; 0.5 is used by
+    draw_surface, ObjectLabels and LocalStar. NearestWorld.draw_rocks/
+    draw_ore_fields pass 0.52 instead — kept as a parameter so either
+    value is preserved without forcing a behavior change.
+    """
+    view_h = int(h * CONSOLE_TOP)
+    horizon_y = int(view_h * horizon_fraction)
+    focal_length_px = (view_h * 0.5) / math.tan(VIEW_VERTICAL_FOV_RADIANS * 0.5)
+    return view_h, horizon_y, focal_length_px
+
+
+def project_to_camera(player: Player, vector: Vector3, w: int, horizon_y: int, focal_length_px: float) -> Optional[Tuple[float, float]]:
+    """Pinhole-project a direction (in the frame consumed by player.camera_components)
+    onto the screen. Returns None if the direction is behind the near-clip plane."""
+    right, cam_up, cam_forward = player.camera_components(vector)
+    if cam_forward <= NEAR_CLIP:
+        return None
+    screen_x = w / 2 + focal_length_px * right / cam_forward
+    screen_y = horizon_y - focal_length_px * cam_up / cam_forward
+    return screen_x, screen_y
 
 
 def get_cockpit_background(w: int, h: int) -> pygame.Surface:

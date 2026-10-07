@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import pygame
 from .DeepSpace import DeepSpace
-from .Stars import Stars
 from .NearestWorld import NearestWorld
 from .Cockpit import Cockpit
 from .Constants import SPACE_COLOR
@@ -22,10 +21,6 @@ if TYPE_CHECKING:
 
 class Gui:
     """Main cockpit graphics orchestrator."""
-
-    def __init__(self) -> None:
-        """Initialize the GUI with a starfield."""
-        self.stars = Stars.make_starfield()
 
     def draw(self, surface: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
         """Draw the complete cockpit view.
@@ -48,7 +43,6 @@ class Gui:
 
         # Draw space and celestial objects
         DeepSpace.draw(surface, w, h)
-        Stars.draw(surface, self.stars, w, h, player.yaw)
         NearestWorld.draw(surface, w, h, environment, player)
 
         # Draw cockpit frame and instruments
@@ -63,7 +57,6 @@ def draw(surface: pygame.Surface, fonts: Any, environment: GameEnvironment, play
     Args:
         surface: Pygame surface to draw on
         fonts: Font manager
-        stars: Pre-generated starfield (unused, uses Gui's own)
         environment: Game environment
         player: Player object
     """

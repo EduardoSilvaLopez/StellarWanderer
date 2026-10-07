@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 import random
 import Galaxies.Constants
 from Galaxies.Orbit import Orbit
+from Galaxies.Politics import PoliticalEntityModule
 if TYPE_CHECKING:
     from Galaxies.Galaxy import Galaxy
 
@@ -38,6 +39,7 @@ class StellarSystem:
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
 
+        self.political_entity = PoliticalEntityModule.THOSE_WHO_SHARE
         self.name: str = self.generate_name(my_random)
 
     def generate_star_type(self, rnd: random.Random) -> tuple:
