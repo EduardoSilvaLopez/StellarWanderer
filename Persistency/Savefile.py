@@ -39,9 +39,7 @@ class Savefile:
             )
         gem.current_environment.nearest_world = current_stellar_system.get_orbit(
                 float(load_object['player']['orbit.number'])
-                ).add_world(
-                    load_object['player']['world.initial_degrees_in_orbit']
-                    )
+                ).worlds[load_object['player']['world.world_idx']]
         gem.current_environment.nearest_world.update_surroundings(
             load_object['player']['position.y'],
             load_object['player']['position.x'],

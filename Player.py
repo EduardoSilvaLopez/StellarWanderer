@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 from typing import TYPE_CHECKING, Optional
 
 from cmath import pi
@@ -64,13 +65,14 @@ class Player:
 
     def serialize(self) -> dict:
         world = gem.current_environment.nearest_world
+        world_idx = world.parent_orbit.worlds.index(world)
         return {
             'time_scale': self.time_scale,
             'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
             'stellar_system.y': world.parent_orbit.parent_stellar_system.y,
             'stellar_system.z': world.parent_orbit.parent_stellar_system.z,
             'orbit.number': world.parent_orbit.number,
-            'world.initial_degrees_in_orbit': world.initial_degrees_in_orbit,
+            'world.world_idx': world_idx,
             'is_bound': self.is_bound,
             'position.x': self.position.x,
             'position.y': self.position.y,
@@ -385,6 +387,7 @@ class Player:
         logger.info(f"        World|  {stellar_pos[0]}  |  {stellar_pos[1]}  |  {stellar_pos[2]}")
         logger.info(f"       Player|  {surface_vel[0]}  |  {surface_vel[1]}  |  {surface_vel[2]}")
 
+        self.ship.set_notification(f"Arriving to {world.name}, Citizen Pilot.")
         self.is_bound = True
         return self
 
@@ -429,6 +432,8 @@ class Player:
         )
         self.position.x, self.position.y, self.position.z = player_pos
         self.velocity.x, self.velocity.y, self.velocity.z = player_vel
+
+        self.ship.set_notification(f"Leaving {world.name}, Citizen Pilot.")
         self.is_bound = False
         return self
 

@@ -30,7 +30,7 @@ class Ship(Updatable):
         self.notification: str
         self.next_update_at: Optional[datetime] = None
 
-        self.set_notification("Welcome, Comrade Commander.")
+        self.set_notification("Welcome, Citizen Pilot.")
 
     @staticmethod
     def load(owner: Player, src: dict) -> Ship:

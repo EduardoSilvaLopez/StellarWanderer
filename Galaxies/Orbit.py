@@ -19,9 +19,6 @@ class Orbit:
         self.seed: int = (self.number + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
-        self.distance_from_star: int = self.calculate_distance_from_star(my_random)
-        self.worlds: List[World] = []
-
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
         alterations_key: str = self.get_alterations_key()
@@ -29,6 +26,19 @@ class Orbit:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
+
+        self.distance_from_star: int = self.calculate_distance_from_star(my_random)
+
+        self.worlds: List[World] = []
+        world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1) # >1 is extraordinary!
+
+        first_degrees = my_random.random() * 360.0
+        first_world = World(self, first_degrees, self.saved_alterations)
+        self.worlds.append(first_world)
+        if world_count > 1:
+            second_degrees = (first_degrees + 180) % 360
+            second_world = World(self, second_degrees, self.saved_alterations)
+            self.worlds.append(second_world)
 
     def calculate_distance_from_star(self, my_random: random) -> float:
         # Tuned to give ~1 AU for orbit number 3 and size of a G-type star.
@@ -51,8 +61,3 @@ class Orbit:
         if alterations == {}:
             return None
         return alterations
-
-    def add_world(self, initial_degrees_in_orbit: int) -> World:
-        new_world = World(self, initial_degrees_in_orbit, self.saved_alterations)
-        self.worlds.append(new_world)
-        return new_world

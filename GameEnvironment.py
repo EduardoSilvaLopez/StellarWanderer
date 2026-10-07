@@ -21,7 +21,6 @@ class GameEnvironment:
 
         current_system: StellarSystem = self.galaxy.add_stellar_system(26000, 0, 0)
         current_orbit: Orbit = current_system.orbits[int(len(current_system.orbits) / 2)]
-        current_orbit.add_world(0)
         self.nearest_world = current_orbit.worlds[0]
         logger.info(f"Initial planet's radius: {self.nearest_world.radius}")
 

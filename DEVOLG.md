@@ -164,6 +164,7 @@ Big leap but it does not work right now as intended: the movements are not corre
 - Many GUI improvements including radar and distance to objects in the window.
 - Create more than one orbit.
 
+### 2026-10-07 (9/9) 12:45 - 
 Extra time: 5h30'
 - Create automatically at least one world per orbit. Load and save correctly, no more "add".
 - Show the other planets in the sky.
