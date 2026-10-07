@@ -29,7 +29,7 @@ class PoliticalInfo:
 
         # Calculate layout
         icon_size = PoliticalInfo.ICON_MAX_SIZE
-        available_width = w * 0.15  # Allocate roughly 15% of screen width
+        available_width = icon_size + 20  # Width constrained by icon
 
         # Start with max font size and reduce if needed
         font_size = PoliticalInfo.MAX_FONT_SIZE
@@ -40,8 +40,8 @@ class PoliticalInfo:
             font = fonts.get(font_size)
             text_surface = font.render(entity.name, True, entity.color)
 
-            # Check if text fits in available space (with small margin)
-            if text_surface.get_width() + icon_size + 20 <= available_width:
+            # Check if text fits within icon width
+            if text_surface.get_width() <= available_width:
                 break
 
             font_size -= 2
@@ -50,15 +50,12 @@ class PoliticalInfo:
         x_base = PoliticalInfo.PADDING
         y_base = PoliticalInfo.PADDING
 
-        # Draw icon
+        # Draw text on top, centered
+        text_x = x_base + (icon_size - text_surface.get_width()) // 2
+        surface.blit(text_surface, (text_x, y_base))
+
+        # Draw icon below text
         if entity.icon is not None:
             scaled_icon = pygame.transform.scale(entity.icon, (icon_size, icon_size))
-            surface.blit(scaled_icon, (x_base, y_base))
-
-            # Draw text next to icon, vertically centered
-            text_x = x_base + icon_size + 15
-            text_y = y_base + (icon_size - text_surface.get_height()) // 2
-            surface.blit(text_surface, (text_x, text_y))
-        else:
-            # Fallback: just draw text if no icon
-            surface.blit(text_surface, (x_base, y_base))
+            icon_y = y_base + text_surface.get_height() + 10
+            surface.blit(scaled_icon, (x_base, icon_y))
