@@ -122,10 +122,10 @@ def main() -> None:
 
         logger.debug("New game created.")
         elapsed = 0.0
-
     gui = OpenGLGui()
     
     running = True
+    player_module.current_player.ship.set_notification(f"Welcome, {player_module.current_player.get_title()} Pilot.")
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

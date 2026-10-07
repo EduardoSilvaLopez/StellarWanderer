@@ -2,6 +2,7 @@ import datetime
 import logging
 from typing import Optional
 from Galaxies.Galaxy import Galaxy
+from Galaxies.StellarSystem import StellarSystem
 from Galaxies.World import World
 
 logger = logging.getLogger(__name__)
@@ -14,13 +15,13 @@ class GameEnvironment:
         if (saved_alterations): saved_alterations['date_time'] = date_time
         self.galaxy: Galaxy = Galaxy(galactic_seed, saved_alterations)
         self.nearest_world: World = None
+        self.nearest_system: StellarSystem = None
 
     def generate_default(self) -> None:
-        from Galaxies.StellarSystem import StellarSystem
         from Galaxies.Orbit import Orbit
 
-        current_system: StellarSystem = self.galaxy.add_stellar_system(26000, 0, 0)
-        current_orbit: Orbit = current_system.orbits[int(len(current_system.orbits) / 2)]
+        self.nearest_system = self.galaxy.add_stellar_system(26000, 0, 0)
+        current_orbit: Orbit = self.nearest_system.orbits[int(len(self.nearest_system.orbits) / 2)]
         self.nearest_world = current_orbit.worlds[0]
         logger.info(f"Initial planet's radius: {self.nearest_world.radius}")
 

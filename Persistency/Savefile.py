@@ -32,12 +32,12 @@ class Savefile:
         logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
         from Galaxies.StellarSystem import StellarSystem
-        current_stellar_system: StellarSystem = gem.current_environment.galaxy.add_stellar_system(
+        gem.current_environment.nearest_system = gem.current_environment.galaxy.add_stellar_system(
             load_object['player']['stellar_system.x'],
             load_object['player']['stellar_system.y'],
             load_object['player']['stellar_system.z']
             )
-        gem.current_environment.nearest_world = current_stellar_system.get_orbit(
+        gem.current_environment.nearest_world = gem.current_environment.nearest_system.get_orbit(
                 float(load_object['player']['orbit.number'])
                 ).worlds[load_object['player']['world.world_idx']]
         gem.current_environment.nearest_world.update_surroundings(

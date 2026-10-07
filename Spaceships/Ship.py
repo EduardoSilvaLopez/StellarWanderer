@@ -26,10 +26,8 @@ class Ship(Updatable):
         self.owner = owner
         self.laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
-        self.notification: str
+        self.notification: str = str()
         self.next_update_at: Optional[datetime] = None
-
-        self.set_notification("Welcome, Citizen Pilot.")
 
     @staticmethod
     def load(owner: Player, src: dict) -> Ship:

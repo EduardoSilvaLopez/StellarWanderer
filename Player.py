@@ -111,7 +111,10 @@ class Player:
             'velocity.yaw': self.velocity.yaw,
             'velocity.pitch': self.velocity.pitch,
             'velocity.roll': self.velocity.roll,
-            'ship': self.ship.serialize()
+            'ship': self.ship.serialize(),
+            'political_status': {
+                'Those-Who-Share': self.political_status[PoliticalEntityModule.THOSE_WHO_SHARE].serialize()
+            }
         }
 
     @staticmethod
@@ -137,6 +140,16 @@ class Player:
                 .get_km2_at(result.position.x, result.position.z)
 
         result.ship = Ship.load(result, loaded_attributes['ship'])
+
+        result.political_status = {}
+        from Galaxies.Politics.PersonalStatusModule import PersonalStatus
+        import Galaxies.Politics.PoliticalEntityModule as pem
+        for entity_name, values in loaded_attributes['political_status'].items():
+            if entity_name == pem.THOSE_WHO_SHARE.name:
+                new_status: PersonalStatus = PersonalStatus
+                new_status.reputation = loaded_attributes['political_status'][entity_name]['reputation']
+                result.political_status[PoliticalEntityModule.THOSE_WHO_SHARE] = new_status
+
         return result
 
 
@@ -404,7 +417,7 @@ class Player:
         logger.info(f"        World|  {stellar_pos[0]}  |  {stellar_pos[1]}  |  {stellar_pos[2]}")
         logger.info(f"       Player|  {surface_vel[0]}  |  {surface_vel[1]}  |  {surface_vel[2]}")
 
-        self.ship.set_notification(f"Arriving to {world.name}, Citizen Pilot.")
+        self.ship.set_notification(f"Arriving to {world.name}, {self.get_title()} Pilot.")
         self.is_bound = True
         return self
 
@@ -455,7 +468,7 @@ class Player:
         self.position.x, self.position.y, self.position.z = player_pos
         self.velocity.x, self.velocity.y, self.velocity.z = player_vel
 
-        self.ship.set_notification(f"Leaving {world.name}, Citizen Pilot.")
+        self.ship.set_notification(f"Leaving {world.name}, {self.get_title()} Pilot.")
         self.is_bound = False
         return self
 
@@ -473,5 +486,12 @@ class Player:
         world_vel_basis = Vector3(world_vel.x, -world_vel.y, world_vel.z)
         total = world_vel_basis + east_hat * (spin_speed + self.velocity.x) + up_hat * self.velocity.y + north_hat * self.velocity.z
         return Vector3(total.x, -total.y, total.z)
+
+    def get_title(self) -> str:
+        from Galaxies.Politics.PoliticalEntityModule import PoliticalEntity
+        entity: PoliticalEntity = gem.current_environment.nearest_system.political_entity
+        from Galaxies.Politics.PersonalStatusModule import PersonalStatus
+        status: PersonalStatus = self.political_status[entity]
+        return entity.title_for(status.reputation)
 
 current_player: Player = None

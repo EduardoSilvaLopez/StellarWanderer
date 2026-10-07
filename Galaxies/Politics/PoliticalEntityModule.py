@@ -10,6 +10,21 @@ class PoliticalEntity:
         self.color: tuple = color
         self.icon: Optional[pygame.Surface] = None
         self._load_icon(icon_filename)
+        self.titles = {
+            float('-inf'): 'Prisioner',
+            -100: 'Dependent',
+            -10: 'Student',
+            0: 'Citizen',
+            10: 'Comrade',
+            100: 'Speaker',
+            1000: 'Champion',
+            10000: 'Premier'
+        }
+
+    def title_for(self, reputation: float) -> str:
+        for k in sorted(self.titles, reverse=True):
+            if reputation >= k:
+                return self.titles[k]
 
     def _load_icon(self, icon_filename: str) -> None:
         """Load the icon image from Resources/textures."""
@@ -21,6 +36,6 @@ class PoliticalEntity:
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         "Those-Who-Share",
-        (128, 0, 0),
+        (192, 0, 0),
         "PoliticalEntity.1.png"
     )
