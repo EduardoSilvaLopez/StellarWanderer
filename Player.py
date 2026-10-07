@@ -281,6 +281,8 @@ class Player:
             braking: bool = False
             ) -> Player:
         self.update_coordinates(delta_time, longitude_accel_input, altitude_accel_input, latitude_accel_input, braking)
+        if not self.is_bound:
+            gem.current_environment.refresh_nearest_world(self.position.as_vector())
         world = gem.current_environment.nearest_world
         if self.is_bound and self.position.y > world.radius:
             self.unbind_to(world)
