@@ -137,7 +137,7 @@ class Console:
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
 
-        entity_text = world_font.render(stellar_system.entity_name, True, ACCENT)
+        entity_text = world_font.render(stellar_system.political_entity.name, True, stellar_system.political_entity.color)
         entity_y = world_y + world_text.get_height() + int(height * 0.005)
         surface.blit(entity_text, (coord_x, entity_y))
 
