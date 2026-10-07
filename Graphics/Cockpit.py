@@ -10,6 +10,7 @@ from .Instruments.clock import Clock
 from .Instruments.crosshair import Crosshair
 from .Instruments.political_info import PoliticalInfo
 from .ObjectLabels import ObjectLabels
+from .VelocityMarkers import VelocityMarkers
 
 if TYPE_CHECKING:
     from Player import Player
@@ -34,6 +35,7 @@ class Cockpit:
         import GameEnvironment as gem
         Canopy.draw(surface, w, h)
         Crosshair.draw(surface, w, h)
+        VelocityMarkers.draw(surface, fonts, w, h, player)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player)
         PoliticalInfo.draw(surface, fonts, w, h, player)
         Console.draw(surface, fonts, w, h, player, date_time)

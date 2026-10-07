@@ -322,11 +322,7 @@ class Player:
             braking: If True, ignore all accel inputs and decelerate all axes to zero instead
         """
         if braking:
-            world = gem.current_environment.nearest_world
-            if self.is_bound or self._distance_to_world_centre(world) >= 2 * world.radius:
-                reference = Vector3(0.0, 0.0, 0.0)
-            else:
-                reference = world.calculate_stellar_velocity(gem.current_environment.date_time)
+            reference = self.velocity_reference_frame()
             relative = self.velocity.as_vector() - reference
             speed = relative.length()
             if speed > 0:
@@ -423,6 +419,17 @@ class Player:
 
     def _distance_to_world_centre(self, world: World) -> float:
         return math.dist(self.position.as_vector(), world.calculate_stellar_position(gem.current_environment.date_time))
+
+    def velocity_reference_frame(self) -> Vector3:
+        """Velocity frame that linear braking (S) and the prograde/retrograde HUD
+        markers are both measured against: zero (stellar frame) while bound or
+        farther than 2 world radii from the nearest world's centre; otherwise the
+        nearest world's own stellar velocity, so braking/markers are relative to
+        that world instead of the star. See CLAUDE.md "Ship Attitude and Controls"."""
+        world = gem.current_environment.nearest_world
+        if self.is_bound or self._distance_to_world_centre(world) >= 2 * world.radius:
+            return Vector3(0.0, 0.0, 0.0)
+        return world.calculate_stellar_velocity(gem.current_environment.date_time)
 
     def speed_relative_to_world(self, world: World) -> float:
         """Speed relative to the world, in m/s. While bound the velocity is already surface-relative."""
