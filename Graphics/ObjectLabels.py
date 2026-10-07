@@ -1,4 +1,4 @@
-"""Labels for visible objects (star and world) showing name and compact distance."""
+"""Labels for visible objects (star and all worlds) showing name and compact distance."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class ObjectLabels:
-    """Render name and distance labels for visible objects (star and nearest world)."""
+    """Render name and distance labels for visible objects (star and all worlds in the stellar system)."""
 
     LABEL_OFFSET_X = 20  # pixels right of object center
     LABEL_OFFSET_Y = -20  # pixels above object center
@@ -39,15 +39,17 @@ class ObjectLabels:
                 int(screen_x), int(screen_y)
             )
 
-        # Draw world label
-        world_vector = world.calculate_stellar_position(environment.date_time) - player.position.as_vector()
-        projected = project_to_camera(player, world_vector, w, horizon_y, focal_length_px)
-        if projected is not None:
-            screen_x, screen_y = projected
-            ObjectLabels._draw_label(
-                surface, label_font, world.name, format_compact_distance(world_vector.length()),
-                int(screen_x), int(screen_y)
-            )
+        # Draw labels for all worlds in the stellar system
+        for orbit in star.orbits:
+            for world_obj in orbit.worlds:
+                world_vector = world_obj.calculate_stellar_position(environment.date_time) - player.position.as_vector()
+                projected = project_to_camera(player, world_vector, w, horizon_y, focal_length_px)
+                if projected is not None:
+                    screen_x, screen_y = projected
+                    ObjectLabels._draw_label(
+                        surface, label_font, world_obj.name, format_compact_distance(world_vector.length()),
+                        int(screen_x), int(screen_y)
+                    )
 
     @staticmethod
     def _draw_label(surface: pygame.Surface, font, name: str, distance: str, center_x: int, center_y: int) -> None:
