@@ -137,9 +137,17 @@ class Console:
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
 
-        entity_text = world_font.render(stellar_system.political_entity.name, True, stellar_system.political_entity.color)
         entity_y = world_y + world_text.get_height() + int(height * 0.005)
+        entity_text = world_font.render(stellar_system.political_entity.name, True, stellar_system.political_entity.color)
         surface.blit(entity_text, (coord_x, entity_y))
+
+        # Draw icon next to entity name if available
+        if stellar_system.political_entity.icon is not None:
+            icon_size = int(world_font.get_height() * 1.2)
+            scaled_icon = pygame.transform.scale(stellar_system.political_entity.icon, (icon_size, icon_size))
+            icon_x = coord_x + entity_text.get_width() + int(w * 0.01)
+            icon_y = entity_y + (entity_text.get_height() - icon_size) // 2
+            surface.blit(scaled_icon, (icon_x, icon_y))
 
         # Position readouts
         coord_y = entity_y + entity_text.get_height() + int(height * 0.04)
