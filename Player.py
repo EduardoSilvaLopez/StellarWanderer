@@ -91,6 +91,7 @@ class Player:
     def serialize(self) -> dict:
         world = gem.current_environment.nearest_world
         world_idx = world.parent_orbit.worlds.index(world)
+        those_who_share_status = self.political_status[PoliticalEntityModule.THOSE_WHO_SHARE]
         return {
             'time_scale': self.time_scale,
             'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
@@ -113,7 +114,7 @@ class Player:
             'velocity.roll': self.velocity.roll,
             'ship': self.ship.serialize(),
             'political_status': {
-                'Those-Who-Share': self.political_status[PoliticalEntityModule.THOSE_WHO_SHARE].serialize()
+                'Those-Who-Share': those_who_share_status.serialize()
             }
         }
 
@@ -146,8 +147,7 @@ class Player:
         import Galaxies.Politics.PoliticalEntityModule as pem
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == pem.THOSE_WHO_SHARE.name:
-                new_status: PersonalStatus = PersonalStatus
-                new_status.reputation = loaded_attributes['political_status'][entity_name]['reputation']
+                new_status = PersonalStatus.deserialize(loaded_attributes['political_status'][entity_name])
                 result.political_status[PoliticalEntityModule.THOSE_WHO_SHARE] = new_status
 
         return result
