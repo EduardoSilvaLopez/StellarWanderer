@@ -145,11 +145,11 @@ Move away from world. This includes the sphere-to-rectangle transformation and t
 - Trigger "unbind" when alt = radius. Just log it.
 - Trigger "bind" when alt = radius / 2. Just log it.
 
-### 2026-10-04
+### 2026-10-04 (6/9)
 
 Big leap but it does not work right now as intended: the movements are not correct, "s" does not reduce pitch. q/r should change the orientation relative to ship current left-right-forward-backward plane (it does not). left-right-forward-backward should also be relative to the ships orientation and pitch.
 
-### 2026-10-05
+### 2026-10-05 (7/9)
 
 - Alt bar, orientation and world map disappear when unbound - and back.
 - Altitude, latitude and longitude are renamed to x/y/z when unbound - and back.
@@ -160,23 +160,26 @@ Big leap but it does not work right now as intended: the movements are not corre
 - Move the world. Make approximation playable (break relative to planet).
 - Binding bar shows the current distance-to-nearest-planet, velocity, radius and binding altitude.
 
-Extra time: 6h00'
-### 2026-10-06 19:45-
+### 2026-10-06 (8/9)
+- Many GUI improvements including radar and distance to objects in the window.
+- Create more than one orbit.
 
-- ⁠Create more than one orbit, each with one world.
+Extra time: 5h30'
+- Create automatically at least one world per orbit. Load and save correctly, no more "add".
 - Show the other planets in the sky.
+- Hide / eliminate the current "stars".
 
 BACKLOG
 - PLANETS AND MOONS
 - TRAVELLING TO ANOTHER MOON
 - TRADE POSTS
-- Create the other orbits, with planets (asteroids would require a radar, if realistic).
-- Allow travel to the sun and other planets. Create the concept of forbidden area (too near the star).
-- Make the real stars around the one we are.
-- Allow travel to other stellar systems.
+- TRAVEL TO THE SUN (forbidden areas)
+- ASTEROIDS
+- REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
+- INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
 - https://github.com/obra/superpowers#how-it-works
-- Create Jovian planets, with a forbidden area.
-- Make the worlds real spheres.
+- JOVIAN PLANETS (with forbidden area)
+- SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
 
 ### Learning Python:
 

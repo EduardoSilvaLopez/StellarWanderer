@@ -19,7 +19,6 @@ class StellarSystem:
         self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.radius = self.generate_star_type(my_random)
-        self.orbits: List[Orbit] = []
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -29,6 +28,16 @@ class StellarSystem:
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
         
+        orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
+        # the first-ever system must have an orbit.
+        if orbits_count == 0:
+            if (x, y, z) == (26000, 0, 0): # Original stellar system.
+                orbits_count = 1
+        self.orbits: List[Orbit] = []
+        for orbit_number in range(1, orbits_count+1):
+            new_orbit = Orbit(self, orbit_number, self.saved_alterations)
+            self.orbits.append(new_orbit)
+
         self.name: str = self.generate_name(my_random)
 
     def generate_star_type(self, rnd: random.Random) -> tuple:
@@ -99,7 +108,5 @@ class StellarSystem:
 
         return name.capitalize()
 
-    def add_orbit(self, number: float) -> Orbit:
-        new_orbit = Orbit(self, number, self.saved_alterations)
-        self.orbits.append(new_orbit)
-        return new_orbit
+    def get_orbit(self, number: float) -> Orbit:
+        return next((orbit for orbit in self.orbits if orbit.number == number), None)

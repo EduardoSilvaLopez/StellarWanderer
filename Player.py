@@ -78,10 +78,10 @@ class Player:
             'velocity.x': self.velocity.x,
             'velocity.y': self.velocity.y,
             'velocity.z': self.velocity.z,
-            'velocity.yaw': self.velocity.yaw,
             'attitude.right': list(self.right),
             'attitude.up': list(self.up),
             'attitude.forward': list(self.forward),
+            'velocity.yaw': self.velocity.yaw,
             'velocity.pitch': self.velocity.pitch,
             'velocity.roll': self.velocity.roll,
             'ship': self.ship.serialize()
