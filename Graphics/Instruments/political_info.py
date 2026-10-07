@@ -29,29 +29,33 @@ class PoliticalInfo:
 
         # Calculate layout
         icon_size = PoliticalInfo.ICON_MAX_SIZE
-        available_width = icon_size + 20  # Width constrained by icon
+        x_base = PoliticalInfo.PADDING
+        y_base = PoliticalInfo.PADDING
 
         # Start with max font size and reduce if needed
         font_size = PoliticalInfo.MAX_FONT_SIZE
         text_surface = None
 
-        # Find appropriate font size that fits the entity name
+        # Find appropriate font size that fits within reasonable bounds
+        # Constrain text to be narrower than icon for visual balance
+        max_text_width = icon_size + 40
+
         while font_size >= PoliticalInfo.MIN_FONT_SIZE:
             font = fonts.get(font_size)
             text_surface = font.render(entity.name, True, entity.color)
 
-            # Check if text fits within icon width
-            if text_surface.get_width() <= available_width:
+            if text_surface.get_width() <= max_text_width:
                 break
 
-            font_size -= 2
+            font_size -= 1
 
-        # Calculate positions
-        x_base = PoliticalInfo.PADDING
-        y_base = PoliticalInfo.PADDING
+        # Ensure we have a valid text surface
+        if text_surface is None:
+            font = fonts.get(PoliticalInfo.MIN_FONT_SIZE)
+            text_surface = font.render(entity.name, True, entity.color)
 
-        # Draw text on top, centered
-        text_x = x_base + (icon_size - text_surface.get_width()) // 2
+        # Draw text on top, centered (but don't let it go negative)
+        text_x = max(x_base, x_base + (icon_size - text_surface.get_width()) // 2)
         surface.blit(text_surface, (text_x, y_base))
 
         # Draw icon below text
