@@ -29,6 +29,7 @@ class OpenGLGui:
         self.overlay_surface: Optional[pygame.Surface] = None
         self.world_texture: Optional[int] = None
         self.overlay_texture: Optional[int] = None
+        self._uploaded_textures: set = set()
 
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
         """Render one complete frame into the active OpenGL window."""
@@ -99,6 +100,7 @@ class OpenGLGui:
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.world_texture = self._make_texture(width, height)
             self.overlay_texture = self._make_texture(width, height)
+            self._uploaded_textures = set()
 
     @staticmethod
     def _make_texture(width: int, height: int) -> int:
@@ -108,14 +110,9 @@ class OpenGLGui:
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
-        GL.glTexImage2D(
-            GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, width, height, 0,
-            GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, None
-        )
         return texture
 
-    @staticmethod
-    def _draw_texture(surface: pygame.Surface, texture: int, blend: bool = False) -> None:
+    def _draw_texture(self, surface: pygame.Surface, texture: int, blend: bool = False) -> None:
         width, height = surface.get_size()
         # Keep Pygame's top-to-bottom row order for the top-left screen quad.
         pixels = pygame.image.tostring(surface, 'RGBA', False)
@@ -123,10 +120,24 @@ class OpenGLGui:
         # before drawing either 2D texture.
         GL.glViewport(0, 0, width, height)
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
-        GL.glTexSubImage2D(
-            GL.GL_TEXTURE_2D, 0, 0, 0, width, height,
-            GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
-        )
+        if texture in self._uploaded_textures:
+            # Fast path: texture storage already exists, just update its contents.
+            GL.glTexSubImage2D(
+                GL.GL_TEXTURE_2D, 0, 0, 0, width, height,
+                GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
+            )
+        else:
+            # First upload: allocate storage and fill it in the same call. Allocating
+            # blank storage (glTexImage2D with no data) and sub-imaging it in the very
+            # next call, within the same frame, raced on some drivers and left parts
+            # of the texture stale until something forced a full texture recreation
+            # (e.g. a window resize) — symptoms were specific small UI regions missing
+            # on the first rendered frame only.
+            GL.glTexImage2D(
+                GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, width, height, 0,
+                GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
+            )
+            self._uploaded_textures.add(texture)
         if blend:
             GL.glEnable(GL.GL_BLEND)
             GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)

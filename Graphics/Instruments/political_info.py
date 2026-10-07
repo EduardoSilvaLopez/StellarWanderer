@@ -3,13 +3,14 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
+from ..Constants import CANOPY_TOP
 
 if TYPE_CHECKING:
     from Player import Player
 
 
 class PoliticalInfo:
-    """Display political entity name (above) and icon (below) in the top-left corner."""
+    """Display political entity name (above) and icon (below) in the top-left corner, below the canopy's top rail."""
 
     PADDING = 20  # pixels from screen edges
     ICON_SIZE = 120  # icon size in pixels
@@ -18,7 +19,7 @@ class PoliticalInfo:
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
-        """Draw political entity info in the top-left corner."""
+        """Draw political entity info in the top-left corner, under the canopy's top rail."""
         import GameEnvironment as gem
 
         stellar_system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
@@ -28,7 +29,7 @@ class PoliticalInfo:
             return
 
         x = PoliticalInfo.PADDING
-        y = PoliticalInfo.PADDING
+        y = int(h * CANOPY_TOP) + PoliticalInfo.PADDING
 
         text_surface = fonts.render_to_fit(entity.name, entity.color, PoliticalInfo.ICON_SIZE, PoliticalInfo.MAX_FONT_SIZE)
         text_x = x + (PoliticalInfo.ICON_SIZE - text_surface.get_width()) // 2
