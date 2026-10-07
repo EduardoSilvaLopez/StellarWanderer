@@ -155,7 +155,7 @@ class NearestWorld:
         matching lateral face, and size falls off with true forward depth rather
         than straight-line distance.
         """
-        _, horizon_y, focal_length_px = view_geometry(h, horizon_fraction=0.52)
+        _, horizon_y, focal_length_px = view_geometry(h)
 
         player_x = player.position.x
         player_z = player.position.z
@@ -259,7 +259,7 @@ class NearestWorld:
         Ore fields are 2D circles centered at (x, z) on the ground (y=0),
         projected using the same perspective as rocks.
         """
-        _, horizon_y, focal_length_px = view_geometry(h, horizon_fraction=0.52)
+        _, horizon_y, focal_length_px = view_geometry(h)
 
         player_x = player.position.x
         player_z = player.position.z
