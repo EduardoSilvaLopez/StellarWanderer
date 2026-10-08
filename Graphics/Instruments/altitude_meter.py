@@ -35,8 +35,15 @@ class AltitudeMeter:
 
         # Meter spans from surface (altitude=0) to unbinding altitude (altitude=0.1x radius)
         # The unbinding threshold is at 0.1 * radius altitude
+        altitude_above_surface = player.altitude_above_surface(world)
         max_altitude = world.radius / 10.0
-        distance_fraction = player.altitude_above_surface(world) / max_altitude if max_altitude > 0 else 0
+        distance_fraction = altitude_above_surface / max_altitude if max_altitude > 0 else 0
+
+        # DEBUG: log the calculation values
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"AltitudeMeter: altitude={altitude_above_surface:.1f}, radius={world.radius:.1f}, max={max_altitude:.1f}, fraction={distance_fraction:.4f}")
+
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
