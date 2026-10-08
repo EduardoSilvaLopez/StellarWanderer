@@ -4,7 +4,7 @@ import math
 from typing import Optional
 from Galaxies.Galaxy import Galaxy
 from Galaxies.StellarSystem import StellarSystem
-from Galaxies.World import World
+from Galaxies.world import World
 from Vector3 import Vector3
 
 logger = logging.getLogger(__name__)

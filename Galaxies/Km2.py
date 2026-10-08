@@ -13,13 +13,13 @@ from Galaxies.Rock import Rock
 from Galaxies.OreField import OreField
 
 if TYPE_CHECKING:
-    from Galaxies.World import World
+    from Galaxies.planet import Planet
 
 class Km2:
 
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
-    def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict):
+    def __init__(self, parent_world: Planet, longitude: int, latitude: int, saved_alterations: dict):
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude

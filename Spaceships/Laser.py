@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import math
 if TYPE_CHECKING:
     from Spaceships.Ship import Ship
-    from Galaxies.World import World
+    from Galaxies.planet import Planet
     from Galaxies.Km2 import Km2
     from Galaxies.Rock import Rock
     from Galaxies.OreMine import OreMine
@@ -106,7 +106,7 @@ class Laser:
 
         '''If no rock but a mine, transfer the ore to the ship.'''
         if not self.hitting_rock and self.targeted_mine:
-            world: World = gem.current_environment.nearest_world
+            world: Planet = gem.current_environment.nearest_world
             tgt_mine: OreMine = self.get_hit_mine(world)
             if tgt_mine is not None and tgt_mine[0].content > 0:
                 self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += tgt_mine[0].content
@@ -120,7 +120,7 @@ class Laser:
         self.firing = False
         self.hitting_rock = None
 
-    def _relevant_km2(self, world: World) -> List[Km2]:
+    def _relevant_km2(self, world: Planet) -> List[Km2]:
         '''Exclude fully irrelevant km2s based on the player's position and the laser's length. This is a rough filter to avoid unnecessary checks.'''
         if (self.ship.owner.position.y < 0):
             raise ValueError("Laser's ship is below the surface of the world.")
@@ -136,7 +136,7 @@ class Laser:
             relevant_km2.append(km2)
         return relevant_km2
 
-    def get_hit_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
+    def get_hit_rock(self, world: Planet) -> Optional[Tuple[Rock, float]]:
         ''' Returns the closest rock currently in the beam's path, and its t_value, regardless of firing state.'''
         relevant_km2 = self._relevant_km2(world)
 
@@ -151,7 +151,7 @@ class Laser:
                 hit_at_t_value = t_value
         return (hit_rock, hit_at_t_value) if hit_rock else None
 
-    def get_hit_mine(self, world: World) -> Optional[Tuple[OreMine, float]]:
+    def get_hit_mine(self, world: Planet) -> Optional[Tuple[OreMine, float]]:
         ''' Returns the closest ore mine currently in the beam's path, and its t_value, regardless of firing state.'''
         relevant_km2 = self._relevant_km2(world)
 

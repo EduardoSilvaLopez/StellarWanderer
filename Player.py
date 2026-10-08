@@ -10,12 +10,12 @@ import logging
 from Galaxies.Politics import PoliticalEntityModule
 from Galaxies.Politics.PersonalStatusModule import PersonalStatus
 from Vector3 import Vector3, rotate_2d
-from Galaxies.World import World; logger = logging.getLogger(__name__)
+from Galaxies.planet import Planet; logger = logging.getLogger(__name__)
 from Galaxies.Km2 import Km2
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
 if TYPE_CHECKING:
-    from Galaxies.World import World
+    from Galaxies.planet import Planet
 
 
 @dataclass
@@ -67,7 +67,7 @@ class Player:
         self.political_status: dict = {}
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
-        from Galaxies.World import World
+        from Galaxies.planet import Planet
         ''' Spawn the player in the given environment, just using the first place we find.'''
         self.is_bound = True
         environment.nearest_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
@@ -234,28 +234,28 @@ class Player:
         """Heading in degrees clockwise from north, from the ship's forward axis."""
         return math.degrees(math.atan2(self.forward[0], self.forward[2])) % 360
 
-    def _up_reference(self, world: World, current_datetime: datetime) -> Vector3:
+    def _up_reference(self, world: Planet, current_datetime: datetime) -> Vector3:
         """Local "up" direction (opposite of direction_down); shared by pitch_angle and roll_angle."""
         return -self.direction_down(world, current_datetime)
 
-    def pitch_angle(self, world: World, current_datetime: datetime) -> float:
+    def pitch_angle(self, world: Planet, current_datetime: datetime) -> float:
         """Nose-up angle in degrees above the local horizon."""
         up_reference = self._up_reference(world, current_datetime)
         return math.degrees(math.asin(max(-1.0, min(1.0, self.forward.dot(up_reference)))))
 
-    def roll_angle(self, world: World, current_datetime: datetime) -> float:
+    def roll_angle(self, world: Planet, current_datetime: datetime) -> float:
         """Right-wing-down angle in degrees relative to the local horizon."""
         up_reference = self._up_reference(world, current_datetime)
         return math.degrees(math.atan2(-self.right.dot(up_reference), self.up.dot(up_reference)))
 
-    def direction_down(self, world: World, current_datetime: datetime) -> Vector3:
+    def direction_down(self, world: Planet, current_datetime: datetime) -> Vector3:
         """Unit vector from the ship towards the planet's surface, in the active frame."""
         if self.is_bound:
             return Vector3(0.0, -1.0, 0.0)
         centre = world.calculate_stellar_position(current_datetime)
         return (centre - self.position.as_vector()).normalized()
 
-    def direction_to_star(self, world: World, current_datetime: datetime) -> Vector3:
+    def direction_to_star(self, world: Planet, current_datetime: datetime) -> Vector3:
         if self.is_bound:
             return world.calculate_star_position(self, current_datetime)
         return -self.position.as_vector()
@@ -383,7 +383,7 @@ class Player:
         self.velocity.y = max(-(self.position.y - self.ship.HEIGHT), self.velocity.y)
         return self
 
-    def bind_to(self, world: World) -> Player:
+    def bind_to(self, world: Planet) -> Player:
         # NOTE: intentionally yaw-only. Binding snaps the ship level, discarding any
         # pitch/roll it had while unbound — a ship always lands/binds level. This is
         # NOT a bug and is asymmetric with unbind_from below by design; see CLAUDE.md
@@ -421,7 +421,7 @@ class Player:
         self.is_bound = True
         return self
 
-    def _distance_to_world_centre(self, world: World) -> float:
+    def _distance_to_world_centre(self, world: Planet) -> float:
         return math.dist(self.position.as_vector(), world.calculate_stellar_position(gem.current_environment.date_time))
 
     def velocity_reference_frame(self) -> Vector3:
@@ -435,7 +435,7 @@ class Player:
             return Vector3(0.0, 0.0, 0.0)
         return world.calculate_stellar_velocity(gem.current_environment.date_time)
 
-    def speed_relative_to_world(self, world: World) -> float:
+    def speed_relative_to_world(self, world: Planet) -> float:
         """Speed relative to the world, in m/s. While bound the velocity is already surface-relative."""
         velocity = self.velocity.as_vector()
         if self.is_bound:
@@ -443,12 +443,12 @@ class Player:
         world_velocity = world.calculate_stellar_velocity(gem.current_environment.date_time)
         return math.dist(velocity, world_velocity)
 
-    def altitude_above_surface(self, world: World) -> float:
+    def altitude_above_surface(self, world: Planet) -> float:
         if self.is_bound:
             return self.position.y
         return self._distance_to_world_centre(world) - world.radius
 
-    def unbind_from(self, world: World) -> Player:
+    def unbind_from(self, world: Planet) -> Player:
         # NOTE: intentionally preserves the full right/up/forward attitude, round-tripping
         # all three axes through World.surface_vector_to_stellar — the counterpart to
         # bind_to's intentional yaw-only snap above. This is NOT a bug; see CLAUDE.md
@@ -483,13 +483,13 @@ class Player:
         self.is_bound = False
         return self
 
-    def calculate_stellar_position(self, world: World, world_pos: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
+    def calculate_stellar_position(self, world: Planet, world_pos: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
         _, up_hat, _ = basis
         offset = up_hat * (world.radius + self.position.y)
         # The star-centred basis has Y opposite to the orbital motion, so Y is negated here.
         return Vector3(world_pos.x + offset.x, world_pos.y - offset.y, world_pos.z + offset.z)
 
-    def calculate_stellar_velocity(self, world: World, world_vel: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
+    def calculate_stellar_velocity(self, world: Planet, world_vel: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
         east_hat, up_hat, north_hat = basis
         spin_speed = world.spin_speed_at(self.position.y, self.position.z)
 
