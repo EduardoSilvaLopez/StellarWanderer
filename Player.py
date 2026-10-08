@@ -284,7 +284,7 @@ class Player:
         if not self.is_bound:
             gem.current_environment.refresh_nearest_world(self.position.as_vector())
         world = gem.current_environment.nearest_world
-        if self.is_bound and self.position.y > world.radius:
+        if self.is_bound and self.position.y > 0.1 * world.radius:
             self.unbind_to(world)
         elif not self.is_bound and self._distance_to_world_centre(world) <= Player.BIND_RADIUS_MULTIPLE * world.radius:
             self.bind_to(world)

@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 
 class BindingMeter:
-    """Bar filled by surface distance relative to the world radius, labelled NEAREST.
+    """Altitude meter showing distance from surface to 9x radius altitude, labelled NEAREST.
 
-    Full at a distance of one radius or more. The red mark sits at half-full, the
-    point where the ship binds to the world.
+    Bottom at surface (1x radius from center). Top at 10x radius from center (9x radius altitude).
+    Red mark shows the binding threshold at 1.5x radius (0.5x radius altitude).
     """
 
     @staticmethod
@@ -33,7 +33,8 @@ class BindingMeter:
         bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
         draw_beveled_panel(surface, bar_rect)
 
-        distance_fraction = player.altitude_above_surface(world) / world.radius
+        # Meter spans from surface (1x radius, altitude=0) to 10x radius (altitude=9x radius)
+        distance_fraction = player.altitude_above_surface(world) / (9 * world.radius)
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
@@ -44,7 +45,9 @@ class BindingMeter:
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
 
-        mark_y = bar_rect.bottom - fill_pad - inner_height // 2
+        # Red mark at binding threshold: 1.5x radius = 0.5x radius altitude = 0.5/9 of full scale
+        mark_fraction = (0.5 * world.radius) / (9 * world.radius)
+        mark_y = bar_rect.bottom - fill_pad - int(inner_height * mark_fraction)
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 
         # Green when in the braking zone (within 10x radius, not bound): the reference frame
