@@ -98,10 +98,10 @@ class Console:
         draw_beveled_panel(surface, bar_rect)
 
         import GameEnvironment as gem
-        max_altitude = gem.current_environment.nearest_world.radius
-        min_altitude = player.ship.HEIGHT
-        altitude_range = max_altitude - min_altitude
-        altitude_fraction = (player.position.y - min_altitude) / altitude_range
+        world = gem.current_environment.nearest_world
+        # Meter spans from surface (altitude=0) to unbinding altitude (altitude=0.1x radius)
+        unbinding_altitude = world.radius * 0.1
+        altitude_fraction = player.position.y / unbinding_altitude if unbinding_altitude > 0 else 0
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
 
         fill_pad = 3
