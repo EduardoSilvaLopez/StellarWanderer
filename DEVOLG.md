@@ -164,34 +164,18 @@ Big leap but it does not work right now as intended: the movements are not corre
 - Many GUI improvements including radar and distance to objects in the window.
 - Create more than one orbit.
 
-### 2026-10-07 (9/9) 12:45 - 16:00
+### 2026-10-07 (9/9)
 - Create automatically at least one world per orbit. Load and save correctly, no more "add".
 - Show the other worlds in the sky.
 - Hide / eliminate the current "stars".
 - Wasted a lot of time with the political thing... but ok, title now available, icon.
 
-Stuck here: I cannot seem to be able to reach another world. Until this is resolved, I am not done here.
-
-Hello. I have been testing "abandon the world". It is still hard to match the planet's velocity, but I could get quite near. Therefore, I want to make an experiment. Until now, we have allowed the user to "brake to the world" when it was at 2 x radius. I want to change this to 10 x radius. That makes the "target to hit" larger. Please change that. The "NEAREST" label should glow green, when "brake" is set to use the planet's velocity.
-
-I could land!
-
-We need a redefinition to make this all more playable:
-
-The binding meter changes:
-- Its range should be "from surface (1 x radius) to 10 x radius".
-- The red mark should be at 1.5 radius. Then his mark is reached, binding happens.
-Altitude and unbinding should also change:
-- Unbinding happens at only 1.1 radius from the center of the planet.
-- The altitude bar shows the progress towards this 1.1 radius (altitude = radius / 10)
-- The altitude bar has no marks, as the only event happens when it reaches the top - and then disappears.
-
 ### 2026-10-08 (1/10) 7h + 15:45-
 
-Extra time: 6h30' + 20:15-21:45
-
 - Update "nearest_world" (plan already made)
-... ok, we need more help. Show speed relative to nearest world?
+... ok, we need more help. Show speed relative to nearest world? -> Resolved!
+
+Closing the branch.
 
 BACKLOG
 - PLANETS AND MOONS: Min. radius 300 Km, moon 3474 (is very large), 384Mm distance to Earth (~500 Earth radius)
