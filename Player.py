@@ -47,8 +47,8 @@ class Player:
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
-    BIND_RADIUS_MULTIPLE = 1.5           # bind at or inside this distance from the world's centre, in radii
-    UNBIND_RADIUS_MULTIPLE = 1.1         # unbind beyond this distance from the world's centre, in radii
+    BIND_RADIUS_MULTIPLE = 1.1           # bind at or inside this distance from the world's centre, in radii
+    UNBIND_RADIUS_MULTIPLE = 1.2         # unbind beyond this distance from the world's centre, in radii
     BRAKING_RADIUS_MULTIPLE = 10         # braking/markers use the world's velocity inside this distance, in radii
 
     def __init__(self) -> None:
