@@ -33,10 +33,10 @@ class AltitudeMeter:
         bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
         draw_beveled_panel(surface, bar_rect)
 
-        # Meter spans from surface (altitude=0) to unbinding altitude (altitude=0.1x radius)
-        # The unbinding threshold is at 0.1 * radius altitude
+        # Meter spans from surface (altitude=0) to unbinding altitude
+        from Player import Player
         altitude_above_surface = player.altitude_above_surface(world)
-        max_altitude = world.radius / 10.0
+        max_altitude = world.radius * Player.UNBINDING_ALTITUDE_MULTIPLIER
         distance_fraction = altitude_above_surface / max_altitude if max_altitude > 0 else 0
 
         # DEBUG: log the calculation values
@@ -54,8 +54,8 @@ class AltitudeMeter:
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
 
-        # Red mark at binding threshold: 1.5x radius = 0.05x radius altitude = 0.5 of full scale
-        mark_fraction = 0.05 / 0.1  # 0.05 radius altitude / 0.1 radius range = 0.5
+        # Red mark at binding threshold: 1.5x radius = (UNBINDING_ALTITUDE_MULTIPLIER / 2) of radius altitude
+        mark_fraction = (Player.BIND_RADIUS_MULTIPLE - 1.0) / Player.UNBINDING_ALTITUDE_MULTIPLIER
         mark_y = bar_rect.bottom - fill_pad - int(inner_height * mark_fraction)
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 

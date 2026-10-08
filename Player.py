@@ -48,6 +48,7 @@ class Player:
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
     BIND_RADIUS_MULTIPLE = 1.5
+    UNBINDING_ALTITUDE_MULTIPLIER = 0.1  # Fraction of world radius at which the player unbinds
 
     def __init__(self) -> None:
         self.time_scale: int = 1  # Default time scale
@@ -284,7 +285,7 @@ class Player:
         if not self.is_bound:
             gem.current_environment.refresh_nearest_world(self.position.as_vector())
         world = gem.current_environment.nearest_world
-        if self.is_bound and self.position.y > 0.1 * world.radius:
+        if self.is_bound and self.position.y > Player.UNBINDING_ALTITUDE_MULTIPLIER * world.radius:
             self.unbind_from(world)
         elif not self.is_bound and self._distance_to_world_centre(world) <= Player.BIND_RADIUS_MULTIPLE * world.radius:
             self.bind_to(world)
