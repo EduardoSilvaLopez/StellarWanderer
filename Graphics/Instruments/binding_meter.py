@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 
 class BindingMeter:
-    """Altitude meter showing distance from surface to 9x radius altitude, labelled NEAREST.
+    """Altitude meter showing the delicate low-altitude zone, labelled NEAREST.
 
-    Bottom at surface (1x radius from center). Top at 10x radius from center (9x radius altitude).
-    Red mark shows the binding threshold at 1.5x radius (0.5x radius altitude).
+    Bottom at surface (0 altitude). Top at 0.1x radius altitude (unbinding threshold).
+    Red mark shows the binding threshold at 0.05x radius altitude (1.5x radius distance).
     """
 
     @staticmethod
@@ -33,8 +33,8 @@ class BindingMeter:
         bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
         draw_beveled_panel(surface, bar_rect)
 
-        # Meter spans from surface (1x radius, altitude=0) to 10x radius (altitude=9x radius)
-        distance_fraction = player.altitude_above_surface(world) / (9 * world.radius)
+        # Meter spans from surface (altitude=0) to unbinding altitude (altitude=0.1x radius)
+        distance_fraction = player.altitude_above_surface(world) / (0.1 * world.radius)
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
@@ -45,8 +45,8 @@ class BindingMeter:
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
 
-        # Red mark at binding threshold: 1.5x radius = 0.5x radius altitude = 0.5/9 of full scale
-        mark_fraction = (0.5 * world.radius) / (9 * world.radius)
+        # Red mark at binding threshold: 1.5x radius = 0.05x radius altitude = 0.5 of full scale
+        mark_fraction = 0.05 / 0.1  # 0.05 radius altitude / 0.1 radius range = 0.5
         mark_y = bar_rect.bottom - fill_pad - int(inner_height * mark_fraction)
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 
