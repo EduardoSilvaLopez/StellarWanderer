@@ -50,9 +50,9 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
 - Location-info readouts show yaw, pitch and roll as angle plus rate (Δ, deg/s). `Player.pitch_angle` and `Player.roll_angle` are relative to the local horizon, positive nose up and right wing down.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
-- **`bind_to`/`unbind_to` asymmetry is intentional.** `Player.bind_to` snaps the ship level
+- **`bind_to`/`unbind_from` asymmetry is intentional.** `Player.bind_to` snaps the ship level
   (yaw-only; pitch and roll are discarded) when binding to a world's surface — a ship always
-  starts level on a surface. `Player.unbind_to` instead preserves the ship's full right/up/forward
+  starts level on a surface. `Player.unbind_from` instead preserves the ship's full right/up/forward
   attitude, round-tripping all three axes through `World.surface_vector_to_stellar` — free flight
   keeps whatever attitude the ship had while bound. This asymmetry is correct; do not "fix" it to
   be symmetric.

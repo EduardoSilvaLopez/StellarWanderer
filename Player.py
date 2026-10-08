@@ -285,7 +285,7 @@ class Player:
             gem.current_environment.refresh_nearest_world(self.position.as_vector())
         world = gem.current_environment.nearest_world
         if self.is_bound and self.position.y > 0.1 * world.radius:
-            self.unbind_to(world)
+            self.unbind_from(world)
         elif not self.is_bound and self._distance_to_world_centre(world) <= Player.BIND_RADIUS_MULTIPLE * world.radius:
             self.bind_to(world)
 
@@ -384,7 +384,7 @@ class Player:
     def bind_to(self, world: World) -> Player:
         # NOTE: intentionally yaw-only. Binding snaps the ship level, discarding any
         # pitch/roll it had while unbound — a ship always lands/binds level. This is
-        # NOT a bug and is asymmetric with unbind_to below by design; see CLAUDE.md
+        # NOT a bug and is asymmetric with unbind_from below by design; see CLAUDE.md
         # "Ship Attitude and Controls".
         logger.info(f"Arriving to {world.name}.")
 
@@ -446,7 +446,7 @@ class Player:
             return self.position.y
         return self._distance_to_world_centre(world) - world.radius
 
-    def unbind_to(self, world: World) -> Player:
+    def unbind_from(self, world: World) -> Player:
         # NOTE: intentionally preserves the full right/up/forward attitude, round-tripping
         # all three axes through World.surface_vector_to_stellar — the counterpart to
         # bind_to's intentional yaw-only snap above. This is NOT a bug; see CLAUDE.md
