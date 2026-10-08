@@ -101,7 +101,7 @@ class Console:
         from Player import Player
         world = gem.current_environment.nearest_world
         # Meter spans from surface (altitude=0) to unbinding altitude
-        unbinding_altitude = world.radius * Player.UNBINDING_ALTITUDE_MULTIPLIER
+        unbinding_altitude = world.radius * (Player.UNBIND_RADIUS_MULTIPLE - 1.0)
         altitude_fraction = player.position.y / unbinding_altitude if unbinding_altitude > 0 else 0
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
 
