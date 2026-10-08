@@ -34,7 +34,9 @@ class AltitudeMeter:
         draw_beveled_panel(surface, bar_rect)
 
         # Meter spans from surface (altitude=0) to unbinding altitude (altitude=0.1x radius)
-        distance_fraction = player.altitude_above_surface(world) / (0.1 * world.radius)
+        # The unbinding threshold is at 0.1 * radius altitude
+        max_altitude = world.radius / 10.0
+        distance_fraction = player.altitude_above_surface(world) / max_altitude if max_altitude > 0 else 0
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
