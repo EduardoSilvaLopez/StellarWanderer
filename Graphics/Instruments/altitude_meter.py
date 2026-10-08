@@ -1,4 +1,4 @@
-"""Binding meter: distance from the ship to the nearest world's surface, shown while unbound."""
+"""Altitude meter: displays altitude above the nearest world's surface, shown while unbound."""
 
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from Player import Player
 
 
-class BindingMeter:
+class AltitudeMeter:
     """Altitude meter showing the delicate low-altitude zone, labelled NEAREST.
 
     Bottom at surface (0 altitude). Top at 0.1x radius altitude (unbinding threshold).
