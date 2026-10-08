@@ -425,11 +425,11 @@ class Player:
     def velocity_reference_frame(self) -> Vector3:
         """Velocity frame that linear braking (S) and the prograde/retrograde HUD
         markers are both measured against: zero (stellar frame) while bound or
-        farther than 2 world radii from the nearest world's centre; otherwise the
+        farther than 10 world radii from the nearest world's centre; otherwise the
         nearest world's own stellar velocity, so braking/markers are relative to
         that world instead of the star. See CLAUDE.md "Ship Attitude and Controls"."""
         world = gem.current_environment.nearest_world
-        if self.is_bound or self._distance_to_world_centre(world) >= 2 * world.radius:
+        if self.is_bound or self._distance_to_world_centre(world) >= 10 * world.radius:
             return Vector3(0.0, 0.0, 0.0)
         return world.calculate_stellar_velocity(gem.current_environment.date_time)
 

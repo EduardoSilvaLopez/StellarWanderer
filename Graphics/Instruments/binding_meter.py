@@ -47,8 +47,11 @@ class BindingMeter:
         mark_y = bar_rect.bottom - fill_pad - inner_height // 2
         pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
 
-        near_world = player.altitude_above_surface(world) < world.radius
-        label = label_font.render('NEAREST', True, BINDING_NEAR_GREEN if near_world else ACCENT_DIM)
+        # Green when in the braking zone (within 10x radius, not bound): the reference frame
+        # uses the planet's velocity, so braking/markers show direction relative to the planet.
+        in_braking_zone = (not player.is_bound and
+                           player._distance_to_world_centre(world) < 10 * world.radius)
+        label = label_font.render('NEAREST', True, BINDING_NEAR_GREEN if in_braking_zone else ACCENT_DIM)
         surface.blit(label, label.get_rect(midtop=(cluster_left + bar_w // 2, label_top)))
 
         centre_dist = format_compact_distance(player.altitude_above_surface(world) + world.radius)
