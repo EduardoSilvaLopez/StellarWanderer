@@ -170,15 +170,27 @@ Big leap but it does not work right now as intended: the movements are not corre
 - Hide / eliminate the current "stars".
 - Wasted a lot of time with the political thing... but ok, title now available, icon.
 
-### 2026-10-08 (1/10) 7h + 15:45-
+### 2026-10-08 (1/10)
 
 - Update "nearest_world" (plan already made)
 ... ok, we need more help. Show speed relative to nearest world? -> Resolved!
 
-Closing the branch.
+PLANETS AND MOONS started.
+- Rename "World" to "Planet" at this point. Make then Planet and Moon derive from World.
+
+### 2026-10-09 (2/10) 8h + 17:00-
+
+- Make the model, load / save.
+
+... here, load and save. Have to think about it with a fresh mind.
+... no, all this is wrong. Go back and start again.
+
+
+- Refresh nearest world (discover commonalities, create base class)
+- Refresh radar (more commonalities)
+- Heavily use Claude for drawing, discovering more commonalities.
 
 BACKLOG
-- PLANETS AND MOONS: Min. radius 300 Km, moon 3474 (is very large), 384Mm distance to Earth (~500 Earth radius)
 - TRAVELLING TO ANOTHER MOON
 - TRADE POSTS
 - TRAVEL TO THE SUN (forbidden areas)
