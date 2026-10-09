@@ -6,7 +6,10 @@ from typing import Any, List, Tuple, TYPE_CHECKING
 import math
 import pygame
 from Vector3 import Vector3
-from ..Constants import ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR
+from ..Constants import (
+    ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR, RADAR_MOON_COLOR,
+    RADAR_STAR_DOT_RADIUS, RADAR_WORLD_DOT_RADIUS, RADAR_MOON_DOT_RADIUS,
+)
 
 if TYPE_CHECKING:
     from Player import Player
@@ -37,14 +40,19 @@ class Radar:
         return min(1.0, fraction)
 
     @staticmethod
-    def objects(date_time: datetime) -> List[Tuple[Vector3, Tuple[int, int, int]]]:
-        """Stellar-frame position and colour of the star and of every world in its system."""
+    def objects(date_time: datetime) -> List[Tuple[Vector3, Tuple[int, int, int], int]]:
+        """Stellar-frame position, dot colour and dot radius of the star and of every world in its system.
+        Moons get a different colour and a smaller dot than planets."""
         import GameEnvironment as gem
         system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
-        found: List[Tuple[Vector3, Tuple[int, int, int]]] = [(Vector3(0.0, 0.0, 0.0), system.color)]
-        for orbit in system.orbits:
-            for world in orbit.planets:
-                found.append((world.calculate_stellar_position(date_time), RADAR_WORLD_COLOR))
+        found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
+            (Vector3(0.0, 0.0, 0.0), system.color, RADAR_STAR_DOT_RADIUS)
+        ]
+        for world in system.get_all_worlds():
+            if world.parent_planet:
+                found.append((world.calculate_stellar_position(date_time), RADAR_MOON_COLOR, RADAR_MOON_DOT_RADIUS))
+            else:
+                found.append((world.calculate_stellar_position(date_time), RADAR_WORLD_COLOR, RADAR_WORLD_DOT_RADIUS))
         return found
 
     @staticmethod
@@ -66,7 +74,7 @@ class Radar:
         surface.set_clip(rect.inflate(-2, -2))
 
         projected = []
-        for object_position, colour in Radar.objects(date_time):
+        for object_position, colour, dot_radius in Radar.objects(date_time):
             relative = object_position - position
             if relative.length() > Radar.MAX_DISTANCE:
                 continue
@@ -76,12 +84,12 @@ class Radar:
             foot = (centre_x + in_plane * horizontal_radius * math.sin(bearing),
                     centre_y - in_plane * vertical_radius * math.cos(bearing))
             height = math.copysign(Radar.log_fraction(abs(up)), up) * bar_length
-            projected.append((foot, height, colour))
+            projected.append((foot, height, colour, dot_radius))
 
-        for foot, height, colour in sorted(projected, key=lambda item: item[0][1]):
+        for foot, height, colour, dot_radius in sorted(projected, key=lambda item: item[0][1]):
             tip = (foot[0], foot[1] - height)
             pygame.draw.line(surface, RADAR_BAR_OVER if height >= 0 else RADAR_BAR_UNDER, foot, tip, 2)
-            pygame.draw.circle(surface, colour, tip, 3)
+            pygame.draw.circle(surface, colour, tip, dot_radius)
 
         pygame.draw.circle(surface, RADAR_BAR_OVER, (centre_x, centre_y), 2)
         surface.set_clip(previous_clip)

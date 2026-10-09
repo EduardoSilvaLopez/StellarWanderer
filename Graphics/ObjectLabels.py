@@ -1,11 +1,12 @@
 """Labels for visible objects (star and all worlds) showing name and compact distance."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import Dict, Tuple, TYPE_CHECKING
 import pygame
 from .Constants import ACCENT
 
 if TYPE_CHECKING:
+    from Galaxies.world import World
     from Player import Player
     from GameEnvironment import GameEnvironment
 
@@ -18,7 +19,10 @@ class ObjectLabels:
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
-        """Draw labels for visible objects while unbound."""
+        """Draw labels for visible objects while unbound.
+
+        A moon's label is skipped when it would overlap its planet's label.
+        """
         if player.is_bound:
             return
 
@@ -34,29 +38,38 @@ class ObjectLabels:
         projected = project_to_camera(player, star_vector, w, horizon_y, focal_length_px)
         if projected is not None:
             screen_x, screen_y = projected
-            ObjectLabels._draw_label(
-                surface, label_font, star.name, format_compact_distance(star_vector.length()),
+            label_surf, rect = ObjectLabels._render_label(
+                label_font, star.name, format_compact_distance(star_vector.length()),
                 int(screen_x), int(screen_y)
             )
+            surface.blit(label_surf, rect)
 
-        # Draw labels for all worlds in the stellar system
-        for orbit in star.orbits:
-            for world_obj in orbit.planets:
-                world_vector = world_obj.calculate_stellar_position(environment.date_time) - player.position.as_vector()
-                projected = project_to_camera(player, world_vector, w, horizon_y, focal_length_px)
-                if projected is not None:
-                    screen_x, screen_y = projected
-                    ObjectLabels._draw_label(
-                        surface, label_font, world_obj.name, format_compact_distance(world_vector.length()),
-                        int(screen_x), int(screen_y)
-                    )
+        # Draw labels for all worlds in the stellar system. get_all_worlds() lists each
+        # planet before its moons, so the planet's label rectangle is known for its moons.
+        drawn_rects: Dict[World, pygame.Rect] = {}
+        for world_obj in star.get_all_worlds():
+            world_vector = world_obj.calculate_stellar_position(environment.date_time) - player.position.as_vector()
+            projected = project_to_camera(player, world_vector, w, horizon_y, focal_length_px)
+            if projected is None:
+                continue
+            screen_x, screen_y = projected
+            label_surf, rect = ObjectLabels._render_label(
+                label_font, world_obj.name, format_compact_distance(world_vector.length()),
+                int(screen_x), int(screen_y)
+            )
+            if world_obj.parent_planet is not None:
+                planet_rect = drawn_rects.get(world_obj.parent_planet)
+                if planet_rect is not None and rect.colliderect(planet_rect):
+                    continue
+            drawn_rects[world_obj] = rect
+            surface.blit(label_surf, rect)
 
     @staticmethod
-    def _draw_label(surface: pygame.Surface, font, name: str, distance: str, center_x: int, center_y: int) -> None:
-        """Draw a single object label at the given screen center."""
+    def _render_label(font, name: str, distance: str, center_x: int, center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:
+        """Render a single object label; returns its surface and its screen rectangle."""
         text = f'{name} {distance}'
         label_surf = font.render(text, True, ACCENT)
         rect = label_surf.get_rect(
             topleft=(center_x + ObjectLabels.LABEL_OFFSET_X, center_y + ObjectLabels.LABEL_OFFSET_Y)
         )
-        surface.blit(label_surf, rect)
+        return label_surf, rect

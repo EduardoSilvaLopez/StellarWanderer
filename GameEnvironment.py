@@ -27,9 +27,9 @@ class GameEnvironment:
         from Galaxies.orbit import Orbit
 
         self.nearest_system = self.galaxy.add_stellar_system(26000, 0, 0)
-        current_orbit: Orbit = self.nearest_system.orbits[int(len(self.nearest_system.orbits) / 2)]
-        self.nearest_world = current_orbit.planets[0]
-        logger.info(f"Initial planet's radius: {self.nearest_world.radius}")
+        current_orbit: Orbit = self.nearest_system.get_orbit(3.0)
+        self.nearest_world = current_orbit.planets[0].moons[0]
+        logger.info(f"Initial world's radius: {self.nearest_world.radius}")
 
     def refresh_nearest_world(self, player_position: Vector3) -> None:
         """Re-pick nearest_world from the current nearest_system's worlds. Throttled
@@ -44,14 +44,14 @@ class GameEnvironment:
         self._nearest_world_recheck_countdown = GameEnvironment.NEAREST_WORLD_RECHECK_FRAMES
 
         current_distance = math.dist(player_position, self.nearest_world.calculate_stellar_position(self.date_time))
-        for orbit in self.nearest_system.orbits:
-            for world in orbit.planets:
-                if world is self.nearest_world:
-                    continue
-                distance = math.dist(player_position, world.calculate_stellar_position(self.date_time))
-                if distance < current_distance * (1 - GameEnvironment.NEAREST_WORLD_HYSTERESIS):
-                    self.nearest_world = world
-                    current_distance = distance
+        for world in self.nearest_system.get_all_worlds():
+            if world is self.nearest_world:
+                continue
+            distance = math.dist(player_position, world.calculate_stellar_position(self.date_time))
+            if distance < current_distance * (1 - GameEnvironment.NEAREST_WORLD_HYSTERESIS):
+                self.nearest_world = world
+                current_distance = distance
+
 
     @staticmethod
     def new_game(seed: int) -> None:

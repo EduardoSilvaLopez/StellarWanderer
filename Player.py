@@ -93,7 +93,7 @@ class Player:
     def serialize(self) -> dict:
         world = gem.current_environment.nearest_world
         if world.parent_planet:
-            planet_index = world.parent_planet.parent_orbit.planets.index(world)
+            planet_index = world.parent_planet.parent_orbit.planets.index(world.parent_planet)
             moon_index = world.index
         else:
             planet_index = world.parent_orbit.planets.index(world)
@@ -266,6 +266,20 @@ class Player:
         if self.is_bound:
             return world.calculate_star_position(self, current_datetime)
         return -self.position.as_vector()
+
+    def direction_to_world(self, target: World, current_datetime: datetime) -> Vector3:
+        """Vector from the ship to the centre of `target`, in the active frame (the same
+        frame as direction_to_star: surface east/up/north when bound, stellar when unbound)."""
+        target_position = target.calculate_stellar_position(current_datetime)
+        if not self.is_bound:
+            return target_position - self.position.as_vector()
+        world = gem.current_environment.nearest_world
+        east_hat, up_hat, north_hat = world.surface_basis(self.position.x, self.position.z, current_datetime)
+        centre = world.calculate_stellar_position(current_datetime)
+        # The star-centred basis has Y opposite to the orbital motion, so Y is negated.
+        player_position = Vector3(centre.x, -centre.y, centre.z) + up_hat * (world.radius + self.position.y)
+        relative = Vector3(target_position.x, -target_position.y, target_position.z) - player_position
+        return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
 
     def camera_components(self, vector: Vector3) -> Vector3:
         """Components of a direction along the ship's right, up and forward axes."""

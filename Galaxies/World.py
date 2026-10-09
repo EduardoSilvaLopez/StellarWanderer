@@ -21,22 +21,24 @@ class World:
 
     WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
+    GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
+    EARTH_DENSITY = 5514.0  # kg/m^3, assumed for every world (planets and moons alike)
 
-    def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = dict) -> None:
+    def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
 
         # No parent_planet? Well, then it is a big moon.
         if parent_planet:
             self.parent_planet: World = parent_planet
             self.parent_orbit: Orbit = parent_planet.parent_orbit
-            self.index = len(self.parent_planet.moons) + 1
+            self.index = len(self.parent_planet.moons)
             seed_origin: int = self.parent_planet.seed
         else:
             self.parent_planet: World = None
             self.parent_orbit: Orbit = parent_orbit
-            self.index = len(self.parent_orbit.planets) + 1
+            self.index = len(self.parent_orbit.planets)
             seed_origin: int = self.parent_orbit.seed
 
-        self.seed: int = (seed_origin * self.index + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: int = (seed_origin * (self.index + 1) + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\
@@ -58,7 +60,14 @@ class World:
         
         self.initial_degrees_in_orbit: float = my_random.random() * 360.0
         
-        self.orbital_period: float = 365.2425 * 24 * 60 * 60 * (self.distance_to_parent / 1.496e11) ** (3 / 2)
+        self.mass: float = 4.0 / 3.0 * math.pi * self.radius ** 3 * World.EARTH_DENSITY
+
+        # Kepler's third law around the parent, a planet or the star (two-body: both masses count).
+        parent_mass: float = \
+            self.parent_planet.mass if self.parent_planet else self.parent_orbit.parent_stellar_system.mass
+        self.orbital_period: float = math.tau * math.sqrt(
+            self.distance_to_parent ** 3 / (World.GRAVITATIONAL_CONSTANT * (parent_mass + self.mass))
+        )
 
         self.rotation_period: int = self.generate_rotation_period(my_random)
 
@@ -66,9 +75,18 @@ class World:
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
         alterations_key: str = self.get_alterations_key()
+
+        own_alterations: Optional[dict] = None
         if saved_alterations is not None and alterations_key in saved_alterations:
+            # come from an orbit
+            own_alterations = saved_alterations.get(alterations_key)
+        elif saved_alterations is not None and 'moons' in saved_alterations:
+            # come from a planet
+            own_alterations = saved_alterations['moons'].get(alterations_key)
+
+        if own_alterations is not None:
             self.is_altered = True
-            self.saved_alterations = saved_alterations.get(alterations_key)
+            self.saved_alterations = own_alterations
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         # Children:
@@ -137,7 +155,9 @@ class World:
 
     def set_altered(self) -> World:
         self.is_altered = True
-        if not self.parent_orbit.is_altered:
+        if self.parent_planet and not self.parent_planet.is_altered:
+            self.parent_planet.set_altered()
+        elif not self.parent_planet and not self.parent_orbit.is_altered:
             self.parent_orbit.set_altered()
         return self
 
@@ -145,14 +165,29 @@ class World:
         return str(self.index)
 
     def get_alterations(self) -> Optional[dict]:
-        alterations: Optional[dict] = dict()
-        if self.is_altered:
-            for km2 in self.km2s:
-                if km2.is_altered:
-                    alterations[km2.get_alterations_key()] = km2.get_alterations()
-        if alterations == {}:
+        if not self.is_altered:
             return None
-        return alterations                    
+
+        result: Optional[dict] = dict()
+
+        km2_alterations: Optional[dict] = dict()
+        for km2 in self.km2s:
+            if km2.is_altered:
+                km2_alterations[km2.get_alterations_key()] = km2.get_alterations()
+        if len(km2_alterations):
+            result['Km2s'] = km2_alterations
+
+        moon_alterations: dict = dict()
+        for moon in self.moons:
+            one_moon_alterations: Optional[dict] = moon.get_alterations()
+            if one_moon_alterations is not None:
+                moon_alterations[moon.get_alterations_key()] = one_moon_alterations
+        if len(moon_alterations):
+            result['moons'] = moon_alterations
+
+        if not len(result):
+            return None
+        return result
 
     def get_km2_at(self, longitude: float, latitude: float) -> Optional[Km2]:
         """Find the right Km2 for a given point... if it exists."""
@@ -206,23 +241,32 @@ class World:
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         """Position of this world relative to its star, in the orbital frame (meters).
 
-        x points from the star towards the world at EPOCH, y lies in the orbital plane
-        in the direction of motion at EPOCH, and z is perpendicular to the plane, positive
-        when the orbit is clockwise seen from above.
+        x is the reference direction of the orbital angle (the world is at its
+        initial_degrees_in_orbit from it at EPOCH), y lies in the orbital plane in the
+        direction of motion, and z is perpendicular to the plane, positive when the orbit
+        is clockwise seen from above. A moon is its planet's position plus its own offset
+        around the planet, in the same plane.
         """
         orbital_angle = self._orbital_angle_rad(current_datetime)
-        distance = self.parent_orbit.distance_from_star
-        return Vector3(distance * math.cos(orbital_angle), distance * math.sin(orbital_angle), 0.0)
+        distance = self.distance_to_parent
+        offset = Vector3(distance * math.cos(orbital_angle), distance * math.sin(orbital_angle), 0.0)
+        if self.parent_planet:
+            return self.parent_planet.calculate_stellar_position(current_datetime) + offset
+        return offset
 
     def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
         """Velocity of this world relative to its star (meters per second), in the frame of calculate_stellar_position.
 
         Assumes a circular orbit. The vector is tangent to the orbit; its length is the orbital speed.
+        A moon's velocity is its planet's velocity plus its own orbital velocity around the planet.
         """
         orbital_angle = self._orbital_angle_rad(current_datetime)
         angular_speed = math.tau / self.orbital_period
-        speed = self.parent_orbit.distance_from_star * angular_speed
-        return Vector3(-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
+        speed = self.distance_to_parent * angular_speed
+        own_velocity = Vector3(-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
+        if self.parent_planet:
+            return self.parent_planet.calculate_stellar_velocity(current_datetime) + own_velocity
+        return own_velocity
 
     def surface_basis(self, longitude: float, latitude: float, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
         """East, up and north unit vectors at a surface point, in the star-centered basis."""
@@ -323,15 +367,24 @@ class World:
         return (elapsed_seconds % self.orbital_period) / self.orbital_period
 
     def local_day_fraction(self, current_datetime: datetime) -> float:
-        """Fraction of this world's current spin (day) completed, in [0, 1)."""
+        """Fraction of the local solar day at longitude 0, in [0, 1): 0 at local noon, 0.5 at midnight.
+
+        It depends on the direction to the star, so the world's initial_degrees_in_orbit sets
+        the time of day at EPOCH; the game's date and time are not affected."""
+        position = self.calculate_stellar_position(current_datetime)
+        angle_to_star = math.atan2(position.y, position.x)
+        return ((self._spin_angle_rad(current_datetime) - angle_to_star) / math.tau) % 1.0
+
+    def _spin_fraction(self, current_datetime: datetime) -> float:
+        """Fraction of this world's current spin (sidereal day) completed, in [0, 1)."""
         elapsed_seconds = self._elapsed_seconds(current_datetime)
         return (elapsed_seconds % self.rotation_period) / self.rotation_period
 
     def _orbital_angle_rad(self, current_datetime: datetime) -> float:
-        return math.tau * self.local_year_fraction(current_datetime)
+        return math.radians(self.initial_degrees_in_orbit) + math.tau * self.local_year_fraction(current_datetime)
 
     def _spin_angle_rad(self, current_datetime: datetime) -> float:
-        return math.tau * self.local_day_fraction(current_datetime)
+        return math.tau * self._spin_fraction(current_datetime)
 
     @staticmethod
     def _elapsed_seconds(current_datetime: datetime) -> float:

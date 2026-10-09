@@ -27,7 +27,11 @@ class Km2:
 
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()
-        own_alterations: Optional[dict] = saved_alterations.get(alterations_key) if saved_alterations is not None else None
+        own_alterations: Optional[dict] = None
+        if saved_alterations is not None:
+            if saved_alterations.get('Km2s') is not None:
+                if saved_alterations.get('Km2s').get(alterations_key) is not None:
+                    own_alterations = saved_alterations.get('Km2s').get(alterations_key)
         if own_alterations is not None:
             self.set_altered()
 

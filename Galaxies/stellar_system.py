@@ -3,12 +3,16 @@ from typing import TYPE_CHECKING, List, Optional
 
 import random
 import Galaxies.constants
+from Galaxies.world import World
 from Galaxies.orbit import Orbit
 from Galaxies.Politics import political_entity
 if TYPE_CHECKING:
     from Galaxies.galaxy import Galaxy
 
 class StellarSystem:
+
+    SOLAR_MASS = 1.989e30  # kg
+    SOLAR_RADIUS = 6.957e8  # m
 
     def __init__(self, parent_galaxy: Galaxy, x: int, y: int, z: int, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
@@ -20,6 +24,7 @@ class StellarSystem:
         self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.radius = self.generate_star_type(my_random)
+        self.mass: float = self.estimate_mass()
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -30,10 +35,9 @@ class StellarSystem:
             self.saved_alterations['date_time'] = saved_alterations['date_time']
         
         orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
-        # the first-ever system must have an orbit.
-        if orbits_count == 0:
-            if (x, y, z) == (26000, 0, 0): # Original stellar system.
-                orbits_count = 1
+        # the first-ever system must have three orbits.
+        if (x, y, z) == (26000, 0, 0): # Original stellar system.
+            orbits_count = max(3, orbits_count)
         self.orbits: List[Orbit] = []
         for orbit_number in range(1, orbits_count+1):
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
@@ -75,23 +79,12 @@ class StellarSystem:
         star_color = tuple(max(0, min(255, b + v)) for b, v in zip(base_color, color_variation))
         return star_color, radius
 
-    def set_altered(self) -> StellarSystem:
-        self.is_altered = True
-        self.parent_galaxy.set_altered()
-        return self
-
-    def get_alterations_key(self) -> str:
-        return str(self.x) + " " + str(self.y) + " " + str(self.z)
-
-    def get_alterations(self) -> Optional[dict]:
-        alterations = dict()
-        if self.is_altered:
-            for orbit in self.orbits:
-                if orbit.is_altered:
-                    alterations[orbit.get_alterations_key()] = orbit.get_alterations()
-        if alterations == {}:
-            return None
-        return alterations
+    def estimate_mass(self) -> float:
+        """Main-sequence mass (kg) from the radius: R ~ M^0.8 up to one solar radius, R ~ M^0.57 above.
+        Derived from the radius so it consumes no random numbers."""
+        radius_ratio = self.radius / StellarSystem.SOLAR_RADIUS
+        exponent = 1.0 / 0.8 if radius_ratio <= 1.0 else 1.0 / 0.57
+        return StellarSystem.SOLAR_MASS * radius_ratio ** exponent
 
     def generate_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
@@ -110,5 +103,31 @@ class StellarSystem:
 
         return name.capitalize()
 
+    def set_altered(self) -> StellarSystem:
+        self.is_altered = True
+        self.parent_galaxy.set_altered()
+        return self
+
+    def get_alterations_key(self) -> str:
+        return str(self.x) + " " + str(self.y) + " " + str(self.z)
+
+    def get_alterations(self) -> Optional[dict]:
+        alterations = dict()
+        if self.is_altered:
+            for orbit in self.orbits:
+                if orbit.is_altered:
+                    alterations[orbit.get_alterations_key()] = orbit.get_alterations()
+        if alterations == {}:
+            return None
+        return alterations
+
     def get_orbit(self, number: float) -> Orbit:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
+
+    def get_all_worlds(self) -> List[World]:
+        result: List[World] = []
+        for orbit in self.orbits:
+            for planet in orbit.planets:
+                result.append(planet)
+                result = result + [m for m in planet.moons]
+        return result

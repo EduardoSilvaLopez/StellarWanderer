@@ -13,6 +13,8 @@ See `DEVOLG.md` for architecture deep-dive and design rationale.
 - **Scope**: Applies to new code and any function being edited.
 - **Pattern**: Use `from __future__ import annotations` to support forward references (already in `Player.py`).
 
+**Module names**: Use Python-style snake_case for module files (`stellar_system.py`, not `StellarSystem.py`). This is the standard for new files and for files with significant changes; existing files are not renamed in bulk.
+
 Example:
 ```python
 def generate_default(self) -> None:
@@ -61,6 +63,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 ## World Orbit
 
 - A world's stellar position and velocity are pure functions of game time (`World.calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`.
+- A moon's stellar position and velocity are its planet's plus its own offset and velocity around the planet (same orbital plane). Every orbital period follows Kepler's third law around the parent's mass: a moon around its planet (`World.mass`, from the radius and `World.EARTH_DENSITY`), a planet around its star (`StellarSystem.mass`, estimated from the star's radius). Every world starts `initial_degrees_in_orbit` from the reference direction at EPOCH. `World.local_day_fraction` is the solar day at longitude 0 (0 = noon), so that start angle sets the starting time of day; the game's date and time always start at EPOCH 00:00:00.
 - The world is not put in `UpdateQueue`, because its state is derived, not stored. Use the queue only for work that mutates state at intervals.
 - Do not add per-call logging to these functions; they run every frame while unbound.
 
