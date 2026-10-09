@@ -28,7 +28,7 @@ class GameEnvironment:
 
         self.nearest_system = self.galaxy.add_stellar_system(26000, 0, 0)
         current_orbit: Orbit = self.nearest_system.orbits[int(len(self.nearest_system.orbits) / 2)]
-        self.nearest_world = current_orbit.worlds[0]
+        self.nearest_world = current_orbit.planets[0]
         logger.info(f"Initial planet's radius: {self.nearest_world.radius}")
 
     def refresh_nearest_world(self, player_position: Vector3) -> None:
@@ -45,7 +45,7 @@ class GameEnvironment:
 
         current_distance = math.dist(player_position, self.nearest_world.calculate_stellar_position(self.date_time))
         for orbit in self.nearest_system.orbits:
-            for world in orbit.worlds:
+            for world in orbit.planets:
                 if world is self.nearest_world:
                     continue
                 distance = math.dist(player_position, world.calculate_stellar_position(self.date_time))

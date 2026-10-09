@@ -92,7 +92,13 @@ class Player:
 
     def serialize(self) -> dict:
         world = gem.current_environment.nearest_world
-        world_idx = world.parent_orbit.worlds.index(world)
+        if world.parent_planet:
+            planet_index = world.parent_planet.parent_orbit.planets.index(world)
+            moon_index = world.index
+        else:
+            planet_index = world.parent_orbit.planets.index(world)
+            moon_index = None
+
         those_who_share_status = self.political_status[political_entity.THOSE_WHO_SHARE]
         return {
             'time_scale': self.time_scale,
@@ -100,7 +106,8 @@ class Player:
             'stellar_system.y': world.parent_orbit.parent_stellar_system.y,
             'stellar_system.z': world.parent_orbit.parent_stellar_system.z,
             'orbit.number': world.parent_orbit.number,
-            'world.world_idx': world_idx,
+            'planet.index': planet_index,
+            'moon.index': moon_index,
             'is_bound': self.is_bound,
             'position.x': self.position.x,
             'position.y': self.position.y,

@@ -43,7 +43,7 @@ class Radar:
         system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int]]] = [(Vector3(0.0, 0.0, 0.0), system.color)]
         for orbit in system.orbits:
-            for world in orbit.worlds:
+            for world in orbit.planets:
                 found.append((world.calculate_stellar_position(date_time), RADAR_WORLD_COLOR))
         return found
 

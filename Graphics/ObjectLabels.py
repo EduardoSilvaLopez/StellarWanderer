@@ -41,7 +41,7 @@ class ObjectLabels:
 
         # Draw labels for all worlds in the stellar system
         for orbit in star.orbits:
-            for world_obj in orbit.worlds:
+            for world_obj in orbit.planets:
                 world_vector = world_obj.calculate_stellar_position(environment.date_time) - player.position.as_vector()
                 projected = project_to_camera(player, world_vector, w, horizon_y, focal_length_px)
                 if projected is not None:

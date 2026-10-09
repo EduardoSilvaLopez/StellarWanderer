@@ -17,27 +17,52 @@ from Galaxies.km2 import Km2
 from Vector3 import Vector3
 
 class World:
+    '''The generation is full of heuristic but playtested, hopefully realistic, factors.'''
 
-    EARTHLIKE_RADIUS_AVERAGE = 5000000
-    EARTHLIKE_RADIUS_SIGMA = 1000000
-    EARTHLIKE_ROTATION_AVERAGE_F = 1.0 / (60 * 60 * 24)
-    EARTHLIKE_ROTATION_SIGMA_F = 0.2 / (60 * 60 * 24)
+    WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
 
-    def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
-        self.parent_orbit: Orbit = parent_orbit
-        self.initial_degrees_in_orbit: int = initial_degrees_in_orbit
-        self.seed: int = (self.initial_degrees_in_orbit + self.parent_orbit.seed) % Galaxies.constants.SEEDS_SCALING
+    def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = dict) -> None:
+
+        # No parent_planet? Well, then it is a big moon.
+        if parent_planet:
+            self.parent_planet: World = parent_planet
+            self.parent_orbit: Orbit = parent_planet.parent_orbit
+            self.index = len(self.parent_planet.moons) + 1
+            seed_origin: int = self.parent_planet.seed
+        else:
+            self.parent_planet: World = None
+            self.parent_orbit: Orbit = parent_orbit
+            self.index = len(self.parent_orbit.planets) + 1
+            seed_origin: int = self.parent_orbit.seed
+
+        self.seed: int = (seed_origin * self.index + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
-        self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
-        while self.radius <= 0:
-            self.radius = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)
-        self.rotation_period: float = 1 / my_random.gauss(World.EARTHLIKE_ROTATION_AVERAGE_F, World.EARTHLIKE_ROTATION_SIGMA_F)
-        # Cached because it only depends on distance_from_star, which never changes.
-        self.year_duration_seconds: float = 365.2425 * 24 * 60 * 60 * (self.parent_orbit.distance_from_star / 1.496e11) ** (3 / 2)
-        self.km2s: List[Km2] = []
+        self.name: str =\
+            self.generate_moon_name(my_random)\
+            if self.parent_planet\
+            else self.generate_planet_name(my_random)
 
+        self.radius: float = 0.0
+        while self.radius < self.WORLD_MIN_RADIUS:
+            if self.parent_planet:
+                self.radius = self.generate_radius_of_big_moon(my_random)
+            else:
+                self.radius = self.generate_radius_of_earthlike(my_random)
+
+        if self.parent_planet:
+            self.distance_to_parent: int = self.generate_orbital_distance_of_big_moon(my_random)
+        else:
+            self.distance_to_parent: int = int(parent_orbit.distance_from_star)
+        
+        self.initial_degrees_in_orbit: float = my_random.random() * 360.0
+        
+        self.orbital_period: float = 365.2425 * 24 * 60 * 60 * (self.distance_to_parent / 1.496e11) ** (3 / 2)
+
+        self.rotation_period: int = self.generate_rotation_period(my_random)
+
+        # Alterations:
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
         alterations_key: str = self.get_alterations_key()
@@ -46,28 +71,27 @@ class World:
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.name: str = self.generate_name(my_random)
+        # Children:
+        self.moons: List[World] = []
+        if not self.parent_planet:
+            moons_count = -1
+            while moons_count < 0:
+                moons_count = int(my_random.gauss(2.0, 1.0))
+            # Initial moon's clause.
+            if not moons_count and self.parent_orbit.number == 3.0:
+                from Galaxies.stellar_system import StellarSystem
+                system: StellarSystem = self.parent_orbit.parent_stellar_system
+                if system.x == 26000 and system.y == 0 and system.z == 0:
+                    moons_count = 1
+            for moonIdx in range(0, moons_count):
+                new_moon: World = \
+                    World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations)
+                self.moons.append(new_moon)
 
-    def set_altered(self) -> World:
-        self.is_altered = True
-        if not self.parent_orbit.is_altered:
-            self.parent_orbit.set_altered()
-        return self
+        self.km2s: List[Km2] = []
+        logger.info(f"New world created, '{self.name}', radius {self.radius}, at a distance {self.distance_to_parent} to its parent.")
 
-    def get_alterations_key(self) -> str:
-        return str(self.initial_degrees_in_orbit)
-
-    def get_alterations(self) -> Optional[dict]:
-        alterations: Optional[dict] = dict()
-        if self.is_altered:
-            for km2 in self.km2s:
-                if km2.is_altered:
-                    alterations[km2.get_alterations_key()] = km2.get_alterations()
-        if alterations == {}:
-            return None
-        return alterations                    
-
-    def generate_name(self, my_random: random.Random) -> str:
+    def generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
@@ -80,6 +104,55 @@ class World:
                 name += my_random.choice(consonants)
         
         return name.capitalize()
+
+    def generate_moon_name(self, my_random: random.Random) -> str:
+        result: str = self.parent_planet.name + "-" + str(self.index + 1)
+        return result.capitalize()
+
+    def generate_orbital_distance_of_big_moon(self, my_random: random.Random) -> int:
+        result = 0.0
+        while result < 3 * self.parent_planet.radius:
+            result = int(my_random.gauss(3, 1) * 250.0 * self.radius)
+        return result
+
+    def generate_radius_of_earthlike(self, my_random: random.Random) -> int:
+        result: float = 0.0
+        while result < World.WORLD_MIN_RADIUS:
+            result = my_random.gauss(5000000, 1000000)
+        return int(result)
+
+    def generate_radius_of_big_moon(self, my_random: random.Random) -> int:
+        result: float = 0.0
+        while result < World.WORLD_MIN_RADIUS:
+            result = 2 ** my_random.gauss(1.0, 1.0) * self.parent_planet.radius / 100.0
+        return int(result)
+
+    def generate_rotation_period(self, my_random: random.Random) -> int:
+        result: float = 0.0
+        if self.parent_planet:
+            result = 1 / my_random.gauss(1.0 / (60 * 60 * 24 * 28), 0.2 / (60 * 60 * 24 * 28))
+        else:
+            result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
+        return int(result)
+
+    def set_altered(self) -> World:
+        self.is_altered = True
+        if not self.parent_orbit.is_altered:
+            self.parent_orbit.set_altered()
+        return self
+
+    def get_alterations_key(self) -> str:
+        return str(self.index)
+
+    def get_alterations(self) -> Optional[dict]:
+        alterations: Optional[dict] = dict()
+        if self.is_altered:
+            for km2 in self.km2s:
+                if km2.is_altered:
+                    alterations[km2.get_alterations_key()] = km2.get_alterations()
+        if alterations == {}:
+            return None
+        return alterations                    
 
     def get_km2_at(self, longitude: float, latitude: float) -> Optional[Km2]:
         """Find the right Km2 for a given point... if it exists."""
@@ -147,7 +220,7 @@ class World:
         Assumes a circular orbit. The vector is tangent to the orbit; its length is the orbital speed.
         """
         orbital_angle = self._orbital_angle_rad(current_datetime)
-        angular_speed = math.tau / self.year_duration_seconds
+        angular_speed = math.tau / self.orbital_period
         speed = self.parent_orbit.distance_from_star * angular_speed
         return Vector3(-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
 
@@ -247,7 +320,7 @@ class World:
     def local_year_fraction(self, current_datetime: datetime) -> float:
         """Fraction of this world's orbit completed since EPOCH, in [0, 1)."""
         elapsed_seconds = self._elapsed_seconds(current_datetime)
-        return (elapsed_seconds % self.year_duration_seconds) / self.year_duration_seconds
+        return (elapsed_seconds % self.orbital_period) / self.orbital_period
 
     def local_day_fraction(self, current_datetime: datetime) -> float:
         """Fraction of this world's current spin (day) completed, in [0, 1)."""

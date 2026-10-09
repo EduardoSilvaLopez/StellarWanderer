@@ -37,9 +37,17 @@ class Savefile:
             load_object['player']['stellar_system.y'],
             load_object['player']['stellar_system.z']
             )
-        gem.current_environment.nearest_world = gem.current_environment.nearest_system.get_orbit(
+        from Galaxies.orbit import Orbit
+        current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(
                 float(load_object['player']['orbit.number'])
-                ).worlds[load_object['player']['world.world_idx']]
+                )
+        planet_idx: int = load_object['player']['planet.index']
+        moon_idx: int = load_object['player']['moon.index']
+        if moon_idx is None:
+            gem.current_environment.nearest_world = current_orbit.planets[planet_idx]
+        else:
+            gem.current_environment.nearest_world = current_orbit.planets[planet_idx].moons[moon_idx]
+
         gem.current_environment.nearest_world.update_surroundings(
             load_object['player']['position.y'],
             load_object['player']['position.x'],
