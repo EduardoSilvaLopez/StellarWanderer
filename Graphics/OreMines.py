@@ -21,7 +21,7 @@ from .Constants import (
 )
 
 if TYPE_CHECKING:
-    from Galaxies.OreMine import OreMine
+    from Galaxies.ore_mine import OreMine
 
 
 class OreMines:

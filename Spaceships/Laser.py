@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import math
 if TYPE_CHECKING:
     from Spaceships.Ship import Ship
-    from Galaxies.World import World
-    from Galaxies.Km2 import Km2
+    from Galaxies.world import World
+    from Galaxies.km2 import Km2
     from Galaxies.Rock import Rock
-    from Galaxies.OreMine import OreMine
+    from Galaxies.ore_mine import OreMine
 
 
 class Laser:

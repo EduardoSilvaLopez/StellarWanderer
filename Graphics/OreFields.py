@@ -9,7 +9,7 @@ import pygame
 from OpenGL import GL
 
 if TYPE_CHECKING:
-    from Galaxies.OreField import OreField
+    from Galaxies.ore_fields import OreField
 
 
 class OreFields:

@@ -7,13 +7,13 @@ import random
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-import Galaxies.Constants
+import Galaxies.constants
 
 if TYPE_CHECKING:
-    from Galaxies.Orbit import Orbit
+    from Galaxies.orbit import Orbit
     from Player import Player
 
-from Galaxies.Km2 import Km2
+from Galaxies.km2 import Km2
 from Vector3 import Vector3
 
 class World:
@@ -27,7 +27,7 @@ class World:
     def __init__(self, parent_orbit: Orbit, initial_degrees_in_orbit: int, saved_alterations: dict) -> None:
         self.parent_orbit: Orbit = parent_orbit
         self.initial_degrees_in_orbit: int = initial_degrees_in_orbit
-        self.seed: int = (self.initial_degrees_in_orbit + self.parent_orbit.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.seed: int = (self.initial_degrees_in_orbit + self.parent_orbit.seed) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.radius: float = my_random.gauss(World.EARTHLIKE_RADIUS_AVERAGE, World.EARTHLIKE_RADIUS_SIGMA)

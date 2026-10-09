@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
     from Galaxies.Rock import Rock
-    from Galaxies.OreField import OreField
+    from Galaxies.ore_fields import OreField
 
 
 class NearestWorld:

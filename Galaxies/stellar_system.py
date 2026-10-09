@@ -2,11 +2,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 import random
-import Galaxies.Constants
-from Galaxies.Orbit import Orbit
-from Galaxies.Politics import PoliticalEntityModule
+import Galaxies.constants
+from Galaxies.orbit import Orbit
+from Galaxies.Politics import political_entity
 if TYPE_CHECKING:
-    from Galaxies.Galaxy import Galaxy
+    from Galaxies.galaxy import Galaxy
 
 class StellarSystem:
 
@@ -17,7 +17,7 @@ class StellarSystem:
         self.x: int = x
         self.y: int = y
         self.z: int = z
-        self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.seed: int = (self.x + self.y + self.z + self.parent_galaxy.seed) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.radius = self.generate_star_type(my_random)
 
@@ -39,7 +39,7 @@ class StellarSystem:
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
 
-        self.political_entity = PoliticalEntityModule.THOSE_WHO_SHARE
+        self.political_entity = political_entity.THOSE_WHO_SHARE
         self.name: str = self.generate_name(my_random)
 
     def generate_star_type(self, rnd: random.Random) -> tuple:

@@ -7,15 +7,15 @@ from cmath import pi
 import math
 import logging
 
-from Galaxies.Politics import PoliticalEntityModule
-from Galaxies.Politics.PersonalStatusModule import PersonalStatus
+from Galaxies.Politics import political_entity
+from Galaxies.Politics.personal_status import PersonalStatus
 from Vector3 import Vector3, rotate_2d
-from Galaxies.World import World; logger = logging.getLogger(__name__)
-from Galaxies.Km2 import Km2
+from Galaxies.world import World; logger = logging.getLogger(__name__)
+from Galaxies.km2 import Km2
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
 if TYPE_CHECKING:
-    from Galaxies.World import World
+    from Galaxies.world import World
 
 
 @dataclass
@@ -67,7 +67,7 @@ class Player:
         self.political_status: dict = {}
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
-        from Galaxies.World import World
+        from Galaxies.world import World
         ''' Spawn the player in the given environment, just using the first place we find.'''
         self.is_bound = True
         environment.nearest_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
@@ -78,7 +78,7 @@ class Player:
         self.position.z = self.position.km2.latitude + 500
 
         self.political_status = {
-            PoliticalEntityModule.THOSE_WHO_SHARE: PersonalStatus()
+            political_entity.THOSE_WHO_SHARE: PersonalStatus()
         }
         return self
 
@@ -93,7 +93,7 @@ class Player:
     def serialize(self) -> dict:
         world = gem.current_environment.nearest_world
         world_idx = world.parent_orbit.worlds.index(world)
-        those_who_share_status = self.political_status[PoliticalEntityModule.THOSE_WHO_SHARE]
+        those_who_share_status = self.political_status[political_entity.THOSE_WHO_SHARE]
         return {
             'time_scale': self.time_scale,
             'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
@@ -145,12 +145,12 @@ class Player:
         result.ship = Ship.load(result, loaded_attributes['ship'])
 
         result.political_status = {}
-        from Galaxies.Politics.PersonalStatusModule import PersonalStatus
-        import Galaxies.Politics.PoliticalEntityModule as pem
+        from Galaxies.Politics.personal_status import PersonalStatus
+        import Galaxies.Politics.political_entity as pem
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == pem.THOSE_WHO_SHARE.name:
                 new_status = PersonalStatus.deserialize(loaded_attributes['political_status'][entity_name])
-                result.political_status[PoliticalEntityModule.THOSE_WHO_SHARE] = new_status
+                result.political_status[political_entity.THOSE_WHO_SHARE] = new_status
 
         return result
 
@@ -499,9 +499,9 @@ class Player:
         return Vector3(total.x, -total.y, total.z)
 
     def get_title(self) -> str:
-        from Galaxies.Politics.PoliticalEntityModule import PoliticalEntity
+        from Galaxies.Politics.political_entity import PoliticalEntity
         entity: PoliticalEntity = gem.current_environment.nearest_system.political_entity
-        from Galaxies.Politics.PersonalStatusModule import PersonalStatus
+        from Galaxies.Politics.personal_status import PersonalStatus
         status: PersonalStatus = self.political_status[entity]
         return entity.title_for(status.reputation)
 

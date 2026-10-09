@@ -13,8 +13,8 @@ from .OreMines import OreMines
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
-    from Galaxies.OreField import OreField
-    from Galaxies.OreMine import OreMine
+    from Galaxies.ore_fields import OreField
+    from Galaxies.ore_mine import OreMine
 
 
 class Rocks:

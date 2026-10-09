@@ -8,20 +8,20 @@ logger = logging.getLogger(__name__)
 from Updating.Updatable import Updatable
 from Updating.UpdateQueue import update_queue
 
-from Galaxies import OreField
+from Galaxies import ore_fields
 
 class OreMine(Updatable):
     EXTRACTION_PERIOD: int = 3600
 
     def __init__(
             self,
-            parent_field: OreField,
+            parent_field: ore_fields,
             longitude: int = 0,
             latitude: int = 0,
             orientation: float = 0.0,
             saved_attributes: dict = None
             ):
-        self.parent_field: OreField = parent_field
+        self.parent_field: ore_fields = parent_field
         if saved_attributes is None:
             self.longitude: float = longitude
             self.latitude: float = latitude

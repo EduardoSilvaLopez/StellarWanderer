@@ -31,7 +31,7 @@ class Savefile:
             )
         logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
-        from Galaxies.StellarSystem import StellarSystem
+        from Galaxies.stellar_system import StellarSystem
         gem.current_environment.nearest_system = gem.current_environment.galaxy.add_stellar_system(
             load_object['player']['stellar_system.x'],
             load_object['player']['stellar_system.y'],

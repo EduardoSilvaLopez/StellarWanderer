@@ -8,12 +8,12 @@ from typing import List, TYPE_CHECKING, Optional
 
 from Updating.Updatable import Updatable
 
-import Galaxies.Constants
-from Galaxies.Rock import Rock
-from Galaxies.OreField import OreField
+import Galaxies.constants
+from Galaxies.rock import Rock
+from Galaxies.ore_fields import OreField
 
 if TYPE_CHECKING:
-    from Galaxies.World import World
+    from Galaxies.world import World
 
 class Km2:
 
@@ -23,7 +23,7 @@ class Km2:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
-        self.seed: int = (self.longitude + self.latitude + self.parent_world.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.seed: int = (self.longitude + self.latitude + self.parent_world.seed) % Galaxies.constants.SEEDS_SCALING
 
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()

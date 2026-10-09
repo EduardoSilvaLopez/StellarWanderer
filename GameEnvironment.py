@@ -2,9 +2,9 @@ import datetime
 import logging
 import math
 from typing import Optional
-from Galaxies.Galaxy import Galaxy
-from Galaxies.StellarSystem import StellarSystem
-from Galaxies.World import World
+from Galaxies.galaxy import Galaxy
+from Galaxies.stellar_system import StellarSystem
+from Galaxies.world import World
 from Vector3 import Vector3
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class GameEnvironment:
         self._nearest_world_recheck_countdown: int = 0
 
     def generate_default(self) -> None:
-        from Galaxies.Orbit import Orbit
+        from Galaxies.orbit import Orbit
 
         self.nearest_system = self.galaxy.add_stellar_system(26000, 0, 0)
         current_orbit: Orbit = self.nearest_system.orbits[int(len(self.nearest_system.orbits) / 2)]

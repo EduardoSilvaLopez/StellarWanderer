@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
 
-from Galaxies.OreField import OreField
-from Galaxies.OreMine import OreMine
+from Galaxies.ore_fields import OreField
+from Galaxies.ore_mine import OreMine
 import GameEnvironment as gem
 from Spaceships.CargoHold import CargoHold
 from Spaceships.Laser import Laser
@@ -65,7 +65,7 @@ class Ship(Updatable):
         player_lon: float = self.owner.position.x
         player_lat: float = self.owner.position.z
         player_yaw: float = self.owner.yaw
-        from Galaxies.Km2 import Km2
+        from Galaxies.km2 import Km2
         relevant_km2s: List[Km2] = list()
         import GameEnvironment as gem
         world = gem.current_environment.nearest_world

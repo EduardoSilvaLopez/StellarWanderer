@@ -2,10 +2,10 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, List, Optional
 
-import Galaxies.Constants
-from Galaxies.World import World
+import Galaxies.constants
+from Galaxies.world import World
 if TYPE_CHECKING:
-    from Galaxies.StellarSystem import StellarSystem
+    from Galaxies.stellar_system import StellarSystem
 
 class Orbit:
 
@@ -16,7 +16,7 @@ class Orbit:
                  ) -> None:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number
-        self.seed: int = (self.number + self.parent_stellar_system.seed) % Galaxies.Constants.SEEDS_SCALING
+        self.seed: int = (self.number + self.parent_stellar_system.seed) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.is_altered: bool = False

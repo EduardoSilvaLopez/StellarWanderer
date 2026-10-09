@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from Galaxies.StellarSystem import StellarSystem
+from Galaxies.stellar_system import StellarSystem
 
 class Galaxy():
 

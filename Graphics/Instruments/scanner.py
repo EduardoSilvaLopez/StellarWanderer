@@ -11,7 +11,7 @@ from .common import draw_beveled_panel
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
-    from Galaxies.OreMine import OreMine
+    from Galaxies.ore_mine import OreMine
 
 
 class Scanner:
