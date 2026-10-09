@@ -23,6 +23,8 @@ def generate_default(self) -> None:
 
 **Hierarchy**: Galaxy → StellarSystem → Orbit → World → Km2 → Rock
 
+**Planets and moons**: Planets and moons are both worlds. The worlds that existed until now were all planets. Planet and moon differ only where explicitly specified or coded by the user; every other aspect applies to both.
+
 **Persistence Pattern**: Objects track `is_altered` and return `get_alterations()` → dict. Saved to file, re-applied on load. Each object marks parent as altered if it changes.
 
 **Seeding**: Every object has deterministic `seed = (coordinate + parent_seed) % SEEDS_SCALING`. Same seed = same generated object.

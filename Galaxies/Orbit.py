@@ -3,7 +3,7 @@ import random
 from typing import TYPE_CHECKING, List, Optional
 
 import Galaxies.Constants
-from Galaxies.World import World
+from Galaxies.planet import Planet
 if TYPE_CHECKING:
     from Galaxies.StellarSystem import StellarSystem
 
@@ -29,15 +29,15 @@ class Orbit:
 
         self.distance_from_star: int = self.calculate_distance_from_star(my_random)
 
-        self.worlds: List[World] = []
+        self.worlds: List[Planet] = []
         world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1) # >1 is extraordinary!
 
         first_degrees = my_random.random() * 360.0
-        first_world = World(self, first_degrees, self.saved_alterations)
+        first_world = Planet(self, first_degrees, self.saved_alterations)
         self.worlds.append(first_world)
         if world_count > 1:
             second_degrees = (first_degrees + 180) % 360
-            second_world = World(self, second_degrees, self.saved_alterations)
+            second_world = Planet(self, second_degrees, self.saved_alterations)
             self.worlds.append(second_world)
 
     def calculate_distance_from_star(self, my_random: random) -> float:
