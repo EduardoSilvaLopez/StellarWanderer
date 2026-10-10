@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import math
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
+from ..Constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
 from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from .common import draw_beveled_panel
 
@@ -25,36 +25,44 @@ class Scanner:
         crosshair (whether or not the laser is actually firing), scaled to
         fill the square but kept at the same relative orientation and color
         the player sees ahead. Rocks take priority if somehow both are set.
+
+        Below the square a rock shows its temperature (only above 0°) and then, if it is
+        ore rich, its purity. The square always leaves room for those two text lines.
         """
+        label_font = fonts.get(max(9, int(h * 0.017)))
+        text_line_height = label_font.get_height() + 2
+
         margin = int(w * 0.04)
         available = max(0, (w - margin) - (mfd_right + margin))
-        size = max(20, min(cluster_height, available))
+        size = max(20, min(cluster_height - text_line_height, available))
 
         rect = pygame.Rect(0, 0, size, size)
-        rect.centery = cluster_top + cluster_height // 2
+        rect.centery = cluster_top + (cluster_height - text_line_height) // 2
         rect.right = w - margin
 
-        label_font = fonts.get(max(9, int(h * 0.017)))
         label = label_font.render('SCANNER', True, ACCENT_DIM)
         surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 6)))
 
         draw_beveled_panel(surface, rect)
 
+        bevel_depth = max(2, rect.width // 24)
+        text_y = rect.bottom + bevel_depth + 6
+
         rock = player.ship.laser.targeted_rock
         mine = player.ship.laser.targeted_mine
         if rock is not None:
             Scanner._draw_scanned_rock(surface, rect, player, rock)
+            if round(rock.temperature) > 0:
+                temperature_text = label_font.render(f'Temperature: {round(rock.temperature)}°', True, AMBER)
+                surface.blit(temperature_text, temperature_text.get_rect(midtop=(rect.centerx, text_y)))
+                text_y += text_line_height
             if rock.is_ore_rich():
-                bevel_depth = max(2, rect.width // 24)
-                purity_font = fonts.get(max(9, int(h * 0.017)))
-                purity_text = purity_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
-                surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
+                purity_text = label_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
+                surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, text_y)))
         elif mine is not None:
             Scanner._draw_scanned_mine(surface, rect, mine)
-            bevel_depth = max(2, rect.width // 24)
-            content_font = fonts.get(max(9, int(h * 0.017)))
-            content_text = content_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
-            surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, rect.bottom + bevel_depth + 6)))
+            content_text = label_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
+            surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, text_y)))
 
     @staticmethod
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:

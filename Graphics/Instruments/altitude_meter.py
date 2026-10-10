@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, BINDING_MARK_RED, BINDING_NEAR_GREEN
+from ..Constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
 from .common import draw_beveled_panel, format_compact_distance
 
 if TYPE_CHECKING:
@@ -14,8 +14,7 @@ class AltitudeMeter:
     """Altitude meter showing the vicinity of the nearest world, labelled NEAREST.
 
     Bottom at surface (1.0x radius distance from centre). Top at braking zone threshold
-    (BRAKING_RADIUS_MULTIPLE x radius distance). Red mark shows the binding threshold at
-    BIND_RADIUS_MULTIPLE x radius distance.
+    (BRAKING_RADIUS_MULTIPLE x radius distance).
     """
 
     @staticmethod
@@ -48,11 +47,6 @@ class AltitudeMeter:
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
 
-        # Red mark at binding threshold: BIND_RADIUS_MULTIPLE x radius distance
-        mark_fraction = (Player.BIND_RADIUS_MULTIPLE - 1.0) / (Player.BRAKING_RADIUS_MULTIPLE - 1.0)
-        mark_y = bar_rect.bottom - fill_pad - int(inner_height * mark_fraction)
-        pygame.draw.line(surface, BINDING_MARK_RED, (bar_rect.left, mark_y), (bar_rect.right - 1, mark_y), 2)
-
         # Green when in the braking zone (within BRAKING_RADIUS_MULTIPLE x radius, not bound): the reference frame
         # uses the planet's velocity, so braking/markers show direction relative to the planet.
         in_braking_zone = (not player.is_bound and
@@ -70,10 +64,15 @@ class AltitudeMeter:
         centre_text = label_font.render(f'{centre_dist}', True, ACCENT)
         surface.blit(centre_text, centre_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
 
+        # Red when, inside the braking zone, a collision is unavoidable even braking part of the time.
+        collision_warning = in_braking_zone and player.collision_warning(world)
+
         row_y += row_height
-        speed_label = label_font.render('Speed', True, ACCENT_DIM)
+        speed_label = label_font.render('Speed', True, SPEED_WARNING_RED if collision_warning else ACCENT_DIM)
         surface.blit(speed_label, speed_label.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
 
         row_y += row_height
-        speed_text = label_font.render(f'{int(player.speed_relative_to_world(world))}', True, ACCENT)
+        speed_text = label_font.render(
+            f'{int(player.speed_relative_to_world(world))}', True, SPEED_WARNING_RED if collision_warning else ACCENT
+        )
         surface.blit(speed_text, speed_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))

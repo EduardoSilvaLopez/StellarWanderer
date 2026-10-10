@@ -178,20 +178,21 @@ Big leap but it does not work right now as intended: the movements are not corre
 PLANETS AND MOONS started.
 - Rename "World" to "Planet" at this point. Make then Planet and Moon derive from World.
 
-### 2026-10-09 (2/10) 8h + 17:00-
-
 - Make the model, load / save.
 
 ... here, load and save. Have to think about it with a fresh mind.
 ... no, all this is wrong. Go back and start again.
+... done.
 
+- Refresh nearest world
+- Refresh radar
+- Heavily use Claude for drawing
+- Indication of rock temperature.
+- Indication when approaching the planet in a dangerous speed (must start breaking)
 
-- Refresh nearest world (discover commonalities, create base class)
-- Refresh radar (more commonalities)
-- Heavily use Claude for drawing, discovering more commonalities.
+Extra time: 12h + 6:00 - 
 
 BACKLOG
-- TRAVELLING TO ANOTHER MOON
 - TRADE POSTS
 - TRAVEL TO THE SUN (forbidden areas)
 - ASTEROIDS

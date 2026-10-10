@@ -50,6 +50,7 @@ class Player:
     BIND_RADIUS_MULTIPLE = 1.1           # bind at or inside this distance from the world's centre, in radii
     UNBIND_RADIUS_MULTIPLE = 1.2         # unbind beyond this distance from the world's centre, in radii
     BRAKING_RADIUS_MULTIPLE = 10         # braking/markers use the world's velocity inside this distance, in radii
+    COLLISION_BRAKE_FRACTION = 0.5       # share of BRAKE_ACC assumed available when judging a collision
 
     def __init__(self) -> None:
         self.time_scale: int = 1  # Default time scale
@@ -463,6 +464,34 @@ class Player:
             return velocity.length()
         world_velocity = world.calculate_stellar_velocity(gem.current_environment.date_time)
         return math.dist(velocity, world_velocity)
+
+    def collision_warning(self, world: World) -> bool:
+        """True if, keeping its direction relative to the world, the ship reaches the world's
+        surface even when it brakes with only COLLISION_BRAKE_FRACTION of BRAKE_ACC.
+
+        Braking decelerates along the velocity relative to the world (no gravity), so the
+        braking path is the straight line along that velocity: a collision is unavoidable when
+        the line enters the surface sphere before the ship could stop. Sideways thrust to dodge
+        is not considered. Always False while bound."""
+        if self.is_bound:
+            return False
+        current_datetime = gem.current_environment.date_time
+        relative_position = self.position.as_vector() - world.calculate_stellar_position(current_datetime)
+        relative_velocity = self.velocity.as_vector() - world.calculate_stellar_velocity(current_datetime)
+        speed = relative_velocity.length()
+        if speed == 0.0:
+            return False
+        direction = relative_velocity * (1.0 / speed)
+        along = relative_position.dot(direction)  # negative while approaching
+        beyond_surface = relative_position.dot(relative_position) - world.radius ** 2
+        if beyond_surface <= 0.0:
+            return True
+        discriminant = along * along - beyond_surface
+        if along >= 0.0 or discriminant < 0.0:
+            return False  # moving away, or the line misses the world
+        entry_distance = -along - math.sqrt(discriminant)
+        stopping_distance = speed ** 2 / (2.0 * self.ship.BRAKE_ACC * Player.COLLISION_BRAKE_FRACTION)
+        return entry_distance <= stopping_distance
 
     def altitude_above_surface(self, world: World) -> float:
         if self.is_bound:
