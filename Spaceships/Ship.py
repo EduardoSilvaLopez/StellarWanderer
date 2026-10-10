@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from Player import Player
 
 class Ship(Updatable):
-    HEIGHT = 10 # meters, up to the camera
+    HEIGHT = 4 # meters, up to the camera
 
     UP_DOWN_ACC = 5.0  # meters per second squared
     RIGHT_LEFT_ACC = 10  # meters per second squared

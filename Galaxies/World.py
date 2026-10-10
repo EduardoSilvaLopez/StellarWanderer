@@ -98,6 +98,17 @@ class World:
             self.saved_alterations = own_alterations
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
+        # Outposts:
+        from Galaxies.outpost import Outpost
+        self.outposts: dict = {}
+        if not self.parent_planet:
+            outposts_count = int(abs(my_random.gauss(1.0, 1.5)))
+            if self.is_initial_planet() and outposts_count <= 0:
+                self.outposts = 1
+            generated_outposts: List[Outpost] = [Outpost(self) for _ in range(outposts_count)]
+            for o in generated_outposts:
+                self.outposts[o.get_alteration_key()] = o # May overwrite, it is intentional.
+
         # Children:
         self.moons: List[World] = []
         if not self.parent_planet:
@@ -107,10 +118,9 @@ class World:
             # Initial moon's clause.
             if not moons_count and self.is_initial_planet():
                 moons_count = 1
-            for moonIdx in range(0, moons_count):
-                new_moon: World = \
-                    World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations)
-                self.moons.append(new_moon)
+            self.moons = [
+                World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations) for _ in range(moons_count)
+                ]
 
         self.km2s: List[Km2] = []
         self.log_creation()
@@ -273,6 +283,12 @@ class World:
 
         if count_before != len(self.km2s):
             logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
+
+    def get_outpost_for(self, km2: Km2) -> Optional[Outpost]:
+        return next(
+            (o for o in self.outposts if o.latitude == km2.latitude and o.longitude == km2.longitude),
+            None
+            )
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         """Position of this world relative to its star, in the orbital frame (meters).

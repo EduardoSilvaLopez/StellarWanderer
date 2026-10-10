@@ -193,15 +193,15 @@ PLANETS AND MOONS started.
 DIALOGS:
 
 - Made.
-
-TRADE POSTS:
-
 - Improving the way worlds are seen, first.
 - Ore prevalence for planets, affects the composition of rocks.
 - Test the drawing of planets in outbound...
 
-Extra time: 12h + 6:00 - 10:15 = 16h15' + 11:00-
+OUTPOSTS:
 - Generate outposts in planets only.
+
+Extra time: 17h30' + 19:30 - 
+
 - Mark the outposts in the world map.
 - Mark the outposts in the unbound view of the planet.
 - Remove rocks too near an outpost.

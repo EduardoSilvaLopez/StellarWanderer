@@ -6,13 +6,12 @@ if TYPE_CHECKING:
     from Spaceships.Ship import Ship
     from Galaxies.world import World
     from Galaxies.km2 import Km2
-    from Galaxies.Rock import Rock
+    from Galaxies.rock import Rock
     from Galaxies.ore_mine import OreMine
 
 
 class Laser:
     MAX_LENGTH = 500  # metres
-    POSITION_OFFSET = 5  # metres, offset from camera to avoid culling
     TEMP_RISE_RATE = 2000.0  # degrees per second, rate at which rock temperature rises when hit by laser, when the rock is 1 cubic meter.
 
     def __init__(self, ship: Ship) -> None:
@@ -29,6 +28,12 @@ class Laser:
         self.end_y = 0.0
         self.end_z = 0.0
 
+    def emitter_offset(self) -> float:
+        """How far below the camera the beam starts: half the ship's height (read at runtime, because
+        Ship imports this module)."""
+        from Spaceships.Ship import Ship
+        return Ship.HEIGHT / 2
+
     def update_aim(self) -> None:
         """Recompute the beam's start/end points and the currently targeted rock
         from the ship's current position and yaw. Called once per frame
@@ -40,11 +45,12 @@ class Laser:
             # the ship, along its attitude axes (below the camera, like when bound).
             self.targeted_rock = None
             self.targeted_mine = None
+            owner_offset = self.emitter_offset()
             self.start_x, self.start_y, self.start_z = (
-                f * 5.0 - u * Laser.POSITION_OFFSET for f, u in zip(owner.forward, owner.up)
+                f * 5.0 - u * owner_offset for f, u in zip(owner.forward, owner.up)
             )
             self.end_x, self.end_y, self.end_z = (
-                f * self.length - u * Laser.POSITION_OFFSET for f, u in zip(owner.forward, owner.up)
+                f * self.length - u * owner_offset for f, u in zip(owner.forward, owner.up)
             )
             return
 
@@ -63,7 +69,7 @@ class Laser:
 
         # Offset start point slightly ahead and below camera to avoid culling
         self.start_x = self.ship.owner.position.x + forward_x * 5.0
-        self.start_y = self.ship.owner.position.y - Laser.POSITION_OFFSET
+        self.start_y = self.ship.owner.position.y - self.emitter_offset()
         self.start_z = self.ship.owner.position.z + forward_z * 5.0
 
         self.end_x = self.ship.owner.position.x + self.length * forward_x

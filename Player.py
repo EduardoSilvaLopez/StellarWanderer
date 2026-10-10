@@ -76,7 +76,7 @@ class Player:
         central_km2 = next(km2 for km2 in environment.nearest_world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = self.position.km2.longitude + 500
-        self.position.y = 10
+        self.position.y = Ship.HEIGHT
         self.position.z = self.position.km2.latitude + 500
 
         self.political_status = {

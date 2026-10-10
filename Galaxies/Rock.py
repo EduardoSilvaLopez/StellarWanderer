@@ -28,7 +28,9 @@ class Rock(Updatable):
         my_random: float = random.Random(parent_Km2.seed + latitude + longitude)
         self.size: float = abs(my_random.gauss(0, 10))
         self.longitude: int = longitude
-        self.altitude: int = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
+        # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
+        # around this point, so it can sit partly under the ground).
+        self.altitude: float = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
         self.latitude: int = latitude
         self.orientation: float = my_random.random() * 180 - 90
         self.tilt: float = my_random.random() * 45

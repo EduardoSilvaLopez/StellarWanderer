@@ -51,9 +51,9 @@ class Rocks:
         # Instead, every vertex below is made camera-relative in Python
         # (double precision) before being handed to glVertex3f, so only
         # small, already-precise offsets ever get truncated to float32.
-        # Y doesn't need this treatment: player.position.y is bounded to
-        # [ship.HEIGHT, Player.MAX_ALTITUDE] = [10, 20000], far too small for
-        # float32 to meaningfully round.
+        # Y doesn't need this treatment: while bound, player.position.y runs from
+        # Ship.HEIGHT up to (UNBIND_RADIUS_MULTIPLE - 1) x radius, about 1,200 km at most
+        # on an earthlike planet, where float32 still resolves about 0.1 m.
         GL.glTranslatef(0.0, -player.position.y, 0.0)
 
         GL.glEnable(GL.GL_DEPTH_TEST)

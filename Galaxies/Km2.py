@@ -12,6 +12,7 @@ from Galaxies.ore_fields import OreField
 
 if TYPE_CHECKING:
     from Galaxies.world import World
+    from Galaxies.outpost import Outpost
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class Km2:
             self.set_altered()
 
         my_random: random.Random = random.Random(self.seed)
-        rocksCount: int = max(int(parent_world.rocks_prevalence * my_random.gauss(100, 50)), 0)
+        rocksCount: int = max(int(parent_world.rocks_prevalence * my_random.gauss(80, 40)), 0)
         self.rocks: List[Rock] = []
         self.molten_rocks: List[str] = []
         self.ore_fields: List[OreField] = []
@@ -63,6 +64,11 @@ class Km2:
         if ore_fields and len(ore_fields) > 0:
             self.ore_fields = [OreField.generate_loaded(self, f) for f in ore_fields]
 
+        # From the planet (if at all):
+        self.outpost: Optional[Outpost] = None
+        if not self.parent_world.parent_planet:
+            self.parent_world.get_outpost(self.longitude, self.latitude)
+
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
@@ -78,7 +84,7 @@ class Km2:
     def get_alterations(self) -> dict:
         alterations = dict()
 
-        # Rocks
+        # Rocks - only altered
         rocks = dict()
         for rock in self.rocks:
             rock_alterations = rock.get_alterations()
@@ -87,10 +93,10 @@ class Km2:
             rocks[rock.get_alterations_key()] = rock_alterations
         alterations['rocks'] = rocks
 
-        # Molten rocks
+        # Molten rocks - all are alterations
         alterations['molten_rocks'] = self.molten_rocks
 
-        # Ore fields
+        # Ore fields - all are alterations
         alterations['ore_fields'] = [f.serialize() for f in self.ore_fields]
 
         if len(rocks) + len(self.molten_rocks) + len(self.ore_fields) <= 0:
