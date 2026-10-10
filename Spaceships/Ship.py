@@ -48,7 +48,7 @@ class Ship(Updatable):
 
     def set_notification(self, message: str) -> Ship:
         self.notification = message
-        self.next_update_at = gem.current_environment.date_time + timedelta(seconds=5)
+        self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
         UpdateQueue.update_queue.add(self)
 
     def set_mine_pressed(self) -> None:

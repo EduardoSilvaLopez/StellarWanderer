@@ -7,7 +7,7 @@ from datetime import datetime
 from ..Constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
-from .common import get_cockpit_background, draw_beveled_panel, format_compact_distance
+from .common import get_console_background, draw_beveled_panel, format_compact_distance
 from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
@@ -29,10 +29,8 @@ class Console:
         top = int(h * CONSOLE_TOP)
         height = h - top
 
-        # Draw textured background
-        background = get_cockpit_background(w, h)
-        console_scaled = pygame.transform.scale(background, (w, height))
-        surface.blit(console_scaled, (0, top))
+        # Draw textured background (scaled once and cached, not every frame)
+        surface.blit(get_console_background(w, h, height), (0, top))
 
         pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (0, top), (w, top), 2)
         pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))

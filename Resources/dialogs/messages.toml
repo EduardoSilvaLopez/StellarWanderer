@@ -6,14 +6,14 @@
 #   button - the label of the button (optional, default "OK")
 #
 # {placeholders} are replaced with game data when the message is shown. Unknown ones stay as written.
-# Available for "welcome": {pilot_title}  {world}  {system}
+# Available for "welcome": {pilot_title}  {moon}  {planet}
 
 [welcome]
 title = "Welcome, {pilot_title} Pilot!"
 text = """
 Speaker Xi, the famous pilot trainer, has closed the communication with his last message. Now he will train other Citizen Pilots. You are ready.
 
-{world} extends in front of you. Your task is to plant mines in this ore-rich moon and bring it to the outpost in the planet. The better you work, the more your reputation will increase.
+{moon} extends in front of you. Your task is to plant mines in this ore-rich moon and bring it to the outpost in the planet, {planet}. The better you work, the more your reputation will increase.
 
 The State of "Those-Who-Share" will provide you everything you need there, as they provided you this ship as long as you need it to perform your tasks for the Community.
 

@@ -29,8 +29,6 @@ ROCK_EDGE_COLOR = (60, 60, 60)
 LASER_COLOR = (255, 255, 0)
 
 # Ore mine geometry and texture
-MINE_RADIUS = 4.0  # metres
-MINE_HEIGHT = 12.0  # metres
 MINE_SEGMENTS = 16
 MINE_BASE_HEIGHT = 0.05  # Small offset above the ground to avoid z-fighting.
 MINE_TEXTURE_WIDTH = 256
@@ -62,6 +60,8 @@ MAX_DEPTH = 2000  # metres
 LOCAL_STAR_MIN_RADIUS_PX = 1  # floor so a distant/small star never vanishes to 0px
 LOCAL_STAR_HALO_WIDTH_PX = 4  # extra radius of the semi-transparent glow ring around the star
 LOCAL_STAR_HALO_ALPHA = 90    # 0-255
-SKY_WORLD_COLOR = RADAR_WORLD_COLOR  # disc colour of the other worlds (planets and moons) in the sky
-SKY_WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a dot
-SKY_WORLD_MAX_RADIUS_PX = 4000  # cap so a world seen from very close cannot overflow pygame's drawing
+WORLD_ALBEDO = (176, 160, 140)  # base colour of every world (planets and moons) when lit by its star
+WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
+WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
+WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
+LIT_WORLD_PIXEL_BUDGET = 80_000  # discs larger than this (in pixels) are shaded on a coarser grid

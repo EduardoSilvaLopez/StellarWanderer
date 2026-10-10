@@ -108,8 +108,8 @@ def start_game(action: str, value: object) -> float:
         show_message(
             'welcome',
             pilot_title=player.get_title(),
-            world=gem.current_environment.nearest_world.name,
-            system=gem.current_environment.nearest_system.name,
+            planet=gem.current_environment.nearest_world.parent_planet.name,
+            moon=gem.current_environment.nearest_world.name,
         )
     return elapsed
 

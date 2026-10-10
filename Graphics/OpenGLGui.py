@@ -9,6 +9,7 @@ from .Constants import SPACE_COLOR
 from .Cockpit import Cockpit
 from .DeepSpace import DeepSpace
 from .LocalStar import LocalStar
+from .lit_worlds import LitWorlds
 from .NearestWorld import NearestWorld
 from .other_worlds import OtherWorlds
 from .Rocks import Rocks
@@ -50,7 +51,10 @@ class OpenGLGui:
         OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=True)
         LocalStar.draw(self.world_surface, width, height, environment, player)
         OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=False)
-        NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
+        if player.is_bound:
+            NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
+        else:
+            LitWorlds.draw_nearest(self.world_surface, width, height, environment, player)
 
         self.overlay_surface.fill((0, 0, 0, 0))
         Cockpit.draw(
@@ -126,10 +130,16 @@ class OpenGLGui:
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
         return texture
 
-    def _draw_texture(self, surface: pygame.Surface, texture: int, blend: bool = False) -> None:
-        width, height = surface.get_size()
-        # Keep Pygame's top-to-bottom row order for the top-left screen quad.
-        pixels = pygame.image.tostring(surface, 'RGBA', False)
+    @staticmethod
+    def _is_bgra32(surface: pygame.Surface) -> bool:
+        """True if the surface's memory is tightly packed 32-bit BGRA (or BGRX), as OpenGL's GL_BGRA reads it."""
+        return (
+            surface.get_bytesize() == 4
+            and surface.get_pitch() == surface.get_width() * 4
+            and surface.get_masks()[:3] == (0x00FF0000, 0x0000FF00, 0x000000FF)
+        )
+
+    def _upload_texture(self, texture: int, width: int, height: int, pixel_format: int, pixels: Any) -> None:
         # The rock pass uses the canopy-height viewport; restore the full window
         # before drawing either 2D texture.
         GL.glViewport(0, 0, width, height)
@@ -138,7 +148,7 @@ class OpenGLGui:
             # Fast path: texture storage already exists, just update its contents.
             GL.glTexSubImage2D(
                 GL.GL_TEXTURE_2D, 0, 0, 0, width, height,
-                GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
+                pixel_format, GL.GL_UNSIGNED_BYTE, pixels
             )
         else:
             # First upload: allocate storage and fill it in the same call. Allocating
@@ -149,9 +159,21 @@ class OpenGLGui:
             # on the first rendered frame only.
             GL.glTexImage2D(
                 GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, width, height, 0,
-                GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
+                pixel_format, GL.GL_UNSIGNED_BYTE, pixels
             )
             self._uploaded_textures.add(texture)
+
+    def _draw_texture(self, surface: pygame.Surface, texture: int, blend: bool = False) -> None:
+        width, height = surface.get_size()
+        # Keep Pygame's top-to-bottom row order for the top-left screen quad.
+        # A 32-bit surface laid out as BGRA is uploaded as a plain copy of its memory (get_buffer().raw),
+        # about 2.5x faster than converting with image.tostring on every frame. It is deliberately a bytes
+        # copy and not a memoryview of the live buffer: a memoryview can stay exported while OpenGL holds
+        # it (that raised BufferError at start, under the debugger) and would keep the surface locked.
+        if self._is_bgra32(surface):
+            self._upload_texture(texture, width, height, GL.GL_BGRA, surface.get_buffer().raw)
+        else:
+            self._upload_texture(texture, width, height, GL.GL_RGBA, pygame.image.tostring(surface, 'RGBA', False))
         if blend:
             GL.glEnable(GL.GL_BLEND)
             GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)

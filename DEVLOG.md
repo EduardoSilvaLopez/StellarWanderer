@@ -190,19 +190,34 @@ PLANETS AND MOONS started.
 - Indication of rock temperature.
 - Indication when approaching the planet in a dangerous speed (must start breaking)
 
-Extra time: 12h + 6:00 - 
+DIALOGS:
+
+- Made.
+
+TRADE POSTS:
+
+- Improving the way worlds are seen, first.
+- Ore prevalence for planets, affects the composition of rocks.
+
+Extra time: 12h + 6:00 - 10:15 = 16h15' + 11:00-
+- Test the drawing of planets in outbound...
+- Generate outposts in planets only.
+- Mark the outposts in the world map.
+- Mark the outposts in the unbound view of the planet.
+- Remove rocks too near an outpost.
+- Draw the outposts.
+- Scan the outposts (just a symbol for now... later, faces?)
+- "Laser hit" when outposts in scan, now opens dialog.
 
 BACKLOG
-- DIALOGS: First the "starting" one, then the "introduction" with ok.
-- TRADE POSTS
-- BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
-- TRAVEL TO THE SUN (forbidden areas)
-- ASTEROIDS
-- REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
-- INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
-- https://github.com/obra/superpowers#how-it-works
-- JOVIAN PLANETS (with forbidden area)
-- SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
+* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
+* TRAVEL TO THE SUN (forbidden areas)
+* ASTEROIDS
+* REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
+* INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
+* https://github.com/obra/superpowers#how-it-works
+* JOVIAN PLANETS (with forbidden area)
+* SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
 
 ### Learning Python:
 

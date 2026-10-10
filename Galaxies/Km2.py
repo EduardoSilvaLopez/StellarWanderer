@@ -36,7 +36,7 @@ class Km2:
             self.set_altered()
 
         my_random: random.Random = random.Random(self.seed)
-        rocksCount: int = max(my_random.gauss(50, 10), 0)
+        rocksCount: int = max(int(parent_world.rocks_prevalence * my_random.gauss(100, 50)), 0)
         self.rocks: List[Rock] = []
         self.molten_rocks: List[str] = []
         self.ore_fields: List[OreField] = []

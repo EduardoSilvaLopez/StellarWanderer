@@ -19,8 +19,9 @@ class Laser:
     def draw(width: int, height: int, player: Player) -> None:
         """Draw the laser beam if the player is firing.
 
-        Laser is a straight line from player position extending 500 meters
-        forward along the ship's heading, depth-tested against rocks/ground.
+        Laser is a straight segment from just below the camera to its end point (Laser.update_aim):
+        while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
+        MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground.
         """
         if not player.ship.laser.firing:
             return

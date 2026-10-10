@@ -52,7 +52,7 @@ class Scanner:
         mine = player.ship.laser.targeted_mine
         if rock is not None:
             Scanner._draw_scanned_rock(surface, rect, player, rock)
-            if round(rock.temperature) > 0:
+            if rock.temperature > 0.0:
                 temperature_text = label_font.render(f'Temperature: {round(rock.temperature)}°', True, AMBER)
                 surface.blit(temperature_text, temperature_text.get_rect(midtop=(rect.centerx, text_y)))
                 text_y += text_line_height

@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 class Laser:
     MAX_LENGTH = 500  # metres
     POSITION_OFFSET = 5  # metres, offset from camera to avoid culling
-    TEMP_RISE_RATE = 1000.0  # degrees per second, rate at which rock temperature rises when hit by laser, when the rock is 1 cubic meter.
-    MINE_RADIUS = 2.0  # metres, must match the mine's rendered geometry.
-    MINE_HEIGHT = 8.0  # metres, must match the mine's rendered geometry.
+    TEMP_RISE_RATE = 2000.0  # degrees per second, rate at which rock temperature rises when hit by laser, when the rock is 1 cubic meter.
 
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
@@ -56,7 +54,9 @@ class Laser:
             self.targeted_mine = None
             return
 
-        # Compute laser endpoint: forward vector is (sin(θ), 0, cos(θ))
+        # Forward vector is (sin(θ), 0, cos(θ)). The beam starts just below and ahead of the camera and
+        # ends on the ground (altitude 0, the surface) at MAX_LENGTH metres ahead, so it is a shallow
+        # slope from the emitter down to the ground at full range.
         yaw = math.radians(self.ship.owner.yaw)
         forward_x = math.sin(yaw)
         forward_z = math.cos(yaw)
@@ -67,7 +67,7 @@ class Laser:
         self.start_z = self.ship.owner.position.z + forward_z * 5.0
 
         self.end_x = self.ship.owner.position.x + self.length * forward_x
-        self.end_y = self.ship.owner.position.y - Laser.POSITION_OFFSET
+        self.end_y = 0.0
         self.end_z = self.ship.owner.position.z + self.length * forward_z
 
         # Find out which rock and which mine, if any, are currently in the
@@ -91,7 +91,10 @@ class Laser:
 
             # Adjust the endpoint to the intersection point using the t-value
             # The intersection point is: start + t * (end - start)
+            # The beam slopes down to the ground, so the height moves with it too, or the drawn
+            # end would sit below the point the beam really hits.
             self.end_x = self.start_x + closest_t * (self.end_x - self.start_x)
+            self.end_y = self.start_y + closest_t * (self.end_y - self.start_y)
             self.end_z = self.start_z + closest_t * (self.end_z - self.start_z)
         else:
             self.targeted_rock = None
@@ -263,7 +266,7 @@ class Laser:
     def is_mine_hit(self, mine: OreMine) -> Optional[float]:
         """Determine if the laser hits an ore mine and return the t-value of the intersection.
 
-        Mines are vertical cylinders of radius MINE_RADIUS and height MINE_HEIGHT,
+        Mines are vertical cylinders of radius mine.MINE_RADIUS and height mine.MINE_HEIGHT,
         standing on the ground (y in [0, MINE_HEIGHT]) at (mine.longitude, mine.latitude).
         Being rotationally symmetric, no un-rotation is needed, unlike rocks.
         """
@@ -279,7 +282,7 @@ class Laser:
         # Circular cross-section (XZ plane): solve |start + t*d|^2 = radius^2.
         a = dx * dx + dz * dz
         b = 2.0 * (start_x * dx + start_z * dz)
-        c = start_x * start_x + start_z * start_z - self.MINE_RADIUS ** 2
+        c = start_x * start_x + start_z * start_z - mine.MINE_RADIUS ** 2
         if abs(a) > 1e-9:
             discriminant = b * b - 4.0 * a * c
             if discriminant < 0:
@@ -297,13 +300,13 @@ class Laser:
         # Height bounds (Y axis).
         if abs(dy) > 1e-9:
             t1 = (0.0 - self.start_y) / dy
-            t2 = (self.MINE_HEIGHT - self.start_y) / dy
+            t2 = (mine.MINE_HEIGHT - self.start_y) / dy
             if t1 > t2:
                 t1, t2 = t2, t1
             t_min = max(t_min, t1)
             t_max = min(t_max, t2)
         else:
-            if self.start_y < 0.0 or self.start_y > self.MINE_HEIGHT:
+            if self.start_y < 0.0 or self.start_y > mine.MINE_HEIGHT:
                 return None
 
         if t_min <= t_max:

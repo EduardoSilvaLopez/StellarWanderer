@@ -14,7 +14,7 @@ import pygame
 from OpenGL import GL
 
 from .Constants import (
-    MINE_RADIUS, MINE_HEIGHT, MINE_SEGMENTS, MINE_BASE_HEIGHT,
+    MINE_SEGMENTS, MINE_BASE_HEIGHT,
     MINE_TEXTURE_WIDTH, MINE_TEXTURE_HEIGHT,
     MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT,
     MINE_WARNING_A, MINE_WARNING_B, MINE_CAP_COLOR,
@@ -67,8 +67,8 @@ class OreMines:
         for i in range(MINE_SEGMENTS + 1):
             frac = i / MINE_SEGMENTS
             angle = 2.0 * math.pi * frac
-            local_x = MINE_RADIUS * math.cos(angle)
-            local_z = MINE_RADIUS * math.sin(angle)
+            local_x = mine.MINE_RADIUS * math.cos(angle)
+            local_z = mine.MINE_RADIUS * math.sin(angle)
             x2 = local_x * cos_o + local_z * sin_o
             z2 = -local_x * sin_o + local_z * cos_o
             points.append((relative_longitude + x2, y, relative_latitude + z2, frac))
@@ -77,7 +77,7 @@ class OreMines:
     @staticmethod
     def _draw_mine_side(mine: OreMine, player_x: float, player_z: float) -> None:
         base_y = MINE_BASE_HEIGHT
-        top_y = base_y + MINE_HEIGHT
+        top_y = base_y + mine.MINE_HEIGHT
         base_pts = OreMines._mine_circle_points(mine, base_y, player_x, player_z)
         top_pts = OreMines._mine_circle_points(mine, top_y, player_x, player_z)
 
@@ -92,7 +92,7 @@ class OreMines:
     @staticmethod
     def _draw_mine_caps(mine: OreMine, player_x: float, player_z: float) -> None:
         base_y = MINE_BASE_HEIGHT
-        top_y = base_y + MINE_HEIGHT
+        top_y = base_y + mine.MINE_HEIGHT
         relative_longitude = mine.longitude - player_x
         relative_latitude = mine.latitude - player_z
 

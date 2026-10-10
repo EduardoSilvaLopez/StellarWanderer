@@ -12,6 +12,10 @@ from Galaxies import ore_fields
 
 class OreMine(Updatable):
     EXTRACTION_PERIOD: int = 3600
+    # Geometry of a mine: a vertical cylinder standing on the ground. Graphics draws it with these and
+    # the laser hits it with these, so the two always agree.
+    MINE_RADIUS: float = 4.0  # metres
+    MINE_HEIGHT: float = 12.0  # metres
 
     def __init__(
             self,

@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
 _cockpit_background: Optional[pygame.Surface] = None
 _windshield_frame_texture: Optional[pygame.Surface] = None
+# (w, h, console height, the cockpit background it was made from, the scaled console background)
+_console_background: Optional[Tuple[int, int, int, pygame.Surface, pygame.Surface]] = None
 
 COMPACT_DISTANCE_UNITS = (('m', 1.0), ('Km', 1e3), ('Mm', 1e6), ('Gm', 1e9), ('Tm', 1e12), ('Pm', 1e15))
 
@@ -93,6 +95,21 @@ def get_cockpit_background(w: int, h: int) -> pygame.Surface:
             fallback.fill((40, 50, 60))
             _cockpit_background = fallback
     return _cockpit_background
+
+
+def get_console_background(w: int, h: int, console_height: int) -> pygame.Surface:
+    """The cockpit background scaled to the console's size (w x console_height), cached.
+
+    It is converted to per-pixel alpha, the format of the overlay it is blitted onto every frame:
+    blitting an opaque surface onto a per-pixel-alpha one takes a much slower path (about 13 ms
+    versus 1.3 ms for a full console)."""
+    global _console_background
+    background = get_cockpit_background(w, h)
+    cached = _console_background
+    if cached is None or cached[:3] != (w, h, console_height) or cached[3] is not background:
+        scaled = pygame.transform.scale(background, (w, console_height)).convert_alpha()
+        _console_background = (w, h, console_height, background, scaled)
+    return _console_background[4]
 
 
 def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:

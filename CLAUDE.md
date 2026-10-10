@@ -52,6 +52,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - Braking (S) decelerates linear velocity in all three axes and all rotation rates (yaw, pitch, roll) to zero. While unbound, linear braking is relative to the star, except within `BRAKING_RADIUS_MULTIPLE` world radii of the nearest world's centre, where it is relative to that world.
 - Bind, unbind and braking thresholds are all distances from the world's centre in radii (1.0 = surface). The bound altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to BRAKING_RADIUS_MULTIPLE radii distance from the centre.
 - In the braking zone the "Speed" readout of the unbound meter turns red when `Player.collision_warning` holds: keeping its direction relative to the world, the ship reaches the surface even braking with only `Player.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (straight-line check, sideways dodging not considered).
+- The laser, while bound, is a shallow slope from the emitter (`POSITION_OFFSET` below the camera) down to the ground at `Laser.MAX_LENGTH` metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their distance pass over the beam.
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
 - Location-info readouts show yaw, pitch and roll as angle plus rate (Δ, deg/s). `Player.pitch_angle` and `Player.roll_angle` are relative to the local horizon, positive nose up and right wing down.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
@@ -69,6 +70,12 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - The world is not put in `UpdateQueue`, because its state is derived, not stored. Use the queue only for work that mutates state at intervals.
 - Do not add per-call logging to these functions; they run every frame while unbound.
 
+## Worlds in the sky
+
+- Every world drawn in the sky (planets and moons) is a sphere lit by its star: `Graphics/lit_worlds.py` intersects each pixel's view ray with the sphere, so the silhouette is exact and the shade is the cosine between the surface normal and the direction to the star (colour = `WORLD_ALBEDO` tinted by the star's colour, plus `WORLD_AMBIENT_LIGHT`). Worlds too small to see are drawn as a small lit disc (`WORLD_MIN_RADIUS_PX`).
+- While unbound, all worlds are lit this way, including the nearest one (`LitWorlds.draw_nearest`). While bound, every world except the nearest is lit; the nearest is still the plain gray disc below the horizon (`NearestWorld.draw_surface`), to be handled differently later.
+- Draw order in `OpenGLGui.draw`: worlds farther than the star, the star, worlds nearer than the star, then the nearest world.
+
 ## Dialogs
 
 - Dialogs are modal and live in `Dialogs/`. A `Dialog` never runs its own loop: the host feeds it events and shows its surface, as an overlay above the frozen game (`Dialog.compose_overlay` through `OpenGLGui.draw(dialog_surface=...)`) or alone in the startup window (`run_in_window`).
@@ -85,10 +92,12 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 
 - `pygame-ce`: Window, input, OpenGL context
 - `PyOpenGL`: 3D graphics
+- `numpy`: shading of lit worlds (`Graphics/lit_worlds.py`, with `pygame.surfarray`)
 - Python stdlib: datetime, logging, random, math, os, sys
 
 ## Key Notes
 
+- Frame cost: software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`OpenGLGui._upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`), and the console background is scaled once and cached as a per-pixel-alpha surface (`get_console_background`). Both were measured at about 14 ms per frame each; avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame `image.tostring`.
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - Window position/size: `center_window_on_screen()` in `main.py` uses Windows API via ctypes to center the 1920×1080 main window
 - Logging: `GameLogging.configure_logging()` called at app startup; logs to console + `Logs/stellar_wanderer.log` (ISO8601 timestamps)

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import logging
 import Galaxies.constants
 from Galaxies.km2 import Km2
+from Galaxies.rock import Rock
 from Vector3 import Vector3
 
 if TYPE_CHECKING:
@@ -72,6 +73,13 @@ class World:
 
         self.rotation_period: int = self.generate_rotation_period(my_random)
 
+        self.rocks_prevalence: float = my_random.random()
+        self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 2 * my_random.random()
+        if self.parent_planet is not None and self.parent_planet.is_initial_planet():
+            # Why were you sent here...? :D
+            self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
+            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
+
         # Alterations:
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -97,18 +105,24 @@ class World:
             while moons_count < 0:
                 moons_count = int(my_random.gauss(2.0, 1.0))
             # Initial moon's clause.
-            if not moons_count and self.parent_orbit.number == 3.0:
-                from Galaxies.stellar_system import StellarSystem
-                system: StellarSystem = self.parent_orbit.parent_stellar_system
-                if system.x == 26000 and system.y == 0 and system.z == 0:
-                    moons_count = 1
+            if not moons_count and self.is_initial_planet():
+                moons_count = 1
             for moonIdx in range(0, moons_count):
                 new_moon: World = \
                     World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations)
                 self.moons.append(new_moon)
 
         self.km2s: List[Km2] = []
-        logger.info(f"New world created, '{self.name}', radius {self.radius}, at a distance {self.distance_to_parent} to its parent.")
+        self.log_creation()
+
+    def is_initial_planet(self) -> bool:
+        from Galaxies.stellar_system import StellarSystem
+        return self.parent_planet is None\
+            and self.parent_orbit.number == 3.0\
+            and self.parent_orbit.parent_stellar_system.x == 26000\
+            and self.parent_orbit.parent_stellar_system.y == 0\
+            and self.parent_orbit.parent_stellar_system.z == 0
+
 
     def generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
@@ -153,6 +167,19 @@ class World:
         else:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
+
+    def log_creation(self) -> World:
+        if self.parent_planet:
+            logger.info(f"NEW MOON CREATED")
+        else:
+            logger.info(f"NEW PLANET CREATED")
+
+        logger.info(f" - Orbit(Index): {int(self.parent_orbit.number)} ({self.index})")
+        logger.info(f" - Name: {self.name}")
+        logger.info(f" - Distance to parent: {'{:,}'.format(int(self.distance_to_parent))}")
+        logger.info(f" - Radius: {'{:,}'.format(int(self.radius))}")
+        logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
+        return self
 
     def set_altered(self) -> World:
         self.is_altered = True
