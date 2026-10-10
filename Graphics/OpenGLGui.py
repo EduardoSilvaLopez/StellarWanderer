@@ -30,11 +30,19 @@ class OpenGLGui:
         self.overlay_surface: Optional[pygame.Surface] = None
         self.world_texture: Optional[int] = None
         self.overlay_texture: Optional[int] = None
+        self.dialog_texture: Optional[int] = None
         self._uploaded_textures: set = set()
 
-    def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player) -> None:
-        """Render one complete frame into the active OpenGL window."""
-        width, height = screen.get_size()
+    def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
+             dialog_surface: Optional[pygame.Surface] = None) -> None:
+        """Render one complete frame into the active OpenGL window.
+
+        dialog_surface, if given, is a window-sized RGBA layer (see Dialog.compose_overlay) drawn
+        above everything else."""
+        # The real window size, not screen.get_size(): for an OpenGL window pygame can keep returning
+        # a surface of the size first requested, which then differs from the window's client area
+        # (the window frame takes part of it), cropping the frame and shifting mouse positions.
+        width, height = pygame.display.get_window_size()
         self._ensure_surfaces(width, height)
 
         self.world_surface.fill(SPACE_COLOR)
@@ -70,6 +78,8 @@ class OpenGLGui:
         Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
+        if dialog_surface is not None:
+            self._draw_texture(dialog_surface, self.dialog_texture, blend=True)
 
     def _rocks(self, environment: GameEnvironment, player: Player) -> List[Rock]:
         rocks: List[Rock] = []
@@ -103,6 +113,7 @@ class OpenGLGui:
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.world_texture = self._make_texture(width, height)
             self.overlay_texture = self._make_texture(width, height)
+            self.dialog_texture = self._make_texture(width, height)
             self._uploaded_textures = set()
 
     @staticmethod

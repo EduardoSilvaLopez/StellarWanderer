@@ -1,6 +1,5 @@
-"""Game persistence and startup dialog."""
+"""Game persistence."""
 
 from .Savefile import Savefile
-from .StartDialog import StartDialog
 
-__all__ = ["Savefile", "StartDialog"]
+__all__ = ["Savefile"]

@@ -11,7 +11,8 @@ Controls:
     S          brake (linear and rotational)
     SPACE      fire the laser
     M          place mine
-    Esc        quit
+    Esc        open the starting dialog (new game, load, exit game); Esc again resumes.
+               Game time is paused while a dialog is open.
 """
 
 from __future__ import annotations
@@ -27,7 +28,9 @@ from Graphics.FontCache import FontCache
 import GameEnvironment as gem
 import Player as player_module
 from Persistency.Savefile import Savefile
-from Persistency.StartDialog import StartDialog
+from Dialogs import (
+    Dialog, DialogResult, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
+)
 from Graphics.OpenGLGui import OpenGLGui
 from Updating.UpdateQueue import update_queue
 
@@ -74,18 +77,90 @@ def center_window_on_screen(window_title: str, window_size: Tuple[int, int]) -> 
         logger.debug(f"Failed to center window: {e}")
 
 
+def resize_window(width: int, height: int) -> pygame.Surface:
+    """Re-create the OpenGL window at the requested size (never below MIN_SIZE)."""
+    size = (max(width, MIN_SIZE[0]), max(height, MIN_SIZE[1]))
+    return pygame.display.set_mode(size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
+
+
+def start_game(action: str, value: object) -> float:
+    """Replace the current game with a new one ('new', seed) or a saved one ('load', path).
+
+    Returns the elapsed ship seconds since EPOCH of the game that starts."""
+    update_queue.clear()
+    if action == 'load':
+        Savefile.load_from_file(value)
+        elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
+    else:
+        logger.info(f"New game with seed: {value}")
+        gem.current_environment = gem.GameEnvironment(value, EPOCH, None)
+        gem.current_environment.generate_default()
+
+        # Spawn player in the first world they encounter
+        player_module.current_player = player_module.Player()
+        player_module.current_player.spawn_in_environment(gem.current_environment)
+
+        logger.debug("New game created.")
+        elapsed = 0.0
+    player = player_module.current_player
+    player.ship.set_notification(f"Welcome, {player.get_title()} Pilot.")
+    if action == 'new':
+        show_message(
+            'welcome',
+            pilot_title=player.get_title(),
+            world=gem.current_environment.nearest_world.name,
+            system=gem.current_environment.nearest_system.name,
+        )
+    return elapsed
+
+
+def open_starting_dialog(
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[DialogResult, pygame.Surface]:
+    """Show the starting dialog above the frozen game (see run_modal_dialog)."""
+    return run_modal_dialog(StartingDialog(game_running=True), screen, gui, fonts, clock)
+
+
+def run_modal_dialog(
+        dialog: Dialog, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[DialogResult, pygame.Surface]:
+    """Show `dialog` above the frozen game until it returns a result.
+
+    Game time is paused for as long as this runs: nothing that advances it (elapsed, date and
+    time, movement, laser, the update queue) is called here, the game frame behind the dialog
+    is just re-rendered unchanged. Returns the result and the (possibly resized) window."""
+    player = player_module.current_player
+    if player.ship.laser.firing:
+        player.ship.laser.cease_fire()
+
+    result = None
+    while result is None:
+        for event in pygame.event.get():
+            if event.type == pygame.VIDEORESIZE:
+                screen = resize_window(event.w, event.h)
+                continue
+            result = dialog.handle_event(dialog.localize_event(event, pygame.display.get_window_size()))
+            if result is not None:
+                break
+        gui.draw(screen, fonts, gem.current_environment, player,
+                 dialog_surface=dialog.compose_overlay(pygame.display.get_window_size()))
+        pygame.display.flip()
+        clock.tick(FPS)
+    clock.tick()  # restart the frame timer, so the time spent in the dialog is not part of the next dt
+    return result, screen
+
+
 def main() -> None:
     configure_logging()
     pygame.init()
 
-    # Create temporary display for startup dialog
+    # Create temporary display for the starting dialog
     temp_screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption(WINDOW_TITLE)
 
-    # Show startup dialog to load or create a new game
-    dialog = StartDialog(surface=temp_screen)
-    choice = dialog.run()
-    if choice is None:
+    # Show the starting dialog to load or create a new game, or to exit
+    choice = run_in_window(StartingDialog(game_running=False), temp_screen)
+    if choice is None or choice[0] == 'exit':
         pygame.quit()
         return
 
@@ -99,40 +174,32 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     fonts = FontCache()
-    elapsed = 0.0  # seconds of ship time since EPOCH
-
-    action, value = choice
-
-    if action == 'load':
-        # Load existing savefile
-        Savefile.load_from_file(value)
-        elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
-    elif action == 'new':
-        logger.info(f"New game with seed: {value}")
-        gem.current_environment = gem.GameEnvironment(
-            value,
-            EPOCH
-            , None
-            )
-        gem.current_environment.generate_default()
-
-        # Spawn player in the first world they encounter
-        player_module.current_player = player_module.Player()
-        player_module.current_player.spawn_in_environment(gem.current_environment)
-
-        logger.debug("New game created.")
-        elapsed = 0.0
+    elapsed = start_game(*choice)  # seconds of ship time since EPOCH
     gui = OpenGLGui()
-    
+
     running = True
-    player_module.current_player.ship.set_notification(f"Welcome, {player_module.current_player.get_title()} Pilot.")
     while running:
+        # Messages asked for by game code (show_message) open here, at the start of a frame.
+        pending_message = next_pending_message()
+        while pending_message is not None and running:
+            key, values = pending_message
+            result, screen = run_modal_dialog(MessageDialog(key, values), screen, gui, fonts, clock)
+            if result[0] == 'exit':
+                running = False
+            pending_message = next_pending_message()
+        if not running:
+            break
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    running = False
+                    result, screen = open_starting_dialog(screen, gui, fonts, clock)
+                    if result[0] == 'exit':
+                        running = False
+                    elif result[0] in ('new', 'load'):
+                        elapsed = start_game(*result)
                 elif event.key == pygame.K_KP_PLUS:
                     player_module.current_player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:
@@ -147,10 +214,7 @@ def main() -> None:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
             elif event.type == pygame.VIDEORESIZE:
-                size = (max(event.w, MIN_SIZE[0]), max(event.h, MIN_SIZE[1]))
-                screen = pygame.display.set_mode(
-                    size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
-                )
+                screen = resize_window(event.w, event.h)
 
         dt = clock.tick(FPS) / 1000.0
         elapsed = min(elapsed + dt * player_module.current_player.time_scale, MAX_ELAPSED)

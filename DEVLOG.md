@@ -193,7 +193,9 @@ PLANETS AND MOONS started.
 Extra time: 12h + 6:00 - 
 
 BACKLOG
+- DIALOGS: First the "starting" one, then the "introduction" with ok.
 - TRADE POSTS
+- BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
 - TRAVEL TO THE SUN (forbidden areas)
 - ASTEROIDS
 - REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)

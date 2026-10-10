@@ -36,7 +36,8 @@ def generate_default(self) -> None:
 - `Galaxies/`: Procedural world structure (Galaxy, StellarSystem, Orbit, World, Km2, Rock)
 - `Graphics/`: OpenGL rendering (Cockpit, DeepSpace, NearestWorld, Laser, Rocks)
 - `Spaceships/`: Ship + Laser logic
-- `Persistency/`: Save/load (Savefile, StartDialog)
+- `Persistency/`: Save/load (Savefile)
+- `Dialogs/`: Modal dialogs (`dialog.py` base class, `starting_dialog.py`)
 - `GameLogging/`: Logging config (Constants, Setup)
 - `Updating/`: Time-based updates (UpdateQueue, Updatable)
 
@@ -68,6 +69,13 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - The world is not put in `UpdateQueue`, because its state is derived, not stored. Use the queue only for work that mutates state at intervals.
 - Do not add per-call logging to these functions; they run every frame while unbound.
 
+## Dialogs
+
+- Dialogs are modal and live in `Dialogs/`. A `Dialog` never runs its own loop: the host feeds it events and shows its surface, as an overlay above the frozen game (`Dialog.compose_overlay` through `OpenGLGui.draw(dialog_surface=...)`) or alone in the startup window (`run_in_window`).
+- **Opening a dialog pauses game time.** While `main.open_starting_dialog` (or any future modal loop) runs, nothing that advances game time is called, and the frame timer is restarted afterwards so the next `dt` does not include the dialog's time.
+- **Message dialogs** (`MessageDialog`): a textured panel (`Resources/textures/dialog_background.png`), Orbitron title and Exo 2 body (`Resources/fonts/`, SIL OFL, licence files next to them), one button; Esc, Enter, Space or the button close it. Their texts live in `Resources/dialogs/messages.toml` (one section per message: `title`, `text`, optional `button`; `{placeholders}` are filled from game data; re-read from disk every time a message opens, so editing the file needs no restart). Game code calls `show_message('key', name=value, ...)` and never opens a modal loop itself: `main` opens pending messages at the start of the next frame through `run_modal_dialog`. Currently only the `welcome` message, shown at the start of a *new* game.
+- Esc opens the *starting dialog* (`StartingDialog`: new game, load a savefile, Exit game); Esc inside it resumes the game. Esc no longer quits; the Exit game button (or closing the window) does.
+
 ## Radar
 
 - Shown only while unbound, in the centre console panel where the world map is drawn while bound (`Graphics/Instruments/radar.py`).
@@ -81,6 +89,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 
 ## Key Notes
 
+- Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - Window position/size: `center_window_on_screen()` in `main.py` uses Windows API via ctypes to center the 1920×1080 main window
 - Logging: `GameLogging.configure_logging()` called at app startup; logs to console + `Logs/stellar_wanderer.log` (ISO8601 timestamps)
-- No external config files — all settings in module-level constants (e.g., `GameLogging/Constants.py`)
+- No external config files — all settings in module-level constants (e.g., `GameLogging/Constants.py`). Texts meant to be edited by hand are the exception: `Resources/dialogs/messages.toml`.
