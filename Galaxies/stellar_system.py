@@ -116,7 +116,9 @@ class StellarSystem:
         if self.is_altered:
             for orbit in self.orbits:
                 if orbit.is_altered:
-                    alterations[orbit.get_alterations_key()] = orbit.get_alterations()
+                    orbit_alterations: Optional[dict] = orbit.get_alterations()
+                    if orbit_alterations is not None:
+                        alterations[orbit.get_alterations_key()] = orbit_alterations
         if alterations == {}:
             return None
         return alterations

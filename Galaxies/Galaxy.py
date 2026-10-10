@@ -1,3 +1,4 @@
+import copy
 from typing import List, Optional
 
 from Galaxies.stellar_system import StellarSystem
@@ -22,9 +23,19 @@ class Galaxy():
         ''' Galaxy alterations, exceptionally, are an empty map if none.'''
         alterations = dict()
         if self.is_altered:
+            # Stellar systems only exist once visited, so start from the alterations loaded from the
+            # savefile (systems not in memory must survive the next save), then overlay the live systems.
+            if self.saved_alterations is not None:
+                alterations = {
+                    key: copy.deepcopy(value) for key, value in self.saved_alterations.items() if key != 'date_time'
+                }
             for system in self.stellar_systems:
                 if system.is_altered:
-                    alterations[system.get_alterations_key()] = system.get_alterations()
+                    system_alterations: Optional[dict] = system.get_alterations()
+                    if system_alterations is None:
+                        alterations.pop(system.get_alterations_key(), None)
+                    else:
+                        alterations[system.get_alterations_key()] = system_alterations
         return alterations
 
     def add_stellar_system(self, x: int, y: int, z: int) -> StellarSystem:

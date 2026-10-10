@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import math
 import random
 from datetime import datetime
@@ -170,10 +171,18 @@ class World:
 
         result: Optional[dict] = dict()
 
-        km2_alterations: Optional[dict] = dict()
+        # Km2 objects only exist near the player, so start from the alterations loaded from the
+        # savefile (Km2s not in memory must survive the next save), then overlay the live Km2s.
+        km2_alterations: dict = dict()
+        if self.saved_alterations is not None and self.saved_alterations.get('Km2s') is not None:
+            km2_alterations = copy.deepcopy(self.saved_alterations['Km2s'])
         for km2 in self.km2s:
             if km2.is_altered:
-                km2_alterations[km2.get_alterations_key()] = km2.get_alterations()
+                one_km2_alterations: Optional[dict] = km2.get_alterations()
+                if one_km2_alterations is None:
+                    km2_alterations.pop(km2.get_alterations_key(), None)
+                else:
+                    km2_alterations[km2.get_alterations_key()] = one_km2_alterations
         if len(km2_alterations):
             result['Km2s'] = km2_alterations
 
