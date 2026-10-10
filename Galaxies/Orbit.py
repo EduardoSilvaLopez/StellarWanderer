@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import random
 from typing import TYPE_CHECKING, List, Optional
 
@@ -7,6 +8,7 @@ from Galaxies.world import World
 if TYPE_CHECKING:
     from Galaxies.stellar_system import StellarSystem
 
+'''An orbit can have 2 planets, even more later - but very seldom.'''
 class Orbit:
 
     def __init__(self,

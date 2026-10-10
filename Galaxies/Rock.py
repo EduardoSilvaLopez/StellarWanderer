@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging; logger = logging.getLogger(__name__)
+import logging
 from random import Random
 
 from datetime import datetime, timedelta
@@ -12,6 +12,8 @@ from Updating.UpdateQueue import update_queue
 
 if TYPE_CHECKING:
     from Galaxies.km2 import Km2
+
+logger = logging.getLogger(__name__)
 
 class Rock(Updatable):
     TEMP_RISE_RATE = 1000.0 # Temp. raise for a 1 square cube rock in 1 second.

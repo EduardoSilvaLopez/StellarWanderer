@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-import logging; logger = logging.getLogger(__name__)
-
 import math
 import random
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
+import logging
 import Galaxies.constants
+from Galaxies.km2 import Km2
+from Vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.orbit import Orbit
     from Player import Player
 
-from Galaxies.km2 import Km2
-from Vector3 import Vector3
+logger = logging.getLogger(__name__)
 
 class World:
     '''The generation is full of heuristic but playtested, hopefully realistic, factors.'''

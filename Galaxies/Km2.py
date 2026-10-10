@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import logging; logger = logging.getLogger(__name__)
-
 import datetime
 import random
 from typing import List, TYPE_CHECKING, Optional
 
-from Updating.Updatable import Updatable
+import logging
 
 import Galaxies.constants
 from Galaxies.rock import Rock
@@ -14,6 +12,8 @@ from Galaxies.ore_fields import OreField
 
 if TYPE_CHECKING:
     from Galaxies.world import World
+
+logger = logging.getLogger(__name__)
 
 class Km2:
 
@@ -63,7 +63,8 @@ class Km2:
         if ore_fields and len(ore_fields) > 0:
             self.ore_fields = [OreField.generate_loaded(self, f) for f in ore_fields]
 
-        logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+        if self.is_altered:
+            logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
     def set_altered(self) -> Km2:
         self.is_altered = True

@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from Galaxies.stellar_system import StellarSystem
 
+'''The whole galaxy. We won't have more than one.'''
 class Galaxy():
 
     def __init__(self, seeds_delta: int, saved_alterations: dict) -> None:
