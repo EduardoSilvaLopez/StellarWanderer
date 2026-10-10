@@ -272,16 +272,27 @@ class Player:
     def direction_to_world(self, target: World, current_datetime: datetime) -> Vector3:
         """Vector from the ship to the centre of `target`, in the active frame (the same
         frame as direction_to_star: surface east/up/north when bound, stellar when unbound)."""
-        target_position = target.calculate_stellar_position(current_datetime)
+        return self.direction_to_point(target.calculate_stellar_position(current_datetime), current_datetime)
+
+    def direction_to_point(self, point: Vector3, current_datetime: datetime) -> Vector3:
+        """Vector from the ship to a stellar-frame `point`, in the active frame (see direction_to_world)."""
         if not self.is_bound:
-            return target_position - self.position.as_vector()
+            return point - self.position.as_vector()
         world = gem.current_environment.nearest_world
         east_hat, up_hat, north_hat = world.surface_basis(self.position.x, self.position.z, current_datetime)
         centre = world.calculate_stellar_position(current_datetime)
         # The star-centred basis has Y opposite to the orbital motion, so Y is negated.
         player_position = Vector3(centre.x, -centre.y, centre.z) + up_hat * (world.radius + self.position.y)
-        relative = Vector3(target_position.x, -target_position.y, target_position.z) - player_position
+        relative = Vector3(point.x, -point.y, point.z) - player_position
         return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
+
+    def stellar_position(self, current_datetime: datetime) -> Vector3:
+        """The ship's position in the stellar frame, whether bound or not."""
+        if not self.is_bound:
+            return self.position.as_vector()
+        world = gem.current_environment.nearest_world
+        basis = world.surface_basis(self.position.x, self.position.z, current_datetime)
+        return self.calculate_stellar_position(world, world.calculate_stellar_position(current_datetime), basis)
 
     def camera_components(self, vector: Vector3) -> Vector3:
         """Components of a direction along the ship's right, up and forward axes."""

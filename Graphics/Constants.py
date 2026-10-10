@@ -64,4 +64,6 @@ WORLD_ALBEDO = (176, 160, 140)  # base colour of every world (planets and moons)
 WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
 WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
 WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
+OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky
+OUTPOST_DOT_RADIUS_PX = 2
 LIT_WORLD_PIXEL_BUDGET = 80_000  # discs larger than this (in pixels) are shaded on a coarser grid

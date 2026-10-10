@@ -67,24 +67,51 @@ class WorldMap:
         pygame.draw.rect(surface, ACCENT_DIM, inner_area, 1)
 
         # Calculate player position as normalized coordinates within map
-        lon_min = -math.pi * radius
-        lon_max = math.pi * radius
-        lat_min = -math.pi * radius / 2
-        lat_max = math.pi * radius / 2
+        player_x, player_y = WorldMap._map_point(player.position.x, player.position.z, radius, inner_area)
 
-        # Normalize player position to [0, 1]
-        norm_lon = (player.position.x - lon_min) / (lon_max - lon_min)
-        norm_lat = (player.position.z - lat_min) / (lat_max - lat_min)
-
-        # Clamp to [0, 1] in case of floating point errors
-        norm_lon = max(0, min(1, norm_lon))
-        norm_lat = max(0, min(1, norm_lat))
-
-        # Convert to pixel coordinates within inner_area
-        player_x = int(inner_area.left + norm_lon * inner_area.width)
-        player_y = int(inner_area.top + (1 - norm_lat) * inner_area.height)  # Flip Y (top=max latitude)
+        # Outposts of this world (planets only; moons have none), as small white dots with their names.
+        WorldMap._draw_outposts(surface, fonts, h, world, radius, inner_area)
 
         # Draw player position as a brilliant dot
         dot_radius = max(2, int(h * 0.003))
         pygame.draw.circle(surface, ACCENT, (player_x, player_y), dot_radius)
         pygame.draw.circle(surface, (255, 255, 255), (player_x, player_y), max(1, dot_radius - 1))
+
+    @staticmethod
+    def _map_point(lon: float, lat: float, radius: float, area: pygame.Rect) -> tuple:
+        """Pixel position of a surface point (longitude, latitude in metres) inside the map area."""
+        lon_min = -math.pi * radius
+        lon_max = math.pi * radius
+        lat_min = -math.pi * radius / 2
+        lat_max = math.pi * radius / 2
+        # Normalize to [0, 1], clamped in case of floating point errors.
+        norm_lon = max(0, min(1, (lon - lon_min) / (lon_max - lon_min)))
+        norm_lat = max(0, min(1, (lat - lat_min) / (lat_max - lat_min)))
+        # Top of the map is the maximum latitude.
+        return int(area.left + norm_lon * area.width), int(area.top + (1 - norm_lat) * area.height)
+
+    @staticmethod
+    def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world, radius: float, area: pygame.Rect) -> None:
+        """White dot per outpost, with its name beside it. The label goes towards the middle of the map
+        (left when the dot is in the right half, above when in the lower half), and is kept inside the map."""
+        if world.parent_planet is not None or not world.outposts:
+            return
+        font = fonts.get(max(9, int(h * 0.014)))
+        gap_x, gap_y = 6, 4
+        centre_x, centre_y = area.centerx, area.centery
+        for outpost in world.outposts.values():
+            x, y = WorldMap._map_point(outpost.longitude, outpost.latitude, radius, area)
+            text = font.render(outpost.name, True, (255, 255, 255))
+            rect = text.get_rect()
+            if x > centre_x:
+                rect.right = x - gap_x     # right half: label on the left
+            else:
+                rect.left = x + gap_x      # left half: label on the right
+            if y > centre_y:
+                rect.bottom = y - gap_y    # lower half: label above
+            else:
+                rect.top = y + gap_y       # upper half: label below
+            rect.clamp_ip(area)
+            surface.blit(text, rect)
+            pygame.draw.circle(surface, (255, 255, 255), (x, y), 2)
+

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import math
 import random
 from typing import List, TYPE_CHECKING, Optional
 
@@ -44,9 +45,15 @@ class Km2:
 
         all_rocks_alterations: Optional[dict] = own_alterations.get('rocks') if own_alterations is not None else None
         molten_rocks: Optional[dict] = own_alterations.get('molten_rocks') if own_alterations is not None else None
+        # Outposts of a planet keep their footprint free of rocks: half the diagonal of the 12 x 6 m
+        # building plus a 5 m margin. The random draws still happen, so the other rocks do not change.
+        clearance = math.hypot(12.0 / 2, 6.0 / 2) + 5.0
+        outpost_centres = [(o.longitude, o.latitude) for o in parent_world.outposts.values()]
         for i in range(int(rocksCount)):
             rock_lon = self.longitude + my_random.randint(0, 1000)
             rock_lat = self.latitude + my_random.randint(0, 1000)
+            if any(math.hypot(rock_lon - lon, rock_lat - lat) < clearance for lon, lat in outpost_centres):
+                continue
             rock_key = f"{rock_lon} {rock_lat}"
             if molten_rocks is not None and rock_key in molten_rocks:
                 logger.debug(f"Molten rock detected at ({rock_key})")
@@ -67,7 +74,7 @@ class Km2:
         # From the planet (if at all):
         self.outpost: Optional[Outpost] = None
         if not self.parent_world.parent_planet:
-            self.parent_world.get_outpost(self.longitude, self.latitude)
+            self.outpost = self.parent_world.get_outpost_for(self)
 
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")

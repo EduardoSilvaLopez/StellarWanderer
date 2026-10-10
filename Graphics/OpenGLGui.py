@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List, Any
+import math
 import pygame
 from OpenGL import GL
 
-from .Constants import SPACE_COLOR
+from .Constants import SPACE_COLOR, MAX_DEPTH
 from .Cockpit import Cockpit
 from .DeepSpace import DeepSpace
 from .LocalStar import LocalStar
 from .lit_worlds import LitWorlds
+from .outpost_markers import OutpostMarkers
 from .NearestWorld import NearestWorld
 from .other_worlds import OtherWorlds
 from .Rocks import Rocks
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     from GameEnvironment import GameEnvironment
     from Galaxies.Rock import Rock
     from Galaxies.ore_fields import OreField
+    from Galaxies.outpost import Outpost
     from Galaxies.ore_mine import OreMine
 
 
@@ -55,6 +58,7 @@ class OpenGLGui:
             NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
         else:
             LitWorlds.draw_nearest(self.world_surface, width, height, environment, player)
+        OutpostMarkers.draw(self.world_surface, width, height, environment, player)
 
         self.overlay_surface.fill((0, 0, 0, 0))
         Cockpit.draw(
@@ -78,6 +82,7 @@ class OpenGLGui:
                 self._rocks(environment, player),
                 self._ore_fields(environment, player),
                 self._ore_mines(environment, player),
+                self._outposts(environment, player),
             )
         Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)
@@ -109,6 +114,19 @@ class OpenGLGui:
                 for ore_field in km2.ore_fields:
                     mines.extend(ore_field.mines)
         return mines
+
+    def _outposts(self, environment: GameEnvironment, player: Player) -> List[Outpost]:
+        """Outposts of the nearest world (planets only) within draw distance of the ship.
+
+        Taken from the world's own outposts, not from loaded Km2s, so they do not appear and disappear with
+        the Km2 loading around the ship."""
+        world = environment.nearest_world
+        if world.parent_planet is not None or not world.outposts:
+            return []
+        return [
+            outpost for outpost in world.outposts.values()
+            if math.hypot(outpost.longitude - player.position.x, outpost.latitude - player.position.z) < MAX_DEPTH
+        ]
 
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)

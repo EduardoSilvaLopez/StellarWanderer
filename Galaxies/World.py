@@ -98,16 +98,17 @@ class World:
             self.saved_alterations = own_alterations
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        # Outposts:
+        # Outposts (planets only): one is generated at least on the initial planet.
         from Galaxies.outpost import Outpost
         self.outposts: dict = {}
         if not self.parent_planet:
             outposts_count = int(abs(my_random.gauss(1.0, 1.5)))
             if self.is_initial_planet() and outposts_count <= 0:
-                self.outposts = 1
-            generated_outposts: List[Outpost] = [Outpost(self) for _ in range(outposts_count)]
-            for o in generated_outposts:
-                self.outposts[o.get_alteration_key()] = o # May overwrite, it is intentional.
+                outposts_count = 1
+            for _ in range(outposts_count):
+                # Added one by one, so each outpost sees the previous ones when it takes its index.
+                outpost = Outpost(self)
+                self.outposts[outpost.get_alteration_key()] = outpost  # May overwrite, it is intentional.
 
         # Children:
         self.moons: List[World] = []
@@ -285,10 +286,16 @@ class World:
             logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
 
     def get_outpost_for(self, km2: Km2) -> Optional[Outpost]:
-        return next(
-            (o for o in self.outposts if o.latitude == km2.latitude and o.longitude == km2.longitude),
-            None
-            )
+        return self.outposts.get(km2.get_alterations_key())
+
+    def surface_point_stellar(self, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+        """Stellar position (metres) of a point on this world's surface, given in surface coordinates.
+        Same convention as Player.calculate_stellar_position, with altitude 0."""
+        _, up_hat, _ = self.surface_basis(longitude, latitude, current_datetime)
+        centre = self.calculate_stellar_position(current_datetime)
+        offset = up_hat * self.radius
+        # The star-centred basis has Y opposite to the orbital motion, so Y is negated.
+        return Vector3(centre.x + offset.x, centre.y - offset.y, centre.z + offset.z)
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         """Position of this world relative to its star, in the orbital frame (meters).

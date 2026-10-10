@@ -25,6 +25,8 @@ class StellarSystem:
         my_random: random.Random = random.Random(self.seed)
         self.color, self.radius = self.generate_star_type(my_random)
         self.mass: float = self.estimate_mass()
+        self.political_entity = political_entity.THOSE_WHO_SHARE
+        self.name: str = self.generate_name(my_random)
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -33,7 +35,7 @@ class StellarSystem:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
-        
+
         orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
         # the first-ever system must have three orbits.
         if (x, y, z) == (26000, 0, 0): # Original stellar system.
@@ -42,9 +44,6 @@ class StellarSystem:
         for orbit_number in range(1, orbits_count+1):
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
-
-        self.political_entity = political_entity.THOSE_WHO_SHARE
-        self.name: str = self.generate_name(my_random)
 
     def generate_star_type(self, rnd: random.Random) -> tuple:
         color_code = rnd.random()

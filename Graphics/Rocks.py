@@ -9,19 +9,22 @@ from OpenGL import GL, GLU
 from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, PLANET_GRAY
 from .OreFields import OreFields
 from .OreMines import OreMines
+from .outposts import Outposts
 
 if TYPE_CHECKING:
     from Player import Player
     from Galaxies.Rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.ore_mine import OreMine
+    from Galaxies.outpost import Outpost
 
 
 class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
     @staticmethod
-    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField], mines: List[OreMine]) -> None:
+    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField], mines: List[OreMine],
+             outposts: List[Outpost]) -> None:
         """Draw all cube faces in a perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
@@ -62,6 +65,7 @@ class Rocks:
 
         OreFields.draw(ore_fields, player.position.x, player.position.z)
         OreMines.draw(mines, player.position.x, player.position.z)
+        Outposts.draw(outposts, player.position.x, player.position.z)
 
         for rock in rocks:
             Rocks._draw_rock(rock, player.position.x, player.position.z)
