@@ -47,9 +47,12 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             10000: 'Premier'
         },
         [
-            'Hard', 'Necessary', 'Tough', 'Realistic', 'Iron', 'Complex', 'Vital', 'Important', 'Relevant'
+            'Hard', 'Necessary', 'Tough', 'Realistic', 'Iron',
+            'Complex', 'Vital', 'Important', 'Relevant', 'Critical',
+            'Noble', 'Consequential', 'Helpful'
         ],
         [
-            'Hope', 'Reality', 'Task', 'Work', 'Duty', 'Plan', 'Issue'
+            'Hope', 'Reality', 'Task', 'Work', 'Duty',
+            'Plan', 'Issue', 'Target', 'Outcome'
         ]
     )

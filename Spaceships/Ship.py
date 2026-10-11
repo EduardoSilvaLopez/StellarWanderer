@@ -20,7 +20,7 @@ class Ship(Updatable):
     RIGHT_LEFT_ACC = 10  # meters per second squared
     FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
     ANGULAR_ACC = 10.0  # degrees per second squared
-    ANGULAR_BREAK = 20.0  # degrees per second squared
+    ANGULAR_BRAKE = 20.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 90.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 

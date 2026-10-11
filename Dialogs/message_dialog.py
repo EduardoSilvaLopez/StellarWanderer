@@ -1,4 +1,4 @@
-"""Message dialog: a short textured, futuristic-looking message with one button."""
+"""Message dialog: a short textured, futuristic-looking message with one or more buttons."""
 
 from __future__ import annotations
 from typing import List, Optional, Tuple
@@ -19,10 +19,12 @@ BUTTON_FILL_HOVER = (26, 84, 88)
 
 
 class MessageDialog(Dialog):
-    """Title, wrapped and scrollable text, and one button, loaded from messages.toml by key.
+    """Title, wrapped and scrollable text, and one or more buttons, loaded from messages.toml by key.
 
-    Results: ('close', None) on Esc, Enter, Space or a click on the button; ('exit', None) when the
-    window is closed."""
+    Results: ('close', index) when a button is pressed, index being its position in the message's
+    buttons (0 is the first); ('close', None) on Esc; ('exit', None) when the window is closed.
+    Enter or Space press the focused button (the first at the start); Tab, Left and Right move the focus,
+    and the mouse moves it too."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -31,21 +33,26 @@ class MessageDialog(Dialog):
     BODY_SIZE = 19
     LINE_SPACING = 1.35
     PARAGRAPH_GAP = 12
-    BUTTON_SIZE = (220, 40)
+    BUTTON_MIN_WIDTH = 220
+    BUTTON_HEIGHT = 40
+    BUTTON_PADDING = 20    # each side of the label
+    BUTTON_GAP = 14
+    BUTTON_FONT_SIZE = 16
 
     def __init__(self, key: str, values: Optional[dict] = None, message: Optional[Message] = None) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
         self.message: Message = message if message is not None else load_message(key, values)
 
-        self.button_rect = pygame.Rect(0, 0, *self.BUTTON_SIZE)
-        self.button_rect.midbottom = (self.WIDTH // 2, self.HEIGHT - self.MARGIN + 6)
-        self.button_hover: bool = False
+        self.button_rects: List[pygame.Rect] = self._layout_buttons()
+        self.hover: Optional[int] = None   # the button under the mouse
+        self.focus: int = 0                # the button Enter or Space press
 
         self._title_surface: pygame.Surface = self._render_title()
         self.divider_y: int = self.MARGIN - 4 + self._title_surface.get_height() + 12
+        buttons_top = min(rect.top for rect in self.button_rects)
         self.text_rect = pygame.Rect(
             self.MARGIN, self.divider_y + 16,
-            self.WIDTH - 2 * self.MARGIN, self.button_rect.top - 18 - (self.divider_y + 16)
+            self.WIDTH - 2 * self.MARGIN, buttons_top - 18 - (self.divider_y + 16)
         )
         self.lines: List[Tuple[str, int]] = []   # (text, y offset inside the text area)
         self.content_height: int = 0
@@ -56,6 +63,36 @@ class MessageDialog(Dialog):
         self._texture_loaded: bool = False
 
     # ---- layout ----
+
+    def _layout_buttons(self) -> List[pygame.Rect]:
+        """One rectangle per button: side by side, centred, when they fit the width; otherwise stacked with
+        the same width, the last one at the bottom."""
+        available = self.WIDTH - 2 * self.MARGIN
+        font = title_font(self.BUTTON_FONT_SIZE)
+        widths = [
+            min(available, max(self.BUTTON_MIN_WIDTH, font.size(label.upper())[0] + 2 * self.BUTTON_PADDING))
+            for label in self.message.buttons
+        ]
+        count = len(widths)
+        bottom = self.HEIGHT - self.MARGIN + 6
+        rects: List[pygame.Rect] = []
+
+        row_width = sum(widths) + self.BUTTON_GAP * (count - 1)
+        if row_width <= available:
+            x = (self.WIDTH - row_width) // 2
+            for width in widths:
+                rects.append(pygame.Rect(x, bottom - self.BUTTON_HEIGHT, width, self.BUTTON_HEIGHT))
+                x += width + self.BUTTON_GAP
+        else:
+            width = max(widths)
+            for index in range(count):
+                rect = pygame.Rect(0, 0, width, self.BUTTON_HEIGHT)
+                rect.midbottom = (
+                    self.WIDTH // 2,
+                    bottom - (count - 1 - index) * (self.BUTTON_HEIGHT + self.BUTTON_GAP),
+                )
+                rects.append(rect)
+        return rects
 
     def _render_title(self) -> pygame.Surface:
         """The title, with the font stepped down until it fits the width."""
@@ -151,7 +188,7 @@ class MessageDialog(Dialog):
         surface.set_clip(previous_clip)
 
         self._draw_scroll_indicators(surface)
-        self._draw_button(surface)
+        self._draw_buttons(surface)
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
         outer = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)
@@ -174,11 +211,22 @@ class MessageDialog(Dialog):
             bottom = self.text_rect.bottom - 4
             pygame.draw.polygon(surface, ACCENT, [(x, bottom), (x - 7, bottom - 10), (x + 7, bottom - 10)])
 
-    def _draw_button(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, BUTTON_FILL_HOVER if self.button_hover else BUTTON_FILL, self.button_rect)
-        pygame.draw.rect(surface, ACCENT, self.button_rect, 2)
-        label = title_font(16).render(self.message.button.upper(), True, ACCENT)
-        surface.blit(label, label.get_rect(center=self.button_rect.center))
+    def _draw_buttons(self, surface: pygame.Surface) -> None:
+        font = title_font(self.BUTTON_FONT_SIZE)
+        several = len(self.button_rects) > 1
+        for index, (rect, text) in enumerate(zip(self.button_rects, self.message.buttons)):
+            # With several buttons the focused one is lit, so the player sees which Enter will press.
+            lit = index == self.hover or (several and index == self.focus)
+            pygame.draw.rect(surface, BUTTON_FILL_HOVER if lit else BUTTON_FILL, rect)
+            pygame.draw.rect(surface, ACCENT, rect, 2)
+            label = font.render(text.upper(), True, ACCENT)
+            surface.blit(label, label.get_rect(center=rect.center))
+
+    def _button_at(self, position: Tuple[int, int]) -> Optional[int]:
+        for index, rect in enumerate(self.button_rects):
+            if rect.collidepoint(position):
+                return index
+        return None
 
     # ---- events ----
 
@@ -188,10 +236,20 @@ class MessageDialog(Dialog):
             return ('exit', None)
 
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+            if event.key == pygame.K_ESCAPE:
                 return ('close', None)
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                return ('close', self.focus)
             line = int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)
-            if event.key == pygame.K_UP:
+            count = len(self.button_rects)
+            if event.key == pygame.K_TAB:
+                step = -1 if event.mod & pygame.KMOD_SHIFT else 1
+                self.focus = (self.focus + step) % count
+            elif event.key == pygame.K_LEFT:
+                self.focus = (self.focus - 1) % count
+            elif event.key == pygame.K_RIGHT:
+                self.focus = (self.focus + 1) % count
+            elif event.key == pygame.K_UP:
                 self._scroll_by(-line)
             elif event.key == pygame.K_DOWN:
                 self._scroll_by(line)
@@ -209,10 +267,13 @@ class MessageDialog(Dialog):
             self._scroll_by(-event.y * line * 3)
 
         elif event.type == pygame.MOUSEMOTION:
-            self.button_hover = self.button_rect.collidepoint(event.pos)
+            self.hover = self._button_at(event.pos)
+            if self.hover is not None:
+                self.focus = self.hover
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.button_rect.collidepoint(event.pos):
-                return ('close', None)
+            pressed = self._button_at(event.pos)
+            if pressed is not None:
+                return ('close', pressed)
 
         return None

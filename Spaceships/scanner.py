@@ -1,7 +1,9 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Union
 
 import math
+
+from Dialogs import show_message
 
 if TYPE_CHECKING:
     from Spaceships.Ship import Ship
@@ -11,16 +13,15 @@ if TYPE_CHECKING:
     from Galaxies.ore_mine import OreMine
     from Galaxies.outpost import Outpost
 
+# Everything the beam can hit.
+Target = Union['Rock', 'OreMine', 'Outpost']
 
 class Scanner:
     MAX_LENGTH = 500  # metres
 
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
-        self.targeted_rock: Optional[Rock] = None
-        self.targeted_mine: Optional[OreMine] = None
-        self.targeted_outpost: Optional[Outpost] = None
-        self.length = Scanner.MAX_LENGTH
+        self.target: Optional[Target] = None
         self.start_x = 0.0
         self.start_y = 0.0
         self.start_z = 0.0
@@ -28,98 +29,103 @@ class Scanner:
         self.end_y = 0.0
         self.end_z = 0.0
 
+    # Imported here, not at module level: Galaxies.ore_mine needs Spaceships.Ship to load first.
+    @property
+    def targeted_rock(self) -> Optional[Rock]:
+        from Galaxies.rock import Rock
+        return self.target if isinstance(self.target, Rock) else None
+
+    @property
+    def targeted_mine(self) -> Optional[OreMine]:
+        from Galaxies.ore_mine import OreMine
+        return self.target if isinstance(self.target, OreMine) else None
+
+    @property
+    def targeted_outpost(self) -> Optional[Outpost]:
+        from Galaxies.outpost import Outpost
+        return self.target if isinstance(self.target, Outpost) else None
+
     def emitter_offset(self) -> float:
-        """How far below the camera the scanner beam starts: half the ship's height (read at runtime,
-        because Ship imports this module)."""
-        from Spaceships.Ship import Ship
-        return Ship.HEIGHT / 2
+        """How far below the camera the scanner beam starts: half the ship's height."""
+        return self.ship.HEIGHT / 2
 
     def update_target(self) -> None:
-        """Recompute the scanner's start/end points and the currently targeted object
-        from the ship's current position and yaw. Called once per frame, so it can show what's
-        in the crosshair at all times."""
+        """Recompute the beam's start and end from the ship's attitude and position, then the object it hits
+        first. Called once per frame, so the scanner always shows what is in the crosshair."""
         owner = self.ship.owner
-        if not owner.is_bound:
-            # Nothing can be in range while unbound. The beam is stored relative to
-            # the ship, along its attitude axes (below the camera, like when bound).
-            self.targeted_rock = None
-            self.targeted_mine = None
-            owner_offset = self.emitter_offset()
-            self.start_x, self.start_y, self.start_z = (
-                f * 5.0 - u * owner_offset for f, u in zip(owner.forward, owner.up)
-            )
-            self.end_x, self.end_y, self.end_z = (
-                f * self.length - u * owner_offset for f, u in zip(owner.forward, owner.up)
-            )
-            return
+        self.target = None
+        offset = self.emitter_offset()
+        forward, up = owner.forward, owner.up
 
-        # No Km2 while bound means too high, means no aim.
-        if owner.position.km2 is None:
-            self.targeted_rock = None
-            self.targeted_mine = None
-            return
-
-        # Forward vector is (sin(θ), 0, cos(θ)). The beam starts just below and ahead of the camera and
-        # ends on the ground (altitude 0, the surface) at MAX_LENGTH metres ahead, so it is a shallow
-        # slope from the emitter down to the ground at full range.
-        yaw = math.radians(self.ship.owner.yaw)
-        forward_x = math.sin(yaw)
-        forward_z = math.cos(yaw)
-
-        # Offset start point slightly ahead and below camera to avoid culling
-        self.start_x = self.ship.owner.position.x + forward_x * 5.0
-        self.start_y = self.ship.owner.position.y - self.emitter_offset()
-        self.start_z = self.ship.owner.position.z + forward_z * 5.0
-
-        self.end_x = self.ship.owner.position.x + self.length * forward_x
-        self.end_y = 0.0
-        self.end_z = self.ship.owner.position.z + self.length * forward_z
-
-        # Find out which rock and which mine, if any, are currently in the
-        # beam's path, then keep only whichever is closest — the nearer one
-        # occludes the other.
-        import GameEnvironment as gem
-        world = gem.current_environment.nearest_world
-        hit_rock_tuple = self.get_targeted_rock(world)
-        hit_mine_tuple = self.get_targeted_mine(world)
-
-        candidates = []
-        if hit_rock_tuple:
-            candidates.append(('rock', hit_rock_tuple[0], hit_rock_tuple[1]))
-        if hit_mine_tuple:
-            candidates.append(('mine', hit_mine_tuple[0], hit_mine_tuple[1]))
-
-        if candidates:
-            kind, target, closest_t = min(candidates, key=lambda candidate: candidate[2])
-            self.targeted_rock = target if kind == 'rock' else None
-            self.targeted_mine = target if kind == 'mine' else None
-
-            # Adjust the endpoint to the intersection point using the t-value
-            # The intersection point is: start + t * (end - start)
-            # The beam slopes down to the ground, so the height moves with it too, or the drawn
-            # end would sit below the point the beam really hits.
-            self.end_x = self.start_x + closest_t * (self.end_x - self.start_x)
-            self.end_y = self.start_y + closest_t * (self.end_y - self.start_y)
-            self.end_z = self.start_z + closest_t * (self.end_z - self.start_z)
+        # Unbound, the beam is stored relative to the ship. Bound, it is in surface coordinates and starts above
+        # the ship's position, where forward is horizontal and up is vertical.
+        if owner.is_bound:
+            origin = (owner.position.x, owner.position.y, owner.position.z)
         else:
-            self.targeted_rock = None
-            self.targeted_mine = None
+            origin = (0.0, 0.0, 0.0)
+
+        # Start just below and ahead of the camera (5 m ahead, so the camera's own geometry is not hit).
+        self.start_x, self.start_y, self.start_z = (
+            o + f * 5.0 - u * offset for o, f, u in zip(origin, forward, up)
+        )
+
+        if not owner.is_bound:
+            self.end_x, self.end_y, self.end_z = (
+                o + f * self.MAX_LENGTH - u * offset for o, f, u in zip(origin, forward, up)
+            )
+            return
+
+        # Bound, the beam slopes down to the ground MAX_LENGTH metres ahead.
+        self.end_x = origin[0] + forward[0] * self.MAX_LENGTH
+        self.end_y = 0.0
+        self.end_z = origin[2] + forward[2] * self.MAX_LENGTH
+
+        # No Km2 while bound means too high: nothing is in reach.
+        if owner.position.km2 is None:
+            return
+
+        import GameEnvironment as gem
+        hit = self._closest_hit(gem.current_environment.nearest_world)
+        if hit is None:
+            return
+        self.target, t = hit
+
+        # The beam ends where it hits: start + t * (end - start). It slopes, so the height moves too.
+        self.end_x = self.start_x + t * (self.end_x - self.start_x)
+        self.end_y = self.start_y + t * (self.end_y - self.start_y)
+        self.end_z = self.start_z + t * (self.end_z - self.start_z)
 
     def activate(self, time_passed: int) -> Scanner:
-        """SPACE pressed. On a targeted ore mine, transfer its ore to the ship (the beam stays off);
-        otherwise switch the beam on, heating the targeted rock if there is one. Uses the target found by
-        this frame's update_aim, so it does not search again."""
+        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise
+        switch the beam on, heating the targeted rock if there is one. Uses the target found by this frame's
+        update_target, so it does not search again."""
         from Spaceships.CargoHold import CargoHold
 
-        # Ore mine: transfer the ore to the ship.
         if self.targeted_mine is not None:
             self.ship.laser.cease_fire()
-            if self.targeted_mine.content > 0:
-                self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += self.targeted_mine.content
-                self.targeted_mine.content = 0
+            mine: OreMine = self.targeted_mine
+            if mine.content > 0:
+                self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += mine.content
+                mine.content = 0
             return self
 
-        # Rock, or nothing: Fire the laser.
+        if self.targeted_outpost is not None:
+            outpost: Outpost = self.targeted_outpost
+            cargo_hold: CargoHold = self.ship.cargo_hold
+
+            #[outpost: start, came back]
+            if cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
+                show_message(
+                    'outpost_start_no_ore',
+                    title=self.ship.owner.get_title(),
+                    )
+            else:
+                show_message(
+                    'outpost_start_ore',
+                    title=self.ship.owner.get_title(),
+                    )
+            return self
+        
         self.ship.laser.fire(self.targeted_rock, time_passed)
         return self
 
@@ -127,161 +133,127 @@ class Scanner:
         self.ship.laser.cease_fire()
         return self
 
+    def _closest_hit(self, world: World) -> Optional[Tuple[Target, float]]:
+        """The target the beam enters first, with its t-value, or None."""
+        hits = []
+        for target, hit_t in self._candidates(world):
+            t = hit_t(target)
+            if t is not None:
+                hits.append((target, t))
+        return min(hits, key=lambda hit: hit[1], default=None)
+
+    def _candidates(self, world: World) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
+        """Every target within reach, each with the test that finds where the beam enters it. Outposts are
+        not inside Km2s: when they become targets, yield them from world.outposts here, with their own filter."""
+        for km2 in self.get_relevant_km2s(world):
+            for rock in km2.rocks:
+                yield rock, self.is_rock_targeted
+            for field in km2.ore_fields:
+                for mine in field.mines:
+                    yield mine, self.is_mine_targeted
+            if km2.outpost:
+                yield km2.outpost, self.is_outpost_targeted
+
     def get_relevant_km2s(self, world: World) -> List[Km2]:
-        '''Exclude fully irrelevant km2s based on the player's position and the beam's length. This is a rough filter to avoid unnecessary checks.'''
-        if (self.ship.owner.position.y < 0):
-            raise ValueError("Scanner's ship is below the surface of the world.")
-        if self.ship.owner.position.y - self.length > 100:
-            return []
+        """Km2s whose square lies within the beam's reach in longitude and latitude. A rough filter, applied
+        before the per-object tests."""
+        position = self.ship.owner.position
+        reach = self.MAX_LENGTH
+        return [
+            km2 for km2 in world.km2s
+            if position.x - reach - km2.SIZE < km2.longitude < position.x + reach
+            and position.z - reach - km2.SIZE < km2.latitude < position.z + reach
+        ]
 
-        relevant_km2 = []
-        for km2 in world.km2s:
-            if km2.longitude <= self.ship.owner.position.x - self.length - km2.SIZE or km2.longitude >= self.ship.owner.position.x + self.length:
-                continue  # km2 is too far in longitude
-            if km2.latitude <= self.ship.owner.position.z - self.length - km2.SIZE or km2.latitude >= self.ship.owner.position.z + self.length:
-                continue  # km2 is too far in latitude
-            relevant_km2.append(km2)
-        return relevant_km2
+    @staticmethod
+    def _clip_slab(start: float, delta: float, low: float, high: float, t_min: float, t_max: float) -> Optional[Tuple[float, float]]:
+        """Narrow [t_min, t_max] to the part of the beam between the planes low and high on one axis."""
+        if abs(delta) <= 1e-9:  # parallel to the slab: all or nothing
+            return (t_min, t_max) if low <= start <= high else None
+        t1 = (low - start) / delta
+        t2 = (high - start) / delta
+        return max(t_min, min(t1, t2)), min(t_max, max(t1, t2))
 
-    def get_targeted_rock(self, world: World) -> Optional[Tuple[Rock, float]]:
-        ''' Returns the closest rock currently in the beam's path, and its t_value.'''
-        relevant_km2 = self.get_relevant_km2s(world)
+    def _beam_enters_box(self, start: Tuple[float, float, float], end: Tuple[float, float, float], half_sizes: Tuple[float, float, float]) -> Optional[float]:
+        """Slab test of the segment start -> end against an axis-aligned box centred on the origin.
+        Returns the t-value where the beam enters, or None."""
+        t_min, t_max = 0.0, 1.0
+        for s, e, half in zip(start, end, half_sizes):
+            clipped = self._clip_slab(s, e - s, -half, half, t_min, t_max)
+            if clipped is None:
+                return None
+            t_min, t_max = clipped
+        return t_min if t_min <= t_max else None
 
-        # Analyse each rock to see if it is hit by the beam. This is a more precise check.
-        # Return the one with the minimum t_value.
-        hit_rock = None
-        hit_at_t_value = self.MAX_LENGTH
-        for rock in (rock for km2 in relevant_km2 for rock in km2.rocks):
-            t_value = self.is_rock_targeted(rock)
-            if t_value is not None and t_value < hit_at_t_value:
-                hit_rock = rock
-                hit_at_t_value = t_value
-        return (hit_rock, hit_at_t_value) if hit_rock else None
+    def _beam_within_reach(self, x: float, y: float, z: float, radius: float) -> bool:
+        """Whether the beam segment passes within radius of (x, y, z)."""
+        dx = self.end_x - self.start_x
+        dy = self.end_y - self.start_y
+        dz = self.end_z - self.start_z
+        length_sq = dx * dx + dy * dy + dz * dz
+        px = x - self.start_x
+        py = y - self.start_y
+        pz = z - self.start_z
+        t = 0.0 if length_sq <= 1e-12 else max(0.0, min(1.0, (px * dx + py * dy + pz * dz) / length_sq))
+        gx = px - t * dx
+        gy = py - t * dy
+        gz = pz - t * dz
+        return gx * gx + gy * gy + gz * gz <= radius * radius
 
-    def get_targeted_mine(self, world: World) -> Optional[Tuple[OreMine, float]]:
-        ''' Returns the closest ore mine currently in the beam's path, and its t_value.'''
-        relevant_km2 = self.get_relevant_km2s(world)
+    def _beam_enters_oriented_box(self, centre: Tuple[float, float, float], half_sizes: Tuple[float, float, float], tilt_degrees: float, orientation_degrees: float) -> Optional[float]:
+        """t-value where the beam first enters a box centred on `centre`, or None. The box is tilted by tilt_degrees
+        around its local Z axis, then turned by orientation_degrees around Y (0 = unrotated, positive = clockwise
+        from north, the same convention as the ship's forward vector)."""
+        # Cheap rejection first: the box is turned about its centre, so it lies within its circumscribed sphere.
+        radius = math.sqrt(sum(half * half for half in half_sizes))
+        if not self._beam_within_reach(centre[0], centre[1], centre[2], radius):
+            return None
 
-        hit_mine = None
-        hit_at_t_value = self.MAX_LENGTH
-        for mine in (mine for km2 in relevant_km2 for field in km2.ore_fields for mine in field.mines):
-            t_value = self.is_mine_targeted(mine)
-            if t_value is not None and t_value < hit_at_t_value:
-                hit_mine = mine
-                hit_at_t_value = t_value
-        return (hit_mine, hit_at_t_value) if hit_mine else None
+        tilt = math.radians(tilt_degrees)
+        cos_t, sin_t = math.cos(tilt), math.sin(tilt)
+        orientation = math.radians(orientation_degrees)
+        cos_o, sin_o = math.cos(orientation), math.sin(orientation)
 
-    def is_rock_targeted(self, rock: Rock) -> Optional[float]:
-        """Determine if the scanner's beam hits a rock and return the t-value of the intersection.
-
-        Rocks are cubes of size rock.size, and the beam is a line segment from
-        (start_x, start_y, start_z) to (end_x, end_y, end_z).
-
-        Returns the t-value (0 to 1) where the beam first enters the rock's bounding box,
-        or None if no intersection occurs.
-        """
-        # The cube's bounding box in the rock's fully local (untilted, unrotated) frame,
-        # centered on the origin.
-        half = rock.size / 2.0
-        box_min = -half
-        box_max = half
-
-        # Rocks are tilted around their own local Z axis by rock.tilt degrees,
-        # THEN rotated around their vertical (Y) axis by rock.orientation degrees,
-        # deviating from north (0 = unrotated, positive = clockwise) — the same
-        # convention used for the ship's forward vector. Undo both transforms, in
-        # reverse order, to bring the beam's endpoints into the rock's local frame.
-        tilt = math.radians(rock.tilt)
-        cos_t = math.cos(tilt)
-        sin_t = math.sin(tilt)
-        orientation = math.radians(rock.orientation)
-        cos_o = math.cos(orientation)
-        sin_o = math.sin(orientation)
-
+        # Undo the rotation and tilt, in reverse order, to bring the beam's endpoints into the box's local frame.
         def to_local(world_x: float, world_y: float, world_z: float) -> Tuple[float, float, float]:
-            dx = world_x - rock.longitude
-            dy = world_y - rock.altitude
-            dz = world_z - rock.latitude
+            dx = world_x - centre[0]
+            dy = world_y - centre[1]
+            dz = world_z - centre[2]
             x1 = dx * cos_o - dz * sin_o
             z1 = dx * sin_o + dz * cos_o
-            y1 = dy
-            x2 = x1 * cos_t + y1 * sin_t
-            y2 = -x1 * sin_t + y1 * cos_t
+            x2 = x1 * cos_t + dy * sin_t
+            y2 = -x1 * sin_t + dy * cos_t
             return x2, y2, z1
 
-        start_x, start_y, start_z = to_local(self.start_x, self.start_y, self.start_z)
-        end_x, end_y, end_z = to_local(self.end_x, self.end_y, self.end_z)
+        return self._beam_enters_box(
+            to_local(self.start_x, self.start_y, self.start_z),
+            to_local(self.end_x, self.end_y, self.end_z),
+            half_sizes,
+        )
 
-        # Beam direction vector, now expressed in the rock's local frame.
-        dx = end_x - start_x
-        dy = end_y - start_y
-        dz = end_z - start_z
-
-        # Use a parametric line equation: P(t) = start + t * direction, where t ∈ [0, 1]
-        # Check intersection with the axis-aligned bounding box using the slab method
-        t_min = 0.0
-        t_max = 1.0
-
-        # Check X axis
-        if abs(dx) > 1e-9:  # Avoid division by zero
-            t1 = (box_min - start_x) / dx
-            t2 = (box_max - start_x) / dx
-            if t1 > t2:
-                t1, t2 = t2, t1
-            t_min = max(t_min, t1)
-            t_max = min(t_max, t2)
-        else:
-            # Ray is parallel to X axis; check if ray is within the box's X range
-            if start_x < box_min or start_x > box_max:
-                return None
-
-        # Check Y axis
-        if abs(dy) > 1e-9:  # Avoid division by zero
-            t1 = (box_min - start_y) / dy
-            t2 = (box_max - start_y) / dy
-            if t1 > t2:
-                t1, t2 = t2, t1
-            t_min = max(t_min, t1)
-            t_max = min(t_max, t2)
-        else:
-            # Ray is parallel to Y axis; check if ray is within the box's Y range
-            if start_y < box_min or start_y > box_max:
-                return None
-
-        # Check Z axis
-        if abs(dz) > 1e-9:  # Avoid division by zero
-            t1 = (box_min - start_z) / dz
-            t2 = (box_max - start_z) / dz
-            if t1 > t2:
-                t1, t2 = t2, t1
-            t_min = max(t_min, t1)
-            t_max = min(t_max, t2)
-        else:
-            # Ray is parallel to Z axis; check if ray is within the box's Z range
-            if start_z < box_min or start_z > box_max:
-                return None
-
-        # If t_min <= t_max, the line segment intersects the box
-        # Return t_min (the distance along the beam where it enters the box)
-        if t_min <= t_max:
-            return t_min
-        return None
+    def is_outpost_targeted(self, outpost: Outpost) -> Optional[float]:
+        """t-value where the beam first enters the outpost building, or None. The building is a box of
+        Outpost.WIDTH x HEIGHT x DEPTH standing on the ground at (longitude, latitude), with its width along local x
+        and its depth along local z; the door is on the local +z side, so orientation is the heading the door faces."""
+        from Galaxies.outpost import Outpost
+        return self._beam_enters_oriented_box(
+            (outpost.longitude, Outpost.HEIGHT / 2, outpost.latitude),
+            (Outpost.WIDTH / 2, Outpost.HEIGHT / 2, Outpost.DEPTH / 2),
+            0.0,
+            outpost.orientation,
+        )
 
     def is_mine_targeted(self, mine: OreMine) -> Optional[float]:
-        """Determine if the scanner's beam hits an ore mine and return the t-value of the intersection.
-
-        Mines are vertical cylinders of radius mine.MINE_RADIUS and height mine.MINE_HEIGHT,
-        standing on the ground (y in [0, MINE_HEIGHT]) at (mine.longitude, mine.latitude).
-        Being rotationally symmetric, no un-rotation is needed, unlike rocks.
-        """
+        """t-value where the beam first enters the mine, or None. A mine is a vertical cylinder of radius
+        MINE_RADIUS and height MINE_HEIGHT, standing on the ground at (longitude, latitude). Being rotationally
+        symmetric, it needs no un-rotation, unlike rocks."""
         start_x = self.start_x - mine.longitude
         start_z = self.start_z - mine.latitude
-        dx = (self.end_x - mine.longitude) - start_x
-        dz = (self.end_z - mine.latitude) - start_z
+        dx = self.end_x - self.start_x
+        dz = self.end_z - self.start_z
         dy = self.end_y - self.start_y
 
-        t_min = 0.0
-        t_max = 1.0
+        t_min, t_max = 0.0, 1.0
 
         # Circular cross-section (XZ plane): solve |start + t*d|^2 = radius^2.
         a = dx * dx + dz * dz
@@ -291,28 +263,24 @@ class Scanner:
             discriminant = b * b - 4.0 * a * c
             if discriminant < 0:
                 return None
-            sqrt_discriminant = math.sqrt(discriminant)
-            t1 = (-b - sqrt_discriminant) / (2.0 * a)
-            t2 = (-b + sqrt_discriminant) / (2.0 * a)
-            t_min = max(t_min, t1)
-            t_max = min(t_max, t2)
-        else:
-            # Ray doesn't move across the circle; check if its (fixed) position is within radius.
-            if c > 0:
-                return None
+            root = math.sqrt(discriminant)
+            t_min = max(t_min, (-b - root) / (2.0 * a))
+            t_max = min(t_max, (-b + root) / (2.0 * a))
+        elif c > 0:  # not moving across the circle, and outside it
+            return None
 
         # Height bounds (Y axis).
-        if abs(dy) > 1e-9:
-            t1 = (0.0 - self.start_y) / dy
-            t2 = (mine.MINE_HEIGHT - self.start_y) / dy
-            if t1 > t2:
-                t1, t2 = t2, t1
-            t_min = max(t_min, t1)
-            t_max = min(t_max, t2)
-        else:
-            if self.start_y < 0.0 or self.start_y > mine.MINE_HEIGHT:
-                return None
+        clipped = self._clip_slab(self.start_y, dy, 0.0, mine.MINE_HEIGHT, t_min, t_max)
+        if clipped is None:
+            return None
+        t_min, t_max = clipped
+        return t_min if t_min <= t_max else None
 
-        if t_min <= t_max:
-            return t_min
-        return None
+    def is_rock_targeted(self, rock: Rock) -> Optional[float]:
+        """t-value where the beam first enters the rock, or None. A rock is a cube of side rock.size, centred on
+        (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation."""
+        half = rock.size / 2.0
+        return self._beam_enters_oriented_box(
+            (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
+        )
+

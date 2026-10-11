@@ -105,7 +105,7 @@ def start_game(action: str, value: object) -> float:
     if action == 'new':
         show_message(
             'welcome',
-            pilot_title=player.get_title(),
+            title=player.get_title(),
             planet=gem.current_environment.nearest_world.parent_planet.name,
             moon=gem.current_environment.nearest_world.name,
         )
@@ -180,10 +180,13 @@ def main() -> None:
         # Messages asked for by game code (show_message) open here, at the start of a frame.
         pending_message = next_pending_message()
         while pending_message is not None and running:
-            key, values = pending_message
-            result, screen = run_modal_dialog(MessageDialog(key, values), screen, gui, fonts, clock)
+            result, screen = run_modal_dialog(
+                MessageDialog(pending_message.key, pending_message.values), screen, gui, fonts, clock
+            )
             if result[0] == 'exit':
                 running = False
+            elif pending_message.on_result is not None:
+                pending_message.on_result(result[1])  # the pressed button's index, None for Esc
             pending_message = next_pending_message()
         if not running:
             break

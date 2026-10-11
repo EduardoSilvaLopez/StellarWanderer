@@ -1,8 +1,8 @@
 """Message texts for message dialogs, read from Resources/dialogs/messages.toml."""
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 import logging
 import os
 import tomllib
@@ -17,7 +17,7 @@ DEFAULT_BUTTON = "OK"
 class Message:
     title: str
     paragraphs: List[str]
-    button: str = DEFAULT_BUTTON
+    buttons: List[str] = field(default_factory=lambda: [DEFAULT_BUTTON])  # at least one
 
 
 class _KeepUnknown(dict):
@@ -65,24 +65,45 @@ def load_message(key: str, values: Dict[str, Any] = None, path: str = MESSAGES_P
         logger.error(f"No message '{key}' in {path}")
         return Message("Missing message", [f"There is no message called '{key}' in messages.toml."])
 
+    # `buttons` is a list of labels; `button` is the shorthand for a single one.
+    labels = entry.get('buttons')
+    if not isinstance(labels, list) or not labels:
+        labels = [entry.get('button', DEFAULT_BUTTON)]
+
     return Message(
         title=_fill(str(entry.get('title', '')), values),
         paragraphs=_paragraphs(_fill(str(entry.get('text', '')), values)),
-        button=_fill(str(entry.get('button', DEFAULT_BUTTON)), values),
+        buttons=[_fill(str(label), values) for label in labels],
     )
 
 
-_pending: List[Tuple[str, Dict[str, Any]]] = []
+# Called with the index of the pressed button (in the order of the message's buttons), or None when the
+# message was dismissed with Esc.
+ResultCallback = Callable[[Optional[int]], None]
 
 
-def show_message(key: str, **values: Any) -> None:
+@dataclass
+class PendingMessage:
+    key: str
+    values: Dict[str, Any]
+    on_result: Optional[ResultCallback] = None
+
+
+_pending: List[PendingMessage] = []
+
+
+def show_message(key: str, on_result: Optional[ResultCallback] = None, **values: Any) -> None:
     """Ask for message `key` to be shown. Game code calls this instead of opening a modal loop in the
-    middle of an update; the main loop opens pending messages at the start of the next frame."""
-    _pending.append((key, values))
+    middle of an update; the main loop opens pending messages at the start of the next frame.
+
+    Because the message opens later, the answer cannot be returned: pass `on_result`, which is called
+    with the index of the pressed button (0 is the first one in messages.toml), or None if the player
+    dismissed the message with Esc. The other keyword arguments fill the message's {placeholders}."""
+    _pending.append(PendingMessage(key, values, on_result))
 
 
-def next_pending_message() -> Tuple[str, Dict[str, Any]] | None:
-    """Remove and return the oldest pending (key, values), or None."""
+def next_pending_message() -> Optional[PendingMessage]:
+    """Remove and return the oldest pending message, or None."""
     return _pending.pop(0) if _pending else None
 
 
