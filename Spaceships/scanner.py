@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Uni
 
 import math
 
-from Dialogs import show_message
-
 if TYPE_CHECKING:
     from Spaceships.Ship import Ship
     from Galaxies.world import World
@@ -99,7 +97,7 @@ class Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise
         switch the beam on, heating the targeted rock if there is one. Uses the target found by this frame's
         update_target, so it does not search again."""
-        from Spaceships.CargoHold import CargoHold
+        from Spaceships.cargo_hold import CargoHold
 
         if self.targeted_mine is not None:
             self.ship.laser.cease_fire()
@@ -111,19 +109,7 @@ class Scanner:
 
         if self.targeted_outpost is not None:
             outpost: Outpost = self.targeted_outpost
-            cargo_hold: CargoHold = self.ship.cargo_hold
-
-            #[outpost: start, came back]
-            if cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
-                show_message(
-                    'outpost_start_no_ore',
-                    title=self.ship.owner.get_title(),
-                    )
-            else:
-                show_message(
-                    'outpost_start_ore',
-                    title=self.ship.owner.get_title(),
-                    )
+            outpost.communicate()
             return self
         
         self.ship.laser.fire(self.targeted_rock, time_passed)

@@ -7,7 +7,7 @@ from ..Constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RE
 from .common import draw_beveled_panel, format_compact_distance, bezel_depth
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class AltitudeMeter:
@@ -34,7 +34,7 @@ class AltitudeMeter:
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         # Meter spans from surface (1.0x radius distance) to braking zone (BRAKING_RADIUS_MULTIPLE x radius)
-        from Player import Player
+        from Galaxies.People.player import Player
         distance_from_centre = player.altitude_above_surface(world) + world.radius
         distance_fraction = (distance_from_centre / world.radius - 1.0) / (Player.BRAKING_RADIUS_MULTIPLE - 1.0)
         distance_fraction = min(1.0, max(0.0, distance_fraction))

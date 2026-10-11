@@ -14,7 +14,7 @@ from Vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.orbit import Orbit
-    from Player import Player
+    from Galaxies.People.player import Player
 
 logger = logging.getLogger(__name__)
 

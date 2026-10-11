@@ -7,7 +7,7 @@ from datetime import datetime
 
 from Spaceships.Ship import Ship
 import GameEnvironment as gem
-import Player as pem
+import Galaxies.People.player as pem
 
 class Savefile:
 

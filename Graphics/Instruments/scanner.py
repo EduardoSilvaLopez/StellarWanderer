@@ -1,7 +1,7 @@
 """Target scanner display."""
 
 from __future__ import annotations
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
 import pygame
 from ..Constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
@@ -9,13 +9,17 @@ from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_A
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
     from Galaxies.rock import Rock
     from Galaxies.ore_mine import OreMine
+    from Galaxies.outpost import Outpost
+
+# The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
+_portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 
 
 class Scanner:
-    """Draw a square scanner readout showing targeted rock or ore mine."""
+    """Draw a square scanner readout showing targeted rock, ore mine or outpost."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
@@ -50,7 +54,10 @@ class Scanner:
 
         rock = player.ship.scanner.targeted_rock
         mine = player.ship.scanner.targeted_mine
-        if rock is not None:
+        outpost = player.ship.scanner.targeted_outpost
+        if outpost is not None:
+            Scanner._draw_scanned_outpost(surface, rect, outpost)
+        elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, player, rock)
             if rock.temperature > 0.0:
                 temperature_text = label_font.render(f'Temperature: {round(rock.temperature)}°', True, AMBER)
@@ -63,6 +70,24 @@ class Scanner:
             Scanner._draw_scanned_mine(surface, rect, mine)
             content_text = label_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
             surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, text_y)))
+
+    @staticmethod
+    def _draw_scanned_outpost(surface: pygame.Surface, rect: pygame.Rect, outpost: Outpost) -> None:
+        """Draw the outpost's com officer's portrait to fill `rect`: scaled to cover it, keeping its proportions,
+        and cropped equally from the top and bottom (or sides) where it overflows. No padding."""
+        global _portrait_cache
+        icon = outpost.com_officer.icon
+        if icon is None:
+            return
+        scale = max(rect.width / icon.get_width(), rect.height / icon.get_height())
+        size = (max(rect.width, round(icon.get_width() * scale)), max(rect.height, round(icon.get_height() * scale)))
+        key = (id(icon), size)
+        if _portrait_cache is None or _portrait_cache[:2] != key:
+            _portrait_cache = (id(icon), size, pygame.transform.smoothscale(icon, size))
+        scaled = _portrait_cache[2]
+        crop = pygame.Rect(0, 0, rect.width, rect.height)
+        crop.center = (scaled.get_width() // 2, scaled.get_height() // 2)
+        surface.blit(scaled, rect.topleft, area=crop)
 
     @staticmethod
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:

@@ -25,7 +25,7 @@ import logging; logger = logging.getLogger(__name__)
 from GameLogging import configure_logging
 from Graphics.FontCache import FontCache
 import GameEnvironment as gem
-import Player as player_module
+import Galaxies.People.player as player_module
 from Persistency.Savefile import Savefile
 from Dialogs import (
     Dialog, DialogResult, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message

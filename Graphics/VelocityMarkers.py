@@ -6,7 +6,7 @@ import pygame
 from .Constants import PROGRADE_COLOR, RETROGRADE_COLOR
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class VelocityMarkers:

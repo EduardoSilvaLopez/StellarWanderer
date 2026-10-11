@@ -7,11 +7,11 @@ from Galaxies.ore_fields import OreField
 from Galaxies.ore_mine import OreMine
 import GameEnvironment as gem
 from .laser import Laser
-from .CargoHold import CargoHold
+from .cargo_hold import CargoHold
 from .scanner import Scanner
 from Updating import Updatable, UpdateQueue
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 class Ship(Updatable):
     HEIGHT = 4 # meters, up to the camera

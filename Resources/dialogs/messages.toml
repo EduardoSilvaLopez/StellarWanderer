@@ -41,3 +41,26 @@ We will maintain your ship and replenish your air, water and food storage.
 
 Long live the Community."""
 buttons = ["Long live", "Thank you for sharing", "Can you just pay me for the ore, and I buy what I need?"]
+
+[outpost_ore_payment_requested]
+title = "Welcome, {title}."
+text = """
+
+What is 'pay'...?
+
+Wait... you mean... like in the Shining Throne? or UniDiv?
+
+*LAUGHS*
+
+How many stamps you think I'd have to...!?
+
+You... can't be serious, yes?
+
+Don't make such jokes, {title}.
+
+Really.
+
+Don't.
+
+Long live the Community."""
+button = "Long live. I guess."

@@ -12,7 +12,7 @@ from .OreMines import OreMines
 from .outposts import Outposts
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
     from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.ore_mine import OreMine

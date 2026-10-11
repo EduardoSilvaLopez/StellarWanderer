@@ -206,7 +206,6 @@ OUTPOSTS:
 
 ### 2026-10-11 (2/10) 20h00' + 8:15 - 
 Extra time: 20h00'
-
 - Refactor laser, creating scanner and eliminating duplicate logic.
 - Scan the outposts (just a symbol for now... later, faces?)
 - "Laser hit" when outposts in scan, now opens dialog.

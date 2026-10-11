@@ -8,7 +8,7 @@ from Vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.world import World
-    from Player import Player
+    from Galaxies.People.player import Player
     from GameEnvironment import GameEnvironment
 
 

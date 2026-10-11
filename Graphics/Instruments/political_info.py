@@ -6,7 +6,7 @@ import pygame
 from ..Constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class PoliticalInfo:

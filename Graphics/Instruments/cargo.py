@@ -7,7 +7,7 @@ from ..Constants import ACCENT, ACCENT_DIM
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class Cargo:

@@ -11,7 +11,7 @@ from .Constants import (
 from Vector3 import Vector3
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
     from GameEnvironment import GameEnvironment
     from Galaxies.world import World
 

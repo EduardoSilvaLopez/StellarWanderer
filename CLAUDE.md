@@ -32,7 +32,7 @@ def generate_default(self) -> None:
 **Module Map**:
 - `main.py`: Entry point, game loop, window setup
 - `GameEnvironment.py`: Galaxy + current world (module-level `current_environment`)
-- `Player.py`: Player state + movement (module-level `current_player`)
+- `Galaxies/People/player.py`: Player state + movement (module-level `current_player`; imported as `Galaxies.People.player`)
 - `Galaxies/`: Procedural world structure (Galaxy, StellarSystem, Orbit, World, Km2, Rock)
 - `Graphics/`: OpenGL rendering (Cockpit, DeepSpace, NearestWorld, Rocks, and `Laser.py`, which only draws the beam)
 - `Spaceships/`: Ship, `scanner.py` (`Scanner`, reached as `ship.scanner`: aiming, targeting of rocks and ore mines, ore collection via `activate`) and `laser.py` (`Laser`, reached as `ship.laser`: the firing state and heating the targeted rock, via `fire`/`cease_fire`). The scanner decides what is targeted; the laser only fires at it.

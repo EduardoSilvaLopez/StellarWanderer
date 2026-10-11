@@ -13,7 +13,7 @@ from ..Constants import (
 )
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 _cockpit_background: Optional[pygame.Surface] = None

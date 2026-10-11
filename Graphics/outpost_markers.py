@@ -9,7 +9,7 @@ from .Constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost
     from GameEnvironment import GameEnvironment
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class OutpostMarkers:
@@ -21,7 +21,7 @@ class OutpostMarkers:
 
         `visible` is False when the outpost is on the far side of its planet (its surface normal points
         away from the ship). Such outposts still get a label, but no dot."""
-        import Player as player_module
+        import Galaxies.People.player as player_module
         date_time = environment.date_time
         ship_position = player.stellar_position(date_time)
         result = []

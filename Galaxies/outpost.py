@@ -3,6 +3,7 @@ import math
 import logging
 from datetime import datetime
 
+from Galaxies.People.person import Person
 from Vector3 import Vector3
 
 import Galaxies.constants
@@ -32,6 +33,8 @@ class Outpost:
 
         self.orientation: float = my_random.random() * 360
 
+        self.com_officer: Person = Person(self.seed)
+
         self.is_altered = False
         self.log_generation()
 
@@ -49,3 +52,7 @@ class Outpost:
 
     def generate_name(self, my_random: random.Random) -> str:
         return self.planet.parent_orbit.parent_stellar_system.political_entity.generate_outpost_name(my_random)
+
+    def communicate(self) -> Outpost:
+        self.com_officer.communicate_from(self)
+        return self

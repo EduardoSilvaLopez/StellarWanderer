@@ -17,7 +17,7 @@ from .altitude_meter import AltitudeMeter
 from .radar import Radar
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class Console:
@@ -101,7 +101,7 @@ class Console:
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         import GameEnvironment as gem
-        from Player import Player
+        from Galaxies.People.player import Player
         world = gem.current_environment.nearest_world
         # Meter spans from surface (altitude=0) to unbinding altitude
         unbinding_altitude = world.radius * (Player.UNBIND_RADIUS_MULTIPLE - 1.0)

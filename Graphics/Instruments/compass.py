@@ -7,7 +7,7 @@ import pygame
 from ..Constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class Compass:

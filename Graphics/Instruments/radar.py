@@ -12,7 +12,7 @@ from ..Constants import (
 )
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class Radar:

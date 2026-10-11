@@ -8,7 +8,7 @@ from datetime import datetime
 from ..Constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Player import Player
+    from Galaxies.People.player import Player
 
 
 class WorldMap:

@@ -66,7 +66,7 @@ class GameEnvironment:
         current_environment = GameEnvironment(seed, datetime.now())
 
         # Spawn player in the first world they encounter
-        from Player import Player, current_player
+        from Galaxies.People.player import Player, current_player
         current_player = Player()
         current_player.spawn_in_environment(current_environment)
 
