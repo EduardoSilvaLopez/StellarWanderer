@@ -7,7 +7,7 @@ from datetime import datetime
 from ..Constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
-from .common import get_console_background, draw_beveled_panel, format_compact_distance
+from .common import get_console_background, draw_beveled_panel, format_compact_distance, bezel_depth
 from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
@@ -58,13 +58,18 @@ class Console:
         mfd.centerx = layout_w // 2 + mfd.width // 3
         mfd.centery = top + int(height * 0.44)
 
+        # The MFD frame (bound: world map, unbound: radar) gets the same bezel as every other instrument.
+        # The footprint stays what the old thick textured bezel gave, so the freed space goes to the screen.
+        depth = bezel_depth(h)
+        old_depth = max(2, mfd.width // 24)
+        screen = mfd.inflate(old_depth * 2, old_depth * 2).inflate(-depth * 2, -depth * 2)
+        draw_beveled_panel(surface, screen, depth=depth)
+
         if player.is_bound:
             Compass.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
-            draw_beveled_panel(surface, mfd, w=w, h=h)
-            WorldMap.draw(surface, fonts, mfd, h, player, date_time)
+            WorldMap.draw(surface, fonts, screen, h, player, date_time)
         else:
-            draw_beveled_panel(surface, mfd, depth=3, w=w, h=h)
-            Radar.draw(surface, fonts, h, mfd, player, date_time)
+            Radar.draw(surface, fonts, h, screen, player, date_time)
 
         # Scanner
         Scanner.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
@@ -93,7 +98,7 @@ class Console:
         bar_w = int(w * 0.028)
         bar_h = cluster_height
         bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_h)
-        draw_beveled_panel(surface, bar_rect)
+        draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         import GameEnvironment as gem
         from Player import Player

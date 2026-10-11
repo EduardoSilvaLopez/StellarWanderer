@@ -130,8 +130,8 @@ def main() -> None:
 
     # Front wall: the door side. Windows left and right of the door, emblem between door and right windows.
     paint_wall(atlas, FRONT, windows=[
-        (24, 24, 72, 40), (120, 24, 72, 40),
-        (378, 24, 36, 40), (426, 24, 36, 40),
+        (24, 32, 72, 24), (120, 32, 72, 24),
+        (378, 32, 36, 24), (426, 32, 36, 24),
     ])
     door_x = FRONT[0] + (FRONT[2] - DOOR_W) // 2
     door_y = FRONT[1] + FRONT[3] - DOOR_H
@@ -140,12 +140,12 @@ def main() -> None:
 
     # Back wall: windows only.
     paint_wall(atlas, BACK, windows=[
-        (40, 24, 80, 40), (160, 24, 80, 40), (300, 24, 80, 40), (400, 24, 40, 40),
+        (40, 32, 80, 24), (160, 32, 80, 24), (300, 32, 80, 24), (400, 32, 40, 24),
     ])
 
     # Side walls: one lit window each.
-    paint_wall(atlas, LEFT, windows=[(60, 24, 80, 40), (160, 24, 60, 40)])
-    paint_wall(atlas, RIGHT, windows=[(40, 24, 80, 40), (140, 24, 60, 40)])
+    paint_wall(atlas, LEFT, windows=[(60, 32, 80, 24), (160, 32, 60, 24)])
+    paint_wall(atlas, RIGHT, windows=[(40, 32, 80, 24), (140, 32, 60, 24)])
 
     paint_roof(atlas)
 

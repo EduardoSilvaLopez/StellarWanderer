@@ -19,3 +19,32 @@ The State of "Those-Who-Share" will provide you everything you need there, as th
 
 You trained years for this. Now it is the time to decide what you do with your new freedom."""
 button = "Understood"
+
+[outpost: start, no ore]
+title = "Welcome, {pilot_title}."
+text = """
+I see you bring no ore, {pilot_title}.
+
+We will maintain your ship and replenish your air, water and food storage, but please make your best to bring some ore.
+
+Long live the Community."""
+button = "Yeah, whatever"
+button = "Thank you for sharing"
+
+[outpost: start, ore]
+title = "Welcome, {pilot_title}."
+text = """
+Thank you for the ore, {pilot_title}. It helps immensely.
+
+We will maintain your ship and replenish your air, water and food storage.
+
+Long live the Community."""
+button = "Thank you for sharing"
+button = "Can't you just pay me for the ore?"
+
+[outpost: start, came back]
+title = "Welcome, {pilot_title}."
+text = """
+Is there something else, {title}?"""
+button = "My mistake. Sorry. Long live."
+button = "<Cut>"

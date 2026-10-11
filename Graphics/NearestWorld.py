@@ -12,7 +12,7 @@ from Graphics.Instruments.common import view_geometry
 if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
-    from Galaxies.Rock import Rock
+    from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
 
 

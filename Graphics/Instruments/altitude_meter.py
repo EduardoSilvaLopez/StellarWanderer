@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
 from ..Constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
-from .common import draw_beveled_panel, format_compact_distance
+from .common import draw_beveled_panel, format_compact_distance, bezel_depth
 
 if TYPE_CHECKING:
     from Player import Player
@@ -31,7 +31,7 @@ class AltitudeMeter:
         bar_height = group_bottom - bar_top - row_height * 4 - 2
 
         bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
-        draw_beveled_panel(surface, bar_rect)
+        draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         # Meter spans from surface (1.0x radius distance) to braking zone (BRAKING_RADIUS_MULTIPLE x radius)
         from Player import Player

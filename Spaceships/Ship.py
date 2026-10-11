@@ -6,8 +6,9 @@ import math
 from Galaxies.ore_fields import OreField
 from Galaxies.ore_mine import OreMine
 import GameEnvironment as gem
-from Spaceships.CargoHold import CargoHold
-from Spaceships.Laser import Laser
+from .laser import Laser
+from .CargoHold import CargoHold
+from .scanner import Scanner
 from Updating import Updatable, UpdateQueue
 if TYPE_CHECKING:
     from Player import Player
@@ -19,11 +20,13 @@ class Ship(Updatable):
     RIGHT_LEFT_ACC = 10  # meters per second squared
     FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
     ANGULAR_ACC = 10.0  # degrees per second squared
+    ANGULAR_BREAK = 20.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 90.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 
     def __init__(self, owner: Player) -> None:
         self.owner = owner
+        self.scanner = Scanner(self)
         self.laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
         self.notification: str = str()

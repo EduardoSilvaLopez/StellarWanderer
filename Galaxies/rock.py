@@ -168,7 +168,7 @@ class Rock(Updatable):
         self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
         return self
 
-    def increase_temperature(self, delta_time: float, game_date_time: datetime) -> Rock:
+    def increase_temperature(self, delta_time: float) -> Rock:
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
 
@@ -179,5 +179,6 @@ class Rock(Updatable):
 
         self.adjust_color()
         if self.next_update_at is None:
-            self.start_updating(game_date_time) # First time we just get ready anyway.
+            import GameEnvironment as gem
+            self.start_updating(gem.current_environment.date_time) # First time we just get ready anyway.
         return self

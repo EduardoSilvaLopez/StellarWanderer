@@ -150,17 +150,24 @@ def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
     return _windshield_frame_texture
 
 
+def bezel_depth(h: int) -> int:
+    """Thickness, in pixels, of every instrument bezel. One value for all instruments at a given window
+    height, so their borders match."""
+    return max(2, int(h * 0.006))
+
+
 def draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None, w: int | None = None, h: int | None = None) -> None:
     """Draw a recessed instrument screen: a raised bezel frame around a
     sunken readout, lit from the top-left (bezel highlight top/left,
     shadow bottom/right; screen shadow top/left, inner highlight
     bottom/right) instead of a single flat border line.
 
-    When w and h are provided, the bezel background uses the cockpit texture
+    The bezel thickness is bezel_depth(h) when h is given (callers should pass it), otherwise
+    a width-based value. When w and h are provided, the bezel background uses the cockpit texture
     instead of a solid color.
     """
     if depth is None:
-        depth = max(2, rect.width // 24)
+        depth = bezel_depth(h) if h is not None else max(2, rect.width // 24)
     outer = rect.inflate(depth * 2, depth * 2)
 
     if w is not None and h is not None:

@@ -19,7 +19,7 @@ class Laser:
     def draw(width: int, height: int, player: Player) -> None:
         """Draw the laser beam if the player is firing.
 
-        Laser is a straight segment from just below the camera to its end point (Laser.update_aim):
+        Laser is a straight segment from just below the camera to its end point (Scanner.update_aim in Spaceships/scanner.py):
         while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
         MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground.
         """
@@ -77,14 +77,14 @@ class Laser:
                 for centre, base, right, up in zip((cx, cy, cz), origin, right_axis, up_axis)
             )
 
-        s_tr = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, 1)
-        s_br = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, 1, -1)
-        s_bl = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, -1, -1)
-        s_tl = corner(player.ship.laser.start_x, player.ship.laser.start_y, player.ship.laser.start_z, -1, 1)
-        e_tr = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, 1, 1)
-        e_br = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, 1, -1)
-        e_bl = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, -1, -1)
-        e_tl = corner(player.ship.laser.end_x, player.ship.laser.end_y, player.ship.laser.end_z, -1, 1)
+        s_tr = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, 1, 1)
+        s_br = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, 1, -1)
+        s_bl = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, -1, -1)
+        s_tl = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, -1, 1)
+        e_tr = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, 1, 1)
+        e_br = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, 1, -1)
+        e_bl = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, -1, -1)
+        e_tl = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, -1, 1)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glColor3ub(*LASER_COLOR)

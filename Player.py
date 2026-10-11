@@ -60,7 +60,6 @@ class Player:
         self.forward: Vector3 = Vector3(0.0, 0.0, 1.0)
 
         self.ship: Ship = Ship(self)
-        self.ship.laser.firing = False  # Laser firing (SPACE held)
 
         self.position: Position = Position()
         self.is_bound: bool = False
@@ -182,7 +181,7 @@ class Player:
         if braking:
             speed = abs(self.velocity.yaw)
             if speed > 0:
-                decel = min(self.ship.ANGULAR_ACC * delta_time, speed)
+                decel = min(self.ship.ANGULAR_BRAKE * delta_time, speed)
                 self.velocity.yaw -= math.copysign(decel, self.velocity.yaw)
         else:
             direction = clockwise - counterclockwise

@@ -9,7 +9,7 @@ Controls:
     Numpad 4/6 yaw left/right
     Q/E        roll left/right
     S          brake (linear and rotational)
-    SPACE      fire the laser
+    SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine)
     M          place mine
     Esc        open the starting dialog (new game, load, exit game); Esc again resumes.
                Game time is paused while a dialog is open.
@@ -18,7 +18,6 @@ Controls:
 from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Tuple
-import os
 import sys
 
 import pygame
@@ -55,7 +54,6 @@ def center_window_on_screen(window_title: str, window_size: Tuple[int, int]) -> 
 
     try:
         import ctypes
-        import ctypes.wintypes as wintypes
 
         # Get window handle by title
         hwnd = ctypes.windll.user32.FindWindowW(None, window_title)
@@ -127,7 +125,7 @@ def run_modal_dialog(
     """Show `dialog` above the frozen game until it returns a result.
 
     Game time is paused for as long as this runs: nothing that advances it (elapsed, date and
-    time, movement, laser, the update queue) is called here, the game frame behind the dialog
+    time, movement, scanner, the update queue) is called here, the game frame behind the dialog
     is just re-rendered unchanged. Returns the result and the (possibly resized) window."""
     player = player_module.current_player
     if player.ship.laser.firing:
@@ -217,15 +215,17 @@ def main() -> None:
                 screen = resize_window(event.w, event.h)
 
         dt = clock.tick(FPS) / 1000.0
-        elapsed = min(elapsed + dt * player_module.current_player.time_scale, MAX_ELAPSED)
+
+        player = player_module.current_player
+        delta_game_seconds = dt * player.time_scale
+        elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
         keys = pygame.key.get_pressed()
-        player = player_module.current_player
 
         # Yaw: Numpad 4 (left) and 6 (right)
         player.update_yaw(
-            dt * player.time_scale,
+            delta_game_seconds,
             1 if keys[pygame.K_KP_4] else 0,
             1 if keys[pygame.K_KP_6] else 0,
             keys[pygame.K_s]
@@ -233,7 +233,7 @@ def main() -> None:
 
         # Pitch: Numpad 8 (up) and 2 (down), only while unbound
         player.update_pitch(
-            dt * player.time_scale,
+            delta_game_seconds,
             1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
             1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
             keys[pygame.K_s]
@@ -241,7 +241,7 @@ def main() -> None:
 
         # Roll: Q (left) and E (right), only while unbound
         player.update_roll(
-            dt * player.time_scale,
+            delta_game_seconds,
             1 if keys[pygame.K_q] else 0,
             1 if keys[pygame.K_e] else 0,
             keys[pygame.K_s]
@@ -253,21 +253,17 @@ def main() -> None:
         # brakes instead, overriding all thrust keys in all three axes and stopping
         # all rotations (yaw, pitch, roll).
         player.update_position_and_velocity(
-            dt * player.time_scale,
+            delta_game_seconds,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
             (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if player.is_bound else 0,
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )
-        player_module.current_player.ship.laser.update_aim()
+        player_module.current_player.ship.scanner.update_target()
         if (keys[pygame.K_SPACE]):
-            player_module.current_player.ship.laser.fire()
-            if (player_module.current_player.ship.laser.hitting_rock):
-                player_module.current_player.ship.laser.hitting_rock.increase_temperature(
-                    dt * player_module.current_player.time_scale, gem.current_environment.date_time
-                    )
+            player_module.current_player.ship.scanner.activate(delta_game_seconds)
         elif (player_module.current_player.ship.laser.firing):
-            player_module.current_player.ship.laser.cease_fire()
+            player_module.current_player.ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
 

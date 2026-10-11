@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
 from ..Constants import ACCENT, ACCENT_DIM
-from .common import draw_beveled_panel
+from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
     from Player import Player
@@ -20,7 +20,7 @@ class Cargo:
         label = label_font.render('CARGO', True, ACCENT_DIM)
         surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 12)))
 
-        draw_beveled_panel(surface, rect, depth=4)
+        draw_beveled_panel(surface, rect, depth=bezel_depth(h))
 
         line_font = fonts.get(max(9, int(h * 0.017)))
         pad = max(6, rect.width // 16)

@@ -20,7 +20,7 @@ from .Laser import Laser
 if TYPE_CHECKING:
     from Player import Player
     from GameEnvironment import GameEnvironment
-    from Galaxies.Rock import Rock
+    from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.outpost import Outpost
     from Galaxies.ore_mine import OreMine

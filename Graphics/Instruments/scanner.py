@@ -6,11 +6,11 @@ import math
 import pygame
 from ..Constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
 from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
-from .common import draw_beveled_panel
+from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
     from Player import Player
-    from Galaxies.Rock import Rock
+    from Galaxies.rock import Rock
     from Galaxies.ore_mine import OreMine
 
 
@@ -21,8 +21,8 @@ class Scanner:
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
         """Draw the scanner display.
 
-        Mirrors whatever rock or ore mine is currently in the laser's
-        crosshair (whether or not the laser is actually firing), scaled to
+        Mirrors whatever rock or ore mine is currently in the scanner's
+        crosshair (whether or not the beam is actually on), scaled to
         fill the square but kept at the same relative orientation and color
         the player sees ahead. Rocks take priority if somehow both are set.
 
@@ -43,13 +43,13 @@ class Scanner:
         label = label_font.render('SCANNER', True, ACCENT_DIM)
         surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 6)))
 
-        draw_beveled_panel(surface, rect)
+        bevel_depth = bezel_depth(h)
+        draw_beveled_panel(surface, rect, depth=bevel_depth)
 
-        bevel_depth = max(2, rect.width // 24)
         text_y = rect.bottom + bevel_depth + 6
 
-        rock = player.ship.laser.targeted_rock
-        mine = player.ship.laser.targeted_mine
+        rock = player.ship.scanner.targeted_rock
+        mine = player.ship.scanner.targeted_mine
         if rock is not None:
             Scanner._draw_scanned_rock(surface, rect, player, rock)
             if rock.temperature > 0.0:

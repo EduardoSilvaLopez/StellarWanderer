@@ -4,7 +4,7 @@
 
 **Stellar Wanderer** is a proof-of-concept space exploration game with realistic scale. Procedurally generated worlds, time compression (1x to 1,000,000x), and persistence via alteration tracking (only player changes saved, world regenerated from seed on load).
 
-See `DEVOLG.md` for architecture deep-dive and design rationale.
+See `DEVLOG.md` for architecture deep-dive and design rationale.
 
 ## Coding Standards
 
@@ -13,7 +13,7 @@ See `DEVOLG.md` for architecture deep-dive and design rationale.
 - **Scope**: Applies to new code and any function being edited.
 - **Pattern**: Use `from __future__ import annotations` to support forward references (already in `Player.py`).
 
-**Module names**: Use Python-style snake_case for module files (`stellar_system.py`, not `StellarSystem.py`). This is the standard for new files and for files with significant changes; existing files are not renamed in bulk.
+**Module names**: Use Python-style snake_case for module files (`stellar_system.py`, not `StellarSystem.py`). This is the standard for new files and for files with significant changes; existing files are not renamed in bulk. Git on Windows does not record case-only renames (`core.ignorecase` is on), so a renamed module can stay tracked under its old case, which breaks imports on case-sensitive systems: rename with `git mv a.py tmp.py` then `git mv tmp.py b.py`, and check that `git ls-files` shows the new case.
 
 Example:
 ```python
@@ -34,8 +34,8 @@ def generate_default(self) -> None:
 - `GameEnvironment.py`: Galaxy + current world (module-level `current_environment`)
 - `Player.py`: Player state + movement (module-level `current_player`)
 - `Galaxies/`: Procedural world structure (Galaxy, StellarSystem, Orbit, World, Km2, Rock)
-- `Graphics/`: OpenGL rendering (Cockpit, DeepSpace, NearestWorld, Laser, Rocks)
-- `Spaceships/`: Ship + Laser logic
+- `Graphics/`: OpenGL rendering (Cockpit, DeepSpace, NearestWorld, Rocks, and `Laser.py`, which only draws the beam)
+- `Spaceships/`: Ship and `scanner.py` (`Scanner`, reached as `ship.scanner`): aiming, targeting of rocks and ore mines, ore collection (`activate`). A separate `Laser` class is planned; until then the beam is a visual of the scanner's aim.
 - `Persistency/`: Save/load (Savefile)
 - `Dialogs/`: Modal dialogs (`dialog.py` base class, `starting_dialog.py`)
 - `GameLogging/`: Logging config (Constants, Setup)
@@ -53,7 +53,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - Bind, unbind and braking thresholds are all distances from the world's centre in radii (1.0 = surface). The bound altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to BRAKING_RADIUS_MULTIPLE radii distance from the centre.
 - In the braking zone the "Speed" readout of the unbound meter turns red when `Player.collision_warning` holds: keeping its direction relative to the world, the ship reaches the surface even braking with only `Player.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (straight-line check, sideways dodging not considered).
 - The ship's eye height above the ground while bound is `Ship.HEIGHT` (4 m). Its altitude never goes below it, and the spawn height and the descent limit use it too.
-- The laser, while bound, is a shallow slope from the emitter (`Laser.emitter_offset()`, half of `Ship.HEIGHT`, below the camera) down to the ground at `Laser.MAX_LENGTH` metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their distance pass over the beam.
+- The scanner's beam (`Scanner.update_aim`, drawn by `Graphics/Laser.py` while SPACE is held), while bound, is a shallow slope from the emitter (`Scanner.emitter_offset()`, half of `Ship.HEIGHT`, below the camera) down to the ground at `Scanner.MAX_LENGTH` metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their distance pass over the beam. The target it finds (`targeted_rock`, `targeted_mine`) is what the scanner panel (`Graphics/Instruments/scanner.py`, a different class with the same name) shows, and what `Scanner.activate` heats or collects from.
 - Rotation accelerations and speed limits share `Ship.ANGULAR_ACC` and `Ship.MAX_ANGULAR_SPEED`.
 - Location-info readouts show yaw, pitch and roll as angle plus rate (Δ, deg/s). `Player.pitch_angle` and `Player.roll_angle` are relative to the local horizon, positive nose up and right wing down.
 - Rock and mine `orientation` and rock `tilt` are different concepts and keep their names.
@@ -85,7 +85,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - An outpost is a flat building, 12 m x 6 m x 3 m (`Outpost.WIDTH/DEPTH/HEIGHT`), drawn by `Graphics/outposts.py` with `Resources/textures/outpost.png` (lit windows painted on the walls, a sealed airlock door, the entity emblem beside the door, no openings). The door is in the middle of a long wall and faces `Outpost.orientation` (degrees clockwise from north). The atlas is generated by `Tools/generate_outpost_texture.py`; replace the PNG by hand, keeping the layout.
 - While bound, the 3D view draws the ground flat from the surface offsets (`longitude - player.x`, `latitude - player.z`), so the outpost label uses those offsets too. Longitude metres are not ground metres away from the equator (the sphere geometry scales them by cos(latitude)); the flat view is the one the player sees, so anything drawn in the 3D view must use the flat offsets.
 - Rocks are not generated within 11.7 m (the building's half-diagonal + 5 m) of an outpost (`Km2`).
-- Outposts are not saved yet and not yet affected by the laser or the ground.
+- Outposts are not saved yet and not yet affected by the scanner or the ground.
 
 ## Dialogs
 
