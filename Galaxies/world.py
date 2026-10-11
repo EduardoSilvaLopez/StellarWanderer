@@ -13,6 +13,7 @@ from Galaxies.rock import Rock
 from Vector3 import Vector3
 
 if TYPE_CHECKING:
+    from Galaxies.outpost import Outpost
     from Galaxies.orbit import Orbit
     from Galaxies.People.player import Player
 
@@ -44,19 +45,19 @@ class World:
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\
-            self.generate_moon_name(my_random)\
+            self._generate_moon_name(my_random)\
             if self.parent_planet\
-            else self.generate_planet_name(my_random)
+            else self._generate_planet_name(my_random)
 
         self.radius: float = 0.0
         while self.radius < self.WORLD_MIN_RADIUS:
             if self.parent_planet:
-                self.radius = self.generate_radius_of_big_moon(my_random)
+                self.radius = self._generate_radius_of_big_moon(my_random)
             else:
-                self.radius = self.generate_radius_of_earthlike(my_random)
+                self.radius = self._generate_radius_of_earthlike(my_random)
 
         if self.parent_planet:
-            self.distance_to_parent: int = self.generate_orbital_distance_of_big_moon(my_random)
+            self.distance_to_parent: int = self._generate_orbital_distance_of_big_moon(my_random)
         else:
             self.distance_to_parent: int = int(parent_orbit.distance_from_star)
         
@@ -71,7 +72,7 @@ class World:
             self.distance_to_parent ** 3 / (World.GRAVITATIONAL_CONSTANT * (parent_mass + self.mass))
         )
 
-        self.rotation_period: int = self.generate_rotation_period(my_random)
+        self.rotation_period: int = self._generate_rotation_period(my_random)
 
         self.rocks_prevalence: float = my_random.random()
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 2 * my_random.random()
@@ -105,9 +106,13 @@ class World:
             outposts_count = int(abs(my_random.gauss(1.0, 1.5)))
             if self.is_initial_planet() and outposts_count <= 0:
                 outposts_count = 1
+            
+            all_outposts_alterations = saved_alterations.get('outposts')\
+                if saved_alterations else None
+            
             for _ in range(outposts_count):
                 # Added one by one, so each outpost sees the previous ones when it takes its index.
-                outpost = Outpost(self)
+                outpost = Outpost(self, all_outposts_alterations)
                 self.outposts[outpost.get_alteration_key()] = outpost  # May overwrite, it is intentional.
 
         # Children:
@@ -124,18 +129,9 @@ class World:
                 ]
 
         self.km2s: List[Km2] = []
-        self.log_creation()
+        self._log_creation()
 
-    def is_initial_planet(self) -> bool:
-        from Galaxies.stellar_system import StellarSystem
-        return self.parent_planet is None\
-            and self.parent_orbit.number == 3.0\
-            and self.parent_orbit.parent_stellar_system.x == 26000\
-            and self.parent_orbit.parent_stellar_system.y == 0\
-            and self.parent_orbit.parent_stellar_system.z == 0
-
-
-    def generate_planet_name(self, my_random: random.Random) -> str:
+    def _generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
@@ -149,29 +145,29 @@ class World:
         
         return name.capitalize()
 
-    def generate_moon_name(self, my_random: random.Random) -> str:
+    def _generate_moon_name(self, my_random: random.Random) -> str:
         result: str = self.parent_planet.name + "-" + str(self.index + 1)
         return result.capitalize()
 
-    def generate_orbital_distance_of_big_moon(self, my_random: random.Random) -> int:
+    def _generate_orbital_distance_of_big_moon(self, my_random: random.Random) -> int:
         result = 0.0
         while result < 3 * self.parent_planet.radius:
             result = int(my_random.gauss(3, 1) * 250.0 * self.radius)
         return result
 
-    def generate_radius_of_earthlike(self, my_random: random.Random) -> int:
+    def _generate_radius_of_earthlike(self, my_random: random.Random) -> int:
         result: float = 0.0
         while result < World.WORLD_MIN_RADIUS:
             result = my_random.gauss(5000000, 1000000)
         return int(result)
 
-    def generate_radius_of_big_moon(self, my_random: random.Random) -> int:
+    def _generate_radius_of_big_moon(self, my_random: random.Random) -> int:
         result: float = 0.0
         while result < World.WORLD_MIN_RADIUS:
             result = 2 ** my_random.gauss(1.0, 1.0) * self.parent_planet.radius / 100.0
         return int(result)
 
-    def generate_rotation_period(self, my_random: random.Random) -> int:
+    def _generate_rotation_period(self, my_random: random.Random) -> int:
         result: float = 0.0
         if self.parent_planet:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24 * 28), 0.2 / (60 * 60 * 24 * 28))
@@ -179,7 +175,7 @@ class World:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
 
-    def log_creation(self) -> World:
+    def _log_creation(self) -> World:
         if self.parent_planet:
             logger.info(f"NEW MOON CREATED")
         else:
@@ -191,6 +187,13 @@ class World:
         logger.info(f" - Radius: {'{:,}'.format(int(self.radius))}")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
+
+    def is_initial_planet(self) -> bool:
+        return self.parent_planet is None\
+            and self.parent_orbit.number == 3.0\
+            and self.parent_orbit.parent_stellar_system.x == 26000\
+            and self.parent_orbit.parent_stellar_system.y == 0\
+            and self.parent_orbit.parent_stellar_system.z == 0
 
     def set_altered(self) -> World:
         self.is_altered = True
@@ -231,6 +234,14 @@ class World:
                 moon_alterations[moon.get_alterations_key()] = one_moon_alterations
         if len(moon_alterations):
             result['moons'] = moon_alterations
+
+        all_outposts_alterations: dict = dict()
+        for alt_key, outpost in self.outposts.items():
+            outpost_alterations: Optional[dict] = outpost.get_alterations()
+            if outpost_alterations is not None:
+                all_outposts_alterations[alt_key] = outpost_alterations
+        if len(all_outposts_alterations):
+            result['outposts'] = all_outposts_alterations
 
         if not len(result):
             return None

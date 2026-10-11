@@ -22,10 +22,19 @@ The State of "Those-Who-Share" will provide you everything you need there, as th
 You trained years for this. Now it is the time to decide what you do with your new freedom."""
 button = "Understood"
 
-[outpost_start_no_ore]
-title = "Welcome, {title}."
+[outpost_start_came_back]
+title = "Huh?"
 text = """
-I see you bring no ore, {title}.
+Yes, {player_title} Pilot...?
+"""
+button = "Nevermind"
+
+[outpost_start_no_ore]
+title = "Welcome, {player_title} Pilot."
+text = """
+I am {full_name}.
+
+I see you bring no ore, {player_title}.
 
 We will maintain your ship and replenish your air, water and food storage, but please make your best to bring some ore.
 
@@ -33,9 +42,11 @@ Long live the Community."""
 buttons = ["I understand, thank you for sharing", "Yeah, whatever"]
 
 [outpost_start_ore]
-title = "Welcome, {title}."
+title = "Welcome, {player_title} Pilot."
 text = """
-Thank you for the ore, {title}. It helps immensely.
+I am {full_name}.
+
+Thank you for the ore, {player_title}. It helps immensely.
 
 We will maintain your ship and replenish your air, water and food storage.
 
@@ -43,7 +54,7 @@ Long live the Community."""
 buttons = ["Long live", "Thank you for sharing", "Can you just pay me for the ore, and I buy what I need?"]
 
 [outpost_ore_payment_requested]
-title = "Welcome, {title}."
+title = "Welcome, {title} Pilot."
 text = """
 
 What is 'pay'...?
@@ -58,9 +69,7 @@ You... can't be serious, yes?
 
 Don't make such jokes, {title}.
 
-Really.
-
-Don't.
+Really. Don't.
 
 Long live the Community."""
 button = "Long live. I guess."

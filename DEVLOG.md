@@ -204,11 +204,18 @@ OUTPOSTS:
 - Remove rocks too near an outpost.
 - Draw the outposts.
 
-### 2026-10-11 (2/10) 20h00' + 8:15 - 
-Extra time: 20h00'
+### 2026-10-11 (2/10)
 - Refactor laser, creating scanner and eliminating duplicate logic.
 - Scan the outposts (just a symbol for now... later, faces?)
 - "Laser hit" when outposts in scan, now opens dialog.
+
+Extra time: 21h45' + 19:00 - 
+- Outpost has an alteration, "last visited".
+- Less rich ore in planet.
+- Depending on it, more reputation is lost when no ore, or "what now?" dialog appears.
+- Reputation is lost anyway on any new visit, just not so much if increased by the ore.
+- People are identified by Guid? Or make it a real seed? Depends how the seed of the outpost looks like.
+- People have also alterations, above all the personal history with the player ("want pay" - button)
 
 BACKLOG
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.

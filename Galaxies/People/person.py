@@ -1,17 +1,40 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Any
 from enum import Enum
+from functools import lru_cache
 import os
-from typing import Optional
+from typing import Optional, Tuple
 import pygame
 import random
 
+from datetime import datetime
 from Dialogs import show_message
+import logging
+
+import GameEnvironment as gem
 
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost
+
+PEOPLE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'people')
+
+logger = logging.getLogger(__name__)
+
+@lru_cache(maxsize=None)
+def _read_names(file_name: str) -> Tuple[str, ...]:
+    """The non-empty lines of Resources/people/<file_name>, read once. A missing file gives no names."""
+    try:
+        with open(os.path.join(PEOPLE_DIR, file_name), encoding='utf-8') as file:
+            return tuple(line.strip() for line in file if line.strip())
+    except OSError as e:
+        print(f"Warning: Could not read person names from {file_name}: {e}")
+        return ()
+
+
+def _pick_name(my_random: random.Random, file_name: str) -> str:
+    names = _read_names(file_name)
+    return my_random.choice(names) if names else ''
 
 class Person:
     class Race(Enum):
@@ -23,7 +46,7 @@ class Person:
         MALE = 1
         FEMALE = 2
 
-    def __init__(self, seed: float):
+    def __init__(self, seed: float, working_place: Outpost):
         my_random = random.Random(seed)
 
         self.race: Person.Race = Person.Race.ASIAN
@@ -38,10 +61,19 @@ class Person:
         if rnd > 0.55: # sue me :D
             self.gender_group = Person.GenderGroup.FEMALE
 
-        self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
-        self.portrait = self.load_portrait(my_random)
+        # All these can change later: mixed heritage, gender-fluid...
+        language = 'chinese' if self.race == Person.Race.ASIAN else 'english'
+        gender = self.gender_group.name.lower()
 
-    def load_portrait(self, my_random: random.Random) -> Person:
+        self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
+        self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
+
+        self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
+        self.portrait = self._load_portrait(my_random)
+
+        self.working_place: Any = working_place
+
+    def _load_portrait(self, my_random: random.Random) -> Person:
         filename_prefix: str = 'outpost.com.' + str(self.race.name).lower() + "." + str(self.gender_group.name).lower() + ".mature.content"
         portraits_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'portraits')
         try:
@@ -64,40 +96,81 @@ class Person:
 
         return self
 
+    def get_full_name(self) -> str:
+        return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
+
     def communicate_from(self, outpost: Outpost) -> Person:
         from Galaxies.People.player import current_player as player
         from Spaceships.cargo_hold import CargoHold
-        cargo_hold: CargoHold = player.ship.cargo_hold
+        from Galaxies.Politics import political_entity
+        from Galaxies.Politics.personal_status import PersonalStatus
 
-        #[outpost: start, came back]
-        if cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
+        cargo_hold: CargoHold = player.ship.cargo_hold
+        status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
+
+        wp: Any = self.working_place
+        visit_time_delta = 0\
+            if not hasattr(wp, "last_visited")\
+                or not isinstance(wp.last_visited, datetime)\
+            else (wp.last_visited - gem.current_environment.date_time).total_seconds()
+
+        status.reputation -= 0.02 * visit_time_delta / (24*60*60) # Lingering. Results are expected.
+        if 0 < visit_time_delta < 60 * 60:
+            status.reputation -= 0.01 # Annoying
+            show_message(
+                'outpost_start_came_back',
+                player_title=player.get_title()
+                )
+        elif cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
             show_message(
                 'outpost_start_no_ore',
-                title=player.get_title(),
+                full_name=self.get_full_name(),
+                player_title=player.get_title(),
                 on_result=self.com_outpost_no_ore
                 )
         else:
             show_message(
                 'outpost_start_ore',
-                title=player.get_title(),
+                full_name=self.get_full_name(),
+                player_title=player.get_title(),
                 on_result=self.com_outpost_ore
                 )
 
+        logger.debug(f"Reputation now: {status.reputation}")
         return self
 
-    def com_outpost_no_ore(self, button_index: int):
+    def com_outpost_no_ore(self, button_index: int) -> None:
+        from Galaxies.Politics import political_entity
+        from Galaxies.People.player import current_player as player
+        from Galaxies.Politics.personal_status import PersonalStatus
+
+        status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
+
         if button_index == 1:
-            from Galaxies.People.player import current_player as player
-            from Galaxies.Politics import political_entity
+            status.reputation -= 0.1
+        logger.debug(f"Reputation now: {status.reputation}")
 
-            player.political_status[political_entity.THOSE_WHO_SHARE].reputation -= 0.1
-        return
+    def com_outpost_ore(self, button_index: int) -> None:
+        from Galaxies.Politics import political_entity
+        from Galaxies.People.player import current_player as player
+        from Spaceships.cargo_hold import CargoHold
+        from Galaxies.Politics.personal_status import PersonalStatus
 
-    def com_outpost_ore(self, button_index: int):
+        cargo_hold: CargoHold = player.ship.cargo_hold
+        status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
+
+        ore_given = cargo_hold.content[CargoHold.CargoElement.ORE]
+        cargo_hold.content[CargoHold.CargoElement.ORE] = 0
+        status.reputation += 0.2 * ore_given
+
+        if button_index == 0:
+            status.reputation += 0.01 # The right answer.
         if button_index == 2:
-            from Galaxies.People.player import current_player as player
-
+            status.reputation -= 0.5
+                #Todo: persist, this option won't be offered anymore.
             show_message(
                 'outpost_ore_payment_requested',
                 title=player.get_title()
                 )
+
+        logger.debug(f"Reputation now: {status.reputation}")
