@@ -39,7 +39,7 @@ class PoliticalInfo:
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
         """Draw political entity info in the top-left hull area, under the canopy's top rail."""
-        import GameEnvironment as gem
+        import game_environment as gem
 
         stellar_system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
         entity = stellar_system.political_entity

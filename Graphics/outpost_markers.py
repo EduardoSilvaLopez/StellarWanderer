@@ -8,7 +8,7 @@ from .Constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost
-    from GameEnvironment import GameEnvironment
+    from game_environment import GameEnvironment
     from Galaxies.People.player import Player
 
 

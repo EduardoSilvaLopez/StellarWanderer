@@ -5,7 +5,7 @@ import math
 
 from Galaxies.ore_fields import OreField
 from Galaxies.ore_mine import OreMine
-import GameEnvironment as gem
+import game_environment as gem
 from .laser import Laser
 from .cargo_hold import CargoHold
 from .scanner import Scanner
@@ -70,7 +70,7 @@ class Ship(Updatable):
         player_yaw: float = self.owner.yaw
         from Galaxies.km2 import Km2
         relevant_km2s: List[Km2] = list()
-        import GameEnvironment as gem
+        import game_environment as gem
         world = gem.current_environment.nearest_world
         for km2 in world.km2s:
             if (km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude\

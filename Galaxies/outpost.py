@@ -40,9 +40,9 @@ class Outpost:
 
         self.is_altered = False
         if saved_alterations:
-            my_alterations = saved_alterations.get(self.get_alteration_key)
+            my_alterations = saved_alterations.get(self.get_alteration_key())
             if my_alterations:
-                last_visited_as_str: Optional[str] = saved_alterations.get('last_visited')
+                last_visited_as_str: Optional[str] = my_alterations.get('last_visited')
                 if last_visited_as_str:
                     self.last_visited = datetime.strptime(last_visited_as_str, '%Y-%m-%d %H:%M:%S.%f')
                     self.set_altered()
@@ -85,7 +85,7 @@ class Outpost:
         return self.planet.parent_orbit.parent_stellar_system.political_entity.generate_outpost_name(my_random)
 
     def communicate(self) -> Outpost:
-        import GameEnvironment as gem
+        import game_environment as gem
         self.com_officer.communicate_from(self)
         self.set_last_visited(gem.current_environment.date_time)
         return self

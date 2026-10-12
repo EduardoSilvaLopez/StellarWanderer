@@ -32,7 +32,7 @@ class Cockpit:
             date_time: Player's ship time
             time_scale: Time acceleration factor
         """
-        import GameEnvironment as gem
+        import game_environment as gem
         Canopy.draw(surface, w, h)
         Crosshair.draw(surface, w, h)
         VelocityMarkers.draw(surface, fonts, w, h, player)

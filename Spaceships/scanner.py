@@ -82,7 +82,7 @@ class Scanner:
         if owner.position.km2 is None:
             return
 
-        import GameEnvironment as gem
+        import game_environment as gem
         hit = self._closest_hit(gem.current_environment.nearest_world)
         if hit is None:
             return

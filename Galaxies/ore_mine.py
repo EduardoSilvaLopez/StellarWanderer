@@ -70,7 +70,7 @@ class OreMine(Updatable):
         return result
 
     def get_next_update(self) -> datetime:
-        from GameEnvironment import current_environment
+        from game_environment import current_environment
         if self.next_update_at is None:
             return current_environment.date_time
         return self.next_update_at

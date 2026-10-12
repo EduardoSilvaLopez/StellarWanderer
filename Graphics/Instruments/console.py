@@ -100,7 +100,7 @@ class Console:
         bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_h)
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
-        import GameEnvironment as gem
+        import game_environment as gem
         from Galaxies.People.player import Player
         world = gem.current_environment.nearest_world
         # Meter spans from surface (altitude=0) to unbinding altitude
@@ -133,7 +133,7 @@ class Console:
         world_y = cluster_top - 40
 
         # World and system labels
-        import GameEnvironment as gem
+        import game_environment as gem
         stellar_system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
         world_name = gem.current_environment.nearest_world.name
         star_name = stellar_system.name

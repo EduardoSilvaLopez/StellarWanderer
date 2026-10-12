@@ -20,7 +20,7 @@ from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
-    from GameEnvironment import GameEnvironment
+    from game_environment import GameEnvironment
     from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.outpost import Outpost

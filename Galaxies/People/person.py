@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-import os
-from typing import Optional, Tuple
-import pygame
-import random
-
-from datetime import datetime
-from Dialogs import show_message
 import logging
+import os
+import random
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
-import GameEnvironment as gem
+import pygame
+
+from Dialogs import show_message
+from Galaxies.Politics import political_entity
+from Galaxies.Politics.personal_status import PersonalStatus
+from Spaceships.cargo_hold import CargoHold
+import game_environment as gem
 
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost
@@ -101,21 +103,19 @@ class Person:
 
     def communicate_from(self, outpost: Outpost) -> Person:
         from Galaxies.People.player import current_player as player
-        from Spaceships.cargo_hold import CargoHold
-        from Galaxies.Politics import political_entity
-        from Galaxies.Politics.personal_status import PersonalStatus
 
         cargo_hold: CargoHold = player.ship.cargo_hold
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
 
         wp: Any = self.working_place
-        visit_time_delta = 0\
+        visit_time_delta: float = 0\
             if not hasattr(wp, "last_visited")\
                 or not isinstance(wp.last_visited, datetime)\
-            else (wp.last_visited - gem.current_environment.date_time).total_seconds()
+            else (gem.current_environment.date_time - wp.last_visited).total_seconds()
+        wp.last_visited = gem.current_environment.date_time
 
         status.reputation -= 0.02 * visit_time_delta / (24*60*60) # "Maintenance, air, water and food needed."
-        if 0 < visit_time_delta < 60 * 60:
+        if 0.0 < visit_time_delta < 60 * 60:
             status.reputation -= 0.005 # "Annoying person."
             show_message(
                 'outpost_start_came_back',
@@ -140,9 +140,7 @@ class Person:
         return self
 
     def com_outpost_no_ore(self, button_index: int) -> None:
-        from Galaxies.Politics import political_entity
         from Galaxies.People.player import current_player as player
-        from Galaxies.Politics.personal_status import PersonalStatus
 
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
 
@@ -151,10 +149,7 @@ class Person:
         logger.debug(f"Reputation now: {status.reputation}")
 
     def com_outpost_ore(self, button_index: int) -> None:
-        from Galaxies.Politics import political_entity
         from Galaxies.People.player import current_player as player
-        from Spaceships.cargo_hold import CargoHold
-        from Galaxies.Politics.personal_status import PersonalStatus
 
         cargo_hold: CargoHold = player.ship.cargo_hold
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]

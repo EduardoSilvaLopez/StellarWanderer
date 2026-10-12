@@ -58,7 +58,7 @@ class WorldMap:
             player: Player object with position and world info
             date_time: Current in-game date/time, for local year/day progress
         """
-        import GameEnvironment as gem
+        import game_environment as gem
         world = gem.current_environment.nearest_world
         radius = world.radius
 

@@ -10,7 +10,7 @@ from .Constants import (
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
-    from GameEnvironment import GameEnvironment
+    from game_environment import GameEnvironment
 
 
 class LocalStar:

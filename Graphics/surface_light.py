@@ -12,7 +12,7 @@ from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
-    from GameEnvironment import GameEnvironment
+    from game_environment import GameEnvironment
 
 Colour = Tuple[int, int, int]
 

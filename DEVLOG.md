@@ -221,12 +221,13 @@ OUTPOSTS:
 - Change the seeds to make them more variated.
 - Ore field remaining ore is shown.
 - Augmentation for the world map.
-
-Extra time: 23h30'
-
 - Make a realistic run... it may be the definitive one...
+
+Extra time: 23h30' + 12:30 - 
+
 - People are identified by Guid? Or make it a real seed? Depends how the seed of the outpost looks like.
 - People have also alterations, above all the personal history with the player ("want pay" - button)
+- De-capitalise file names.
 
 BACKLOG
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.

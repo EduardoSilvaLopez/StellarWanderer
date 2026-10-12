@@ -12,7 +12,7 @@ from Vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
-    from GameEnvironment import GameEnvironment
+    from game_environment import GameEnvironment
     from Galaxies.world import World
 
 

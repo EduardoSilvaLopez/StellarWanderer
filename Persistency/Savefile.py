@@ -6,7 +6,7 @@ import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
 from Spaceships.Ship import Ship
-import GameEnvironment as gem
+import game_environment as gem
 import Galaxies.People.player as pem
 
 class Savefile:

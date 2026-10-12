@@ -179,6 +179,6 @@ class Rock(Updatable):
 
         self.adjust_color()
         if self.next_update_at is None:
-            import GameEnvironment as gem
+            import game_environment as gem
             self.start_updating(gem.current_environment.date_time) # First time we just get ready anyway.
         return self

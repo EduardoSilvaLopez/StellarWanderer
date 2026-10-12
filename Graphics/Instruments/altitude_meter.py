@@ -19,7 +19,7 @@ class AltitudeMeter:
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
-        import GameEnvironment as gem
+        import game_environment as gem
         world = gem.current_environment.nearest_world
 
         bar_w = int(w * 0.028)

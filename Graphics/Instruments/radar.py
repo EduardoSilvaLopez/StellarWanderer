@@ -43,7 +43,7 @@ class Radar:
     def objects(date_time: datetime) -> List[Tuple[Vector3, Tuple[int, int, int], int]]:
         """Stellar-frame position, dot colour and dot radius of the star and of every world in its system.
         Moons get a different colour and a smaller dot than planets."""
-        import GameEnvironment as gem
+        import game_environment as gem
         system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
             (Vector3(0.0, 0.0, 0.0), system.color, RADAR_STAR_DOT_RADIUS)

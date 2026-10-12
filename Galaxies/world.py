@@ -109,8 +109,8 @@ class World:
             if self.is_initial_planet() and outposts_count <= 0:
                 outposts_count = 1
             
-            all_outposts_alterations = saved_alterations.get('outposts')\
-                if saved_alterations else None
+            all_outposts_alterations = self.saved_alterations.get('outposts')\
+                if self.saved_alterations else None
             
             for _ in range(outposts_count):
                 # Added one by one, so each outpost sees the previous ones when it takes its index.
@@ -460,5 +460,5 @@ class World:
 
     @staticmethod
     def _elapsed_seconds(current_datetime: datetime) -> float:
-        from GameEnvironment import GameEnvironment
+        from game_environment import GameEnvironment
         return (current_datetime - GameEnvironment.EPOCH).total_seconds()
