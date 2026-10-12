@@ -114,9 +114,9 @@ class Person:
                 or not isinstance(wp.last_visited, datetime)\
             else (wp.last_visited - gem.current_environment.date_time).total_seconds()
 
-        status.reputation -= 0.02 * visit_time_delta / (24*60*60) # Lingering. Results are expected.
+        status.reputation -= 0.02 * visit_time_delta / (24*60*60) # "Maintenance, air, water and food needed."
         if 0 < visit_time_delta < 60 * 60:
-            status.reputation -= 0.01 # Annoying
+            status.reputation -= 0.005 # "Annoying person."
             show_message(
                 'outpost_start_came_back',
                 player_title=player.get_title()
@@ -161,12 +161,12 @@ class Person:
 
         ore_given = cargo_hold.content[CargoHold.CargoElement.ORE]
         cargo_hold.content[CargoHold.CargoElement.ORE] = 0
-        status.reputation += 0.2 * ore_given
+        status.reputation += 0.02 * ore_given # "Ore was shared."
 
         if button_index == 0:
-            status.reputation += 0.01 # The right answer.
+            status.reputation += 0.001 # "The right answer."
         if button_index == 2:
-            status.reputation -= 0.5
+            status.reputation -= 1 # "Disloyal proposal."
                 #Todo: persist, this option won't be offered anymore.
             show_message(
                 'outpost_ore_payment_requested',

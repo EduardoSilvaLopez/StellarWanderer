@@ -1,7 +1,7 @@
 """World map display (multi-function display)."""
 
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
 import math
 import pygame
 from datetime import datetime
@@ -9,10 +9,42 @@ from ..Constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
+    from Galaxies.world import World
+
+MINE_MARK_COLOR = (255, 255, 0)
+
+# Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, always centred on the ship.
+# The scales are fixed values in metres per pixel (1, 2, 5, 10, ...) down to MIN_SCALE, so a step means the same
+# on every world; the coarsest level is the whole world.
+MIN_SCALE = 1.0
+FIRST_ZOOM_RATIO = 1.5  # the first zoomed scale is at least this much finer than the whole-world map
+
+# Where an object is on the screen, or None when it is outside what is drawn.
+PixelFunction = Callable[[float, float], Optional[Tuple[int, int]]]
 
 
 class WorldMap:
-    """Draw a world map showing player position in the MFD (multi-function display)."""
+    """Draw a world map showing player position in the MFD (multi-function display).
+
+    With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
+    centred on the ship. When the mouse leaves, the map goes back to the whole world and the name returns."""
+
+    mouse: Optional[Tuple[int, int]] = None  # last mouse position, None when the window has no mouse focus
+    hovered: bool = False                    # whether, when the map was last drawn, the mouse was over it
+    zoom_index: int = 0                      # 0 = the whole world; each step is a finer scale
+
+    @staticmethod
+    def set_mouse(position: Tuple[int, int], focused: bool) -> None:
+        """Called once per frame by the main loop with the mouse position and whether the window has the mouse."""
+        WorldMap.mouse = position if focused else None
+
+    @staticmethod
+    def zoom(steps: int) -> bool:
+        """Step the zoom (positive = closer) while the mouse is over the map. Returns whether it was."""
+        if not WorldMap.hovered:
+            return False
+        WorldMap.zoom_index = max(0, WorldMap.zoom_index + steps)  # draw() limits it to the finest level
+        return True
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, player: Player, date_time: datetime) -> None:
@@ -30,27 +62,9 @@ class WorldMap:
         world = gem.current_environment.nearest_world
         radius = world.radius
 
-        # Header with world name, flanked by local year/day progress.
-        world_name_text = fonts.render_to_fit(
-            world.name, ACCENT, mfd.width - 12, max(9, int(h * 0.017))
-        )
-        name_rect = world_name_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
-        surface.blit(world_name_text, name_rect)
-
-        side_font_size = max(8, int(h * 0.013))
-        side_gap = max(6, int(h * 0.008))
-        year_percent = int(100 * world.local_year_fraction(date_time))
-        day_percent = int(100 * world.local_day_fraction(date_time))
-
-        year_text = fonts.render_to_fit(
-            f'Local Y: {year_percent}%', ACCENT_DIM, max(20, name_rect.left - mfd.left - side_gap), side_font_size
-        )
-        surface.blit(year_text, year_text.get_rect(midleft=(mfd.left + side_gap, name_rect.centery)))
-
-        day_text = fonts.render_to_fit(
-            f'Local D: {day_percent}%', ACCENT_DIM, max(20, mfd.right - name_rect.right - side_gap), side_font_size
-        )
-        surface.blit(day_text, day_text.get_rect(midright=(mfd.right - side_gap, name_rect.centery)))
+        # The header's height sets where the map starts; the header itself is drawn once the zoom is known.
+        title_size = max(9, int(h * 0.017))
+        world_name_text = fonts.render_to_fit(world.name, ACCENT, mfd.width - 12, title_size)
 
         # Map area below header — sits on the beveled mfd screen drawn by the caller.
         map_area = mfd.inflate(-8, 0)
@@ -63,22 +77,96 @@ class WorldMap:
         map_padding = 4
         inner_area = map_area.inflate(-map_padding * 2, -map_padding * 2)
 
-        # Draw world rectangle
-        pygame.draw.rect(surface, ACCENT_DIM, inner_area, 1)
+        # The mouse over the map zooms it; leaving it goes back to the whole world.
+        WorldMap.hovered = WorldMap.mouse is not None and inner_area.collidepoint(WorldMap.mouse)
+        if not WorldMap.hovered:
+            WorldMap.zoom_index = 0
+        levels = WorldMap._scale_levels(2.0 * math.pi * radius / inner_area.width)
+        WorldMap.zoom_index = min(WorldMap.zoom_index, len(levels) - 1)
+        scale = levels[WorldMap.zoom_index]
 
-        # Calculate player position as normalized coordinates within map
-        player_x, player_y = WorldMap._map_point(player.position.x, player.position.z, radius, inner_area)
+        # Header: the scale while the mouse is over the map, else the world's name; flanked by local year/day.
+        header_text = world_name_text
+        if WorldMap.hovered:
+            header_text = fonts.render_to_fit(f'1 px = {WorldMap._format_scale(scale)}', ACCENT, mfd.width - 12, title_size)
+        header_rect = header_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
+        surface.blit(header_text, header_rect)
 
-        # Outposts of this world (planets only; moons have none), as small white dots with their names.
-        WorldMap._draw_outposts(surface, fonts, h, world, radius, inner_area)
+        side_font_size = max(8, int(h * 0.013))
+        side_gap = max(6, int(h * 0.008))
+        year_percent = int(100 * world.local_year_fraction(date_time))
+        day_percent = int(100 * world.local_day_fraction(date_time))
 
-        # Draw player position as a brilliant dot
-        dot_radius = max(2, int(h * 0.003))
-        pygame.draw.circle(surface, ACCENT, (player_x, player_y), dot_radius)
-        pygame.draw.circle(surface, (255, 255, 255), (player_x, player_y), max(1, dot_radius - 1))
+        year_text = fonts.render_to_fit(
+            f'Local Y: {year_percent}%', ACCENT_DIM, max(20, header_rect.left - mfd.left - side_gap), side_font_size
+        )
+        surface.blit(year_text, year_text.get_rect(midleft=(mfd.left + side_gap, header_rect.centery)))
+
+        day_text = fonts.render_to_fit(
+            f'Local D: {day_percent}%', ACCENT_DIM, max(20, mfd.right - header_rect.right - side_gap), side_font_size
+        )
+        surface.blit(day_text, day_text.get_rect(midright=(mfd.right - side_gap, header_rect.centery)))
+
+        if WorldMap.zoom_index == 0:
+            pygame.draw.rect(surface, ACCENT_DIM, inner_area, 1)  # the world rectangle
+
+            def to_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
+                return WorldMap._map_point(lon, lat, radius, inner_area)
+
+            WorldMap._draw_contents(surface, fonts, h, world, player, to_pixel, inner_area)
+            return
+
+        # Zoomed: the window around the ship, `scale` metres per pixel, the ship at its centre. The flat offsets
+        # are what the 3D view shows. Longitude wraps around the world; latitude stops at the poles.
+        half_world = math.pi * radius
+        ship_lon, ship_lat = player.position.x, player.position.z
+        centre_x, centre_y = inner_area.center
+
+        def zoomed_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
+            east = (lon - ship_lon + half_world) % (2.0 * half_world) - half_world  # the nearest copy of the point
+            x = centre_x + east / scale
+            y = centre_y - (lat - ship_lat) / scale
+            return (int(x), int(y)) if inner_area.collidepoint(x, y) else None
+
+        previous_clip = surface.get_clip()
+        surface.set_clip(inner_area)
+        left = centre_x + (-half_world - ship_lon) / scale
+        right = centre_x + (half_world - ship_lon) / scale
+        top = centre_y - (half_world / 2 - ship_lat) / scale
+        bottom = centre_y - (-half_world / 2 - ship_lat) / scale
+        pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left), round(bottom - top)), 1)
+        WorldMap._draw_contents(surface, fonts, h, world, player, zoomed_pixel, inner_area)
+        surface.set_clip(previous_clip)
 
     @staticmethod
-    def _map_point(lon: float, lat: float, radius: float, area: pygame.Rect) -> tuple:
+    def _scale_levels(full_scale: float) -> List[float]:
+        """Metres per pixel of each zoom level, coarsest first: the whole world (`full_scale`), then 1-2-5 steps
+        from the first one clearly finer than the whole map down to MIN_SCALE."""
+        steps = sorted((mantissa * 10.0 ** power for power in range(9) for mantissa in (1, 2, 5)), reverse=True)
+        return [full_scale] + [step for step in steps if MIN_SCALE <= step < full_scale / FIRST_ZOOM_RATIO]
+
+    @staticmethod
+    def _format_scale(metres: float) -> str:
+        """Metres per pixel with three significant figures, in m or Km."""
+        return f'{metres / 1000:.3g} Km' if metres >= 1000 else f'{metres:.3g} m'
+
+    @staticmethod
+    def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: World, player: Player,
+                       to_pixel: PixelFunction, area: pygame.Rect) -> None:
+        """Everything the map shows: the outposts (planets only; moons have none), the ore mines and the
+        player. Rocks are not shown."""
+        WorldMap._draw_outposts(surface, fonts, h, world, to_pixel, area)
+        WorldMap._draw_mines(surface, world, to_pixel)
+
+        # Player position as a brilliant dot
+        player_pixel = to_pixel(player.position.x, player.position.z)
+        if player_pixel is not None:
+            dot_radius = max(2, int(h * 0.003))
+            pygame.draw.circle(surface, ACCENT, player_pixel, dot_radius)
+            pygame.draw.circle(surface, (255, 255, 255), player_pixel, max(1, dot_radius - 1))
+
+    @staticmethod
+    def _map_point(lon: float, lat: float, radius: float, area: pygame.Rect) -> Tuple[int, int]:
         """Pixel position of a surface point (longitude, latitude in metres) inside the map area."""
         lon_min = -math.pi * radius
         lon_max = math.pi * radius
@@ -91,16 +179,32 @@ class WorldMap:
         return int(area.left + norm_lon * area.width), int(area.top + (1 - norm_lat) * area.height)
 
     @staticmethod
-    def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world, radius: float, area: pygame.Rect) -> None:
-        """White dot per outpost, with its name beside it. The label goes towards the middle of the map
-        (left when the dot is in the right half, above when in the lower half), and is kept inside the map."""
+    def _draw_mines(surface: pygame.Surface, world: World, to_pixel: PixelFunction) -> None:
+        """A small yellow cross per ore mine of the world (its registered_mines)."""
+        arm = 3
+        for mine in world.registered_mines:
+            pixel = to_pixel(mine.longitude, mine.latitude)
+            if pixel is None:
+                continue
+            x, y = pixel
+            pygame.draw.line(surface, MINE_MARK_COLOR, (x - arm, y - arm), (x + arm, y + arm), 2)
+            pygame.draw.line(surface, MINE_MARK_COLOR, (x - arm, y + arm), (x + arm, y - arm), 2)
+
+    @staticmethod
+    def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world: World, to_pixel: PixelFunction,
+                       area: pygame.Rect) -> None:
+        """White dot per outpost, with its name beside it. The label goes towards the middle of `area`
+        (left when the dot is in the right half, above when in the lower half), and is kept inside it."""
         if world.parent_planet is not None or not world.outposts:
             return
         font = fonts.get(max(9, int(h * 0.014)))
         gap_x, gap_y = 6, 4
         centre_x, centre_y = area.centerx, area.centery
         for outpost in world.outposts.values():
-            x, y = WorldMap._map_point(outpost.longitude, outpost.latitude, radius, area)
+            pixel = to_pixel(outpost.longitude, outpost.latitude)
+            if pixel is None:
+                continue
+            x, y = pixel
             text = font.render(outpost.name, True, (255, 255, 255))
             rect = text.get_rect()
             if x > centre_x:
@@ -114,4 +218,3 @@ class WorldMap:
             rect.clamp_ip(area)
             surface.blit(text, rect)
             pygame.draw.circle(surface, (255, 255, 255), (x, y), 2)
-

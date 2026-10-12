@@ -160,9 +160,9 @@ class Console:
 
         for label, position, velocity in axis_lines:
             if player.is_bound:
-                text = f'{label}: {int(position)} Δ{int(velocity)}'
+                text = f'{label}: {int(position)} Δ {int(velocity)}'
             else:
-                text = f'{label}: {format_compact_distance(position)}  Δ{int(velocity)}'
+                text = f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}'
             line_text = label_font.render(text, True, ACCENT)
             surface.blit(line_text, (coord_x, coord_y))
             coord_y += line_spacing
@@ -170,9 +170,9 @@ class Console:
         world = gem.current_environment.nearest_world
         date_time = gem.current_environment.date_time
         attitude_lines = (
-            f'Yaw: {int(player.yaw)}° Δ{int(player.velocity.yaw)}',
-            f'Pitch: {int(player.pitch_angle(world, date_time))}° Δ{int(player.velocity.pitch)}',
-            f'Roll: {int(player.roll_angle(world, date_time))}° Δ{int(player.velocity.roll)}',
+            f'Yaw: {int(player.yaw)}° Δ {int(player.velocity.yaw)}',
+            f'Pitch: {int(player.pitch_angle(world, date_time))}° Δ {int(player.velocity.pitch)}',
+            f'Roll: {int(player.roll_angle(world, date_time))}° Δ {int(player.velocity.roll)}',
         )
         for text in attitude_lines:
             surface.blit(label_font.render(text, True, ACCENT), (coord_x, coord_y))

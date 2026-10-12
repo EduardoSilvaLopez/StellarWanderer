@@ -20,13 +20,13 @@ class Rock(Updatable):
     BASE_COOLING_PERIOD = 60 * 60 # Once per hour.
     COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature. For 1m3.
     TEMP_MAX = 5000.0 # Boom.
-    ORE_RICH_THRESHOLD = 0.98
+    ORE_RICH_THRESHOLD = 0.998
 
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
         import random
         self.parent_km2: Km2 = parent_Km2
-        my_random: float = random.Random(parent_Km2.seed + latitude + longitude)
-        self.size: float = abs(my_random.gauss(0, 10))
+        my_random: float = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
+        self.size: float = abs(my_random.gauss(0.5, 10))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
         # around this point, so it can sit partly under the ground).
@@ -34,8 +34,8 @@ class Rock(Updatable):
         self.latitude: int = latitude
         self.orientation: float = my_random.random() * 180 - 90
         self.tilt: float = my_random.random() * 45
-        self.composition: float = self.calculate_initial_composition(my_random)
-        self.initial_color: tuple = self.calculate_initial_color(my_random)
+        self.composition: float = self._calculate_initial_composition(my_random)
+        self.initial_color: tuple = self._calculate_initial_color(my_random)
         self.temperature: float = 0.0
         self.adjust_color()
 
@@ -128,7 +128,7 @@ class Rock(Updatable):
         update_queue.add(self)
         logger.info(f"Rock will be updated again, at {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
-    def calculate_initial_composition(self, my_random: Random) -> float:
+    def _calculate_initial_composition(self, my_random: Random) -> float:
         if my_random.random() < self.parent_km2.parent_world.ore_prevalence:
             result = Rock.ORE_RICH_THRESHOLD + my_random.random() * (1.0 - Rock.ORE_RICH_THRESHOLD)
         else:
@@ -150,16 +150,16 @@ class Rock(Updatable):
             return 0.0
         return min(2500000000, 1/(1.0 - self.get_purity()))
 
-    def calculate_initial_color(self, my_random: Random) -> tuple:
+    def _calculate_initial_color(self, my_random: Random) -> tuple:
         # Ore-rich are yellow-ish
         if self.is_ore_rich():
-            base_r = 96 + int(96 * self.get_purity()) + my_random.randint(0, 8)
-            base_g = 96 + int(96 * self.get_purity()) + my_random.randint(0, 8)
-            base_b = 16 + my_random.randint(0, 8)
+            base_r = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
+            base_g = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
+            base_b = 32 + my_random.randint(0, 8)
         else:
-            base_r = 48 + my_random.randint(0, 32)
-            base_g = 48 + my_random.randint(0, 32)
-            base_b = 32 + my_random.randint(0, 48)
+            base_r = 64 + my_random.randint(0, 64)
+            base_g = 64 + my_random.randint(0, 64)
+            base_b = 48 + my_random.randint(0, 64)
 
         return (base_r, base_g, base_b)
 

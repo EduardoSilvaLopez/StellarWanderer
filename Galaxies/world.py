@@ -13,6 +13,7 @@ from Galaxies.rock import Rock
 from Vector3 import Vector3
 
 if TYPE_CHECKING:
+    from Galaxies.ore_mine import OreMine
     from Galaxies.outpost import Outpost
     from Galaxies.orbit import Orbit
     from Galaxies.People.player import Player
@@ -41,7 +42,7 @@ class World:
             self.index = len(self.parent_orbit.planets)
             seed_origin: int = self.parent_orbit.seed
 
-        self.seed: int = (seed_origin * (self.index + 1) + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: int = (seed_origin + self.index + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\
@@ -75,11 +76,12 @@ class World:
         self.rotation_period: int = self._generate_rotation_period(my_random)
 
         self.rocks_prevalence: float = my_random.random()
-        self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 2 * my_random.random()
+        self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
         if self.parent_planet is not None and self.parent_planet.is_initial_planet():
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
-            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
+            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.33 * my_random.random()
+        self.registered_mines: List[OreMine] = []
 
         # Alterations:
         self.is_altered: bool = False

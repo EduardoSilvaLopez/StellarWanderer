@@ -22,6 +22,7 @@ from .Constants import (
 
 if TYPE_CHECKING:
     from Galaxies.ore_mine import OreMine
+    from .surface_light import SurfaceLight
 
 
 class OreMines:
@@ -30,7 +31,7 @@ class OreMines:
     _mine_texture_id: Optional[int] = None
 
     @staticmethod
-    def draw(mines: List[OreMine], player_x: float, player_z: float) -> None:
+    def draw(mines: List[OreMine], player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw every mine, within the camera transform set up by the caller.
 
         Side walls (textured) are drawn for all mines first, then texturing
@@ -44,11 +45,11 @@ class OreMines:
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glBindTexture(GL.GL_TEXTURE_2D, OreMines._get_mine_texture())
         for mine in mines:
-            OreMines._draw_mine_side(mine, player_x, player_z)
+            OreMines._draw_mine_side(mine, player_x, player_z, light)
         GL.glDisable(GL.GL_TEXTURE_2D)
 
         for mine in mines:
-            OreMines._draw_mine_caps(mine, player_x, player_z)
+            OreMines._draw_mine_caps(mine, player_x, player_z, light)
 
     @staticmethod
     def _mine_circle_points(mine: OreMine, y: float, player_x: float, player_z: float) -> List[Tuple[float, float, float, float]]:
@@ -75,14 +76,22 @@ class OreMines:
         return points
 
     @staticmethod
-    def _draw_mine_side(mine: OreMine, player_x: float, player_z: float) -> None:
+    def _draw_mine_side(mine: OreMine, player_x: float, player_z: float, light: SurfaceLight) -> None:
         base_y = MINE_BASE_HEIGHT
         top_y = base_y + mine.MINE_HEIGHT
         base_pts = OreMines._mine_circle_points(mine, base_y, player_x, player_z)
         top_pts = OreMines._mine_circle_points(mine, top_y, player_x, player_z)
+        orientation = math.radians(getattr(mine, 'orientation', 0.0))
+        cos_o, sin_o = math.cos(orientation), math.sin(orientation)
 
         GL.glBegin(GL.GL_QUAD_STRIP)
         for (bx, by, bz, u), (tx, ty, tz, _) in zip(base_pts, top_pts):
+            # The wall's outward normal at this segment (rotated like the points), lit by the sun.
+            angle = 2.0 * math.pi * u
+            lx, lz = math.cos(angle), math.sin(angle)
+            normal_x = lx * cos_o + lz * sin_o
+            normal_z = -lx * sin_o + lz * cos_o
+            GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(normal_x, 0.0, normal_z)))
             GL.glTexCoord2f(u, 0.0)
             GL.glVertex3f(bx, by, bz)
             GL.glTexCoord2f(u, 1.0)
@@ -90,14 +99,15 @@ class OreMines:
         GL.glEnd()
 
     @staticmethod
-    def _draw_mine_caps(mine: OreMine, player_x: float, player_z: float) -> None:
+    def _draw_mine_caps(mine: OreMine, player_x: float, player_z: float, light: SurfaceLight) -> None:
         base_y = MINE_BASE_HEIGHT
         top_y = base_y + mine.MINE_HEIGHT
         relative_longitude = mine.longitude - player_x
         relative_latitude = mine.latitude - player_z
 
-        GL.glColor3ub(*MINE_CAP_COLOR)
-        for y, reverse in ((top_y, False), (base_y, True)):
+        # The top cap faces up, the base cap down (it is on the ground, so it is almost never seen).
+        for y, normal_y, reverse in ((top_y, 1.0, False), (base_y, -1.0, True)):
+            GL.glColor3ub(*light.shade(MINE_CAP_COLOR, light.brightness(0.0, normal_y, 0.0)))
             points = OreMines._mine_circle_points(mine, y, player_x, player_z)
             if reverse:
                 points = list(reversed(points))

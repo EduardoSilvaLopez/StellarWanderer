@@ -1,5 +1,9 @@
 """Shared graphics constants and palette for the cockpit view."""
 
+# The font of the cockpit instruments and of the message dialogs' body text: a file in Resources/fonts (SIL OFL).
+# Change it here to change both. The dialogs' body size goes with it (Dialogs/dialog_fonts.py).
+FONT_FILE = 'Oxanium.ttf'
+
 # Color palette
 SPACE_COLOR = (8, 10, 24)
 PLANET_GRAY = (32, 32, 32)
@@ -62,6 +66,9 @@ LOCAL_STAR_HALO_WIDTH_PX = 4  # extra radius of the semi-transparent glow ring a
 LOCAL_STAR_HALO_ALPHA = 90    # 0-255
 WORLD_ALBEDO = (176, 160, 140)  # base colour of every world (planets and moons) when lit by its star
 WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
+# Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
+# Keeps the night readable, so the ground, rocks and buildings do not go black.
+SURFACE_STARLIGHT = 0.20
 WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
 WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
 OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky

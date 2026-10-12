@@ -21,7 +21,7 @@ class Outpost:
     def __init__(self, planet: World, saved_alterations: dict):
         self.planet = planet
         self.index = len(planet.outposts)
-        self.seed: int = (planet.seed * (self.index + 1) + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: int = (planet.seed + self.index + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str = self.generate_name(my_random)
@@ -52,6 +52,7 @@ class Outpost:
     def log_generation(self) -> Outpost:
         logger.info("OUTPOST created")
         logger.info(f"- Index {self.index}, Lon: {self.longitude}, Lat: {self.latitude}")
+        logger.info(f"- Seed {self.seed}")
         return self
 
     def get_alteration_key(self) -> str:

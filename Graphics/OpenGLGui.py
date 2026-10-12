@@ -16,6 +16,7 @@ from .NearestWorld import NearestWorld
 from .other_worlds import OtherWorlds
 from .Rocks import Rocks
 from .Laser import Laser
+from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
@@ -54,8 +55,10 @@ class OpenGLGui:
         OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=True)
         LocalStar.draw(self.world_surface, width, height, environment, player)
         OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=False)
-        if player.is_bound:
-            NearestWorld.draw_surface(self.world_surface, width, height, environment, player)
+        # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
+        light = SurfaceLight.of(player, environment) if player.is_bound else None
+        if light is not None:
+            NearestWorld.draw_surface(self.world_surface, width, height, environment, player, light.ground_colour())
         else:
             LitWorlds.draw_nearest(self.world_surface, width, height, environment, player)
         OutpostMarkers.draw(self.world_surface, width, height, environment, player)
@@ -76,13 +79,14 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.world_surface, self.world_texture)
-        if player.is_bound:
+        if light is not None:
             Rocks.draw(
                 width, height, player,
                 self._rocks(environment, player),
                 self._ore_fields(environment, player),
                 self._ore_mines(environment, player),
                 self._outposts(environment, player),
+                light,
             )
         Laser.draw(width, height, player)
         GL.glDisable(GL.GL_DEPTH_TEST)

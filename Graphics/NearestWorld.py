@@ -32,7 +32,7 @@ class NearestWorld:
             environment: Game environment with current world
             player: Player object with position
         """
-        NearestWorld.draw_surface(surface, w, h, environment, player)
+        NearestWorld.draw_surface(surface, w, h, environment, player, PLANET_GRAY)
 
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
@@ -46,7 +46,8 @@ class NearestWorld:
         NearestWorld.draw_rocks(surface, w, h, player, rocks, environment)
 
     @staticmethod
-    def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
+    def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player,
+                     colour: Tuple[int, int, int]) -> None:
         """Draw the planet below the horizon as seen from the player's altitude.
 
         The camera looks horizontally, so the planet's centre lies straight down,
@@ -117,7 +118,7 @@ class NearestWorld:
 
         for y in range(view_h):
             for lo, hi in visible_spans(y - centre_y):
-                pygame.draw.line(surface, PLANET_GRAY, (clamp_x(center_x + lo), y), (clamp_x(center_x + hi), y))
+                pygame.draw.line(surface, colour, (clamp_x(center_x + lo), y), (clamp_x(center_x + hi), y))
 
     @staticmethod
     def _camera_coordinates(world_x: float, world_z: float, player_x: float, player_z: float, sin_yaw: float, cos_yaw: float) -> Tuple[float, float]:

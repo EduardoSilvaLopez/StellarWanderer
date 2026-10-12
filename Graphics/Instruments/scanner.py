@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
+from ..Constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
 from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from .common import draw_beveled_panel, bezel_depth
 
@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
+
+# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, red, yellow, white).
+TEMPERATURE_COLORS = ((0, 0, 0), (255, 60, 60), (255, 230, 60), (255, 255, 255))
 
 
 class Scanner:
@@ -30,8 +33,9 @@ class Scanner:
         fill the square but kept at the same relative orientation and color
         the player sees ahead. Rocks take priority if somehow both are set.
 
-        Below the square a rock shows its temperature (only above 0°) and then, if it is
-        ore rich, its purity. The square always leaves room for those two text lines.
+        A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
+        hot it is, and below the square, if it is ore rich, its purity. The square always leaves room
+        for the purity line.
         """
         label_font = fonts.get(max(9, int(h * 0.017)))
         text_line_height = label_font.get_height() + 2
@@ -60,9 +64,10 @@ class Scanner:
         elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, player, rock)
             if rock.temperature > 0.0:
-                temperature_text = label_font.render(f'Temperature: {round(rock.temperature)}°', True, AMBER)
-                surface.blit(temperature_text, temperature_text.get_rect(midtop=(rect.centerx, text_y)))
-                text_y += text_line_height
+                temperature_text = label_font.render(
+                    f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock.temperature)
+                )
+                surface.blit(temperature_text, temperature_text.get_rect(center=rect.center))
             if rock.is_ore_rich():
                 purity_text = label_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
                 surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, text_y)))
@@ -70,6 +75,16 @@ class Scanner:
             Scanner._draw_scanned_mine(surface, rect, mine)
             content_text = label_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
             surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, text_y)))
+            text_y += text_line_height
+            field_text = label_font.render(f'Field: {mine.parent_field.remaining_ore} Kg Ore', True, ACCENT)
+            surface.blit(field_text, field_text.get_rect(midtop=(rect.centerx, text_y)))
+
+    @staticmethod
+    def _temperature_color(temperature: float) -> Tuple[int, int, int]:
+        """The colour for a rock temperature above 0: one of TEMPERATURE_COLORS, by quarters of Rock.TEMP_MAX."""
+        from Galaxies.rock import Rock
+        quarter = int(temperature / Rock.TEMP_MAX * len(TEMPERATURE_COLORS))
+        return TEMPERATURE_COLORS[min(len(TEMPERATURE_COLORS) - 1, max(0, quarter))]
 
     @staticmethod
     def _draw_scanned_outpost(surface: pygame.Surface, rect: pygame.Rect, outpost: Outpost) -> None:

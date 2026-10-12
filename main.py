@@ -31,6 +31,7 @@ from Dialogs import (
     Dialog, DialogResult, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
 )
 from Graphics.OpenGLGui import OpenGLGui
+from Graphics.Instruments.world_map import WorldMap
 from Updating.UpdateQueue import update_queue
 
 WINDOW_TITLE = 'Stellar Wanderer'
@@ -214,8 +215,14 @@ def main() -> None:
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
+            elif event.type == pygame.MOUSEWHEEL:
+                if player_module.current_player.is_bound:  # the world map is only shown while bound
+                    WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
             elif event.type == pygame.VIDEORESIZE:
                 screen = resize_window(event.w, event.h)
+
+        # The world map zooms while the mouse is over it (polled once per frame).
+        WorldMap.set_mouse(pygame.mouse.get_pos(), pygame.mouse.get_focused())
 
         dt = clock.tick(FPS) / 1000.0
 

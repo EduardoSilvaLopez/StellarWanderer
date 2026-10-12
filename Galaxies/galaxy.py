@@ -6,8 +6,8 @@ from Galaxies.stellar_system import StellarSystem
 '''The whole galaxy. We won't have more than one.'''
 class Galaxy():
 
-    def __init__(self, seeds_delta: int, saved_alterations: dict) -> None:
-        self.seed: int = seeds_delta # The galaxy's seed is just the seed_delta from the user.
+    def __init__(self, user_given_seed: int, saved_alterations: dict) -> None:
+        self.seed: int = user_given_seed
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
         self.is_altered: bool = saved_alterations is not None and saved_alterations != {}

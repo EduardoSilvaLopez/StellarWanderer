@@ -6,7 +6,7 @@ import os
 import pygame
 
 from .dialog import Dialog, DialogResult
-from .dialog_fonts import body_font, title_font
+from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
 from .messages import Message, load_message
 
 TEXTURE_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'dialog_background.png')
@@ -30,7 +30,7 @@ class MessageDialog(Dialog):
     HEIGHT = 600
     MARGIN = 38
     TITLE_SIZE = 26
-    BODY_SIZE = 19
+    BODY_SIZE = BODY_FONT_SIZE
     LINE_SPACING = 1.35
     PARAGRAPH_GAP = 12
     BUTTON_MIN_WIDTH = 220

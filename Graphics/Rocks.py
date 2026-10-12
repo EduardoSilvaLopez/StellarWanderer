@@ -6,10 +6,11 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, PLANET_GRAY
+from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
 from .OreFields import OreFields
 from .OreMines import OreMines
 from .outposts import Outposts
+from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
@@ -24,7 +25,7 @@ class Rocks:
 
     @staticmethod
     def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField], mines: List[OreMine],
-             outposts: List[Outpost]) -> None:
+             outposts: List[Outpost], light: SurfaceLight) -> None:
         """Draw all cube faces in a perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
@@ -61,14 +62,14 @@ class Rocks:
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)
-        Rocks._draw_ground()
+        Rocks._draw_ground(light)
 
-        OreFields.draw(ore_fields, player.position.x, player.position.z)
-        OreMines.draw(mines, player.position.x, player.position.z)
-        Outposts.draw(outposts, player.position.x, player.position.z)
+        OreFields.draw(ore_fields, player.position.x, player.position.z, light)
+        OreMines.draw(mines, player.position.x, player.position.z, light)
+        Outposts.draw(outposts, player.position.x, player.position.z, light)
 
         for rock in rocks:
-            Rocks._draw_rock(rock, player.position.x, player.position.z)
+            Rocks._draw_rock(rock, player.position.x, player.position.z, light)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)
@@ -77,8 +78,8 @@ class Rocks:
         GL.glPopMatrix()
 
     @staticmethod
-    def _draw_ground() -> None:
-        """Draw the local surface in the planet colour, populating depth for rocks to sit on.
+    def _draw_ground(light: SurfaceLight) -> None:
+        """Draw the local surface lit by the sun, populating depth for rocks to sit on.
 
         Always centred on the camera (player X/Z is applied via the
         camera-relative vertex convention, not baked into these vertices),
@@ -86,7 +87,7 @@ class Rocks:
         """
         extent = MAX_DEPTH
 
-        GL.glColor3ub(*PLANET_GRAY)
+        GL.glColor3ub(*light.ground_colour())
         GL.glBegin(GL.GL_QUADS)
         GL.glVertex3f(-extent, 0.0, -extent)
         GL.glVertex3f(extent, 0.0, -extent)
@@ -95,7 +96,7 @@ class Rocks:
         GL.glEnd()
 
     @staticmethod
-    def _draw_rock(rock: Rock, player_x: float, player_z: float) -> None:
+    def _draw_rock(rock: Rock, player_x: float, player_z: float, light: SurfaceLight) -> None:
         half = rock.size / 2.0
 
         # Rocks are tilted around their own local Z axis by rock.tilt degrees,
@@ -133,18 +134,26 @@ class Rocks:
         c111 = corner(+1, +1, +1)
         c011 = corner(-1, +1, +1)
 
-        base = rock.color
-        top = tuple(max(0, value - 50) for value in base)
-        side = tuple(max(0, value - 25) for value in base)
-        bottom = tuple(max(0, value - 70) for value in base)
+        # The heat glow (rock.color above rock.initial_color) is added after shading, so a hot rock still
+        # glows on the side away from the sun.
+        glow = tuple(max(0, now - start) for now, start in zip(rock.color, rock.initial_color))
+
+        def face_colour(normal_x: float, normal_y: float, normal_z: float) -> Tuple[int, int, int]:
+            """The face's colour: its normal rotated like the corners (tilt, then orientation), lit by the sun."""
+            x1 = normal_x * cos_t - normal_y * sin_t
+            y1 = normal_x * sin_t + normal_y * cos_t
+            x2 = x1 * cos_o + normal_z * sin_o
+            z2 = -x1 * sin_o + normal_z * cos_o
+            shaded = SurfaceLight.shade(rock.initial_color, light.brightness(x2, y1, z2))
+            return tuple(min(255, shaded[i] + glow[i]) for i in range(3))
 
         faces = (
-            (top, (c010, c110, c111, c011)),
-            (bottom, (c001, c101, c100, c000)),
-            (side, (c000, c001, c011, c010)),
-            (side, (c101, c100, c110, c111)),
-            (base, (c000, c100, c110, c010)),
-            (base, (c101, c001, c011, c111)),
+            (face_colour(0.0, 1.0, 0.0), (c010, c110, c111, c011)),
+            (face_colour(0.0, -1.0, 0.0), (c001, c101, c100, c000)),
+            (face_colour(-1.0, 0.0, 0.0), (c000, c001, c011, c010)),
+            (face_colour(1.0, 0.0, 0.0), (c101, c100, c110, c111)),
+            (face_colour(0.0, 0.0, -1.0), (c000, c100, c110, c010)),
+            (face_colour(0.0, 0.0, 1.0), (c101, c001, c011, c111)),
         )
 
         GL.glBegin(GL.GL_QUADS)

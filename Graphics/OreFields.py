@@ -10,6 +10,7 @@ from OpenGL import GL
 
 if TYPE_CHECKING:
     from Galaxies.ore_fields import OreField
+    from .surface_light import SurfaceLight
 
 
 class OreFields:
@@ -19,7 +20,7 @@ class OreFields:
     _ore_field_texture_id: Optional[int] = None
 
     @staticmethod
-    def draw(ore_fields: List[OreField], player_x: float, player_z: float) -> None:
+    def draw(ore_fields: List[OreField], player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw every ore field, within the camera transform set up by the caller."""
         if not ore_fields:
             return
@@ -35,13 +36,13 @@ class OreFields:
         GL.glBindTexture(GL.GL_TEXTURE_2D, OreFields._get_ore_field_texture())
 
         for ore_field in ore_fields:
-            OreFields._draw_ore_field(ore_field, player_x, player_z)
+            OreFields._draw_ore_field(ore_field, player_x, player_z, light)
 
         # Restore GL state
         GL.glPopAttrib()
 
     @staticmethod
-    def _draw_ore_field(ore_field: OreField, player_x: float, player_z: float) -> None:
+    def _draw_ore_field(ore_field: OreField, player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw a textured quad on the ground for an ore field.
 
         Vertices are made camera-relative in Python (double precision) before
@@ -56,8 +57,8 @@ class OreFields:
         relative_latitude = ore_field.latitude - player_z
         radius = ore_field.radius
 
-        # Set color for texture modulation (white leaves texture unchanged)
-        GL.glColor3ub(*ore_field.color)
+        # Set color for texture modulation (white leaves texture unchanged), lit by the sun on the ground
+        GL.glColor3ub(*light.shade(ore_field.color, light.brightness(0.0, 1.0, 0.0)))
 
         # Rotation angle in radians (clockwise, so negate for standard math)
         angle = math.radians(ore_field.orientation)

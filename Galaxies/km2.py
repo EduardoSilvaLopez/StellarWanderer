@@ -25,7 +25,7 @@ class Km2:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
-        self.seed: int = (self.longitude + self.latitude + self.parent_world.seed) % Galaxies.constants.SEEDS_SCALING
+        self.seed: int = (self.parent_world.seed + 1e9*self.longitude + self.latitude) % Galaxies.constants.SEEDS_SCALING
 
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()
@@ -38,7 +38,7 @@ class Km2:
             self.set_altered()
 
         my_random: random.Random = random.Random(self.seed)
-        rocksCount: int = max(int(parent_world.rocks_prevalence * my_random.gauss(80, 40)), 0)
+        rocks_count: int = max(int(parent_world.rocks_prevalence * my_random.gauss(60, 20)), 0)
         self.rocks: List[Rock] = []
         self.molten_rocks: List[str] = []
         self.ore_fields: List[OreField] = []
@@ -49,7 +49,7 @@ class Km2:
         # building plus a 5 m margin. The random draws still happen, so the other rocks do not change.
         clearance = math.hypot(12.0 / 2, 6.0 / 2) + 5.0
         outpost_centres = [(o.longitude, o.latitude) for o in parent_world.outposts.values()]
-        for i in range(int(rocksCount)):
+        for i in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 1000)
             rock_lat = self.latitude + my_random.randint(0, 1000)
             if any(math.hypot(rock_lon - lon, rock_lat - lat) < clearance for lon, lat in outpost_centres):

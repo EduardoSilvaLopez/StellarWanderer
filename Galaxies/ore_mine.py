@@ -1,14 +1,19 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, TYPE_CHECKING
 
 from datetime import datetime, timedelta
 
 import logging
-logger = logging.getLogger(__name__)
 
 from Updating.Updatable import Updatable
 from Updating.UpdateQueue import update_queue
 
-from Galaxies import ore_fields
+
+if TYPE_CHECKING:
+    from Galaxies.ore_fields import OreField
+
+logger = logging.getLogger(__name__)
 
 class OreMine(Updatable):
     EXTRACTION_PERIOD: int = 3600
@@ -19,13 +24,13 @@ class OreMine(Updatable):
 
     def __init__(
             self,
-            parent_field: ore_fields,
+            parent_field: OreField,
             longitude: int = 0,
             latitude: int = 0,
             orientation: float = 0.0,
             saved_attributes: dict = None
             ):
-        self.parent_field: ore_fields = parent_field
+        self.parent_field: OreField = parent_field
         if saved_attributes is None:
             self.longitude: float = longitude
             self.latitude: float = latitude
@@ -44,6 +49,8 @@ class OreMine(Updatable):
             self.next_update_at: Optional[datetime] = \
                 datetime.strptime(saved_attributes['next_update_at'], '%Y-%m-%d %H:%M:%S.%f') \
                 if 'next_update_at' in saved_attributes else None
+
+        self.parent_field.parent_km2.parent_world.registered_mines.append(self)
 
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
 

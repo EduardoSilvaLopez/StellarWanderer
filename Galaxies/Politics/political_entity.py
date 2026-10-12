@@ -38,7 +38,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         "PoliticalEntity.1.png",
         {
             float('-inf'): 'Prisioner',
-            -100: 'Dependent',
+            -30: 'Dependent',
             -10: 'Student',
             0: 'Citizen',
             10: 'Comrade',

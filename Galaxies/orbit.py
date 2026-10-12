@@ -18,7 +18,7 @@ class Orbit:
                  ) -> None:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number
-        self.seed: int = (self.number + self.parent_stellar_system.seed) % Galaxies.constants.SEEDS_SCALING
+        self.seed: int = (self.parent_stellar_system.seed + self.number) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.is_altered: bool = False
