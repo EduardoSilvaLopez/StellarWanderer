@@ -252,8 +252,8 @@ def main() -> None:
         # Roll: Q (left) and E (right), only while unbound
         player.update_roll(
             delta_game_seconds,
-            1 if keys[pygame.K_q] else 0,
             1 if keys[pygame.K_e] else 0,
+            1 if keys[pygame.K_q] else 0,
             keys[pygame.K_s]
         )
 

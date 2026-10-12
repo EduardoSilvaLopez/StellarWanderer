@@ -21,7 +21,7 @@ class Ship(Updatable):
     FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 20.0  # degrees per second squared
-    MAX_ANGULAR_SPEED = 90.0  # degrees per second
+    MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 
     def __init__(self, owner: Player) -> None:

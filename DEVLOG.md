@@ -225,11 +225,13 @@ OUTPOSTS:
 
 Extra time: 28h15'
 
-- De-capitalise file names.
+- De-capitalise *.py file names.
 
 BACKLOG
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
+- Also air, water and food.
 * TRAVEL TO THE SUN (forbidden areas)
+- Also fuel.
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
