@@ -220,12 +220,11 @@ OUTPOSTS:
 - Ore field remaining ore is shown.
 - Augmentation for the world wmap.
 - Make a realistic run... it may be the definitive one...
+- People are identified by seed, and save their own data.
+- People have also alterations, including the personal history with the player.
 
-Extra time: 23h30' + 12:30 - 14:15 + 16:30 - 
+Extra time: 28h15'
 
-- Losing unloaded mines!? Check!
-- People are identified by Guid? Or make it a real seed? Depends how the seed of the outpost looks like.
-- People have also alterations, above all the personal history with the player ("want pay" - button)
 - De-capitalise file names.
 
 BACKLOG

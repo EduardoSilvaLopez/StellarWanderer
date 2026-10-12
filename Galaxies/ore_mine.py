@@ -64,9 +64,9 @@ class OreMine(Updatable):
             'content': self.content
             }
         if self.last_updated_at:
-            result['last_updated_at'] = str(self.last_updated_at)
+            result['last_updated_at'] = self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
         if self.next_update_at:
-            result['next_update_at'] = str(self.next_update_at)
+            result['next_update_at'] = self.next_update_at.strftime('%Y-%m-%d %H:%M:%S.%f')
         return result
 
     def get_next_update(self) -> datetime:

@@ -94,12 +94,13 @@ class Savefile:
         data = {
             'environment': {
                 'galactic_seed': environment.galaxy.seed,
-                'date_time': str(environment.date_time),
-                'galaxy_alterations': gem.current_environment.galaxy.get_alterations()
+                'date_time': environment.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'galaxy_alterations': gem.current_environment.galaxy.get_alterations(),
+                'persons': [p.serialize() for p in environment.persons]
             }
             , 'player': player.serialize()
         }
-        file_name = str(environment.date_time)
+        file_name = environment.date_time.strftime('%Y-%m-%d %H:%M:%S')
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
         file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
         file_name = 'Savefiles/' + file_name

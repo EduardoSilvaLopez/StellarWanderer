@@ -75,6 +75,8 @@ class Km2:
         self.outpost: Optional[Outpost] = None
         if not self.parent_world.parent_planet:
             self.outpost = self.parent_world.get_outpost_for(self)
+            if self.outpost:
+                self.outpost.prepare()
 
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")

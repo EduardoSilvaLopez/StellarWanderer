@@ -1,3 +1,4 @@
+import copy
 import random
 import math
 import logging
@@ -34,19 +35,16 @@ class Outpost:
 
         self.orientation: float = my_random.random() * 360
 
-        self.com_officer: Person = Person(self.seed + 1, self)
-
+        self.com_officer: Optional[Person] = None
         self.last_visited: Optional[datetime] = None
 
         self.is_altered = False
+        self.saved_alterations: Optional[dict] = None
         if saved_alterations:
             my_alterations = saved_alterations.get(self.get_alteration_key())
             if my_alterations:
-                last_visited_as_str: Optional[str] = my_alterations.get('last_visited')
-                if last_visited_as_str:
-                    self.last_visited = datetime.strptime(last_visited_as_str, '%Y-%m-%d %H:%M:%S.%f')
-                    self.set_altered()
-
+                self.saved_alterations = copy.deepcopy(my_alterations)
+                self.set_altered()
         self.log_generation()
 
     def log_generation(self) -> Outpost:
@@ -55,13 +53,25 @@ class Outpost:
         logger.info(f"- Seed {self.seed}")
         return self
 
+    def prepare(self) -> Outpost:
+        ''' Prepare for visit, that is, apply the alterations.'''
+        if self.saved_alterations and 'last_visited' in self.saved_alterations:
+            self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
+
+        if self.saved_alterations and 'com_officer_seed' in self.saved_alterations:
+            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self)
+        else:
+            self.com_officer = Person(self.seed + 1, self)
+        return self
+
     def get_alteration_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)
 
     def get_alterations(self) -> dict:
         alterations: dict = {}
         if self.last_visited is not None:
-            alterations['last_visited'] = str(self.last_visited)
+            alterations['last_visited'] = self.last_visited.strftime('%Y-%m-%d %H:%M:%S.%f')
+            alterations['com_officer_seed'] = self.com_officer.seed
         if not len(alterations):
             return None
         return alterations

@@ -25,7 +25,7 @@ def generate_default(self) -> None:
 
 **Hierarchy**: Galaxy → StellarSystem → Orbit → World → Km2 → Rock
 
-**Persistence Pattern**: Objects track `is_altered` and return `get_alterations()` → dict. Saved to file, re-applied on load. Each object marks parent as altered if it changes.
+**Persistence Pattern**: Objects track `is_altered` and return `get_alterations()` → dict. Saved to file, re-applied on load. Each object marks parent as altered if it changes. **Ore fields and mines are user-created, so they are alterations by definition**: their existence forces their Km2 (and so the world) to be altered, set once where they are created (e.g. `OreField.generate_new`), and they have no `set_altered` of their own; do not add one, nor calls to mark them on later changes. **Once altered, an object is never "de-altered"**: the flag is not reset, and an altered Km2 stays in memory and in the save.
 
 **Seeding**: Every object has deterministic `seed = (coordinate + parent_seed) % SEEDS_SCALING`. Same seed = same generated object.
 

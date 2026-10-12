@@ -50,6 +50,7 @@ class Person:
 
     def __init__(self, seed: float, working_place: Outpost):
         my_random = random.Random(seed)
+        self.seed: float = seed
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()
@@ -74,6 +75,10 @@ class Person:
         self.portrait = self._load_portrait(my_random)
 
         self.working_place: Any = working_place
+        self.last_communication_at: Optional[datetime] = None
+        self.the_joker_wanted_payment: bool = False # Just a PoC of individual com. status.
+
+        gem.current_environment.persons.add(self)
 
     def _load_portrait(self, my_random: random.Random) -> Person:
         filename_prefix: str = 'outpost.com.' + str(self.race.name).lower() + "." + str(self.gender_group.name).lower() + ".mature.content"
@@ -98,6 +103,14 @@ class Person:
 
         return self
 
+    def serialize(self) -> dict:
+        result: dict = {
+            'seed': self.seed,
+            'last_communication_at': str(self.last_communication_at),
+            'the_joker_wanted_payment': self.the_joker_wanted_payment
+        }
+        return result
+
     def get_full_name(self) -> str:
         return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
 
@@ -115,10 +128,20 @@ class Person:
         wp.last_visited = gem.current_environment.date_time
 
         status.reputation -= 0.02 * visit_time_delta / (24*60*60) # "Maintenance, air, water and food needed."
-        if 0.0 < visit_time_delta < 60 * 60:
+        mines_required = 5 - cargo_hold.content[CargoHold.CargoElement.MINES]
+        status.reputation -= 0.10 * mines_required # "Needs more mines."
+        cargo_hold.content[CargoHold.CargoElement.MINES] += mines_required
+
+        if 0.0 < visit_time_delta < 60 * 60 and self.the_joker_wanted_payment:
+            status.reputation -= 0.01 # "Annoying joker."
+            show_message(
+                'outpost_joker_came_back_to_soon',
+                player_title=player.get_title()
+                )
+        elif 0.0 < visit_time_delta < 60 * 60:
             status.reputation -= 0.005 # "Annoying person."
             show_message(
-                'outpost_start_came_back',
+                'outpost_came_back_to_soon',
                 player_title=player.get_title()
                 )
         elif cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
@@ -128,14 +151,22 @@ class Person:
                 player_title=player.get_title(),
                 on_result=self.com_outpost_no_ore
                 )
-        else:
+        elif self.last_communication_at:
             show_message(
                 'outpost_start_ore',
                 full_name=self.get_full_name(),
                 player_title=player.get_title(),
                 on_result=self.com_outpost_ore
                 )
+        else:
+            show_message(
+                'outpost_start_ore_joke',
+                full_name=self.get_full_name(),
+                player_title=player.get_title(),
+                on_result=self.com_outpost_ore
+                )
 
+        self.last_communication_at = wp.last_visited
         logger.debug(f"Reputation now: {status.reputation}")
         return self
 
@@ -156,11 +187,12 @@ class Person:
 
         ore_given = cargo_hold.content[CargoHold.CargoElement.ORE]
         cargo_hold.content[CargoHold.CargoElement.ORE] = 0
-        status.reputation += 0.02 * ore_given # "Ore was shared."
+        status.reputation += 0.01 * ore_given # "Ore was shared."
 
         if button_index == 0:
             status.reputation += 0.001 # "The right answer."
         if button_index == 2:
+            self.the_joker_wanted_payment = True
             status.reputation -= 1 # "Disloyal proposal."
                 #Todo: persist, this option won't be offered anymore.
             show_message(

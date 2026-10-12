@@ -68,7 +68,7 @@ class Rock(Updatable):
         if self.temperature == 0.0:
             return None
         return {"temperature": self.temperature,
-                "last_updated_at": str(self.last_updated_at)
+                "last_updated_at": self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
                 }
 
     def get_next_update(self) -> datetime:

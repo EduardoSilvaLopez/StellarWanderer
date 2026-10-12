@@ -1,7 +1,8 @@
 import datetime
 import logging
 import math
-from typing import Optional
+from typing import List, Optional
+from Galaxies.People.person import Person
 from Galaxies.galaxy import Galaxy
 from Galaxies.stellar_system import StellarSystem
 from Galaxies.world import World
@@ -22,6 +23,7 @@ class GameEnvironment:
         self.nearest_world: World = None
         self.nearest_system: StellarSystem = None
         self._nearest_world_recheck_countdown: int = 0
+        self.persons: set = set()
 
     def generate_default(self) -> None:
         from Galaxies.orbit import Orbit
