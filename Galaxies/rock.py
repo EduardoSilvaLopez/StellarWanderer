@@ -26,7 +26,7 @@ class Rock(Updatable):
         import random
         self.parent_km2: Km2 = parent_Km2
         my_random: float = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
-        self.size: float = abs(my_random.gauss(0.5, 10))
+        self.size: float = abs(my_random.gauss(1, 10))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
         # around this point, so it can sit partly under the ground).

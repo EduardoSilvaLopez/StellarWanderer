@@ -21,7 +21,7 @@ class StellarSystem:
         self.x: int = x
         self.y: int = y
         self.z: int = z
-        self.seed: int = (self.x*1e10 + self.y*1e5 + self.z + self.parent_galaxy.seed) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (self.parent_galaxy.seed + self.x*1e10 + self.y*1e5 + self.z + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.radius = self.generate_star_type(my_random)
         self.mass: float = self.estimate_mass()

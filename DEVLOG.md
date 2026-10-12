@@ -191,8 +191,6 @@ PLANETS AND MOONS started.
 - Indication when approaching the planet in a dangerous speed (must start breaking)
 
 DIALOGS:
-
-- Made.
 - Improving the way worlds are seen, first.
 - Ore prevalence for planets, affects the composition of rocks.
 - Test the drawing of planets in outbound...
@@ -220,11 +218,12 @@ OUTPOSTS:
 - New font for almost everything.
 - Change the seeds to make them more variated.
 - Ore field remaining ore is shown.
-- Augmentation for the world map.
+- Augmentation for the world wmap.
 - Make a realistic run... it may be the definitive one...
 
-Extra time: 23h30' + 12:30 - 
+Extra time: 23h30' + 12:30 - 14:15 + 16:30 - 
 
+- Losing unloaded mines!? Check!
 - People are identified by Guid? Or make it a real seed? Depends how the seed of the outpost looks like.
 - People have also alterations, above all the personal history with the player ("want pay" - button)
 - De-capitalise file names.

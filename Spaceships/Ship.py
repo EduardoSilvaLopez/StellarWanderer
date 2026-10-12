@@ -119,5 +119,6 @@ class Ship(Updatable):
             self.set_notification("No ore field here.")
             return
 
-        targeted_field.mines.append(OreMine(targeted_field, front_lon, front_lat, player_yaw))
+        new_mine = OreMine(targeted_field, front_lon, front_lat, player_yaw)
+        targeted_field.mines.append(new_mine)
         self.cargo_hold.content[CargoHold.CargoElement.MINES] -= 1

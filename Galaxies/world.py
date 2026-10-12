@@ -35,14 +35,14 @@ class World:
             self.parent_planet: World = parent_planet
             self.parent_orbit: Orbit = parent_planet.parent_orbit
             self.index = len(self.parent_planet.moons)
-            seed_origin: int = self.parent_planet.seed
+            seed_origin: float = self.parent_planet.seed
         else:
             self.parent_planet: World = None
             self.parent_orbit: Orbit = parent_orbit
             self.index = len(self.parent_orbit.planets)
-            seed_origin: int = self.parent_orbit.seed
+            seed_origin: float = self.parent_orbit.seed
 
-        self.seed: int = (seed_origin + self.index + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (seed_origin + self.index + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\
@@ -126,9 +126,8 @@ class World:
             # Initial moon's clause.
             if not moons_count and self.is_initial_planet():
                 moons_count = 1
-            self.moons = [
-                World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations) for _ in range(moons_count)
-                ]
+            for _ in range(moons_count):
+                self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
 
         self.km2s: List[Km2] = []
         self._log_creation()
@@ -184,7 +183,7 @@ class World:
             logger.info(f"NEW PLANET CREATED")
 
         logger.info(f" - Orbit(Index): {int(self.parent_orbit.number)} ({self.index})")
-        logger.info(f" - Name: {self.name}")
+        logger.info(f" - Name: {self.name}, Seed: {self.seed}")
         logger.info(f" - Distance to parent: {'{:,}'.format(int(self.distance_to_parent))}")
         logger.info(f" - Radius: {'{:,}'.format(int(self.radius))}")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
@@ -212,6 +211,7 @@ class World:
         if not self.is_altered:
             return None
 
+        logger.debug(f"get_alterations() Called for {self.name}.")
         result: Optional[dict] = dict()
 
         # Km2 objects only exist near the player, so start from the alterations loaded from the
@@ -220,12 +220,8 @@ class World:
         if self.saved_alterations is not None and self.saved_alterations.get('Km2s') is not None:
             km2_alterations = copy.deepcopy(self.saved_alterations['Km2s'])
         for km2 in self.km2s:
-            if km2.is_altered:
-                one_km2_alterations: Optional[dict] = km2.get_alterations()
-                if one_km2_alterations is None:
-                    km2_alterations.pop(km2.get_alterations_key(), None)
-                else:
-                    km2_alterations[km2.get_alterations_key()] = one_km2_alterations
+            if km2.is_altered: # There is no "no longer altered"
+                km2_alterations[km2.get_alterations_key()] = km2.get_alterations()
         if len(km2_alterations):
             result['Km2s'] = km2_alterations
 

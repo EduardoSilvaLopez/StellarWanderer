@@ -21,7 +21,7 @@ class Outpost:
     def __init__(self, planet: World, saved_alterations: dict):
         self.planet = planet
         self.index = len(planet.outposts)
-        self.seed: int = (planet.seed + self.index + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (planet.seed + self.index + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str = self.generate_name(my_random)

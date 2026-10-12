@@ -34,12 +34,13 @@ class OreField:
         result.parent_km2 = original_rock.parent_km2
         result.longitude = original_rock.longitude
         result.latitude = original_rock.latitude
-        result.radius = 0.5 * original_rock.size**1.5
+        result.radius = original_rock.size**1.5
         result.initial_ore = result.remaining_ore = int(original_rock.ore_per_m3() * original_rock.size**3)
         result.color = result.initial_color = tuple(min(255, value + 50) for value in original_rock.initial_color)
 
         my_random = random.Random(original_rock.parent_km2.seed + original_rock.latitude + original_rock.longitude + result.radius)
         result.orientation = my_random.random() * 360.0
+        result.parent_km2.set_altered() # Any ore field is an alteration by definition.
         
         return result
 
@@ -76,5 +77,6 @@ class OreField:
 
     def extract(self, amount: int) -> int:
         result = min(self.remaining_ore, amount)
-        self.remaining_ore -= result
+        if result > 0:
+            self.remaining_ore -= result
         return result

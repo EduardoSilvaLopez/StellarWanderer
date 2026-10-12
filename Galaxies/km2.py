@@ -25,7 +25,7 @@ class Km2:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
-        self.seed: int = (self.parent_world.seed + 1e9*self.longitude + self.latitude) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (self.parent_world.seed + 1e3*self.longitude + 1e-6*self.latitude + 1) % Galaxies.constants.SEEDS_SCALING
 
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()
@@ -132,6 +132,7 @@ class Km2:
     def melt_rock(self, tgt_rock: Rock) -> Km2:
         self.molten_rocks.append(tgt_rock.get_alterations_key())
         self.rocks.remove(tgt_rock)
+        self.set_altered()
         if tgt_rock.is_ore_rich():
             self.ore_fields.append(OreField.generate_new(tgt_rock))
         return self

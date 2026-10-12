@@ -64,7 +64,7 @@ MAX_DEPTH = 2000  # metres
 LOCAL_STAR_MIN_RADIUS_PX = 1  # floor so a distant/small star never vanishes to 0px
 LOCAL_STAR_HALO_WIDTH_PX = 4  # extra radius of the semi-transparent glow ring around the star
 LOCAL_STAR_HALO_ALPHA = 90    # 0-255
-WORLD_ALBEDO = (176, 160, 140)  # base colour of every world (planets and moons) when lit by its star
+WORLD_ALBEDO = (128, 126, 124)  # base colour of every world (planets and moons) when lit by its star
 WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.

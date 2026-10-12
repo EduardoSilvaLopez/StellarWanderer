@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 
-# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, red, yellow, white).
-TEMPERATURE_COLORS = ((0, 0, 0), (255, 60, 60), (255, 230, 60), (255, 255, 255))
+# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, dark red, gray, blue).
+TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192))
 
 
 class Scanner:

@@ -31,6 +31,7 @@ class OreMine(Updatable):
             saved_attributes: dict = None
             ):
         self.parent_field: OreField = parent_field
+        self.is_altered: bool = False
         if saved_attributes is None:
             self.longitude: float = longitude
             self.latitude: float = latitude
@@ -51,10 +52,9 @@ class OreMine(Updatable):
                 if 'next_update_at' in saved_attributes else None
 
         self.parent_field.parent_km2.parent_world.registered_mines.append(self)
+        update_queue.add(self)
 
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
-
-        update_queue.add(self)
 
     def serialize(self) -> dict:
         result = {
@@ -78,7 +78,7 @@ class OreMine(Updatable):
     def update(self, game_date_time: datetime) -> None:
         if not game_date_time: # stop updating
             return
-        
+
         if self.last_updated_at is None:
             # This mine did not start working. Start now.
             self.last_updated_at = game_date_time
