@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
 import math
 import pygame
 from datetime import datetime
-from ..Constants import ACCENT, ACCENT_DIM
+from ..constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

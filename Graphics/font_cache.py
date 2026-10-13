@@ -3,7 +3,7 @@ from typing import Tuple, Dict
 import os
 import pygame
 
-from .Constants import FONT_FILE
+from .constants import FONT_FILE
 from .fallback_font import FALLBACK_FONTS, FallbackFont
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'fonts')

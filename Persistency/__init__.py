@@ -1,5 +1,5 @@
 """Game persistence."""
 
-from .Savefile import Savefile
+from .savefile import Savefile
 
 __all__ = ["Savefile"]

@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING
 import pygame
-from Vector3 import Vector3
-from .Constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
+from vector3 import Vector3
+from .constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost

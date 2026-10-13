@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Dict, Tuple, TYPE_CHECKING
 import pygame
-from .Constants import ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
+from .constants import ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
     from Galaxies.world import World

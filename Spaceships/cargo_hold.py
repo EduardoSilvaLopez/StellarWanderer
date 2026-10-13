@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 import math
 
 if TYPE_CHECKING:
-    from Spaceships.Ship import Ship
+    from Spaceships.ship import Ship
 
 
 class CargoHold:

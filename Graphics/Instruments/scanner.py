@@ -5,8 +5,8 @@ from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
 import numpy as np
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR
-from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
+from ..constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR
+from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
 from .common import draw_beveled_panel, bezel_depth
 

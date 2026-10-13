@@ -223,19 +223,22 @@ OUTPOSTS:
 - People are identified by seed, and save their own data.
 - People have also alterations, including the personal history with the player.
 
-Extra time: 28h15'
-### 2026-10-13 8:15 -
+### 2026-10-13 (4/10)
 - Bigger outposts.
 - Yaw / pitch / roll go to 0 when time scale > 1. This never made sense.
 - How to approach the planet better ("Approaching")
 - More realistic rocks.
-... ongoing.
 
-- De-capitalise *.py file names.
+Extra time: 29h15' + 11:45-
+
+* De-capitalise *.py file names (small task)
+
+* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
+- Move the zommed map on left-click + drag.
+- Also air, water and food.
+
 
 BACKLOG
-* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
-- Also air, water and food.
 * TRAVEL TO THE SUN (forbidden areas)
 - Also fuel.
 * ASTEROIDS

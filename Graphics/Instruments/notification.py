@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..Constants import READOUT_BG, CONSOLE_EDGE_COLOR
+from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

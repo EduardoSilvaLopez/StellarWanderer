@@ -6,17 +6,17 @@ import math
 import pygame
 from OpenGL import GL
 
-from .Constants import SPACE_COLOR, MAX_DEPTH
-from .Cockpit import Cockpit
-from .DeepSpace import DeepSpace
-from .LocalStar import LocalStar
+from .constants import SPACE_COLOR, MAX_DEPTH
+from .cockpit import Cockpit
+from .deep_space import DeepSpace
+from .local_star import LocalStar
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
-from .NearestWorld import NearestWorld
+from .nearest_world import NearestWorld
 from .other_worlds import OtherWorlds
-from .Rocks import Rocks
+from .rocks import Rocks
 from .rock_batches import RockBatches
-from .Laser import Laser
+from .laser import Laser
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:

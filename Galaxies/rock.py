@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import math
 from typing import TYPE_CHECKING, Optional
 
-from Updating.Updatable import Updatable
-from Updating.UpdateQueue import update_queue
+from Updating.updatable import Updatable
+from Updating.update_queue import update_queue
 
 if TYPE_CHECKING:
     from Galaxies.km2 import Km2

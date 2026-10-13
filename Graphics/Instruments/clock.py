@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from datetime import datetime
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
+from ..constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
 
 if __name__ == '__main__':
     from Galaxies.People.player import Player

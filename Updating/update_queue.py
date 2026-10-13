@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List
-from .Updatable import Updatable
+from .updatable import Updatable
 
 
 class UpdateQueue:

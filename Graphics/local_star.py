@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import math
 import pygame
-from .Constants import (
+from .constants import (
     LOCAL_STAR_MIN_RADIUS_PX, LOCAL_STAR_HALO_WIDTH_PX, LOCAL_STAR_HALO_ALPHA,
 )
 

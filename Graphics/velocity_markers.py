@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from .Constants import PROGRADE_COLOR, RETROGRADE_COLOR
+from .constants import PROGRADE_COLOR, RETROGRADE_COLOR
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

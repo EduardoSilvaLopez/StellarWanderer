@@ -3,7 +3,7 @@
 import logging
 import logging.handlers
 import os
-from .Constants import (
+from .constants import (
     LOG_LEVEL, LOG_FORMAT, LOG_DATE_FORMAT, LOG_DIR, LOG_FILE_NAME,
     LOG_MAX_BYTES, LOG_BACKUP_COUNT
 )

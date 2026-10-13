@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
+from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
 from .common import draw_beveled_panel, format_compact_distance, format_compact_speed, bezel_depth
 
 if TYPE_CHECKING:

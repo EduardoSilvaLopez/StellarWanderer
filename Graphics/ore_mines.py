@@ -13,7 +13,7 @@ import math
 import pygame
 from OpenGL import GL
 
-from .Constants import (
+from .constants import (
     MINE_SEGMENTS, MINE_BASE_HEIGHT,
     MINE_TEXTURE_WIDTH, MINE_TEXTURE_HEIGHT,
     MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT,

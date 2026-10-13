@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import pygame
-from ..Constants import CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, HULL_EDGE_COLOR
+from ..constants import CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, HULL_EDGE_COLOR
 from .common import get_windshield_frame_texture
 
 

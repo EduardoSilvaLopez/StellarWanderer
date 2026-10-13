@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 
 import logging
 
-from Updating.Updatable import Updatable
-from Updating.UpdateQueue import update_queue
+from Updating.updatable import Updatable
+from Updating.update_queue import update_queue
 
 
 if TYPE_CHECKING:

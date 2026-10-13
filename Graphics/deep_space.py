@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import pygame
-from .Constants import SPACE_COLOR, CONSOLE_TOP
+from .constants import SPACE_COLOR, CONSOLE_TOP
 
 
 class DeepSpace:

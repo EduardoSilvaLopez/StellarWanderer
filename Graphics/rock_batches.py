@@ -17,7 +17,7 @@ import weakref
 import numpy as np
 from OpenGL import GL
 
-from .Constants import SURFACE_STARLIGHT
+from .constants import SURFACE_STARLIGHT
 from .rock_shape import FACES, rock_meshes, rotate
 
 if TYPE_CHECKING:

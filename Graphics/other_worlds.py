@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from typing import List, Tuple, TYPE_CHECKING
-from Vector3 import Vector3
+from vector3 import Vector3
 import pygame
 from .lit_worlds import LitWorlds
 

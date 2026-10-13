@@ -5,10 +5,10 @@ from typing import Tuple, TYPE_CHECKING
 import math
 import numpy as np
 import pygame
-from .Constants import (
+from .constants import (
     WORLD_ALBEDO, WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET,
 )
-from Vector3 import Vector3
+from vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

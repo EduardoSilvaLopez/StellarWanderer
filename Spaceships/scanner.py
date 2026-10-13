@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Uni
 import math
 
 if TYPE_CHECKING:
-    from Spaceships.Ship import Ship
+    from Spaceships.ship import Ship
     from Galaxies.world import World
     from Galaxies.km2 import Km2
     from Galaxies.rock import Rock

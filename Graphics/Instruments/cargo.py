@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM
+from ..constants import ACCENT, ACCENT_DIM
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:

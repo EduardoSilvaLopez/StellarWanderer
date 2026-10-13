@@ -8,7 +8,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 
 import pygame
 
-from Graphics.NearestWorld import NearestWorld
+from Graphics.nearest_world import NearestWorld
 
 
 class RockRendererTests(unittest.TestCase):

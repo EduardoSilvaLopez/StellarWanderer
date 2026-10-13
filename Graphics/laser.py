@@ -6,7 +6,7 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
+from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

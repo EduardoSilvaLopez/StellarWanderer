@@ -5,7 +5,7 @@ import glob
 import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
-from Spaceships.Ship import Ship
+from Spaceships.ship import Ship
 import game_environment as gem
 import Galaxies.People.player as pem
 

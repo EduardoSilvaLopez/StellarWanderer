@@ -9,10 +9,10 @@ The panel on the upper right is the ship clock — it starts at
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import pygame
-from .DeepSpace import DeepSpace
-from .NearestWorld import NearestWorld
-from .Cockpit import Cockpit
-from .Constants import SPACE_COLOR
+from .deep_space import DeepSpace
+from .nearest_world import NearestWorld
+from .cockpit import Cockpit
+from .constants import SPACE_COLOR
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

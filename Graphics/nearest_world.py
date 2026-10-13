@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 import math
 import pygame
-from .Constants import (
+from .constants import (
     PLANET_GRAY, ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
 )
 from Graphics.Instruments.common import view_geometry

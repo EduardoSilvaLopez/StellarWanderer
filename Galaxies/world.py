@@ -10,7 +10,7 @@ import logging
 import Galaxies.constants
 from Galaxies.km2 import Km2
 from Galaxies.rock import Rock
-from Vector3 import Vector3
+from vector3 import Vector3
 
 if TYPE_CHECKING:
     from Galaxies.ore_mine import OreMine

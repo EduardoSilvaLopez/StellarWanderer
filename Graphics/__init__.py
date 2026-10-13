@@ -1,5 +1,5 @@
 """Graphics package for Stellar Wanderer cockpit rendering."""
 
-from .Gui import Gui
+from .gui import Gui
 
 __all__ = ['Gui']

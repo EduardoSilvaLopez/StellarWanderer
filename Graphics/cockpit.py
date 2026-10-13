@@ -9,8 +9,8 @@ from .Instruments.console import Console
 from .Instruments.clock import Clock
 from .Instruments.crosshair import Crosshair
 from .Instruments.political_info import PoliticalInfo
-from .ObjectLabels import ObjectLabels
-from .VelocityMarkers import VelocityMarkers
+from .object_labels import ObjectLabels
+from .velocity_markers import VelocityMarkers
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

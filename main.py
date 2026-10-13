@@ -23,16 +23,16 @@ import sys
 import pygame
 import logging; logger = logging.getLogger(__name__)
 from GameLogging import configure_logging
-from Graphics.FontCache import FontCache
+from Graphics.font_cache import FontCache
 import game_environment as gem
 import Galaxies.People.player as player_module
-from Persistency.Savefile import Savefile
+from Persistency.savefile import Savefile
 from Dialogs import (
     Dialog, DialogResult, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
 )
-from Graphics.OpenGLGui import OpenGLGui
+from Graphics.opengl_gui import OpenGLGui
 from Graphics.Instruments.world_map import WorldMap
-from Updating.UpdateQueue import update_queue
+from Updating.update_queue import update_queue
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1920, 1080)

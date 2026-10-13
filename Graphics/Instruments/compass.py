@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import math
 import pygame
-from ..Constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
+from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

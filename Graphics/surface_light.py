@@ -6,8 +6,8 @@ with WORLD_AMBIENT_LIGHT still visible on the unlit side, as for worlds in the s
 from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple
 
-from Vector3 import Vector3
-from .Constants import SURFACE_STARLIGHT
+from vector3 import Vector3
+from .constants import SURFACE_STARLIGHT
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:

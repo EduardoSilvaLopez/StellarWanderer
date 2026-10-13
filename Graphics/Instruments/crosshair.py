@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import pygame
-from ..Constants import CONSOLE_TOP, ACCENT
+from ..constants import CONSOLE_TOP, ACCENT
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

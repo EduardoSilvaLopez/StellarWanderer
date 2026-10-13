@@ -6,9 +6,9 @@ import math
 
 from OpenGL import GL, GLU
 
-from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
-from .OreFields import OreFields
-from .OreMines import OreMines
+from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH
+from .ore_fields import OreFields
+from .ore_mines import OreMines
 from .outposts import Outposts
 from .rock_batches import RockBatches
 from .surface_light import SurfaceLight

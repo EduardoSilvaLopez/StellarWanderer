@@ -1,7 +1,10 @@
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 
 from Galaxies.rock import Rock
-from Spaceships import Ship
+
+if TYPE_CHECKING:
+    from Spaceships.ship import Ship
 
 class Laser:
     def __init__(self, ship: Ship):

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
 from datetime import datetime
-from ..Constants import (
+from ..constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
 from .common import get_console_background, draw_beveled_panel, format_compact_distance, bezel_depth

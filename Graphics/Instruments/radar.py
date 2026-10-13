@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import Any, List, Tuple, TYPE_CHECKING
 import math
 import pygame
-from Vector3 import Vector3
-from ..Constants import (
+from vector3 import Vector3
+from ..constants import (
     ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR, RADAR_MOON_COLOR,
     RADAR_STAR_DOT_RADIUS, RADAR_WORLD_DOT_RADIUS, RADAR_MOON_DOT_RADIUS,
 )

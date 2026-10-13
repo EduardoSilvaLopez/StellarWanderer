@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from Vector3 import Vector3
+from vector3 import Vector3
 
 import Galaxies.constants
 from Galaxies.world import World

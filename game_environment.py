@@ -6,7 +6,7 @@ from Galaxies.People.person import Person
 from Galaxies.galaxy import Galaxy
 from Galaxies.stellar_system import StellarSystem
 from Galaxies.world import World
-from Vector3 import Vector3
+from vector3 import Vector3
 
 logger = logging.getLogger(__name__)
 

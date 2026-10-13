@@ -9,10 +9,10 @@ import logging
 
 from Galaxies.Politics import political_entity
 from Galaxies.Politics.personal_status import PersonalStatus
-from Vector3 import Vector3, rotate_2d
+from vector3 import Vector3, rotate_2d
 from Galaxies.world import World
 from Galaxies.km2 import Km2
-from Spaceships.Ship import Ship
+from Spaceships.ship import Ship
 import game_environment as gem
 if TYPE_CHECKING:
     from Galaxies.world import World

@@ -9,7 +9,7 @@ import game_environment as gem
 from .laser import Laser
 from .cargo_hold import CargoHold
 from .scanner import Scanner
-from Updating import Updatable, UpdateQueue
+from Updating import Updatable, update_queue
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
 
@@ -52,7 +52,7 @@ class Ship(Updatable):
     def set_notification(self, message: str) -> Ship:
         self.notification = message
         self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
-        UpdateQueue.update_queue.add(self)
+        update_queue.add(self)
 
     def set_mine_pressed(self) -> None:
         '''React to the "place mine" button.'''
