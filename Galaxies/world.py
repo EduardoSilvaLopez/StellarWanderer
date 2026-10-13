@@ -295,8 +295,12 @@ class World:
             logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
 
     def get_outpost_for(self, km2: Km2) -> Optional[Outpost]:
-        return self.outposts.get(km2.get_alterations_key())
-
+        for outpost in self.outposts.values():
+            if int(outpost.longitude / Km2.SIZE) == int(km2.longitude / Km2.SIZE):
+                if int(outpost.latitude / Km2.SIZE) == int(km2.latitude / Km2.SIZE):
+                    return outpost
+        return None
+    
     def surface_point_stellar(self, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Stellar position (metres) of a point on this world's surface, given in surface coordinates.
         Same convention as Player.calculate_stellar_position, with altitude 0."""

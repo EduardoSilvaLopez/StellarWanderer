@@ -19,16 +19,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ATLAS_WIDTH = 1024
-ATLAS_HEIGHT = 512
+ATLAS_WIDTH = 2048
+ATLAS_HEIGHT = 1024
 TEXTURE_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'outpost.png')
 
 # Atlas regions (x, y, w, h) in pixels; must match Tools/generate_outpost_texture.py.
-FRONT = (0, 0, 480, 120)
-BACK = (0, 128, 480, 120)
-LEFT = (512, 256, 240, 120)
-RIGHT = (768, 256, 240, 120)
-ROOF = (512, 0, 480, 240)
+FRONT = (0, 0, 960, 240)
+BACK = (0, 248, 960, 240)
+LEFT = (976, 0, 480, 240)
+RIGHT = (976, 248, 480, 240)
+ROOF = (0, 496, 960, 480)
+FLAG = (1472, 0, 384, 256)    # the flag, 3:2
+METAL = (1472, 264, 32, 32)   # plain steel, for the flagpole and its fittings
+
+# The flagpole stands on the front left corner of the roof and rises above it. It is only drawn: the
+# outpost's HEIGHT, its box for the scanner and the cleared ground do not include it.
+POLE_RISE = 5.0             # metres above the roof
+POLE_HALF_WIDTH = 0.07      # the pole is a square 0.14 m across
+POLE_INSET = 0.8            # from the corner of the roof
+FLAG_WIDTH = 3.0            # a rigid flag, held out by a rod (a flag cannot wave without air)
+FLAG_HEIGHT = 2.0
+
 
 class Outposts:
     """Render outpost buildings within the camera transform set up by the caller (see Rocks.draw).
@@ -98,6 +109,37 @@ class Outposts:
         quad(ROOF, (0.0, 1.0, 0.0),
              [corner(-width, height, depth), corner(width, height, depth), corner(width, height, -depth), corner(-width, height, -depth)],
              [(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        # Flagpole on the front left corner of the roof, with its flag held out to the right of the door wall.
+        def box(x0: float, x1: float, y0: float, y1: float, z0: float, z1: float) -> None:
+            """A steel box in the building's local coordinates: four sides and the top."""
+            corners = lambda *points: [corner(*point) for point in points]
+            uvs = [(0, 0), (1, 0), (1, 1), (0, 1)]
+            quad(METAL, door_normal, corners((x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)), uvs)
+            quad(METAL, (-sin_a, 0.0, -cos_a), corners((x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0)), uvs)
+            quad(METAL, (-side_normal[0], 0.0, -side_normal[2]),
+                 corners((x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0)), uvs)
+            quad(METAL, side_normal, corners((x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1)), uvs)
+            quad(METAL, (0.0, 1.0, 0.0), corners((x0, y1, z1), (x1, y1, z1), (x1, y1, z0), (x0, y1, z0)), uvs)
+
+        pole_x, pole_z = -width + POLE_INSET, depth - POLE_INSET
+        pole_top = height + POLE_RISE
+        half = POLE_HALF_WIDTH
+        box(pole_x - 0.3, pole_x + 0.3, height, height + 0.12, pole_z - 0.3, pole_z + 0.3)                    # base plate
+        box(pole_x - half, pole_x + half, height, pole_top, pole_z - half, pole_z + half)                    # pole
+        box(pole_x - 0.1, pole_x + 0.1, pole_top, pole_top + 0.2, pole_z - 0.1, pole_z + 0.1)                # finial
+        flag_top = pole_top - 0.25
+        flag_x0, flag_x1 = pole_x + half, pole_x + half + FLAG_WIDTH
+        box(flag_x0, flag_x1, flag_top, flag_top + 0.06, pole_z - 0.03, pole_z + 0.03)                       # rod
+        flag_bottom = flag_top - FLAG_HEIGHT
+        # Both faces of the cloth, a hair apart so they do not fight; the back is seen mirrored, as on a real flag.
+        for offset, normal, uvs in (
+                (0.015, door_normal, [(0, 1), (1, 1), (1, 0), (0, 0)]),
+                (-0.015, (-sin_a, 0.0, -cos_a), [(1, 1), (0, 1), (0, 0), (1, 0)])):
+            quad(FLAG, normal,
+                 [corner(flag_x0, flag_bottom, pole_z + offset), corner(flag_x1, flag_bottom, pole_z + offset),
+                  corner(flag_x1, flag_top, pole_z + offset), corner(flag_x0, flag_top, pole_z + offset)],
+                 uvs)
 
     @staticmethod
     def _uv_rect(region: Tuple[int, int, int, int]) -> Tuple[float, float, float, float]:

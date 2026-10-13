@@ -233,29 +233,34 @@ def main() -> None:
 
         keys = pygame.key.get_pressed()
 
-        # Yaw: Numpad 4 (left) and 6 (right)
-        player.update_yaw(
-            delta_game_seconds,
-            1 if keys[pygame.K_KP_4] else 0,
-            1 if keys[pygame.K_KP_6] else 0,
-            keys[pygame.K_s]
-        )
+        if player.time_scale == 1: # Yaw, pitch, scale disabled for > 1.
+            # Yaw: Numpad 4 (left) and 6 (right)
+            player.update_yaw(
+                delta_game_seconds,
+                1 if keys[pygame.K_KP_4] else 0,
+                1 if keys[pygame.K_KP_6] else 0,
+                keys[pygame.K_s]
+            )
 
-        # Pitch: Numpad 8 (up) and 2 (down), only while unbound
-        player.update_pitch(
-            delta_game_seconds,
-            1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
-            1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
-            keys[pygame.K_s]
-        )
+            # Pitch: Numpad 8 (up) and 2 (down), only while unbound
+            player.update_pitch(
+                delta_game_seconds,
+                1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
+                1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
+                keys[pygame.K_s]
+            )
 
-        # Roll: Q (left) and E (right), only while unbound
-        player.update_roll(
-            delta_game_seconds,
-            1 if keys[pygame.K_e] else 0,
-            1 if keys[pygame.K_q] else 0,
-            keys[pygame.K_s]
-        )
+            # Roll: Q (left) and E (right), only while unbound
+            player.update_roll(
+                delta_game_seconds,
+                1 if keys[pygame.K_e] else 0,
+                1 if keys[pygame.K_q] else 0,
+                keys[pygame.K_s]
+            )
+        else: # reducing them automatically.
+            player.update_yaw(delta_game_seconds, 0, 0, 1)
+            player.update_pitch(delta_game_seconds, 0, 0, 1)
+            player.update_roll(delta_game_seconds, 0, 0, 1)
 
         # Always update position, even with no thrust keys held: W/A/D/X/KP_8/KP_2 now
         # control acceleration in all axes, so the ship keeps drifting on its

@@ -15,9 +15,10 @@ from Galaxies.People.person import Person
 logger = logging.getLogger(__name__)
 
 class Outpost:
-    HEIGHT = 3.0
-    WIDTH = 12.0
-    DEPTH = 6.0
+    HEIGHT = 6.0
+    WIDTH = 24.0
+    DEPTH = 12.0
+    CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
 
     def __init__(self, planet: World, saved_alterations: dict):
         self.planet = planet
@@ -30,8 +31,6 @@ class Outpost:
             0 if self.index == 0 else \
             my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
         self.latitude: int = my_random.randint(int(-self.planet.radius*math.pi/2), int(self.planet.radius*math.pi/2))
-        self.longitude = int(self.longitude / Km2.SIZE) * Km2.SIZE
-        self.latitude = int(self.latitude / Km2.SIZE) * Km2.SIZE
 
         self.orientation: float = my_random.random() * 360
 
