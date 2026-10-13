@@ -229,14 +229,15 @@ OUTPOSTS:
 - How to approach the planet better ("Approaching")
 - More realistic rocks.
 
-Extra time: 29h15' + 11:45-
-
 * De-capitalise *.py file names (small task)
 
+Extra time: 29h30' + 14:45-
+
+
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
+- Installation package.
 - Move the zommed map on left-click + drag.
 - Also air, water and food.
-
 
 BACKLOG
 * TRAVEL TO THE SUN (forbidden areas)

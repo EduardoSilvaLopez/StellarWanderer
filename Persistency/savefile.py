@@ -8,6 +8,7 @@ from datetime import datetime
 from Spaceships.ship import Ship
 import game_environment as gem
 import Galaxies.People.player as pem
+from paths import data_path, SAVEFILES_DIR
 
 class Savefile:
 
@@ -62,7 +63,7 @@ class Savefile:
         '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        savefiles = glob.glob('Savefiles/Savefile *.json')
+        savefiles = glob.glob(data_path(SAVEFILES_DIR, 'Savefile *.json'))
         
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
@@ -103,7 +104,8 @@ class Savefile:
         file_name = environment.date_time.strftime('%Y-%m-%d %H:%M:%S')
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
         file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
-        file_name = 'Savefiles/' + file_name
+        os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
+        file_name = data_path(SAVEFILES_DIR, file_name)
         logger.info("New savefile's name: " + file_name)
         with open(file_name, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

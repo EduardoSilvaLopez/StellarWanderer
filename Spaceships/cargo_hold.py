@@ -15,6 +15,11 @@ class CargoHold:
 
     def __init__(self, ship: Ship) -> None:
         self.parent_ship: Ship = ship
+        self.air: float = 28.0
+        self.water: float = 28.0
+        self.food: float = 28.0
+        self.mines: int = 5
+        self.ore = 0.0
         self.content: dict = {
             self.CargoElement.MINES: 5,
             self.CargoElement.ORE: 0
@@ -23,8 +28,16 @@ class CargoHold:
     @staticmethod
     def load(ship: Ship, src: dict) -> CargoHold:
         result = CargoHold(ship)
-        result.content[result.CargoElement.MINES] = src[result.CargoElement.MINES.name]
-        result.content[result.CargoElement.ORE] = src[result.CargoElement.ORE.name]
+        if 'air' in src:
+            result.air = src['air']
+        if 'water' in src:
+            result.water = src['water']
+        if 'food' in src:
+            result.food = src['food']
+        if 'mines' in src:
+            result.mines = src['mines']
+        if 'ore' in src:
+            result.ore = src['ore']
         return result
 
     def serialize(self) -> dict:

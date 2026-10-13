@@ -8,6 +8,7 @@ import pygame
 from datetime import datetime
 
 from .dialog import Dialog, DialogResult
+from paths import data_path, SAVEFILES_DIR
 
 
 class StartingDialog(Dialog):
@@ -54,8 +55,8 @@ class StartingDialog(Dialog):
     def load_savefiles(self) -> None:
         """Load list of available savefiles."""
         self.savefiles = []
-        if os.path.exists('Savefiles'):
-            files = glob.glob('Savefiles/Savefile *.json')
+        if os.path.exists(data_path(SAVEFILES_DIR)):
+            files = glob.glob(data_path(SAVEFILES_DIR, 'Savefile *.json'))
             for filepath in sorted(files, key=os.path.getmtime, reverse=True):
                 filename = os.path.basename(filepath)
                 # Format: "Savefile {seed} {datetime}.json"

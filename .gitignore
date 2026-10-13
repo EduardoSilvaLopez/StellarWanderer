@@ -3,3 +3,6 @@ Logs
 __pycache__
 *.py[cod]
 \DEVLOG.md
+build/
+dist/
+installer/
