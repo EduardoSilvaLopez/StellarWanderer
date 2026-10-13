@@ -128,9 +128,9 @@ class Person:
         wp.last_visited = gem.current_environment.date_time
 
         status.reputation -= 0.02 * visit_time_delta / (24*60*60) # "Maintenance, air, water and food needed."
-        mines_required = 5 - cargo_hold.content[CargoHold.CargoElement.MINES]
+        mines_required = 5 - cargo_hold.mines
         status.reputation -= 0.10 * mines_required # "Needs more mines."
-        cargo_hold.content[CargoHold.CargoElement.MINES] += mines_required
+        cargo_hold.mines += mines_required
 
         if 0.0 < visit_time_delta < 60 * 60 and self.the_joker_wanted_payment:
             status.reputation -= 0.01 # "Annoying joker."
@@ -144,7 +144,7 @@ class Person:
                 'outpost_came_back_to_soon',
                 player_title=player.get_title()
                 )
-        elif cargo_hold.content[CargoHold.CargoElement.ORE] == 0:
+        elif cargo_hold.ore == 0:
             show_message(
                 'outpost_start_no_ore',
                 full_name=self.get_full_name(),
@@ -185,8 +185,8 @@ class Person:
         cargo_hold: CargoHold = player.ship.cargo_hold
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
 
-        ore_given = cargo_hold.content[CargoHold.CargoElement.ORE]
-        cargo_hold.content[CargoHold.CargoElement.ORE] = 0
+        ore_given = cargo_hold.ore
+        cargo_hold.ore = 0
         status.reputation += 0.01 * ore_given # "Ore was shared."
 
         if button_index == 0:

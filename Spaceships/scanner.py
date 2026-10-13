@@ -103,7 +103,7 @@ class Scanner:
             self.ship.laser.cease_fire()
             mine: OreMine = self.targeted_mine
             if mine.content > 0:
-                self.ship.cargo_hold.content[CargoHold.CargoElement.ORE] += mine.content
+                self.ship.cargo_hold.ore += mine.content
                 mine.content = 0
             return self
 

@@ -57,7 +57,7 @@ class Ship(Updatable):
     def set_mine_pressed(self) -> None:
         '''React to the "place mine" button.'''
         # Cancel is no mine.
-        if self.cargo_hold.content[CargoHold.CargoElement.MINES] <= 0:
+        if self.cargo_hold.mines <= 0:
             self.set_notification("No mines available.")
             return
         if not self.owner.is_bound:
@@ -121,4 +121,4 @@ class Ship(Updatable):
 
         new_mine = OreMine(targeted_field, front_lon, front_lat, player_yaw)
         targeted_field.mines.append(new_mine)
-        self.cargo_hold.content[CargoHold.CargoElement.MINES] -= 1
+        self.cargo_hold.mines -= 1

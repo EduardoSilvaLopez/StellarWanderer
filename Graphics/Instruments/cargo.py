@@ -26,7 +26,7 @@ class Cargo:
         pad = max(6, rect.width // 16)
         line_spacing = line_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
-        for element, quantity in player.ship.cargo_hold.content.items():
-            line = line_font.render(f'{element.name}: {quantity}', True, ACCENT)
+        for element, quantity in player.ship.cargo_hold.serialize().items():
+            line = line_font.render(f'{element.upper()}: {quantity}', True, ACCENT)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing
