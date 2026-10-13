@@ -81,7 +81,6 @@ class World:
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.33 * my_random.random()
-        self.registered_mines: List[OreMine] = []
 
         # Alterations:
         self.is_altered: bool = False
@@ -117,7 +116,17 @@ class World:
                 outpost = Outpost(self, all_outposts_alterations)
                 self.outposts[outpost.get_alteration_key()] = outpost  # May overwrite, it is intentional.
 
-        # Children:
+        # Register mines in its Km2:
+        self.registered_mines: List[tuple] = []
+        if self.saved_alterations and 'Km2s' in self.saved_alterations:
+            for km2_alt in self.saved_alterations['Km2s'].values():
+                if 'ore_fields' in km2_alt:
+                    for field_dict in km2_alt['ore_fields']:
+                        if 'mines' in field_dict:
+                            for mine_dict in field_dict['mines']:
+                                self.registered_mines.append((mine_dict['longitude'], mine_dict['latitude']))
+
+        # Moons:
         self.moons: List[World] = []
         if not self.parent_planet:
             moons_count = -1

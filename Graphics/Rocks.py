@@ -10,10 +10,12 @@ from .Constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DE
 from .OreFields import OreFields
 from .OreMines import OreMines
 from .outposts import Outposts
+from .rock_batches import RockBatches
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
+    from Galaxies.km2 import Km2
     from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.ore_mine import OreMine
@@ -24,9 +26,10 @@ class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
     @staticmethod
-    def draw(width: int, height: int, player: Player, rocks: List[Rock], ore_fields: List[OreField], mines: List[OreMine],
+    def draw(width: int, height: int, player: Player, km2s: List[Km2], ore_fields: List[OreField], mines: List[OreMine],
              outposts: List[Outpost], light: SurfaceLight) -> None:
-        """Draw all cube faces in a perspective OpenGL pass.
+        """Draw the rocks of `km2s` (cached batches, see rock_batches.py) and the rest of the surface in a
+        perspective OpenGL pass.
 
         A depth buffer, rather than face-selection heuristics, decides which
         projected face is visible at each pixel.
@@ -68,8 +71,7 @@ class Rocks:
         OreMines.draw(mines, player.position.x, player.position.z, light)
         Outposts.draw(outposts, player.position.x, player.position.z, light)
 
-        for rock in rocks:
-            Rocks._draw_rock(rock, player.position.x, player.position.z, light)
+        RockBatches.draw(km2s, player.position.x, player.position.z, light)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)
@@ -97,6 +99,8 @@ class Rocks:
 
     @staticmethod
     def _draw_rock(rock: Rock, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        """One rock, drawn immediately. Not used in the game any more: RockBatches draws the rocks. It stays as
+        the reference that a batch must reproduce (vertices and colours), for tests."""
         half = rock.size / 2.0
 
         # Rocks are tilted around their own local Z axis by rock.tilt degrees,

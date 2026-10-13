@@ -4,7 +4,7 @@ import logging
 from random import Random
 
 from datetime import datetime, timedelta
-from math import sqrt
+import math
 from typing import TYPE_CHECKING, Optional
 
 from Updating.Updatable import Updatable
@@ -25,8 +25,8 @@ class Rock(Updatable):
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
         import random
         self.parent_km2: Km2 = parent_Km2
-        my_random: float = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
-        self.size: float = abs(my_random.gauss(1, 10))
+        my_random: Random = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
+        self.size: float = abs(my_random.lognormvariate(math.log(6), 1))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
         # around this point, so it can sit partly under the ground).
@@ -67,9 +67,11 @@ class Rock(Updatable):
         '''The change, expressed as dictionary.'''
         if self.temperature == 0.0:
             return None
-        return {"temperature": self.temperature,
-                "last_updated_at": self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
-                }
+
+        result: dict = {"temperature": self.temperature}
+        if self.last_updated_at:
+            result['last_updated_at'] = self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
+        return result
 
     def get_next_update(self) -> datetime:
         return self.next_update_at
@@ -164,7 +166,7 @@ class Rock(Updatable):
         return (base_r, base_g, base_b)
 
     def adjust_color(self) -> Rock:
-        temperature_increase = int(sqrt(self.temperature))
+        temperature_increase = int(math.sqrt(self.temperature))
         self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
         return self
 

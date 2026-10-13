@@ -468,13 +468,18 @@ class Player:
             return Vector3(0.0, 0.0, 0.0)
         return world.calculate_stellar_velocity(gem.current_environment.date_time)
 
-    def speed_relative_to_world(self, world: World) -> float:
-        """Speed relative to the world, in m/s. While bound the velocity is already surface-relative."""
-        velocity = self.velocity.as_vector()
-        if self.is_bound:
-            return velocity.length()
-        world_velocity = world.calculate_stellar_velocity(gem.current_environment.date_time)
-        return math.dist(velocity, world_velocity)
+    def approach_speed(self, world: World) -> float:
+        """Rate at which the distance to the world's centre shrinks, in m/s: positive when approaching, negative
+        when moving away. It is the component of the velocity relative to the world along the line to its centre,
+        so sideways motion does not count (the distance to the surface changes at the same rate, the radius being
+        constant). Only meaningful while unbound, in the stellar frame."""
+        current_datetime = gem.current_environment.date_time
+        relative_position = self.position.as_vector() - world.calculate_stellar_position(current_datetime)
+        distance = relative_position.length()
+        if distance == 0.0:
+            return 0.0
+        relative_velocity = self.velocity.as_vector() - world.calculate_stellar_velocity(current_datetime)
+        return -relative_position.dot(relative_velocity) / distance
 
     def collision_warning(self, world: World) -> bool:
         """True if, keeping its direction relative to the world, the ship reaches the world's

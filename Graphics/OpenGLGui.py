@@ -15,13 +15,13 @@ from .outpost_markers import OutpostMarkers
 from .NearestWorld import NearestWorld
 from .other_worlds import OtherWorlds
 from .Rocks import Rocks
+from .rock_batches import RockBatches
 from .Laser import Laser
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
     from game_environment import GameEnvironment
-    from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.outpost import Outpost
     from Galaxies.ore_mine import OreMine
@@ -82,7 +82,7 @@ class OpenGLGui:
         if light is not None:
             Rocks.draw(
                 width, height, player,
-                self._rocks(environment, player),
+                RockBatches.visible_km2s(environment.nearest_world, player.position.x, player.position.z),
                 self._ore_fields(environment, player),
                 self._ore_mines(environment, player),
                 self._outposts(environment, player),
@@ -93,14 +93,6 @@ class OpenGLGui:
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
         if dialog_surface is not None:
             self._draw_texture(dialog_surface, self.dialog_texture, blend=True)
-
-    def _rocks(self, environment: GameEnvironment, player: Player) -> List[Rock]:
-        rocks: List[Rock] = []
-        for km2 in environment.nearest_world.km2s:
-            if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
-                km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
-                rocks.extend(km2.rocks)
-        return rocks
 
     def _ore_fields(self, environment: GameEnvironment, player: Player) -> List[OreField]:
         ore_fields: List[OreField] = []

@@ -182,8 +182,8 @@ class WorldMap:
     def _draw_mines(surface: pygame.Surface, world: World, to_pixel: PixelFunction) -> None:
         """A small yellow cross per ore mine of the world (its registered_mines)."""
         arm = 3
-        for mine in world.registered_mines:
-            pixel = to_pixel(mine.longitude, mine.latitude)
+        for mine_pos in world.registered_mines:
+            pixel = to_pixel(mine_pos[0], mine_pos[1])
             if pixel is None:
                 continue
             x, y = pixel

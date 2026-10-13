@@ -33,6 +33,14 @@ def format_compact_distance(meters: float) -> str:
     return f'{value} {symbol}'
 
 
+def format_compact_speed(meters_per_second: float) -> str:
+    """Signed compact speed in the units of format_compact_distance, per second: '+12 m/s', '-3 Km/s', '0 m/s'."""
+    text = format_compact_distance(meters_per_second)
+    if not text.startswith(('-', '0 ')):
+        text = '+' + text
+    return text + '/s'
+
+
 def view_geometry(h: int, horizon_fraction: float = 0.5) -> Tuple[int, int, float]:
     """(view_h, horizon_y, focal_length_px) for a view of window height h.
 

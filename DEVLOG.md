@@ -227,11 +227,11 @@ Extra time: 28h15'
 ### 2026-10-13 8:15 -
 - Bigger outposts.
 - Yaw / pitch / roll go to 0 when time scale > 1. This never made sense.
-
+- How to approach the planet better ("Approaching")
+- More realistic rocks.
+... ongoing.
 
 - De-capitalise *.py file names.
-- More realistic rocks.
-- How to approach the planet better ("Speed" -> "Approaching")
 
 BACKLOG
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.

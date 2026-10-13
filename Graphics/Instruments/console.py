@@ -14,6 +14,7 @@ from .scanner import Scanner
 from .cargo import Cargo
 from .notification import Notification
 from .altitude_meter import AltitudeMeter
+from .binding_meter import BindingMeter
 from .radar import Radar
 
 if TYPE_CHECKING:
@@ -47,9 +48,9 @@ class Console:
 
         # Draw altitude bar and location info
         if player.is_bound:
-            Console._draw_altitude_bar(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
-        else:
             AltitudeMeter.draw(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
+        else:
+            BindingMeter.draw(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
         Console._draw_location_info(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
 
         bar_w = int(w * 0.028)
@@ -91,33 +92,6 @@ class Console:
             x = int(w * 0.06 + i * light * 2.2)
             color = AMBER if i in (3, 7) else ACCENT_DIM
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
-
-    @staticmethod
-    def _draw_altitude_bar(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
-        """Draw the altitude level indicator bar."""
-        bar_w = int(w * 0.028)
-        bar_h = cluster_height
-        bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_h)
-        draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
-
-        import game_environment as gem
-        from Galaxies.People.player import Player
-        world = gem.current_environment.nearest_world
-        # Meter spans from surface (altitude=0) to unbinding altitude
-        unbinding_altitude = world.radius * (Player.UNBIND_RADIUS_MULTIPLE - 1.0)
-        altitude_fraction = player.position.y / unbinding_altitude if unbinding_altitude > 0 else 0
-        altitude_fraction = min(1.0, max(0.0, altitude_fraction))
-
-        fill_pad = 3
-        filled = int((bar_h - fill_pad * 2) * altitude_fraction)
-        pygame.draw.rect(
-            surface, ACCENT,
-            (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
-        )
-
-        label_font = fonts.get(max(9, int(h * 0.017)))
-        alt_label = label_font.render('ALT', True, ACCENT_DIM)
-        surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))
 
     @staticmethod
     def _draw_location_info(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:

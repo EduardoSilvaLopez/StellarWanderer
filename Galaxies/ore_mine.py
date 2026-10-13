@@ -51,7 +51,7 @@ class OreMine(Updatable):
                 datetime.strptime(saved_attributes['next_update_at'], '%Y-%m-%d %H:%M:%S.%f') \
                 if 'next_update_at' in saved_attributes else None
 
-        self.parent_field.parent_km2.parent_world.registered_mines.append(self)
+        self.parent_field.parent_km2.parent_world.registered_mines.append((self.longitude, self.latitude))
         update_queue.add(self)
 
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
