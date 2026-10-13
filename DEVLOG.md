@@ -234,16 +234,15 @@ OUTPOSTS:
 Extra time: 29h30' + 14:45-
 
 - Installation package (tested locally - to be distributed)
-- Almanac
+- Almanack
 
-
+- show_message directly
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
 - Move the zommed map on left-click + drag.
-- Also air, water and food.
+- Also energy, air, water and food.
 
 BACKLOG
 * TRAVEL TO THE SUN (forbidden areas)
-- Also fuel.
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)

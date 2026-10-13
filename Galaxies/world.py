@@ -22,7 +22,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class World:
-    '''The generation is full of heuristic but playtested, hopefully realistic, factors.'''
+    '''The generation is full of heuristic but playtested, hopefully realistic, factors.
+
+    Orbits: every orbital period follows Kepler's third law around the parent's mass: a moon around its planet
+    (`mass`, from the radius and EARTH_DENSITY), a planet around its star (`StellarSystem.mass`, estimated from the
+    star's radius). Every world starts `initial_degrees_in_orbit` from the reference direction at EPOCH.
+    `local_day_fraction` is the solar day at longitude 0 (0 = noon), so that start angle sets the starting time of
+    day; the game's date and time always start at EPOCH 00:00:00.
+    '''
 
     WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
@@ -186,8 +193,8 @@ class World:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
 
-    def almanach(self) -> str:
-        '''Markdown almanach of this world: its own characteristics, then its moons' (a moon has none).'''
+    def almanack(self) -> str:
+        '''Markdown almanack of this world.'''
         AU: int = 1.496e11
         heading: str = '####' if self.parent_planet else '###'
         kind: str = 'Moon' if self.parent_planet else 'Planet'
@@ -211,7 +218,7 @@ class World:
             f"\n"
             )
         for moon in self.moons:
-            text += moon.almanach()
+            text += moon.almanack()
         return text
 
     def _log_creation(self) -> World:

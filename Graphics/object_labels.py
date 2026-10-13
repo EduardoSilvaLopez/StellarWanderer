@@ -12,7 +12,20 @@ if TYPE_CHECKING:
 
 
 class ObjectLabels:
-    """Render name and distance labels for visible objects (star and all worlds in the stellar system)."""
+    """Render name and distance labels for visible objects (star and all worlds in the stellar system).
+
+    Outposts of planets within BRAKING_RADIUS_MULTIPLE radii of the ship get a label with name and distance, bound
+    and unbound. Their position is the sphere geometry (`Player.direction_to_point`) in both frames, so a label sits
+    where the outpost really is. The sky dot for an outpost (OutpostMarkers) is drawn in the sky while unbound, and
+    while bound on the surface in this overlay, so the 3D ground does not hide it. Outposts on the far side of their
+    planet get no dot, but keep their label.
+
+    While bound, the 3D view draws the ground flat from the surface offsets (longitude - player.x,
+    latitude - player.z), and objects are drawn with those offsets. The flat ground differs from the sphere only by
+    the curvature drop (about d²/2R, under 1 m within 2 km), so near the ship the labels and the drawn objects agree.
+    Labels of distant outposts use the sphere geometry, not the flat offsets: a flat model would put far outposts on
+    the horizon, while on a planet they can be hidden behind its curve.
+    """
 
     LABEL_OFFSET_X = 4  # pixels from object center to the left edge of the label
     LABEL_OFFSET_Y = -4  # pixels from object center to the top of the label (negative = up)

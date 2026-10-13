@@ -7,6 +7,10 @@ frame to the next (see SUN_TOLERANCE_DEGREES). Graphics reads the rocks' tempera
 seed; Galaxies knows nothing about this module.
 
 Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`).
+
+A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rock count changes, which happens when a
+rock melts. Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on
+the dark side. A rock whose lowest point would float above the ground is lowered onto it.
 """
 
 from __future__ import annotations

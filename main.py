@@ -22,7 +22,7 @@ import sys
 
 import pygame
 import logging; logger = logging.getLogger(__name__)
-from GameLogging import configure_logging, write_almanach_async
+from GameLogging import configure_logging, write_almanack_async
 from Graphics.font_cache import FontCache
 import game_environment as gem
 import Galaxies.People.player as player_module
@@ -101,7 +101,7 @@ def start_game(action: str, value: object) -> float:
 
         logger.debug("New game created.")
         elapsed = 0.0
-    write_almanach_async(gem.current_environment.galaxy)
+    write_almanack_async(gem.current_environment.galaxy)
     player = player_module.current_player
     player.ship.set_notification(f"Welcome, {player.get_title()} Pilot.")
     if action == 'new':
@@ -212,7 +212,7 @@ def main() -> None:
                 elif event.key == pygame.K_F6:
                     update_queue.clear()
                     Savefile.load_last()
-                    write_almanach_async(gem.current_environment.galaxy)
+                    write_almanack_async(gem.current_environment.galaxy)
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:

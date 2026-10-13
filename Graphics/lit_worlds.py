@@ -20,7 +20,12 @@ class LitWorlds:
     """Ray-traced sphere shading: every pixel's view ray is intersected with the world's sphere, so
     the silhouette is exact (an ellipse when the world is off-axis) and the shade is the cosine
     between the surface normal and the direction to the star (the star is far, so its light is
-    treated as parallel). Cost depends on the size of the disc on screen, not on the world."""
+    treated as parallel). Cost depends on the size of the disc on screen, not on the world.
+
+    Every world drawn in the sky (planets and moons) is lit this way. Worlds too small to see are drawn as a small
+    lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, including the nearest one
+    (`draw_nearest`). While bound, every world except the nearest is lit; the nearest is the disc below the horizon,
+    lit by the sun like the ground (`NearestWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
 
     @staticmethod
     def light_tint(star_color: Tuple[int, int, int]) -> Tuple[float, float, float]:

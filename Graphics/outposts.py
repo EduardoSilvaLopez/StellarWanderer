@@ -2,6 +2,20 @@
 
 The atlas layout is described in Tools/generate_outpost_texture.py. The door faces the outpost's
 orientation (degrees clockwise from north, as for rocks and mines), so local +z is the door wall.
+
+The building is 24 m x 12 m x 6 m (Outpost.WIDTH/DEPTH/HEIGHT), two levels of 3 m with the ledge at 3 m. The texture
+is for a world without air or water: lightly weathered composite cladding (dust and micrometeorite pits, no rain or
+rust), a red band at the ledge, lit and dark windows, round portholes, a sealed airlock in the middle of the door
+wall, docking collars, thermal radiator panels, gold insulation foil, thruster clusters, EVA handrails, a sensor dome,
+and solar panels and a dish on the roof. Do not add vents, fans or drain pipes.
+
+A real 3D flagpole stands on the front left corner of the roof and rises POLE_RISE (5 m) above it, past HEIGHT, with
+a rigid flag (a flag cannot wave in vacuum) held out by a rod, drawn on both faces from the FLAG region. The pole is
+only drawn: the scanner's box, HEIGHT and CLEARED_RADIUS do not include it.
+
+Windows, lamps and indicator lights are painted after the weathering, so they stay bright; at night they dim with the
+rest, as the lighting is applied by vertex colour. To regenerate the texture: python Tools/generate_outpost_texture.py
+(numpy + pygame, seeded, so the result is repeatable; the previous texture is kept as outpost.Backup.png).
 """
 
 from __future__ import annotations

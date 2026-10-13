@@ -13,7 +13,11 @@ if TYPE_CHECKING:
 
 
 class OutpostMarkers:
-    """Outposts of the planets within braking distance of the ship."""
+    """Outposts of the planets within braking distance of the ship, as dots where each outpost faces the ship.
+
+    Drawn in the sky while unbound (after the worlds). While bound, ObjectLabels draws the dot on the surface instead.
+    `in_braking_distance` is the sphere's visibility test, so outposts on the far side of their planet get no dot.
+    """
 
     @staticmethod
     def in_braking_distance(environment: GameEnvironment, player: Player) -> List[tuple]:

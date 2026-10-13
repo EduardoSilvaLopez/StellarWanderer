@@ -22,7 +22,11 @@ class Radar:
     ellipse is its projection onto that plane: the angle is its bearing, the distance from
     the centre is logarithmic in its in-plane distance. The bar runs from the foot along the
     ship's up axis, upwards (white) when the object is above the plane, downwards (gray) when
-    below, with a logarithmic length. A dot at the end of the bar marks the object.
+    below, with a logarithmic length. A dot at the end of the bar marks the object; the dot is the star's own colour,
+    or light brown for a world.
+
+    Shown only while unbound, in the centre console panel where the world map is drawn while bound. It lists the star
+    and every world of the system within 100 AU.
     """
 
     MIN_DISTANCE = 1.0e5  # metres, mapped to the centre (and to a zero-length bar)

@@ -14,6 +14,13 @@ if TYPE_CHECKING:
     from Galaxies.People.player import Player
 
 class Ship(Updatable):
+    """The ship's systems (scanner, laser, cargo hold) and its flight limits.
+
+    HEIGHT is the eye height above the ground while bound (4 m): the altitude never goes below it, and the spawn
+    height and the descent limit use it too. Rotation accelerations and speed limits (ANGULAR_ACC,
+    MAX_ANGULAR_SPEED) are shared with the player's attitude; see Player.
+    """
+
     HEIGHT = 4 # meters, up to the camera
 
     UP_DOWN_ACC = 5.0  # meters per second squared

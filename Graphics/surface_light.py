@@ -1,7 +1,12 @@
 """Sunlight on the surface of the nearest world while bound: the brightness of a surface facing any way, from
 the direction of the star. Computed on the CPU once per frame and applied to vertex colours, so no OpenGL
 lighting state is needed. The light is the cosine between the surface normal and the direction to the star,
-with WORLD_AMBIENT_LIGHT still visible on the unlit side, as for worlds in the sky (see LitWorlds)."""
+with WORLD_AMBIENT_LIGHT still visible on the unlit side, as for worlds in the sky (see LitWorlds).
+
+Brightness of a surface = SURFACE_STARLIGHT + (1 - starlight) × max(0, normal · sun). SURFACE_STARLIGHT is a floor
+from the stars, the same from every direction, so the night stays readable. The ground's colour is LitWorlds.light_tint,
+so the dark side is the starlight share of it. Each face is shaded from its own normal, computed on the CPU into
+vertex colours (no GL lighting state). Lit: the ground, ore fields, mines, outposts and rocks, with no shadows."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple

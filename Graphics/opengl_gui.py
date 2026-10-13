@@ -28,7 +28,13 @@ if TYPE_CHECKING:
 
 
 class OpenGLGui:
-    """Compose the software UI and depth-tested OpenGL rock pass."""
+    """Compose the software UI and depth-tested OpenGL rock pass.
+
+    Draw order: worlds farther than the star, the star, worlds nearer than the star, then the nearest world. The
+    SurfaceLight is built once per frame here from `Player.direction_to_star` and passed down to the renderers.
+    Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
+    BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,
+    so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame `image.tostring`."""
 
     def __init__(self) -> None:
         self.world_surface: Optional[pygame.Surface] = None

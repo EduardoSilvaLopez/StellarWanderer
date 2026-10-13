@@ -10,7 +10,11 @@ FONTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'fonts')
 
 
 class FontCache:
-    """Fonts are rebuilt on resize, so keep one per pixel size."""
+    """Fonts are rebuilt on resize, so keep one per pixel size.
+
+    The body font is FONT_FILE (Oxanium), also used by the instruments and the message dialogs. Characters the font
+    lacks, such as Δ, are drawn with the system monospace font by FallbackFont (see fallback_font.py), so every label
+    that uses these fonts must go through FontCache (or dialog_fonts), not pygame.font directly."""
 
     def __init__(self) -> None:
         self._fonts: Dict[Tuple[int, bool], FallbackFont] = {}

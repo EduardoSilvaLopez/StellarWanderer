@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
 
 class AltitudeMeter:
-    """Altitude bar labelled ALT: from the surface (altitude 0) to the unbinding altitude."""
+    """Altitude bar labelled ALT: from the surface (altitude 0) to the unbinding altitude, which is
+    (UNBIND_RADIUS_MULTIPLE - 1.0) × radius above the surface."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:

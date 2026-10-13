@@ -7,4 +7,4 @@ LOG_DIR = 'Logs'
 LOG_FILE_NAME = 'stellar_wanderer.log'
 LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 LOG_BACKUP_COUNT = 3
-ALMANACH_FILE_NAME = 'almanach.galaxy.md'  # written on every game start or load, in LOG_DIR
+ALMANACK_FILE_NAME = 'almanack.galaxy.md'  # written on every game start or load, in LOG_DIR

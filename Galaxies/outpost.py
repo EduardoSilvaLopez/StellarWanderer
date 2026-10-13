@@ -15,6 +15,18 @@ from Galaxies.People.person import Person
 logger = logging.getLogger(__name__)
 
 class Outpost:
+    """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
+
+    Outposts belong to planets (`World.outposts`, keyed by "lon lat"; the initial planet always has at least one).
+    `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
+    the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
+
+    Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
+    can target them (`Scanner.is_outpost_targeted`, the building box with the door on local +z, so `orientation`
+    is the heading the door faces), but the beam does nothing to them yet, and neither the laser nor the ground
+    affects them yet.
+    """
+
     HEIGHT = 6.0
     WIDTH = 24.0
     DEPTH = 12.0

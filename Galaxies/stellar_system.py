@@ -111,8 +111,8 @@ class StellarSystem:
 
         return name.capitalize()
 
-    def almanach(self) -> str:
-        '''Markdown almanach'''
+    def almanack(self) -> str:
+        '''Markdown almanack'''
         text: str = (
             f"## Stellar system '{self.name}' ({self.political_entity.name})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
@@ -120,7 +120,7 @@ class StellarSystem:
         )
         for orbit in self.orbits:
             for planet in orbit.planets:
-                text += planet.almanach()
+                text += planet.almanack()
         return text
 
     def set_altered(self) -> StellarSystem:

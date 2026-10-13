@@ -26,8 +26,18 @@ PixelFunction = Callable[[float, float], Optional[Tuple[int, int]]]
 class WorldMap:
     """Draw a world map showing player position in the MFD (multi-function display).
 
+    Bound only. It shows the outposts of the planet as white dots with their names (the name goes towards the middle
+    of the map: left of the dot in its right half, below it in its upper half, and is kept inside the map), the ore
+    mines of the world (`World.registered_mines`) as small yellow crosses, and the player as a bright dot. Rocks are
+    not shown.
+
     With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
-    centred on the ship. When the mouse leaves, the map goes back to the whole world and the name returns."""
+    centred on the ship (the ship's dot stays at the middle). The levels are fixed scales in metres per pixel (1, 2,
+    5, 10, ... down to MIN_SCALE, 1 m/px), after the whole-world map, which is level 0 (`_scale_levels`); one step
+    means the same on every world. A zoomed map uses the same scale on both axes and the flat offsets from the ship
+    (as the 3D view does), wraps longitude around the world, and draws the world's boundary where it falls. When the
+    mouse leaves, the map goes back to the whole world and the name returns. `main` polls the mouse once per frame
+    (`set_mouse`) and routes MOUSEWHEEL to `zoom` while bound."""
 
     mouse: Optional[Tuple[int, int]] = None  # last mouse position, None when the window has no mouse focus
     hovered: bool = False                    # whether, when the map was last drawn, the mouse was over it

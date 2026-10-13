@@ -1,4 +1,10 @@
-"""Message texts for message dialogs, read from Resources/dialogs/messages.toml."""
+"""Message texts for message dialogs, read from Resources/dialogs/messages.toml.
+
+The file has one section per message: `title`, `text` (paragraphs separated by blank lines), and `button`, or a list `buttons`.
+`{placeholders}` are filled from the game data passed to show_message. The file is re-read every time a message
+opens, so editing it needs no restart. The messages in use are `welcome` (shown at the start of a new game) and the
+outpost messages.
+"""
 
 from __future__ import annotations
 from dataclasses import dataclass, field

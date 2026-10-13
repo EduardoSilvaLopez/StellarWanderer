@@ -24,7 +24,12 @@ class MessageDialog(Dialog):
     Results: ('close', index) when a button is pressed, index being its position in the message's
     buttons (0 is the first); ('close', None) on Esc; ('exit', None) when the window is closed.
     Enter or Space press the focused button (the first at the start); Tab, Left and Right move the focus,
-    and the mouse moves it too."""
+    and the mouse moves it too.
+
+    Look: a textured panel (Resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
+    (Resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
+    not pygame.font directly. One or more buttons, side by side when they fit, otherwise stacked. The texts come from
+    Resources/dialogs/messages.toml (see messages.py)."""
 
     WIDTH = 800
     HEIGHT = 600

@@ -16,6 +16,13 @@ class BindingMeter:
 
     Bottom at surface (1.0x radius distance from centre). Top at braking zone threshold
     (BRAKING_RADIUS_MULTIPLE x radius distance).
+
+    The "Approaching" readout is the signed rate of change of the distance to the nearest world
+    (`Player.approach_speed`: the velocity relative to the world along the line to its centre; positive approaching,
+    negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
+    `-3 Km/s`). In the braking zone it turns red when `Player.collision_warning` holds: keeping its direction
+    relative to the world, the ship reaches the surface even braking with only `Player.COLLISION_BRAKE_FRACTION` of
+    `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
     """
 
     @staticmethod

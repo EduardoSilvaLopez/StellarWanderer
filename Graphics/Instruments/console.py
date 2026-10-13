@@ -23,7 +23,11 @@ if TYPE_CHECKING:
 
 
 class Console:
-    """Draw instrument panel below the windshield with all component displays."""
+    """Draw instrument panel below the windshield with all component displays.
+
+    The left cluster shows one of two meters, chosen by `Player.is_bound`: the AltitudeMeter while bound (ALT), the
+    BindingMeter while unbound (NEAREST). The location readouts show yaw, pitch and roll as angle plus rate (Δ,
+    deg/s); see Player for their meaning."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:

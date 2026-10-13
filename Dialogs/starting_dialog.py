@@ -16,6 +16,8 @@ class StartingDialog(Dialog):
 
     Shown when the program starts and again on Esc while playing (game_running=True, where Esc
     resumes the game). Results: ('new', seed), ('load', path), ('exit', None), ('resume', None).
+
+    Esc opens it from the game and does not quit; the Exit game button (or closing the window) does.
     """
 
     WIDTH = 800

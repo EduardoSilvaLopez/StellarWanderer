@@ -44,6 +44,35 @@ class Velocity:
 
 
 class Player:
+    """The pilot and the ship's attitude and motion, bound to a world's surface or free in the star's frame.
+
+    Attitude: the ship's right, up and forward axes, stored as `right`, `up` and `forward` in the active frame
+    (surface when bound, stellar when unbound). This is the source of truth; yaw, pitch and roll are derived from
+    it or applied to it. Use these names consistently, do not introduce synonyms:
+    - Yaw: rotation about the up axis (Numpad 4 left, 6 right). `yaw` is the heading in degrees clockwise from
+      north, derived from the forward axis; `velocity.yaw` is the yaw rate in degrees per second.
+    - Pitch: rotation about the right axis (Numpad 8 up, 2 down; only while unbound). `pitch_angle(world, t)` is
+      the nose-up angle above the local horizon; `velocity.pitch` is the pitch rate.
+    - Roll: rotation about the forward axis (Q left, E right). `velocity.roll` is the roll rate in degrees per second.
+    Location-info readouts show yaw, pitch and roll as angle plus rate (Δ, deg/s). `pitch_angle` and `roll_angle`
+    are relative to the local horizon, positive nose up and right wing down.
+
+    Braking (S) decelerates linear velocity on all three axes and all rotation rates to zero. While unbound, linear
+    braking is relative to the star, except within BRAKING_RADIUS_MULTIPLE world radii of the nearest world's centre,
+    where it is relative to that world.
+
+    Bind, unbind and braking thresholds are distances from the world's centre in radii (1.0 = surface). The bound
+    altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
+    BRAKING_RADIUS_MULTIPLE radii from the centre.
+
+    Rotation accelerations and speed limits share Ship.ANGULAR_ACC and Ship.MAX_ANGULAR_SPEED.
+
+    `bind_to` and `unbind_from` are deliberately asymmetric: `bind_to` snaps the ship level (yaw only; pitch and
+    roll are discarded), because a ship always starts level on a surface. `unbind_from` keeps the full attitude,
+    round-tripping the three axes through `World.surface_vector_to_stellar`, so free flight keeps whatever attitude
+    the ship had while bound. Do not "fix" this to be symmetric.
+    """
+
     # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000

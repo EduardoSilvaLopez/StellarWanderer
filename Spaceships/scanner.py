@@ -15,6 +15,17 @@ if TYPE_CHECKING:
 Target = Union['Rock', 'OreMine', 'Outpost']
 
 class Scanner:
+    """Aiming and targeting: what the crosshair hits (rocks, ore mines, outposts) and ore collection.
+
+    The scanner decides what is targeted; the laser (Spaceships/laser.py) only fires at it. While bound, the beam
+    (drawn by Graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
+    slope from the emitter (`emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
+    MAX_LENGTH metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their
+    distance pass over the beam. `targeted_rock` and `targeted_mine` are what the scanner panel
+    (Graphics/Instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
+    collects from.
+    """
+
     MAX_LENGTH = 500  # metres
 
     def __init__(self, ship: Ship) -> None:
