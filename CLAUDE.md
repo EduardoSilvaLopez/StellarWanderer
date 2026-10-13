@@ -38,7 +38,7 @@ def generate_default(self) -> None:
 - `Spaceships/`: Ship, `scanner.py` (`Scanner`, reached as `ship.scanner`: aiming, targeting of rocks and ore mines, ore collection via `activate`) and `laser.py` (`Laser`, reached as `ship.laser`: the firing state and heating the targeted rock, via `fire`/`cease_fire`). The scanner decides what is targeted; the laser only fires at it.
 - `Persistency/`: Save/load (Savefile)
 - `Dialogs/`: Modal dialogs (`dialog.py` base class, `starting_dialog.py`)
-- `GameLogging/`: Logging config (Constants, Setup)
+- `GameLogging/`: Logging config (Constants, Setup) and the galaxy almanach writer (`almanach.py`)
 - `Updating/`: Time-based updates (UpdateQueue, Updatable)
 
 ## Ship Attitude and Controls
@@ -121,6 +121,7 @@ Use these names consistently; do not introduce synonyms. Three rotation axes:
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - Window position/size: `center_window_on_screen()` in `main.py` uses Windows API via ctypes to center the 1920×1080 main window
 - Logging: `GameLogging.configure_logging()` called at app startup; logs to console + `Logs/stellar_wanderer.log` (ISO8601 timestamps)
+- Galaxy almanach: `main` calls `GameLogging.write_almanach_async(galaxy)` whenever a game starts or loads (`start_game`, and F6), which overwrites `Logs/almanach.galaxy.md`. It lists only the galaxy, planets and moons, nothing else (no systems, orbits, outposts or people). `Galaxy.almanach()` writes its own characteristics, then walks its systems and orbits to ask each planet for `World.almanach()`, which writes its own and asks its moons; every object writes only its own. The text is built in the calling thread, only the file write runs in a fire-and-forget daemon thread, and every exception is ignored.
 - No external config files — all settings in module-level constants (e.g., `GameLogging/constants.py`). Texts meant to be edited by hand are the exception: `Resources/dialogs/messages.toml`.
 
 ## Working Policies (for Claude)

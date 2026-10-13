@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
 from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
-from .common import draw_beveled_panel, format_compact_distance, format_compact_speed, bezel_depth
+from .common import draw_beveled_panel, bezel_depth
+from units import format_compact_distance, format_compact_speed
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player

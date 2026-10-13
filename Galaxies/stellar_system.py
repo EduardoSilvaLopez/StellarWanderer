@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 import random
+from units import format_compact_distance
 import Galaxies.constants
 from Galaxies.world import World
 from Galaxies.orbit import Orbit
@@ -23,10 +24,10 @@ class StellarSystem:
         self.z: int = z
         self.seed: float = (self.parent_galaxy.seed + self.x*1e10 + self.y*1e5 + self.z + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
-        self.color, self.radius = self.generate_star_type(my_random)
-        self.mass: float = self.estimate_mass()
+        self.color, self.color_name, self.radius = self._generate_star_type(my_random)
+        self.mass: float = self._estimate_mass()
         self.political_entity = political_entity.THOSE_WHO_SHARE
-        self.name: str = self.generate_name(my_random)
+        self.name: str = self._generate_name(my_random)
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -45,30 +46,38 @@ class StellarSystem:
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
 
-    def generate_star_type(self, rnd: random.Random) -> tuple:
+    def _generate_star_type(self, rnd: random.Random) -> tuple:
         color_code = rnd.random()
         base_color: tuple = None
+        color_name: str = str()
         radius: int = 0
         if color_code <= 0.75: #M, red dwarf
             base_color = (255, 96, 96)
+            color_name = 'Red dwarf (M)'
             radius = int(200000000 * (0.4 + 1.2 * rnd.random()))
         elif color_code <= 0.88: #K, Orange-ish.
             base_color = (255, 192, 128)
+            color_name = 'K'
             radius = int(550000000 * (0.9 + 0.2 * rnd.random()))
         elif color_code <= 0.96: #G, Yellow(-ish)
             base_color = (255, 255, 128)
+            color_name = 'Yellow star (G)'
             radius = int(700000000 * (0.95 + 0.1 * rnd.random()))
         elif color_code <= 0.99: #F, yellow-white
             base_color = (255, 255, 224)
+            color_name = 'F'
             radius = int(880000000 * (0.9 + 0.2 * rnd.random()))
         elif color_code <= 0.997: #A, White
             base_color = (255, 255, 255)
+            color_name = 'White (A)'
             radius = int(1300000000 * (0.75 + 0.5 * rnd.random()))
         elif color_code <= 0.999999: #B, Blue-white
             base_color = (192, 192, 255)
+            color_name = 'Blue (B)'
             radius = int(3500000000 * (0.85 + 0.3 * rnd.random()))
         else: #0, Blue
             base_color = (96, 96, 255)
+            color_name = 'Blue giant (0)'
             radius = int(10500000000 * (0.3 + 0.6 * rnd.random()))
         color_variation = (
             -16 + rnd.randint(0, 32),
@@ -76,16 +85,16 @@ class StellarSystem:
             -16 + rnd.randint(0, 32)
         )
         star_color = tuple(max(0, min(255, b + v)) for b, v in zip(base_color, color_variation))
-        return star_color, radius
+        return star_color, color_name, radius
 
-    def estimate_mass(self) -> float:
+    def _estimate_mass(self) -> float:
         """Main-sequence mass (kg) from the radius: R ~ M^0.8 up to one solar radius, R ~ M^0.57 above.
         Derived from the radius so it consumes no random numbers."""
         radius_ratio = self.radius / StellarSystem.SOLAR_RADIUS
         exponent = 1.0 / 0.8 if radius_ratio <= 1.0 else 1.0 / 0.57
         return StellarSystem.SOLAR_MASS * radius_ratio ** exponent
 
-    def generate_name(self, my_random: random.Random) -> str:
+    def _generate_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
         vocals = "aeiouaeio" # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
@@ -101,6 +110,18 @@ class StellarSystem:
             name += "eia"
 
         return name.capitalize()
+
+    def almanach(self) -> str:
+        '''Markdown almanach'''
+        text: str = (
+            f"## Stellar system '{self.name}' ({self.political_entity.name})\n"
+            f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
+            f"* {self.color_name} star, radius {format_compact_distance(self.radius)}\n"
+        )
+        for orbit in self.orbits:
+            for planet in orbit.planets:
+                text += planet.almanach()
+        return text
 
     def set_altered(self) -> StellarSystem:
         self.is_altered = True

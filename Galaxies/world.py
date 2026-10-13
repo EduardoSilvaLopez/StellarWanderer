@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import logging
+from units import format_compact_distance
 import Galaxies.constants
 from Galaxies.km2 import Km2
 from Galaxies.rock import Rock
@@ -184,6 +185,34 @@ class World:
         else:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
+
+    def almanach(self) -> str:
+        '''Markdown almanach of this world: its own characteristics, then its moons' (a moon has none).'''
+        AU: int = 1.496e11
+        heading: str = '####' if self.parent_planet else '###'
+        kind: str = 'Moon' if self.parent_planet else 'Planet'
+        parent_info: str = (
+                f"* Distance from the planet: {format_compact_distance(self.distance_to_parent)}\n"
+                f"* Month: {(self.orbital_period / (24 * 60 * 60)):.2f} Earth days\n"
+                ) if self.parent_planet else (
+                f"* Orbit number {self.parent_orbit.number}\n"
+                f"  * Distance from the star: {self.parent_orbit.distance_from_star/AU:.2f} AU\n"
+                f"  * Year: {(self.orbital_period / (365.2425 * 24 * 60 * 60)):.2f} Earth years\n"
+                )
+        outposts: str = f"* {len(self.outposts)} outposts.\n"
+        text: str = (
+            f"{heading} {kind} {self.name}\n"
+            f"{parent_info}"
+            f"* Seed: {self.seed}\n"
+            f"* Radius: {int(self.radius/1000)} Km\n"
+            f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
+            f"{outposts}"
+            f"* % Ore prevalence: {100*self.ore_prevalence:.2f}%\n"
+            f"\n"
+            )
+        for moon in self.moons:
+            text += moon.almanach()
+        return text
 
     def _log_creation(self) -> World:
         if self.parent_planet:

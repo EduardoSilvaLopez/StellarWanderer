@@ -24,7 +24,8 @@ class ObjectLabels:
 
         A moon's label is skipped when it would overlap its planet's label.
         """
-        from Graphics.Instruments.common import format_compact_distance, view_geometry, project_to_camera
+        from Graphics.Instruments.common import view_geometry, project_to_camera
+        from units import format_compact_distance
         _, horizon_y, focal_length_px = view_geometry(h)
         label_font = fonts.get(max(9, int(h * 0.017)))
 

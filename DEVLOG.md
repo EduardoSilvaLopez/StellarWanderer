@@ -233,9 +233,11 @@ OUTPOSTS:
 
 Extra time: 29h30' + 14:45-
 
+- Installation package (tested locally - to be distributed)
+- Almanac
+
 
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
-- Installation package.
 - Move the zommed map on left-click + drag.
 - Also air, water and food.
 

@@ -39,6 +39,17 @@ class Galaxy():
                         star_alterations[system.get_alterations_key()] = system_alterations
         return star_alterations
 
+    def almanach(self) -> str:
+        '''Markdown almanach: A guide of the universe as generated'''
+        text: str = (
+            f"# ALMANACH - The galaxy {self.seed}.\n"
+            f"A guide of the universe as generated.\n"
+            f"\n"
+            )
+        for system in self.stellar_systems:
+            text += system.almanach()
+        return text
+
     def add_stellar_system(self, x: int, y: int, z: int) -> StellarSystem:
         new_system = StellarSystem(self, x, y, z, self.saved_alterations)
         self.stellar_systems.append(new_system)
