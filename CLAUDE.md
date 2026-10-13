@@ -54,12 +54,13 @@ def generate_default(self) -> None:
 - **`bind_to`/`unbind_from` asymmetry is intentional.** Do not "fix" it to be symmetric (see the `Player` docstring).
 - **World orbit is derived, not stored.** A world's stellar position and velocity are pure functions of game time (`calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`. The world is not put in `UpdateQueue`; use the queue only for work that mutates state at intervals. Do not add per-call logging to these functions; they run every frame while unbound.
 - **Opening a dialog pauses game time.** While a modal loop runs (`main.run_modal_dialog`), nothing that advances game time is called, and the frame timer is restarted afterwards.
+- **Message texts live in the code**, next to the logic that shows them: build a `Message` (title, text, buttons) with f-strings and pass it to `show_message`, with an `on_result` callback that reads the pressed button's index.
 - **Galaxy almanack**: `main` writes it on each new game and each load, overwriting the previous file. Its structure is in `Galaxy.almanack()`: each object writes its own part and calls its children.
 
 ## Key Notes
 
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
-- No external config files: settings are module-level constants (e.g., `GameLogging/constants.py`). Texts meant to be edited by hand are the exception: `Resources/dialogs/messages.toml`.
+- No external config files: settings are module-level constants (e.g., `GameLogging/constants.py`)..
 - Saves and logs are written under the data folder (`paths.data_path`): the working directory when run from source, `%LOCALAPPDATA%\StellarWanderer` in the packaged build.
 
 ## Working Policies (for Claude)

@@ -28,7 +28,7 @@ import game_environment as gem
 import Galaxies.People.player as player_module
 from Persistency.savefile import Savefile
 from Dialogs import (
-    Dialog, DialogResult, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
+    Dialog, DialogResult, Message, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
 )
 from Graphics.opengl_gui import OpenGLGui
 from Graphics.Instruments.world_map import WorldMap
@@ -105,12 +105,22 @@ def start_game(action: str, value: object) -> float:
     player = player_module.current_player
     player.ship.set_notification(f"Welcome, {player.get_title()} Pilot.")
     if action == 'new':
-        show_message(
-            'welcome',
-            title=player.get_title(),
-            planet=gem.current_environment.nearest_world.parent_planet.name,
-            moon=gem.current_environment.nearest_world.name,
-        )
+        nearest_world = gem.current_environment.nearest_world
+        planet = nearest_world.parent_planet.name
+        moon = nearest_world.name
+        show_message(Message(
+            title=f"Welcome, {player.get_title()} Pilot!",
+            text=(
+                "Speaker Xi, the famous pilot trainer, has closed the communication with his last message. "
+                "Now he will train other Citizen Pilots. You are ready.\n\n"
+                f"{moon} extends in front of you. Your task is to plant mines in this ore-rich moon and bring it "
+                f"to the outpost in the planet, {planet}. The better you work, the more your reputation will increase.\n\n"
+                "The State of \"Those-Who-Share\" will provide you everything you need there, as they provided you "
+                "this ship as long as you need it to perform your tasks for the Community.\n\n"
+                "You trained years for this. Now it is the time to decide what you do with your new freedom."
+            ),
+            buttons=["Understood"],
+        ))
     return elapsed
 
 
@@ -183,7 +193,7 @@ def main() -> None:
         pending_message = next_pending_message()
         while pending_message is not None and running:
             result, screen = run_modal_dialog(
-                MessageDialog(pending_message.key, pending_message.values), screen, gui, fonts, clock
+                MessageDialog(pending_message.message), screen, gui, fonts, clock
             )
             if result[0] == 'exit':
                 running = False

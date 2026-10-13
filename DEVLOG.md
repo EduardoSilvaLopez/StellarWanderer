@@ -235,8 +235,8 @@ Extra time: 29h30' + 14:45-
 
 - Installation package (tested locally - to be distributed)
 - Almanack
-
 - show_message directly
+
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
 - Move the zommed map on left-click + drag.
 - Also energy, air, water and food.
@@ -246,6 +246,7 @@ BACKLOG
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
+- Idea: credits are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and prominently shown in UniDiv.
 * https://github.com/obra/superpowers#how-it-works
 * JOVIAN PLANETS (with forbidden area)
 * SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS

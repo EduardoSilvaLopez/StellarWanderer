@@ -7,7 +7,7 @@ import pygame
 
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
-from .messages import Message, load_message
+from .messages import Message
 
 TEXTURE_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'dialog_background.png')
 
@@ -19,7 +19,7 @@ BUTTON_FILL_HOVER = (26, 84, 88)
 
 
 class MessageDialog(Dialog):
-    """Title, wrapped and scrollable text, and one or more buttons, loaded from messages.toml by key.
+    """Title, wrapped and scrollable text, and one or more buttons, from the Message it is given.
 
     Results: ('close', index) when a button is pressed, index being its position in the message's
     buttons (0 is the first); ('close', None) on Esc; ('exit', None) when the window is closed.
@@ -28,8 +28,7 @@ class MessageDialog(Dialog):
 
     Look: a textured panel (Resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
     (Resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
-    not pygame.font directly. One or more buttons, side by side when they fit, otherwise stacked. The texts come from
-    Resources/dialogs/messages.toml (see messages.py)."""
+    not pygame.font directly. One or more buttons, side by side when they fit, otherwise stacked."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -44,9 +43,9 @@ class MessageDialog(Dialog):
     BUTTON_GAP = 14
     BUTTON_FONT_SIZE = 16
 
-    def __init__(self, key: str, values: Optional[dict] = None, message: Optional[Message] = None) -> None:
+    def __init__(self, message: Message) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
-        self.message: Message = message if message is not None else load_message(key, values)
+        self.message: Message = message
 
         self.button_rects: List[pygame.Rect] = self._layout_buttons()
         self.hover: Optional[int] = None   # the button under the mouse

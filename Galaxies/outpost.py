@@ -32,6 +32,9 @@ class Outpost:
     DEPTH = 12.0
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
 
+    STAFF_AGE_MIN = 25
+    STAFF_AGE_MAX = 60
+
     def __init__(self, planet: World, saved_alterations: dict):
         self.planet = planet
         self.index = len(planet.outposts)
@@ -70,9 +73,9 @@ class Outpost:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 
         if self.saved_alterations and 'com_officer_seed' in self.saved_alterations:
-            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self)
+            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         else:
-            self.com_officer = Person(self.seed + 1, self)
+            self.com_officer = Person(self.seed + 1, self, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         return self
 
     def get_alteration_key(self) -> str:

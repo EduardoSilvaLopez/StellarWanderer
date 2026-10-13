@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from functools import lru_cache
 import logging
@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 import pygame
 
-from Dialogs import show_message
+from Dialogs import Message, show_message
 from Galaxies.Politics import political_entity
 from Galaxies.Politics.personal_status import PersonalStatus
 from Spaceships.cargo_hold import CargoHold
@@ -18,6 +18,7 @@ import game_environment as gem
 
 if TYPE_CHECKING:
     from Galaxies.outpost import Outpost
+    from Galaxies.People.player import Player
 
 PEOPLE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'people')
 
@@ -48,7 +49,7 @@ class Person:
         MALE = 1
         FEMALE = 2
 
-    def __init__(self, seed: float, working_place: Outpost):
+    def __init__(self, seed: float, residency: Any, age_min: int = 15, age_max: int = 70):
         my_random = random.Random(seed)
         self.seed: float = seed
 
@@ -70,18 +71,35 @@ class Person:
 
         self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
         self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
+        self.empathy: float = my_random.random() * 100
+        self.sociability: float = my_random.random() * 100
+        self.loyalty: float = my_random.random() * 100
+        self.sympathy: float = 50.0
+        seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
+        self.dob = gem.current_environment.date_time + timedelta(seconds = -seconds_after_birth)
+
+        self.residency: Any = residency
+        self.last_communication_at: Optional[datetime] = None
+        self.the_joker_wanted_payment: bool = False # Just a PoC of individual com. status.
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
         self.portrait = self._load_portrait(my_random)
 
-        self.working_place: Any = working_place
-        self.last_communication_at: Optional[datetime] = None
-        self.the_joker_wanted_payment: bool = False # Just a PoC of individual com. status.
-
         gem.current_environment.persons.add(self)
+        self._log_generation()
 
     def _load_portrait(self, my_random: random.Random) -> Person:
-        filename_prefix: str = 'outpost.com.' + str(self.race.name).lower() + "." + str(self.gender_group.name).lower() + ".mature.content"
+        age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
+        age_group: str = 'young' if age < 30\
+            else 'adult' if age < 45\
+            else 'mature' if age < 65\
+            else 'old'
+
+        from Galaxies.outpost import Outpost
+        occupation: str = 'outpost.com' if isinstance(self.residency, Outpost)\
+            else 'generic'
+        
+        filename_prefix: str = occupation + "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
         portraits_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'portraits')
         try:
             names = os.listdir(portraits_dir)
@@ -103,6 +121,19 @@ class Person:
 
         return self
 
+    def _log_generation(self) -> Person:
+        age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
+        logger.info(
+            f"PERSON GENERATED: {self.get_full_name()}\n"
+            f" - {self.gender_group.name.capitalize()}, {self.race.name.capitalize()}\n"
+            f" - D.O.B.: {self.dob.strftime("%Y-%m-%d")} ({age} y.o.)\n"
+            f" - Empathy: {self.empathy:.2f}%\n"
+            f" - Sociability: {self.sociability:.2f}%\n"
+            f" - Loyalty: {self.loyalty:.2f}%\n"
+            f" - Sympathy to the player: {self.sympathy:.2f}%\n"
+        )
+        return self
+
     def serialize(self) -> dict:
         result: dict = {
             'seed': self.seed,
@@ -120,7 +151,7 @@ class Person:
         cargo_hold: CargoHold = player.ship.cargo_hold
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
 
-        wp: Any = self.working_place
+        wp: Any = self.residency
         visit_time_delta: float = 0\
             if not hasattr(wp, "last_visited")\
                 or not isinstance(wp.last_visited, datetime)\
@@ -134,37 +165,52 @@ class Person:
 
         if 0.0 < visit_time_delta < 60 * 60 and self.the_joker_wanted_payment:
             status.reputation -= 0.01 # "Annoying joker."
-            show_message(
-                'outpost_joker_came_back_to_soon',
-                player_title=player.get_title()
-                )
+            show_message(Message(
+                title="Return of the Joker",
+                text="Ah, the joker again. Yes...?",
+                buttons=["Nevermind"],
+            ))
         elif 0.0 < visit_time_delta < 60 * 60:
             status.reputation -= 0.005 # "Annoying person."
-            show_message(
-                'outpost_came_back_to_soon',
-                player_title=player.get_title()
-                )
+            show_message(Message(
+                title="Huh?",
+                text=f"Yes, {player.get_title()} Pilot...?",
+                buttons=["Nevermind"],
+            ))
         elif cargo_hold.ore == 0:
-            show_message(
-                'outpost_start_no_ore',
-                full_name=self.get_full_name(),
-                player_title=player.get_title(),
-                on_result=self.com_outpost_no_ore
-                )
+            show_message(Message(
+                title=f"Welcome, {player.get_title()} Pilot.",
+                text=(
+                    f"I am {self.get_full_name()}.\n\n"
+                    f"I see you bring no ore, {player.get_title()}.\n\n"
+                    "We will maintain your ship and replenish your air, water and food storage, but please make "
+                    "your best to bring some ore.\n\n"
+                    "Long live the Community."
+                ),
+                buttons=["I understand, thank you for sharing", "Yeah, whatever"],
+            ), on_result=self.com_outpost_no_ore)
         elif self.last_communication_at:
-            show_message(
-                'outpost_start_ore',
-                full_name=self.get_full_name(),
-                player_title=player.get_title(),
-                on_result=self.com_outpost_ore
-                )
+            show_message(Message(
+                title=f"Welcome, {player.get_title()} Pilot.",
+                text=(
+                    f"I am {self.get_full_name()}.\n\n"
+                    f"Thank you for the ore, {player.get_title()}. It helps immensely.\n\n"
+                    "We will maintain your ship and replenish your needs as we speak.\n\n"
+                    "Long live the Community."
+                ),
+                buttons=["Long live", "Thank you for sharing"],
+            ), on_result=lambda button_index: self.com_outpost_ore(button_index, player))
         else:
-            show_message(
-                'outpost_start_ore_joke',
-                full_name=self.get_full_name(),
-                player_title=player.get_title(),
-                on_result=self.com_outpost_ore
-                )
+            show_message(Message(
+                title=f"Welcome, {player.get_title()} Pilot.",
+                text=(
+                    f"I am {self.get_full_name()}.\n\n"
+                    f"Thank you for the ore, {player.get_title()}. It helps immensely.\n\n"
+                    "We will maintain your ship and replenish your air, water and food storage.\n\n"
+                    "Long live the Community."
+                ),
+                buttons=["Long live", "Thank you for sharing", "Can you just pay me for the ore, and I buy what I need?"],
+            ), on_result=lambda button_index: self.com_outpost_ore(button_index, player))
 
         self.last_communication_at = wp.last_visited
         logger.debug(f"Reputation now: {status.reputation}")
@@ -179,9 +225,7 @@ class Person:
             status.reputation -= 0.1
         logger.debug(f"Reputation now: {status.reputation}")
 
-    def com_outpost_ore(self, button_index: int) -> None:
-        from Galaxies.People.player import current_player as player
-
+    def com_outpost_ore(self, button_index: int, player: Player) -> None:
         cargo_hold: CargoHold = player.ship.cargo_hold
         status: PersonalStatus = player.political_status[political_entity.THOSE_WHO_SHARE]
 
@@ -195,9 +239,19 @@ class Person:
             self.the_joker_wanted_payment = True
             status.reputation -= 1 # "Disloyal proposal."
                 #Todo: persist, this option won't be offered anymore.
-            show_message(
-                'outpost_ore_payment_requested',
-                title=player.get_title()
-                )
+            show_message(Message(
+                title=f"Welcome, {player.get_title()} Pilot.",
+                text=(
+                    "What is 'pay'...?\n\n"
+                    "Wait... you mean... like in the Shining Throne? or UniDiv?\n\n"
+                    "*LAUGHS*\n\n"
+                    "How many stamps you think I'd have to...!?\n\n"
+                    "You... can't be serious, yes?\n\n"
+                    f"Don't make such jokes, {player.get_title()}.\n\n"
+                    "Really. Don't.\n\n"
+                    "Long live the Community."
+                ),
+                buttons=["Long live. I guess."],
+            ))
 
         logger.debug(f"Reputation now: {status.reputation}")
