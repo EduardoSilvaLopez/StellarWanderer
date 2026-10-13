@@ -30,12 +30,14 @@ class Rock(Updatable):
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
         # around this point, so it can sit partly under the ground).
-        self.altitude: float = max(0.5 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
+        self.altitude: float = max(0.3 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
         self.latitude: int = latitude
         self.orientation: float = my_random.random() * 180 - 90
         self.tilt: float = my_random.random() * 45
         self.composition: float = self._calculate_initial_composition(my_random)
         self.initial_color: tuple = self._calculate_initial_color(my_random)
+        # Seed of the rock's irregular shape (Graphics/rock_shape.py). Drawn last, so every value above is as before.
+        self.shape_seed: int = my_random.getrandbits(32)
         self.temperature: float = 0.0
         self.adjust_color()
 
@@ -159,9 +161,9 @@ class Rock(Updatable):
             base_g = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
             base_b = 32 + my_random.randint(0, 8)
         else:
-            base_r = 64 + my_random.randint(0, 64)
-            base_g = 64 + my_random.randint(0, 64)
-            base_b = 48 + my_random.randint(0, 64)
+            base_r = 96 + my_random.randint(0, 32)
+            base_g = 96 + my_random.randint(0, 32)
+            base_b = 80 + my_random.randint(0, 32)
 
         return (base_r, base_g, base_b)
 

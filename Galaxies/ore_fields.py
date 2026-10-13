@@ -75,8 +75,10 @@ class OreField:
             'mines': [m.serialize() for m in self.mines]
             }
 
-    def extract(self, amount: int) -> int:
-        result = min(self.remaining_ore, amount)
+    def extract(self, extraction_power: int) -> int:
+        ''' The field aspects: more extraction with more remaining per area'''
+        prevalence_factor = self.remaining_ore / self.radius**2
+        result = min(self.remaining_ore, prevalence_factor * extraction_power)
         if result > 0:
             self.remaining_ore -= result
         return result

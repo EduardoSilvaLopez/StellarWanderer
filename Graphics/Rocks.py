@@ -1,7 +1,7 @@
 """Depth-tested OpenGL rock rendering."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List
 import math
 
 from OpenGL import GL, GLU
@@ -16,7 +16,6 @@ from .surface_light import SurfaceLight
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
     from Galaxies.km2 import Km2
-    from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
     from Galaxies.ore_mine import OreMine
     from Galaxies.outpost import Outpost
@@ -95,74 +94,4 @@ class Rocks:
         GL.glVertex3f(extent, 0.0, -extent)
         GL.glVertex3f(extent, 0.0, extent)
         GL.glVertex3f(-extent, 0.0, extent)
-        GL.glEnd()
-
-    @staticmethod
-    def _draw_rock(rock: Rock, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        """One rock, drawn immediately. Not used in the game any more: RockBatches draws the rocks. It stays as
-        the reference that a batch must reproduce (vertices and colours), for tests."""
-        half = rock.size / 2.0
-
-        # Rocks are tilted around their own local Z axis by rock.tilt degrees,
-        # THEN rotated around their vertical (Y) axis by rock.orientation
-        # degrees, deviating from north (0 = unrotated, positive = clockwise) —
-        # the same convention used for the ship's forward vector.
-        tilt = math.radians(rock.tilt)
-        cos_t = math.cos(tilt)
-        sin_t = math.sin(tilt)
-        orientation = math.radians(rock.orientation)
-        cos_o = math.cos(orientation)
-        sin_o = math.sin(orientation)
-
-        # Subtract the player's position here, in double precision, before
-        # these coordinates ever reach a float32 glVertex3f call — see the
-        # comment in draw() for why.
-        relative_longitude = rock.longitude - player_x
-        relative_latitude = rock.latitude - player_z
-
-        def corner(sign_x: int, sign_y: int, sign_z: int) -> Tuple[float, float, float]:
-            local_x, local_y, local_z = sign_x * half, sign_y * half, sign_z * half
-            x1 = local_x * cos_t - local_y * sin_t
-            y1 = local_x * sin_t + local_y * cos_t
-            z1 = local_z
-            x2 = x1 * cos_o + z1 * sin_o
-            z2 = -x1 * sin_o + z1 * cos_o
-            return (relative_longitude + x2, rock.altitude + y1, relative_latitude + z2)
-
-        c000 = corner(-1, -1, -1)
-        c100 = corner(+1, -1, -1)
-        c110 = corner(+1, +1, -1)
-        c010 = corner(-1, +1, -1)
-        c001 = corner(-1, -1, +1)
-        c101 = corner(+1, -1, +1)
-        c111 = corner(+1, +1, +1)
-        c011 = corner(-1, +1, +1)
-
-        # The heat glow (rock.color above rock.initial_color) is added after shading, so a hot rock still
-        # glows on the side away from the sun.
-        glow = tuple(max(0, now - start) for now, start in zip(rock.color, rock.initial_color))
-
-        def face_colour(normal_x: float, normal_y: float, normal_z: float) -> Tuple[int, int, int]:
-            """The face's colour: its normal rotated like the corners (tilt, then orientation), lit by the sun."""
-            x1 = normal_x * cos_t - normal_y * sin_t
-            y1 = normal_x * sin_t + normal_y * cos_t
-            x2 = x1 * cos_o + normal_z * sin_o
-            z2 = -x1 * sin_o + normal_z * cos_o
-            shaded = SurfaceLight.shade(rock.initial_color, light.brightness(x2, y1, z2))
-            return tuple(min(255, shaded[i] + glow[i]) for i in range(3))
-
-        faces = (
-            (face_colour(0.0, 1.0, 0.0), (c010, c110, c111, c011)),
-            (face_colour(0.0, -1.0, 0.0), (c001, c101, c100, c000)),
-            (face_colour(-1.0, 0.0, 0.0), (c000, c001, c011, c010)),
-            (face_colour(1.0, 0.0, 0.0), (c101, c100, c110, c111)),
-            (face_colour(0.0, 0.0, -1.0), (c000, c100, c110, c010)),
-            (face_colour(0.0, 0.0, 1.0), (c101, c001, c011, c111)),
-        )
-
-        GL.glBegin(GL.GL_QUADS)
-        for color, vertices in faces:
-            GL.glColor3ub(*color)
-            for vertex in vertices:
-                GL.glVertex3f(*vertex)
         GL.glEnd()

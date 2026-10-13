@@ -3,9 +3,11 @@
 from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
+import numpy as np
 import pygame
-from ..Constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR, ROCK_EDGE_COLOR
+from ..Constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR
 from ..Constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
+from ..rock_shape import rock_meshes, rotate
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
@@ -106,66 +108,34 @@ class Scanner:
 
     @staticmethod
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:
-        """Render `rock` inside `rect`, at the same relative orientation the
-        player currently sees it from, normalized to a unit cube so every
-        rock — regardless of true size or distance — fills the square.
-        """
+        """Render `rock`'s boulder inside `rect`, at the same relative orientation the player currently sees it
+        from, normalized to its bounding cube so every rock, regardless of true size or distance, fills the square.
+        The shape is the one the 3D view draws (Graphics/rock_shape.py); each triangle is shaded by its normal."""
         view = math.radians(player.yaw)
         cos_view, sin_view = math.cos(view), math.sin(view)
+        tilt, orientation = np.array([rock.tilt]), np.array([rock.orientation])
 
-        tilt = math.radians(rock.tilt)
-        cos_t, sin_t = math.cos(tilt), math.sin(tilt)
-        rock_orientation = math.radians(rock.orientation)
-        cos_o, sin_o = math.cos(rock_orientation), math.sin(rock_orientation)
+        triangles, normals, tones = rock_meshes([rock.shape_seed])
+        points = rotate(triangles.reshape(1, -1, 3), tilt, orientation)[0].reshape(-1, 3, 3)
+        normals = rotate(normals, tilt, orientation)[0]
 
-        def corner(sign_x: int, sign_y: int, sign_z: int) -> Tuple[float, float, float]:
-            lx, ly, lz = float(sign_x), float(sign_y), float(sign_z)
-            x1 = lx * cos_t - ly * sin_t
-            y1 = lx * sin_t + ly * cos_t
-            z1 = lz
-            x2 = x1 * cos_o + z1 * sin_o
-            z2 = -x1 * sin_o + z1 * cos_o
-            cam_x = x2 * cos_view - z2 * sin_view
-            cam_z = x2 * sin_view + z2 * cos_view
-            return (cam_x, y1, cam_z)
+        def camera(vectors: np.ndarray) -> np.ndarray:
+            """(x east-ish, y up, z depth) in the player's view; larger z is farther."""
+            return np.stack((vectors[..., 0] * cos_view - vectors[..., 2] * sin_view, vectors[..., 1],
+                             vectors[..., 0] * sin_view + vectors[..., 2] * cos_view), axis=-1)
 
-        corners = {
-            (sx, sy, sz): corner(sx, sy, sz)
-            for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
-        }
-
-        xs = [c[0] for c in corners.values()]
-        ys = [-c[1] for c in corners.values()]
-        span = max(max(xs) - min(xs), max(ys) - min(ys), 1e-6)
-
+        points, normals = camera(points), camera(normals)
+        span = max(np.ptp(points[..., 0]), np.ptp(points[..., 1]), 1e-6)
         padding = max(10, int(min(rect.width, rect.height) * 0.18))
         scale = (min(rect.width, rect.height) - padding * 2) / span
         cx, cy = rect.centerx, rect.centery
 
-        def project(c: Tuple[float, float, float]) -> Tuple[int, int]:
-            return (int(cx + c[0] * scale), int(cy - c[1] * scale))
-
-        top_color = tuple(max(0, v - 50) for v in rock.color)
-        bottom_color = tuple(max(0, v - 70) for v in rock.color)
-        side_color = tuple(max(0, v - 25) for v in rock.color)
-        base_color = rock.color
-
-        faces = (
-            (top_color, ((-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1))),
-            (bottom_color, ((-1, -1, 1), (1, -1, 1), (1, -1, -1), (-1, -1, -1))),
-            (side_color, ((-1, -1, -1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1))),
-            (side_color, ((1, -1, 1), (1, -1, -1), (1, 1, -1), (1, 1, 1))),
-            (base_color, ((-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1))),
-            (base_color, ((1, -1, 1), (-1, -1, 1), (-1, 1, 1), (1, 1, 1))),
-        )
-
-        def face_depth(indices: Tuple[Tuple[int, int, int], ...]) -> float:
-            return sum(corners[index][2] for index in indices)
-
-        for color, indices in sorted(faces, key=lambda face: face_depth(face[1]), reverse=True):
-            points = [project(corners[index]) for index in indices]
-            pygame.draw.polygon(surface, color, points)
-            pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, points, 1)
+        # Triangles facing the viewer, farthest first.
+        order = [i for i in np.argsort(-points[..., 2].mean(axis=1)) if normals[i, 2] < 0.0]
+        for i in order:
+            shade = (0.55 + 0.45 * (normals[i, 1] + 1.0) / 2.0) * tones[0, i]
+            colour = tuple(min(255, int(value * shade)) for value in rock.color)
+            pygame.draw.polygon(surface, colour, [(int(cx + x * scale), int(cy - y * scale)) for x, y, _ in points[i]])
 
     @staticmethod
     def _draw_scanned_mine(surface: pygame.Surface, rect: pygame.Rect, mine: OreMine) -> None:

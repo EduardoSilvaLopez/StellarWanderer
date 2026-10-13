@@ -92,7 +92,7 @@ class OreMine(Updatable):
         # May be under 1, save the rest for the next.
         self.last_updated_at += timedelta(seconds = periods_passed * OreMine.EXTRACTION_PERIOD)
         
-        ore_extracted = self.parent_field.extract(periods_passed)
+        ore_extracted = self.parent_field.extract(periods_passed) # Later: mine quality.
         self.content += ore_extracted
         if self.parent_field.remaining_ore <= 0:
             logger.info(f"Mine won't be updated anymore, field depleted.")

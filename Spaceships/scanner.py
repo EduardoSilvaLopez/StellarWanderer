@@ -263,8 +263,10 @@ class Scanner:
         return t_min if t_min <= t_max else None
 
     def is_rock_targeted(self, rock: Rock) -> Optional[float]:
-        """t-value where the beam first enters the rock, or None. A rock is a cube of side rock.size, centred on
-        (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation."""
+        """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
+        rock.size, centred on (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation.
+        The boulder drawn inside it (Graphics/rock_shape.py) touches the cube on every axis, but is not the whole
+        cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
         half = rock.size / 2.0
         return self._beam_enters_oriented_box(
             (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,

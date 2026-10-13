@@ -1,15 +1,12 @@
 """Rocks drawn from cached arrays: one batch per Km2, one glDrawArrays call per batch.
 
-Drawing each rock with `Rocks._draw_rock` rebuilt it (trig, 8 corners, 6 lit colours, about 50 GL calls) every frame.
-Now the geometry of a Km2's rocks is built once, with numpy, into vertex arrays relative to the Km2's corner,
-and only the colours (sun light and heat glow, cheap) are recomputed per frame.
-
-The colours are cached too: they depend on the sun and on the heat glow, and neither changes much from one frame to
-the next (see SUN_TOLERANCE_DEGREES), so they are recomputed only when one of them has. Graphics reads the rocks'
-temperature colour (rock.color); Galaxies knows nothing about this module.
+The geometry of a Km2's rocks is built once, with numpy, into vertex arrays relative to the Km2's corner (each rock
+an irregular boulder of FACES triangles, see rock_shape.py), and only the colours (sun light and heat glow) are
+recomputed, and only when needed: they depend on the sun and on the heat glow, and neither changes much from one
+frame to the next (see SUN_TOLERANCE_DEGREES). Graphics reads the rocks' temperature colour (rock.color) and shape
+seed; Galaxies knows nothing about this module.
 
 Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`).
-`Rocks._draw_rock` stays as the reference: a batch must reproduce its vertices and colours exactly.
 """
 
 from __future__ import annotations
@@ -21,6 +18,7 @@ import numpy as np
 from OpenGL import GL
 
 from .Constants import SURFACE_STARLIGHT
+from .rock_shape import FACES, rock_meshes, rotate
 
 if TYPE_CHECKING:
     from Galaxies.km2 import Km2
@@ -35,28 +33,8 @@ if TYPE_CHECKING:
 SUN_TOLERANCE_DEGREES = 0.1
 _SUN_TOLERANCE_COS = math.cos(math.radians(SUN_TOLERANCE_DEGREES))
 
-# Unit-cube faces as GL_QUADS, in the same order and winding as Rocks._draw_rock: top, bottom, -x, +x, -z, +z.
-_FACE_NORMALS = np.array([
-    (0, 1, 0), (0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)], dtype=np.float64)
-_FACE_CORNERS = np.array([
-    ((-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1)),
-    ((-1, -1, 1), (1, -1, 1), (1, -1, -1), (-1, -1, -1)),
-    ((-1, -1, -1), (-1, -1, 1), (-1, 1, 1), (-1, 1, -1)),
-    ((1, -1, 1), (1, -1, -1), (1, 1, -1), (1, 1, 1)),
-    ((-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1)),
-    ((1, -1, 1), (-1, -1, 1), (-1, 1, 1), (1, 1, 1))], dtype=np.float64).reshape(24, 3)
-
-
-def _rotate(points: np.ndarray, tilt: np.ndarray, orientation: np.ndarray) -> np.ndarray:
-    """Rotate (rocks, points, 3) like the renderer: tilt about local Z, then orientation about the vertical axis.
-    `tilt` and `orientation` are in degrees, one per rock."""
-    cos_t, sin_t = np.cos(np.radians(tilt))[:, None], np.sin(np.radians(tilt))[:, None]
-    cos_o, sin_o = np.cos(np.radians(orientation))[:, None], np.sin(np.radians(orientation))[:, None]
-    x, y, z = points[..., 0], points[..., 1], points[..., 2]
-    x1 = x * cos_t - y * sin_t
-    y1 = x * sin_t + y * cos_t
-    return np.stack((x1 * cos_o + z * sin_o, y1, -x1 * sin_o + z * cos_o), axis=-1)
-
+# Faces facing down are a little darker (dust and shadow in the hollows), up to this share, on top of the sun.
+DOWNWARD_DARKENING = 0.18
 
 class RockBatch:
     """The rocks of one Km2 as arrays. Valid while the Km2's rock list is unchanged (see `is_current`)."""
@@ -73,12 +51,17 @@ class RockBatch:
         centre = np.array([(rock.longitude - self.origin_x, rock.altitude, rock.latitude - self.origin_z)
                            for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)
 
-        corners = _FACE_CORNERS[None, :, :] * (size / 2.0)[:, None, None]
-        self.positions: np.ndarray = np.ascontiguousarray(
-            (centre + _rotate(corners, tilt, orientation)).reshape(-1, 3), dtype=np.float32)
-        self.face_normals: np.ndarray = _rotate(np.broadcast_to(_FACE_NORMALS, (count, 6, 3)), tilt, orientation)
+        triangles, normals, tones = rock_meshes([rock.shape_seed for rock in self.rocks])
+        points = rotate(triangles.reshape(count, FACES * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
+        # A rock never floats: if its lowest point is above the ground, it is lowered onto it (a rock that is
+        # partly buried stays buried). The scanner's box is not lowered with it, which is close enough for aiming.
+        lowest = centre[:, 0, 1] + points[..., 1].min(axis=1) if count else np.zeros(0)
+        centre[:, 0, 1] -= np.maximum(0.0, lowest)
+        self.positions: np.ndarray = np.ascontiguousarray((centre + points).reshape(-1, 3), dtype=np.float32)
+        self.face_normals: np.ndarray = rotate(normals, tilt, orientation)
+        down = DOWNWARD_DARKENING * (1.0 - (self.face_normals[..., 1] + 1.0) / 2.0)
         self.face_colours: np.ndarray = np.array(
-            [rock.initial_color for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)
+            [rock.initial_color for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)             * (tones * (1.0 - down))[..., None]
         self.glow: np.ndarray = np.zeros((count, 3), dtype=np.int32)
         self._was_hot: List[bool] = [False] * count
         # The last colours computed, the sun they were computed for, and whether a glow has changed since.
@@ -124,7 +107,7 @@ class RockBatch:
         brightness = SURFACE_STARLIGHT + (1.0 - SURFACE_STARLIGHT) * np.maximum(0.0, facing)
         shaded = (self.face_colours * brightness[..., None]).astype(np.int32)   # truncates, like SurfaceLight.shade
         lit = np.minimum(255, shaded + self.glow[:, None, :])
-        return np.ascontiguousarray(np.repeat(lit, 4, axis=1).reshape(-1, 3), dtype=np.uint8)
+        return np.ascontiguousarray(np.repeat(lit, 3, axis=1).reshape(-1, 3), dtype=np.uint8)
 
     def draw(self, player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw inside the camera setup of Rocks.draw. The translation is the Km2's offset from the camera, computed
@@ -139,7 +122,7 @@ class RockBatch:
         GL.glEnableClientState(GL.GL_COLOR_ARRAY)
         GL.glVertexPointer(3, GL.GL_FLOAT, 0, self.positions)
         GL.glColorPointer(3, GL.GL_UNSIGNED_BYTE, 0, colours)
-        GL.glDrawArrays(GL.GL_QUADS, 0, len(self.positions))
+        GL.glDrawArrays(GL.GL_TRIANGLES, 0, len(self.positions))
         GL.glDisableClientState(GL.GL_COLOR_ARRAY)
         GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
         GL.glPopMatrix()

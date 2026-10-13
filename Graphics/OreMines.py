@@ -56,7 +56,7 @@ class OreMines:
         """Camera-relative (x, y, z, u) points around a mine's circumference.
 
         Rotated by the mine's orientation using the same convention as
-        Rocks._draw_rock (no tilt term — mines stand vertical). Longitude/
+        the rocks (Graphics/rock_shape.py, rotate; no tilt term — mines stand vertical). Longitude/
         latitude are made relative to the player here, in double precision,
         before reaching glVertex3f — see the comment in Rocks.draw() for why.
         """
