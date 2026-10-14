@@ -77,6 +77,8 @@ class Person:
         self.sociability100: float = my_random.random() * 100
         self.loyalty100: float = my_random.random() * 100 + self.reputation
         self.sympathy100: float = 50.0
+        self.sympathy_altered: bool = False
+
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
         self.dob = gem.current_environment.date_time + timedelta(seconds = -seconds_after_birth)
 
@@ -85,13 +87,23 @@ class Person:
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
         self.portrait = self._load_portrait(my_random)
-
         
         self.interactions: dict = {}
         if self.seed in gem.current_environment.persons:
-            self.interactions = gem.current_environment.persons[self.seed].interactions
+            # Apply alterations.
+            my_alterations = gem.current_environment.persons[self.seed]
+            if 'last_communication_at' in my_alterations and my_alterations.get('last_communication_at'):
+                self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
+            if 'sympathy' in my_alterations:
+                self.sympathy100 = my_alterations['sympathy']
+                self.sympathy_altered = True
+            if 'interactions' in my_alterations:
+                for dt_str, lines in my_alterations.items():
+                    dt = datetime.fromisoformat(dt_str)
+                    self.interactions[dt] = lines
         else:
             gem.current_environment.persons[self.seed] = self
+
         self.log_update()
 
     def _load_portrait(self, my_random: random.Random) -> Person:
@@ -146,11 +158,14 @@ class Person:
         for int_date_time, int_lines in self.interactions.items():
             interactions_dict[int_date_time.strftime("%Y-%m-%d")] = int_lines
 
-        result: dict = {
-            'seed': self.seed,
-            'last_communication_at': str(self.last_communication_at),
-            'interactions' : interactions_dict
-        }
+        result: dict = { 'seed': self.seed }
+        if self.last_communication_at:
+            result['last_communication_at'] = str(self.last_communication_at)
+        if self.sympathy_altered:
+            result['sympathy'] = self.sympathy100
+        if len(interactions_dict):
+            result['interactions'] = interactions_dict
+
         return result
 
     def get_title(self) -> str:
@@ -161,18 +176,10 @@ class Person:
         return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
 
     # 'Personality' traits change slower the more they approach the extremes of 0 and 100
-    def adjust_empathy(self, change: float) -> Person:
-        self.empathy100 += change / (1 + abs(self.empathy100 - 50))
-        self.empathy100 = max(0, min(100, self.empathy100))
-    def adjust_sociability(self, change: float) -> Person:
-        self.sociability100 += change / (1 + abs(self.sociability100 - 50))
-        self.sociability100 = max(0, min(100, self.sociability100))
-    def adjust_loyalty(self, change: float) -> Person:
-        self.loyalty100 += change / (1 + abs(self.loyalty100 - 50))
-        self.loyalty100 = max(0, min(100, self.loyalty100))
     def adjust_sympathy(self, change: float) -> Person:
         self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
         self.sympathy100 = max(0, min(100, self.sympathy100))
+        self.sympathy_altered = True
 
     def communicate_from(self, outpost: Outpost) -> Person:
         from .conversation import Conversation

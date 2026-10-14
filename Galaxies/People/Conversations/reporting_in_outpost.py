@@ -27,15 +27,17 @@ class ReportingInOutpost(Conversation):
         if player.ship.cargo_hold.ore > 0:
             self.greet_and_thank(visit_time_delta)
         elif visit_time_delta > 60 * 60:
-            self.greet_and_warn(visit_time_delta)
+            logger.error("Dialog not implemented yet: self.greet_and_warn(visit_time_delta)")
         elif visit_time_delta >= 0:
-            self.greet_why_back()
+            logger.error("Dialog not implemented yet: self.greet_why_back()")
 
     def greet_and_thank(self, time_since_last_visit: Optional[datetime]) -> None:
         from Galaxies.People.player import current_player as player
 
         if self.interlocutor.last_communication_at and (gem.current_environment.date_time - self.interlocutor.last_communication_at).total_seconds() > 28 * 24 * 60 * 60:
             self.say_had_not_seen_you_thanks(time_since_last_visit)
+        elif self.interlocutor.last_communication_at:
+            logger.error("Dialog not implemented yet: say_hi_again_and_thanks")
         elif time_since_last_visit:
             self.say_i_am_and_thanks(time_since_last_visit)
         else:
@@ -104,11 +106,11 @@ class ReportingInOutpost(Conversation):
                 {
                 'text': 'Long live',
                 'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
-                'sympathy': 0 if self.interlocutor.loyalty100 > 10 else -2,
+                'sympathy': 0.1 if self.interlocutor.loyalty100 > 10 else -2,
                 }
                 , {
                 'text': 'Thank you for sharing',
-                'sympathy': 0. if self.interlocutor.loyalty100 > 10 else 5, # Took the hint
+                'sympathy': 0 if self.interlocutor.loyalty100 > 10 else 5, # Took the hint
                 }
             ]
 
@@ -139,7 +141,7 @@ class ReportingInOutpost(Conversation):
                 {
                 'text': 'Long live',
                 'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
-                'sympathy': 0 if self.interlocutor.loyalty100 > 10 else -2,
+                'sympathy': 0.1 if self.interlocutor.loyalty100 > 10 else -2,
                 }
                 , {
                 'text': 'Thank you for sharing',
@@ -160,7 +162,7 @@ class ReportingInOutpost(Conversation):
 
         if 'reputation' in my_consequences:
             status.reputation += my_consequences['reputation']
-        if 'sympathy' in my_consequences:
+        if 'sympathy' in my_consequences and my_consequences['sympathy'] != 0:
             self.interlocutor.adjust_sympathy(my_consequences['sympathy'])
 
         # Reputation loss = need of stuff.
@@ -174,7 +176,7 @@ class ReportingInOutpost(Conversation):
         ship.energy = 1e12
         cargo_hold.air = 28
         cargo_hold.water = 28
-        cargo_hold.foor = 28
+        cargo_hold.food = 28
 
         # Reputation loss due to mines:
         rep_loss_mines = -0.20 * (5 - cargo_hold.mines)

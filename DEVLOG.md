@@ -247,6 +247,7 @@ CONVERSATIONS
 Extra time: 37h45' + 19:30-
 
 Pending: Finish the outpost dialog with gimmicks.
+- Finish the normal dialogs as-is!
 - Chatting gives information about the world?
 - Reintroduce the joke?
 - Introduce "Whatevers"?
