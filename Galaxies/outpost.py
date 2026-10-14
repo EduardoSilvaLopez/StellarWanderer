@@ -73,9 +73,9 @@ class Outpost:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 
         if self.saved_alterations and 'com_officer_seed' in self.saved_alterations:
-            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         else:
-            self.com_officer = Person(self.seed + 1, self, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+            self.com_officer = Person(self.seed + 1, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         return self
 
     def get_alteration_key(self) -> str:

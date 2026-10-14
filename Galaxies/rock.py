@@ -19,7 +19,7 @@ class Rock(Updatable):
     TEMP_RISE_RATE = 500.0 # Temp. raise for a 1 square cube rock in 1 second.
     BASE_COOLING_PERIOD = 60 * 60 # Once per hour.
     COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX = 5000.0 # Boom.
+    TEMP_MAX = 2000.0 # Boom.
     ORE_RICH_THRESHOLD = 0.998
 
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):

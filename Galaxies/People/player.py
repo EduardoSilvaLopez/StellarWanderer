@@ -94,7 +94,7 @@ class Player:
         self.is_bound: bool = False
         self.velocity: Velocity = Velocity()
 
-        self.political_status: dict = {}
+        self.those_who_share: PersonalStatus = PersonalStatus()
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         from Galaxies.world import World
@@ -107,9 +107,7 @@ class Player:
         self.position.y = Ship.HEIGHT
         self.position.z = self.position.km2.latitude + 500
 
-        self.political_status = {
-            political_entity.THOSE_WHO_SHARE: PersonalStatus()
-        }
+        self.those_who_share: PersonalStatus = PersonalStatus()
         return self
 
     def position_in_km2(self, km2: Km2, x: int, y: int, z: int) -> Player:
@@ -129,7 +127,7 @@ class Player:
             planet_index = world.parent_orbit.planets.index(world)
             moon_index = None
 
-        those_who_share_status = self.political_status[political_entity.THOSE_WHO_SHARE]
+        those_who_share_status = self.those_who_share
         return {
             'time_scale': self.time_scale,
             'stellar_system.x': world.parent_orbit.parent_stellar_system.x,
@@ -181,13 +179,12 @@ class Player:
 
         result.ship = Ship.load(result, loaded_attributes['ship'])
 
-        result.political_status = {}
         from Galaxies.Politics.personal_status import PersonalStatus
         import Galaxies.Politics.political_entity as pem
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == pem.THOSE_WHO_SHARE.name:
-                new_status = PersonalStatus.deserialize(loaded_attributes['political_status'][entity_name])
-                result.political_status[political_entity.THOSE_WHO_SHARE] = new_status
+                new_status = PersonalStatus.deserialize(values)
+                result.those_who_share = new_status
 
         return result
 
@@ -594,10 +591,10 @@ class Player:
         return Vector3(total.x, -total.y, total.z)
 
     def get_title(self) -> str:
-        from Galaxies.Politics.political_entity import PoliticalEntity
-        entity: PoliticalEntity = gem.current_environment.nearest_system.political_entity
-        from Galaxies.Politics.personal_status import PersonalStatus
-        status: PersonalStatus = self.political_status[entity]
-        return entity.title_for(status.reputation)
+        if gem.current_environment.nearest_system.political_entity == political_entity.THOSE_WHO_SHARE:
+            return political_entity.THOSE_WHO_SHARE.title_for(self.those_who_share.reputation)
+        else:
+            logger.warning("Unknown political entity.")
+            return str()        
 
 current_player: Player = None

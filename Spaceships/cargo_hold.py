@@ -12,7 +12,7 @@ class CargoHold:
     def __init__(self, ship: Ship) -> None:
         self.parent_ship: Ship = ship
 
-        self.energy: Ship = 1e12 # 1 TWh - prolly too much but let us see.
+        self.energy: int = 1e12 # 1 TWh - prolly too much but let us see.
         self.air: float = 28.0
         self.water: float = 28.0
         self.food: float = 28.0

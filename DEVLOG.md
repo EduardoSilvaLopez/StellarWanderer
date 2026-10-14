@@ -231,17 +231,28 @@ OUTPOSTS:
 
 * De-capitalise *.py file names (small task)
 
-Extra time: 29h30' + 14:45-
-
+CONVERSATIONS
 - Installation package (tested locally - to be distributed)
 - Almanack
 - show_message directly
+- Conversations architecture.
 
-* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
-- Move the zommed map on left-click + drag.
-- Also energy, air, water and food.
+### 2026-10-13 (5/10)
+- Fill up the conversations concept with current data.
+
+Extra time: 34h15'
+
+Pending:
+- Introduce conversation report in the person, save and load it.
+- Reintroduce the joke?
+- Introduce "Whatevers"?
+- Recalculate the loss of reputation with resources provison.
+- Expend energy, air, water and food during flight / passing of time / laser usage.
+- Fill up the person with the communication record.
 
 BACKLOG
+* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
+- Move the zommed map on left-click + drag.
 * TRAVEL TO THE SUN (forbidden areas)
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
