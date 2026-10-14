@@ -68,7 +68,7 @@ class Outpost:
         return self
 
     def prepare(self) -> Outpost:
-        ''' Prepare for visit, that is, apply the alterations.'''
+        ''' Prepare for visit.'''
         if self.saved_alterations and 'last_visited' in self.saved_alterations:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 

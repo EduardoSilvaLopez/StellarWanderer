@@ -1,14 +1,14 @@
 import copy
+import random
 from typing import List, Optional
 
-from Galaxies.People.person import Person
 from Galaxies.stellar_system import StellarSystem
 
 '''The whole galaxy. We won't have more than one.'''
 class Galaxy():
 
-    def __init__(self, user_given_seed: int, saved_alterations: dict) -> None:
-        self.seed: int = user_given_seed
+    def __init__(self, user_given_seed: float, saved_alterations: dict) -> None:
+        self.seed: float = user_given_seed
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
         self.is_altered: bool = saved_alterations is not None and saved_alterations != {}
@@ -50,7 +50,7 @@ class Galaxy():
             text += system.almanack()
         return text
 
-    def add_stellar_system(self, x: int, y: int, z: int) -> StellarSystem:
+    def add_stellar_system(self, x: float, y: float, z: float) -> StellarSystem:
         new_system = StellarSystem(self, x, y, z, self.saved_alterations)
         self.stellar_systems.append(new_system)
         return new_system

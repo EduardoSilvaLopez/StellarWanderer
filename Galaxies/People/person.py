@@ -51,7 +51,7 @@ class Person:
 
     def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70):
         my_random = random.Random(seed)
-        self.seed: float = seed if seed > 0 else len(gem.current_environment.persons) # New or existing person.
+        self.seed: float = seed
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()

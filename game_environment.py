@@ -16,7 +16,7 @@ class GameEnvironment:
     NEAREST_WORLD_RECHECK_FRAMES = 30  # ~0.5s at 60 FPS; a real-frame throttle, not game-time (time_scale can run to 1,000,000x)
     NEAREST_WORLD_HYSTERESIS = 0.05    # a candidate must be >5% closer to replace the current nearest_world, to avoid flip-flop
 
-    def __init__(self, galactic_seed: int, date_time: datetime.datetime, saved_alterations: Optional[dict]) -> None:
+    def __init__(self, galactic_seed: float, date_time: datetime.datetime, saved_alterations: Optional[dict]) -> None:
         self.date_time = date_time
         if (saved_alterations): saved_alterations['date_time'] = date_time
         self.galaxy: Galaxy = Galaxy(galactic_seed, saved_alterations)
@@ -28,7 +28,7 @@ class GameEnvironment:
     def generate_default(self) -> None:
         from Galaxies.orbit import Orbit
 
-        self.nearest_system = self.galaxy.add_stellar_system(26000, 0, 0)
+        self.nearest_system = self.galaxy.add_stellar_system(26000.0, 0.0, 0.0)
         current_orbit: Orbit = self.nearest_system.get_orbit(3.0)
         self.nearest_world = current_orbit.planets[0].moons[0]
         logger.info(f"Initial world's radius: {self.nearest_world.radius}")

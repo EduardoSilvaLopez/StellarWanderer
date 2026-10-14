@@ -167,7 +167,7 @@ class StartingDialog(Dialog):
 
     def _new_game_result(self) -> Optional[DialogResult]:
         try:
-            return ('new', int(self.seed_input) if self.seed_input else 1)
+            return ('new', float(self.seed_input) if self.seed_input else 1.0)
         except ValueError:
             self.seed_input = "1"
             return None

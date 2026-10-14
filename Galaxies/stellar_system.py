@@ -15,14 +15,14 @@ class StellarSystem:
     SOLAR_MASS = 1.989e30  # kg
     SOLAR_RADIUS = 6.957e8  # m
 
-    def __init__(self, parent_galaxy: Galaxy, x: int, y: int, z: int, saved_alterations: dict) -> None:
+    def __init__(self, parent_galaxy: Galaxy, x: float, y: float, z: float, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
         self.parent_galaxy: Galaxy = parent_galaxy
         self.entity_name: str = 'Those-Who-Share'
-        self.x: int = x
-        self.y: int = y
-        self.z: int = z
-        self.seed: float = (self.parent_galaxy.seed + self.x*1e10 + self.y*1e5 + self.z + 1) % Galaxies.constants.SEEDS_SCALING
+        self.x: float = x
+        self.y: float = y
+        self.z: float = z
+        self.seed: float = (self.parent_galaxy.seed + self.x*1e5 + self.y + self.z*1e-5 + 1) % Galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.color_name, self.radius = self._generate_star_type(my_random)
         self.mass: float = self._estimate_mass()

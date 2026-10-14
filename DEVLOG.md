@@ -244,19 +244,21 @@ CONVERSATIONS
 - Expend energy, air, water and food during flight / passing of time / laser usage.
 - Fill up the person with the communication record.
 
-Extra time: 37h45'
+Extra time: 37h45' + 19:30-
 
-Pending:
+Pending: Finish the outpost dialog with gimmicks.
+- Chatting gives information about the world?
 - Reintroduce the joke?
 - Introduce "Whatevers"?
-- Chatting gives information about the world?
-- Maintenance bar, show it.
-- Energy expense by move and laser. And show it.
-- Death by resource expenditure.
+
 
 BACKLOG
-* BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.
-- Move the zommed map on left-click + drag.
+* MAINTENANCE
+  * Maintenance bar, show it.
+  * Energy expense by move and laser. And show it.
+  * Death by resource expenditure.
+  * Move the zommed map on left-click + drag.
+* BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
 * TRAVEL TO THE SUN (forbidden areas)
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
