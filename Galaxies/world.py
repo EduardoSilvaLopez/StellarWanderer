@@ -341,8 +341,8 @@ class World:
 
     def get_outpost_for(self, km2: Km2) -> Optional[Outpost]:
         for outpost in self.outposts.values():
-            if int(outpost.longitude / Km2.SIZE) == int(km2.longitude / Km2.SIZE):
-                if int(outpost.latitude / Km2.SIZE) == int(km2.latitude / Km2.SIZE):
+            if int(outpost.longitude // Km2.SIZE) == int(km2.longitude // Km2.SIZE):
+                if int(outpost.latitude // Km2.SIZE) == int(km2.latitude // Km2.SIZE):
                     return outpost
         return None
     

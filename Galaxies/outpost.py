@@ -3,10 +3,11 @@ import random
 import math
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from vector3 import Vector3
 
+import game_environment as gem
 import Galaxies.constants
 from Galaxies.world import World
 from Galaxies.km2 import Km2
@@ -49,6 +50,9 @@ class Outpost:
 
         self.orientation: float = my_random.random() * 360
 
+        self.staff: List[Person] = []
+        self.work_shift: int = 4
+        self.free_days: float = 0.33
         self.com_officer: Optional[Person] = None
         self.last_visited: Optional[datetime] = None
 
@@ -72,10 +76,19 @@ class Outpost:
         if self.saved_alterations and 'last_visited' in self.saved_alterations:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 
-        if self.saved_alterations and 'com_officer_seed' in self.saved_alterations:
-            self.com_officer = Person(self.saved_alterations['com_officer_seed'], self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+        if not len(self.staff):
+            self.staff = [
+                Person(self.seed + 0, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
+                Person(self.seed + 1, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
+                Person(self.seed + 2, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
+                Person(self.seed + 3, self, 4, self.STAFF_AGE_MIN - 2, self.STAFF_AGE_MAX)
+            ]
+        my_random: random.Random = random.Random(self.seed)
+        if my_random.random() < self.free_days:
+            self.com_officer = self.staff[3]
         else:
-            self.com_officer = Person(0, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+            self.com_officer = self.staff[gem.current_environment.date_time.hour // 8]
+
         return self
 
     def get_alteration_key(self) -> str:
