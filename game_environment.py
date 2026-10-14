@@ -23,7 +23,7 @@ class GameEnvironment:
         self.nearest_world: World = None
         self.nearest_system: StellarSystem = None
         self._nearest_world_recheck_countdown: int = 0
-        self.persons: set = set()
+        self.persons: dict = dict()
 
     def generate_default(self) -> None:
         from Galaxies.orbit import Orbit

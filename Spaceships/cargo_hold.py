@@ -12,7 +12,6 @@ class CargoHold:
     def __init__(self, ship: Ship) -> None:
         self.parent_ship: Ship = ship
 
-        self.energy: int = 1e12 # 1 TWh - prolly too much but let us see.
         self.air: float = 28.0
         self.water: float = 28.0
         self.food: float = 28.0
@@ -22,8 +21,6 @@ class CargoHold:
     @staticmethod
     def load(ship: Ship, src: dict) -> CargoHold:
         result = CargoHold(ship)
-        if 'energy' in src:
-            result.energy = src['energy']
         if 'air' in src:
             result.air = src['air']
         if 'water' in src:
@@ -38,7 +35,6 @@ class CargoHold:
 
     def serialize(self) -> dict:
         return {
-            'energy': self.energy,
             'air': self.air,
             'water': self.water,
             'food': self.food,

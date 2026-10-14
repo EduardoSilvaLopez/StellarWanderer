@@ -70,9 +70,9 @@ class OreMine(Updatable):
         return result
 
     def get_next_update(self) -> datetime:
-        from game_environment import current_environment
+        import game_environment as gem
         if self.next_update_at is None:
-            return current_environment.date_time
+            return gem.current_environment.date_time
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:

@@ -239,16 +239,20 @@ CONVERSATIONS
 
 ### 2026-10-13 (5/10)
 - Fill up the conversations concept with current data.
-
-Extra time: 34h15'
-
-Pending:
 - Introduce conversation report in the person, save and load it.
-- Reintroduce the joke?
-- Introduce "Whatevers"?
 - Recalculate the loss of reputation with resources provison.
 - Expend energy, air, water and food during flight / passing of time / laser usage.
 - Fill up the person with the communication record.
+
+Extra time: 37h45'
+
+Pending:
+- Reintroduce the joke?
+- Introduce "Whatevers"?
+- Chatting gives information about the world?
+- Maintenance bar, show it.
+- Energy expense by move and laser. And show it.
+- Death by resource expenditure.
 
 BACKLOG
 * BETTER STARTING DIALOG: Save with a name. Overwrite save. Delete saves. Instructions.

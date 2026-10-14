@@ -476,7 +476,7 @@ class Player:
         logger.info(f"        World|  {stellar_pos[0]}  |  {stellar_pos[1]}  |  {stellar_pos[2]}")
         logger.info(f"       Player|  {surface_vel[0]}  |  {surface_vel[1]}  |  {surface_vel[2]}")
 
-        self.ship.set_notification(f"Arriving to {world.name}, {self.get_title()} Pilot.")
+        self.ship.notification.set(f"Arriving to {world.name}, {self.get_title()} Pilot.")
         self.is_bound = True
         return self
 
@@ -571,7 +571,7 @@ class Player:
         self.position.x, self.position.y, self.position.z = player_pos
         self.velocity.x, self.velocity.y, self.velocity.z = player_vel
 
-        self.ship.set_notification(f"Leaving {world.name}, {self.get_title()} Pilot.")
+        self.ship.notification.set(f"Leaving {world.name}, {self.get_title()} Pilot.")
         self.is_bound = False
         return self
 

@@ -1,11 +1,11 @@
-from datetime import datetime
 from typing import List, Optional
+from datetime import datetime
 
 import logging
 
+import game_environment as gem
 from Dialogs.messages import show_message
 from Galaxies.Politics.political_entity import PoliticalEntity
-from game_environment import current_environment as env
 from Galaxies.outpost import Outpost
 from Spaceships.ship import Ship
 from ..player import current_player as player
@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 class ReportingInOutpost(Conversation):
     def __init__(self, interlocutor: Person, outpost: Outpost):
-        self.interlocutor: Person = interlocutor
+        super().__init__(interlocutor)
         self.outpost: Outpost = outpost
         self.title: str =  f'Outpost "{outpost.name}", Communication Officer {interlocutor.name} {interlocutor.surname}'
 
     def start(self) -> None:
         visit_time_delta: Optional[float] = None if not self.outpost.last_visited\
-            else (env.date_time - self.outpost.last_visited).total_seconds()
+            else (self.date_time - self.outpost.last_visited).total_seconds()
 
         if player.ship.cargo_hold.ore > 0:
             self.greet_and_thank(visit_time_delta)
@@ -34,7 +34,7 @@ class ReportingInOutpost(Conversation):
     def greet_and_thank(self, time_since_last_visit: Optional[datetime]) -> None:
         from Galaxies.People.player import current_player as player
 
-        if self.interlocutor.last_communication_at and self.interlocutor.last_communication_at < (env.date_time - 28*24*60*60):
+        if self.interlocutor.last_communication_at and (gem.current_environment.date_time - self.interlocutor.last_communication_at).total_seconds() > 28 * 24 * 60 * 60:
             self.say_had_not_seen_you_thanks(time_since_last_visit)
         elif time_since_last_visit:
             self.say_i_am_and_thanks(time_since_last_visit)
@@ -128,7 +128,7 @@ class ReportingInOutpost(Conversation):
         
         text: str = (
             f"{presentation}"
-            f"\n\nThank you for the ore, {player.get_title()}."
+            f"\n\nThank you for sharing the ore, {player.get_title()}."
             f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else str()}"
             f"\n\nWe will now replenish your resources and repair your ship."
             f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else str()}"
@@ -143,7 +143,7 @@ class ReportingInOutpost(Conversation):
                 }
                 , {
                 'text': 'Thank you for sharing',
-                'sympathy': -1 if self.interlocutor.loyalty100 > 10 else 5, # Took the hint
+                'sympathy': -1 if self.interlocutor.loyalty100 > 10 else 10, # Took the hint
                 }
             ]
 
@@ -152,31 +152,66 @@ class ReportingInOutpost(Conversation):
             on_result=lambda button_index: self.finish(time_since_last_visit, button_index, buttons)
             )
 
-    def finish(self, time_since_last_visit: int, chosen_button: int, consequences: dict) -> ReportingInOutpost:
+    def finish(self, time_since_last_visit: Optional[int], chosen_button: int, consequences: dict) -> ReportingInOutpost:
         status = player.those_who_share
-        cargo_hold = player.ship.cargo_hold
+        ship = player.ship
+        cargo_hold = ship.cargo_hold
         my_consequences: dict = consequences[chosen_button]
 
         if 'reputation' in my_consequences:
             status.reputation += my_consequences['reputation']
         if 'sympathy' in my_consequences:
-            self.interlocutor.sympathy100 += my_consequences['sympathy']
+            self.interlocutor.adjust_sympathy(my_consequences['sympathy'])
 
-        # Here the general consequences:
-        # Substitute later by calculation of each resource spent.
-        if time_since_last_visit:
-            status.reputation -= 0.02 * time_since_last_visit / (24*60*60)
-        cargo_hold.energy = 1e12 # 1 TWh - prolly too much but let us see.
-        cargo_hold.air = 28.0
-        cargo_hold.water = 28.0
-        cargo_hold.food = 28.0
+        # Reputation loss = need of stuff.
+        rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 12
+        rep_loss_energy = -(1e12 - ship.energy) * 5e-13 # W/o laser or acc, negligible...
+        rep_loss_air = -(28 - ship.cargo_hold.air) * 0.0006
+        rep_loss_water = -(28 - ship.cargo_hold.air) * 0.0003
+        rep_loss_food = -(28 - ship.cargo_hold.air) * 0.0006
 
-        # More mines required:
-        mines_required = 5 - cargo_hold.mines
-        status.reputation -= 0.20 * mines_required
-        cargo_hold.mines += mines_required
+        ship.maintenance = 0.8 if ship.maintenance < 0.8 else ship.maintenance
+        ship.energy = 1e12
+        cargo_hold.air = 28
+        cargo_hold.water = 28
+        cargo_hold.foor = 28
 
-        self.interlocutor.log_update()
+        # Reputation loss due to mines:
+        rep_loss_mines = -0.20 * (5 - cargo_hold.mines)
+        cargo_hold.mines = 5
 
+        # Reputation gain: ore
+        rep_gain_ore = 0.02 * cargo_hold.ore
+        cargo_hold.ore = 0
+
+        rep_loss = rep_loss_maintenance \
+            + rep_loss_energy \
+            + rep_loss_air \
+            + rep_loss_water \
+            + rep_loss_food \
+            + rep_loss_mines
+
+        rep_change = rep_loss + rep_gain_ore
+
+        logger.debug(
+            "Reputation changes:"
+            f"\n * Maintenance: {rep_loss_maintenance:.6f}"
+            f"\n * Energy: {rep_loss_energy:.6f}"
+            f"\n * Air: {rep_loss_air:.6f}"
+            f"\n * Water: {rep_loss_water:.6f}"
+            f"\n * Food: {rep_loss_food:.6f}"
+            f"\n * Mines: {rep_loss_mines:.6f}"
+            f"\n   Total loss: {rep_loss:.6f}"
+            f"\n * Ore: {rep_gain_ore:.6f}"
+            )
+
+        if rep_change > 0.0:
+            self.interaction_lines.append("Came with enough ore.")
+        if time_since_last_visit is not None and time_since_last_visit > 60*60 and rep_gain_ore <= 0:
+            self.interaction_lines.append("Came with no ore.")
+
+        status.reputation += rep_change
+
+        self.close(self.interaction_lines)
         return self
     

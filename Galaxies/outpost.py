@@ -75,7 +75,7 @@ class Outpost:
         if self.saved_alterations and 'com_officer_seed' in self.saved_alterations:
             self.com_officer = Person(self.saved_alterations['com_officer_seed'], self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         else:
-            self.com_officer = Person(self.seed + 1, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+            self.com_officer = Person(0, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
         return self
 
     def get_alteration_key(self) -> str:

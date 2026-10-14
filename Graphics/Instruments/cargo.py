@@ -10,6 +10,12 @@ if TYPE_CHECKING:
     from Galaxies.People.player import Player
 
 
+def format_quantity(value: float) -> str:
+    """At most two decimals, without trailing zeros: 5 -> '5', 2.5 -> '2.5', 0.333 -> '0.33'."""
+    # + 0.0 turns a rounded -0.0 into 0.0, so a tiny negative value does not show as '-0'.
+    return f'{round(value, 2) + 0.0:.2f}'.rstrip('0').rstrip('.')
+
+
 class Cargo:
     """Draw the CARGO list: one line per hold element, name and quantity."""
 
@@ -27,6 +33,6 @@ class Cargo:
         line_spacing = line_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
         for element, quantity in player.ship.cargo_hold.serialize().items():
-            line = line_font.render(f'{element.upper()}: {quantity}', True, ACCENT)
+            line = line_font.render(f'{element.upper()}: {format_quantity(quantity)}', True, ACCENT)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

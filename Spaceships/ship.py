@@ -9,6 +9,7 @@ import game_environment as gem
 from .laser import Laser
 from .cargo_hold import CargoHold
 from .scanner import Scanner
+from .notification import Notification
 from Updating import Updatable, update_queue
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
@@ -31,22 +32,38 @@ class Ship(Updatable):
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 
+    UPDATE_PERIOD = 24 * 60 * 60 # Large enough to avoid drifts.
+
     def __init__(self, owner: Player) -> None:
-        self.owner = owner
-        self.scanner = Scanner(self)
-        self.laser = Laser(self)
+        self.owner: Player = owner
+        self.maintenance: float = 1.0
+        self.energy: int = 1e12 # 1 TWh - prolly too much but let us see.
+        self.scanner: Scanner = Scanner(self)
+        self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
-        self.notification: str = str()
+        self.notification: Notification = Notification()
+        self.last_update_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
+        self.update(gem.current_environment.date_time)
 
     @staticmethod
     def load(owner: Player, src: dict) -> Ship:
         result = Ship(owner)
+        if 'last_update_at' in src:
+            result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
+        if 'maintenance' in src:
+            result.maintenance = src['maintenance']
+        if 'energy' in src:
+            result.energy = src['energy']
         result.cargo_hold = CargoHold.load(result, src['cargo_hold'])
+        result.update(gem.current_environment.date_time)
         return result
 
     def serialize(self) -> dict:
         return {
+            'last_update_at' : self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'maintenance' : self.maintenance,
+            'energy' : self.energy,
             'cargo_hold': self.cargo_hold.serialize()
         }
 
@@ -54,21 +71,34 @@ class Ship(Updatable):
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
-        self.notification = ""
+        if self.last_update_at is None:
+            self.last_update_at = game_date_time
+            self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
+            update_queue.add(self)
+            return
+        
+        days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
 
-    def set_notification(self, message: str) -> Ship:
-        self.notification = message
-        self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
+        self.maintenance -=  0.001 * days
+        self.energy -=  1e+5 * days
+        self.cargo_hold.air -= days
+        self.cargo_hold.water -= days
+        self.cargo_hold.food -= days
+
+        # Here... warnings and even game over, later.
+
+        self.last_update_at = game_date_time
+        self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
         update_queue.add(self)
 
     def set_mine_pressed(self) -> None:
         '''React to the "place mine" button.'''
         # Cancel is no mine.
         if self.cargo_hold.mines <= 0:
-            self.set_notification("No mines available.")
+            self.notification.set("No mines available.")
             return
         if not self.owner.is_bound:
-            self.set_notification("Mines can only be placed on a world.")
+            self.notification.set("Mines can only be placed on a world.")
             return
 
         # Check if rocks nearby.
@@ -106,7 +136,7 @@ class Ship(Updatable):
             if hitting_a_rock:
                 break
         if hitting_a_rock:
-            self.set_notification("There are rocks there, we cannot place a mine.")
+            self.notification.set("There are rocks there, we cannot place a mine.")
             return
 
         # Cancel if no ore field.
@@ -123,7 +153,7 @@ class Ship(Updatable):
                     targeted_field = field
                     closest_distance = distance_to_field
         if targeted_field is None:
-            self.set_notification("No ore field here.")
+            self.notification.set("No ore field here.")
             return
 
         new_mine = OreMine(targeted_field, front_lon, front_lat, player_yaw)

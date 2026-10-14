@@ -13,7 +13,7 @@ from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
-from .notification import Notification
+from .notification import notification_bar
 from .altitude_meter import AltitudeMeter
 from .binding_meter import BindingMeter
 from .radar import Radar
@@ -90,7 +90,7 @@ class Console:
         light = max(4, int(height * 0.045))
         notification_height = int(height * 0.12)
         notification_y = h - light * 2 - notification_height
-        Notification.draw(surface, fonts, w, notification_y, notification_height, player)
+        notification_bar.draw(surface, fonts, w, notification_y, notification_height, player)
 
         # Indicator lights
         for i in range(10):

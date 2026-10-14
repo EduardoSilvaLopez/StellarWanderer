@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from Galaxies.People.player import Player
 
 
-class Notification:
+class notification_bar:
     """Draw a full-width notification bar at the bottom with red text."""
 
     @staticmethod
@@ -23,6 +23,6 @@ class Notification:
         # Render notification text in red, centered vertically with left padding
         text_font = fonts.get(max(10, int(height * 0.6)))
         pad = max(8, int(w * 0.02))
-        notification_text = text_font.render(player.ship.notification, True, (255, 64, 64))
+        notification_text = text_font.render(player.ship.notification.message, True, (255, 64, 64))
         text_rect = notification_text.get_rect(midleft=(rect.left + pad, rect.centery))
         surface.blit(notification_text, text_rect)

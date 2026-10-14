@@ -103,7 +103,7 @@ def start_game(action: str, value: object) -> float:
         elapsed = 0.0
     write_almanack_async(gem.current_environment.galaxy)
     player = player_module.current_player
-    player.ship.set_notification(f"Welcome, {player.get_title()} Pilot.")
+    player.ship.notification.set(f"Welcome, {player.get_title()} Pilot.")
     if action == 'new':
         nearest_world = gem.current_environment.nearest_world
         planet = nearest_world.parent_planet.name

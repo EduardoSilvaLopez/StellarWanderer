@@ -6,7 +6,7 @@ from functools import lru_cache
 import logging
 import os
 import random
-from typing import TYPE_CHECKING, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import pygame
 
@@ -51,7 +51,7 @@ class Person:
 
     def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70):
         my_random = random.Random(seed)
-        self.seed: float = seed
+        self.seed: float = seed if seed > 0 else len(gem.current_environment.persons) # New or existing person.
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()
@@ -82,12 +82,16 @@ class Person:
 
         self.residency: Any = residency
         self.last_communication_at: Optional[datetime] = None
-        self.the_joker_wanted_payment: bool = False # Just a PoC of individual com. status.
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
         self.portrait = self._load_portrait(my_random)
 
-        gem.current_environment.persons.add(self)
+        
+        self.interactions: dict = {}
+        if self.seed in gem.current_environment.persons:
+            self.interactions = gem.current_environment.persons[self.seed].interactions
+        else:
+            gem.current_environment.persons[self.seed] = self
         self.log_update()
 
     def _load_portrait(self, my_random: random.Random) -> Person:
@@ -127,6 +131,7 @@ class Person:
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
         logger.info(
             f"PERSON UPDATE: {self.get_full_name()}\n"
+            f" - ID: {self.seed}.\n"
             f" - {self.gender_group.name.capitalize()}, {self.race.name.capitalize()}\n"
             f" - D.O.B.: {self.dob.strftime("%Y-%m-%d")} ({age} y.o.)\n"
             f" - Empathy: {self.empathy100:.2f}%\n"
@@ -137,10 +142,14 @@ class Person:
         return self
 
     def serialize(self) -> dict:
+        interactions_dict: dict = {}
+        for int_date_time, int_lines in self.interactions.items():
+            interactions_dict[int_date_time.strftime("%Y-%m-%d")] = int_lines
+
         result: dict = {
             'seed': self.seed,
             'last_communication_at': str(self.last_communication_at),
-            'the_joker_wanted_payment': self.the_joker_wanted_payment
+            'interactions' : interactions_dict
         }
         return result
 
@@ -150,6 +159,20 @@ class Person:
 
     def get_full_name(self) -> str:
         return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
+
+    # 'Personality' traits change slower the more they approach the extremes of 0 and 100
+    def adjust_empathy(self, change: float) -> Person:
+        self.empathy100 += change / (1 + abs(self.empathy100 - 50))
+        self.empathy100 = max(0, min(100, self.empathy100))
+    def adjust_sociability(self, change: float) -> Person:
+        self.sociability100 += change / (1 + abs(self.sociability100 - 50))
+        self.sociability100 = max(0, min(100, self.sociability100))
+    def adjust_loyalty(self, change: float) -> Person:
+        self.loyalty100 += change / (1 + abs(self.loyalty100 - 50))
+        self.loyalty100 = max(0, min(100, self.loyalty100))
+    def adjust_sympathy(self, change: float) -> Person:
+        self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
+        self.sympathy100 = max(0, min(100, self.sympathy100))
 
     def communicate_from(self, outpost: Outpost) -> Person:
         from .conversation import Conversation

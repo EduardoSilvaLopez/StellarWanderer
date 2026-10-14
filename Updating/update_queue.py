@@ -33,6 +33,9 @@ class UpdateQueue:
         """Empty the queue. Used by reset of the game for some reason."""
         self._queue.clear()
 
+    def __contains__(self, updatable: object) -> bool:
+        return updatable in self._queue
+
     def update(self, current_date_time: datetime) -> None:
         """Update all objects whose next update time has passed.
 

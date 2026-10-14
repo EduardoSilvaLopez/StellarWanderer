@@ -89,21 +89,25 @@ class Savefile:
     @staticmethod
     def save() -> None:
         '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
-        environment = gem.current_environment
+        env = gem.current_environment
         player = pem.current_player
+
+        persons_dict = {}
+        for person in env.persons.values():
+            persons_dict[person.seed] = person.serialize()
 
         data = {
             'environment': {
-                'galactic_seed': environment.galaxy.seed,
-                'date_time': environment.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                'galaxy_alterations': gem.current_environment.galaxy.get_alterations(),
-                'persons': [p.serialize() for p in environment.persons]
+                'galactic_seed': env.galaxy.seed,
+                'date_time': env.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'galaxy_alterations': env.galaxy.get_alterations(),
+                'persons': persons_dict
             }
             , 'player': player.serialize()
         }
-        file_name = environment.date_time.strftime('%Y-%m-%d %H:%M:%S')
+        file_name = env.date_time.strftime('%Y-%m-%d %H:%M:%S')
         file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
-        file_name = 'Savefile ' + str(environment.galaxy.seed) + ' ' + file_name + '.json'
+        file_name = 'Savefile ' + str(env.galaxy.seed) + ' ' + file_name + '.json'
         os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
         file_name = data_path(SAVEFILES_DIR, file_name)
         logger.info("New savefile's name: " + file_name)

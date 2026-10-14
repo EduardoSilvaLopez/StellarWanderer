@@ -1,9 +1,11 @@
+from typing import List
 from abc import abstractmethod
+from datetime import datetime
 
 import logging
-from typing import List
-
 from Dialogs.messages import Message
+
+import game_environment as gem
 from Galaxies.People.person import Person
 from Galaxies.outpost import Outpost
 
@@ -15,6 +17,11 @@ class Conversation:
         if isinstance(interlocutor.residency, Outpost):
             from .Conversations.reporting_in_outpost import ReportingInOutpost
             return ReportingInOutpost(interlocutor, interlocutor.residency).start()
+
+    def __init__(self, interlocutor: Person):
+        self.interlocutor: Person = interlocutor
+        self.date_time: datetime = gem.current_environment.date_time
+        self.interaction_lines: List[str] = []
 
     def prepare_message(self, title: str, text: str, button_dicts: List[dict]) -> Message:
         '''Gets a dict of dicts with "text" for every button and the related effects.'''
@@ -39,6 +46,7 @@ class Conversation:
             )
         return result
     
-    @abstractmethod
-    def finish(self):
+    def close(self, interaction_lines: List[str]):
+        self.interlocutor.log_update()
+        self.interlocutor.interactions[self.date_time] = interaction_lines
         logger.debug("Finished.")
