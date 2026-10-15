@@ -33,10 +33,10 @@ class Galaxy():
             for system in self.stellar_systems:
                 if system.is_altered:
                     system_alterations: Optional[dict] = system.get_alterations()
-                    if system_alterations is None:
-                        star_alterations.pop(system.get_alterations_key(), None)
-                    else:
+                    if system_alterations is not None and len(system_alterations) > 0:
                         star_alterations[system.get_alterations_key()] = system_alterations
+                    else:
+                        star_alterations.pop(system.get_alterations_key(), None)
         return star_alterations
 
     def almanack(self) -> str:

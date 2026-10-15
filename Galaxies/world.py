@@ -319,27 +319,29 @@ class World:
             km2_alterations = copy.deepcopy(self.saved_alterations['Km2s'])
         for km2 in self.km2s:
             if km2.is_altered: # There is no "no longer altered"
-                km2_alterations[km2.get_alterations_key()] = km2.get_alterations()
-        if len(km2_alterations):
+                km2_alt = km2.get_alterations()
+                if km2_alt is not None and len(km2_alt) > 0:
+                    km2_alterations[km2.get_alterations_key()] = km2_alt
+        if km2_alterations is not None and len(km2_alterations) > 0:
             result['Km2s'] = km2_alterations
 
         moon_alterations: dict = dict()
         for moon in self.moons:
             one_moon_alterations: Optional[dict] = moon.get_alterations()
-            if one_moon_alterations is not None:
+            if one_moon_alterations is not None and len(one_moon_alterations) > 0:
                 moon_alterations[moon.get_alterations_key()] = one_moon_alterations
-        if len(moon_alterations):
+        if moon_alterations is not None and len(moon_alterations) > 0:
             result['moons'] = moon_alterations
 
         all_outposts_alterations: dict = dict()
         for alt_key, outpost in self.outposts.items():
             outpost_alterations: Optional[dict] = outpost.get_alterations()
-            if outpost_alterations is not None:
+            if outpost_alterations is not None and len(outpost_alterations) > 0:
                 all_outposts_alterations[alt_key] = outpost_alterations
-        if len(all_outposts_alterations):
+        if all_outposts_alterations is not None and len(all_outposts_alterations) > 0:
             result['outposts'] = all_outposts_alterations
 
-        if not len(result):
+        if len(result) <= 0:
             return None
         return result
 

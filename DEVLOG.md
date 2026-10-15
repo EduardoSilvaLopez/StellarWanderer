@@ -257,17 +257,16 @@ RELEASE "The Three Powers" created, with installer.
 
 * MAINTENANCE
   * Extra: Real orbits
+  * Energy expense by move and laser. And show it.
+  * Maintenance bar, show it.
+  * Extra: Move the zommed map on left-click + drag.
+  * Death by resource expenditure.
 
 Energy consumption europe per day. 42GWh
 
 Extra time: 40h45' + 12:30 - 
 
 # BACKLOG
-  * Maintenance bar, show it.
-  * Energy expense by move and laser. And show it.
-  * Death by resource expenditure.
-  * Extra: Move the zommed map on left-click + drag.
-  * Extra: Laser showing rocks too far away, when wide above sky?
   * Extra: Spherification
   * Extra: Directories revamp, including snake_case.
   * Extra: Pythonise all

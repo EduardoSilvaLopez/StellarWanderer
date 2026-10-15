@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
 
+from Dialogs.messages import Message, show_message
 from Galaxies.ore_fields import OreField
 from Galaxies.ore_mine import OreMine
 import game_environment as gem
@@ -43,7 +44,7 @@ class Ship(Updatable):
 
     ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
-    def __init__(self, owner: Player, energy_max: float = 1e12) -> None:
+    def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
         self.is_bound: bool = False
         self.position: Position = Position()
@@ -51,8 +52,8 @@ class Ship(Updatable):
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
-        self.energy_max: float = energy_max  # 1 TWh - prolly too much but let us see. Full: a new ship starts full.
-        self.energy: float = energy_max
+        self.energy_max: float = Ship.ENERGY_MAX  # 1 TWh - prolly too much but let us see. Full: a new ship starts full.
+        self.energy: float = Ship.ENERGY_MAX
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
@@ -115,17 +116,51 @@ class Ship(Updatable):
         
         days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
 
+        self.reduce_resources(days)
+
+        self.last_update_at = game_date_time
+        self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
+        update_queue.add(self)
+
+    def reduce_resources(self, days: float) -> Ship:
+
+        old_maintenance: float = self.maintenance
+        old_energy: float =  self.energy
+        old_air: float = self.cargo_hold.air
+        old_water: float = self.cargo_hold.water
+        old_food: float = self.cargo_hold.food
         self.maintenance -=  0.001 * days
         self.energy -=  1e5 * days
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
         self.cargo_hold.food -= days
 
-        # Here... warnings and even game over, later.
+        # Maintenance thresholds:
+        if self.maintenance <= 0.1 < old_maintenance:
+            self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
+        elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
+            self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
+        elif self.cargo_hold.air <= 5.0 < old_air:
+            self.notification.set('WARNING: Ship needs air refill. Remain near an outpost.')
+        elif self.cargo_hold.air <= 2.0 < old_air:
+            self.notification.set('CRITICAL: Ship needs air refill. Go immediately to an outpost.')
+        elif self.cargo_hold.water <= 2.0 < old_water:
+            self.notification.set('CRITICAL: Ship needs water refill. Go immediately to an outpost.')
+        elif self.cargo_hold.food <= 2.0 < old_food:
+            self.notification.set('CRITICAL: You need food refill. Go immediately to an outpost.')
 
-        self.last_update_at = game_date_time
-        self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
-        update_queue.add(self)
+        if self.maintenance <= 0.0:
+            self.owner.game_over('Your ship falls appart due to lack of maintenance. Your death is horrible but swift.')
+        elif self.energy <= 0.0:
+            self.owner.game_over('Your ship becomes a silent frozen box. Your death is slow but calm at the end.')
+        elif self.cargo_hold.air <= 0.0:
+            self.owner.game_over('You die of CO2 intoxication. A somehow funny death but you are anyway dead.')
+        elif self.cargo_hold.water <= -2.0: # Dying of thirst after 2 days without water.
+            self.owner.game_over('You die of dehydration. A truly horrible death.')
+        elif self.cargo_hold.food <= -14.0: # Starvation at 14 days without food.
+            self.owner.game_over('You die of hunger. A slow and horrible death.')
+
+        return self
 
     def set_mine_pressed(self) -> None:
         '''React to the "place mine" button.'''

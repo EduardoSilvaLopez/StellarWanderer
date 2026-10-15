@@ -28,7 +28,10 @@ class ResourceBars:
     @staticmethod
     def levels(ship: Ship) -> List[Tuple[str, float]]:
         """(label, fraction of the maximum left) for every resource shown, top to bottom."""
-        return [('Energy', ship.energy / ship.energy_max)]
+        return [
+            ('Maintenance', max(0.0, min(1.0, ship.maintenance))),  # outposts only restore it to 0.8: that is intended
+            ('Energy', ship.energy / ship.energy_max),
+        ]
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect) -> None:

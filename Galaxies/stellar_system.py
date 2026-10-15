@@ -137,9 +137,11 @@ class StellarSystem:
             for orbit in self.orbits:
                 if orbit.is_altered:
                     orbit_alterations: Optional[dict] = orbit.get_alterations()
-                    if orbit_alterations is not None:
+                    if orbit_alterations is not None and len(orbit_alterations) > 0:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
-        if alterations == {}:
+                    else:
+                        alterations.pop(orbit.get_alterations_key())
+        if len(alterations) <= 0:
             return None
         return alterations
 

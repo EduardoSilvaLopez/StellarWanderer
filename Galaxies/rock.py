@@ -20,13 +20,13 @@ class Rock(Updatable):
     BASE_COOLING_PERIOD = 60 * 60 # Once per hour.
     COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature. For 1m3.
     TEMP_MAX = 2000.0 # Boom.
-    ORE_RICH_THRESHOLD = 0.998
+    ORE_RICH_THRESHOLD = 0.9998
 
     def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
         import random
         self.parent_km2: Km2 = parent_Km2
         my_random: Random = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
-        self.size: float = abs(my_random.lognormvariate(math.log(12), 1))
+        self.size: float = abs(my_random.lognormvariate(math.log(10), 0.8))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
         # around this point, so it can sit partly under the ground).

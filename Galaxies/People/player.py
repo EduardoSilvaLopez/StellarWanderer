@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 
+from Dialogs.messages import Message, show_message
 from Galaxies.Politics import political_entity
 from Galaxies.Politics.personal_status import PersonalStatus
 from Spaceships.ship import Ship
@@ -25,6 +26,7 @@ class Player:
         self.time_scale: int = 1  # Default time scale
         self.ship: Ship = Ship(self)
         self.those_who_share: PersonalStatus = PersonalStatus()
+        self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -81,5 +83,19 @@ class Player:
         else:
             logger.warning("Unknown political entity.")
             return str()
+    
+    def game_over(self, reason: str) -> None:
+        """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
+        if self.is_dead:
+            return
+        self.is_dead = True
+        show_message(
+            Message(
+                title='GAME OVER',
+                text=reason,
+                buttons=["Damn!"]
+                )
+            , None #pending
+            )
 
 current_player: Player = None

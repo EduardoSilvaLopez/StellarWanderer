@@ -26,7 +26,7 @@ class Scanner:
     collects from.
     """
 
-    MAX_LENGTH = 500  # metres
+    MAX_LENGTH = 200  # metres
 
     def __init__(self, ship: Ship) -> None:
         self.ship = ship

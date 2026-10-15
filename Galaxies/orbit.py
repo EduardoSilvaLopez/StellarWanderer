@@ -58,8 +58,10 @@ class Orbit:
             for world in self.planets:
                 if world.is_altered:
                     world_alterations: Optional[dict] = world.get_alterations()
-                    if world_alterations is not None:
+                    if world_alterations is not None and len(world_alterations) > 0:
                         alterations[world.get_alterations_key()] = world_alterations
-        if alterations == {}:
+                    else:
+                        alterations.pop(world.get_alterations_key())
+        if len(alterations) <= 0:
             return None
         return alterations

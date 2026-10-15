@@ -125,10 +125,25 @@ def start_game(action: str, value: object) -> float:
 
 
 def open_starting_dialog(
-        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
+        game_running: bool = True
         ) -> Tuple[DialogResult, pygame.Surface]:
-    """Show the starting dialog above the frozen game (see run_modal_dialog)."""
-    return run_modal_dialog(StartingDialog(game_running=True), screen, gui, fonts, clock)
+    """Show the starting dialog above the frozen game (see run_modal_dialog). With game_running False (after a death)
+    there is no resuming: only a new game, a load, or exit."""
+    return run_modal_dialog(StartingDialog(game_running=game_running), screen, gui, fonts, clock)
+
+
+def open_start_menu(
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
+        elapsed: float, game_running: bool
+        ) -> Tuple[bool, pygame.Surface, float]:
+    """The starting dialog, and the game it chooses. Returns (keep running, window, elapsed ship seconds)."""
+    result, screen = open_starting_dialog(screen, gui, fonts, clock, game_running)
+    if result[0] == 'exit':
+        return False, screen, elapsed
+    if result[0] in ('new', 'load'):
+        elapsed = start_game(*result)
+    return True, screen, elapsed
 
 
 def run_modal_dialog(
@@ -202,6 +217,11 @@ def main() -> None:
             pending_message = next_pending_message()
         if not running:
             break
+
+        # A death: once its message is closed, the game is over and the starting dialog takes over.
+        if player_module.current_player.is_dead:
+            running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=False)
+            continue
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
