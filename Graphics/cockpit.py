@@ -35,8 +35,8 @@ class Cockpit:
         import game_environment as gem
         Canopy.draw(surface, w, h)
         Crosshair.draw(surface, w, h)
-        VelocityMarkers.draw(surface, fonts, w, h, player)
-        ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player)
+        VelocityMarkers.draw(surface, fonts, w, h, player.ship)
+        ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
         PoliticalInfo.draw(surface, fonts, w, h, player)
-        Console.draw(surface, fonts, w, h, player, date_time)
+        Console.draw(surface, fonts, w, h, player.ship, date_time)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)

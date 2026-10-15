@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from Galaxies.ore_mine import OreMine
     from Galaxies.outpost import Outpost
     from Galaxies.orbit import Orbit
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 
@@ -348,7 +348,7 @@ class World:
     
     def surface_point_stellar(self, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Stellar position (metres) of a point on this world's surface, given in surface coordinates.
-        Same convention as Player.calculate_stellar_position, with altitude 0."""
+        Same convention as Navigation._stellar_position_from_surface, with altitude 0."""
         _, up_hat, _ = self.surface_basis(longitude, latitude, current_datetime)
         centre = self.calculate_stellar_position(current_datetime)
         offset = up_hat * self.radius
@@ -422,8 +422,8 @@ class World:
         basis = self.surface_basis(longitude, latitude, current_datetime)
         return self.stellar_vector_to_surface_with_basis(vector, basis)
 
-    def calculate_star_position(self, player: Player, current_datetime: datetime) -> Vector3:
-        """Position of this world's star relative to `player`, in the player's local
+    def calculate_star_position(self, ship: Ship, current_datetime: datetime) -> Vector3:
+        """Position of this world's star relative to `ship`, in the ship's local
         east/up/north tangent-plane frame (meters), before any heading rotation.
 
         Works in a free-standing, star-centered basis X=(1,0,0), Y=(0,1,0), Z=(0,0,1),
@@ -436,15 +436,15 @@ class World:
         stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
         world_center = Vector3(stellar_x, -stellar_y, stellar_z)
 
-        east_hat, up_hat, north_hat = self.surface_basis(player.position.x, player.position.z, current_datetime)
+        east_hat, up_hat, north_hat = self.surface_basis(ship.position.x, ship.position.z, current_datetime)
 
-        player_position = world_center + up_hat * (self.radius + player.position.y)
-        relative = -player_position
+        ship_position = world_center + up_hat * (self.radius + ship.position.y)
+        relative = -ship_position
 
         return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
 
     def stellar_to_surface_position(self, stellar_pos: Vector3, current_datetime: datetime) -> Vector3:
-        """Inverse of Player.calculate_stellar_position: (longitude, altitude, latitude) for a stellar position."""
+        """Inverse of Navigation._stellar_position_from_surface: (longitude, altitude, latitude) for a stellar position."""
         stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
         relative = Vector3(stellar_pos[0] - stellar_x, -stellar_pos[1] + stellar_y, stellar_pos[2] - stellar_z)
 
@@ -474,7 +474,7 @@ class World:
         return Vector3(relative.dot(east_hat) - spin_speed, relative.dot(up_hat), relative.dot(north_hat))
 
     def stellar_to_surface_velocity(self, stellar_vel: Vector3, longitude: float, altitude: float, latitude: float, current_datetime: datetime) -> Vector3:
-        """Inverse of Player.calculate_stellar_velocity: (east, up, north) velocity for a stellar velocity."""
+        """Inverse of Navigation._stellar_velocity_from_surface: (east, up, north) velocity for a stellar velocity."""
         basis = self.surface_basis(longitude, latitude, current_datetime)
         return self.stellar_to_surface_velocity_with_basis(stellar_vel, altitude, latitude, current_datetime, basis)
 

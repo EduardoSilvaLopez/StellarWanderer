@@ -7,18 +7,18 @@ import pygame
 from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class Compass:
     """Draw a north-up compass dial with a needle showing the player's heading."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, left_bound: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_top: int, cluster_height: int, left_bound: int) -> None:
         """Draw the compass dial.
 
         The dial stays fixed with 'N' at the top; the needle rotates to point
-        in the direction the player is currently facing (player.yaw is
+        in the direction the player is currently facing (ship.attitude.yaw is
         in degrees, clockwise from north). Sized to fit between left_bound
         (the coordinate text block) and the centre multi-function display.
         """
@@ -44,7 +44,7 @@ class Compass:
             surface.blit(label_surf, label_surf.get_rect(center=label_pos))
 
         # Needle: points toward the player's current heading.
-        heading = math.radians(player.yaw)
+        heading = math.radians(ship.attitude.yaw)
         dir_x, dir_y = math.sin(heading), -math.cos(heading)
         perp_x, perp_y = math.cos(heading), math.sin(heading)
 

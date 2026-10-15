@@ -6,13 +6,13 @@ import pygame
 from .constants import PROGRADE_COLOR, RETROGRADE_COLOR
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class VelocityMarkers:
     """Markers showing the ship's current direction of travel (prograde) and its
     exact opposite (retrograde — point here and hold W to cancel drift), both
-    measured in the same reference frame as linear braking (Player.velocity_reference_frame)."""
+    measured in the same reference frame as linear braking (Navigation.velocity_reference_frame)."""
 
     MIN_SPEED = 0.01  # m/s; below this the direction is numerically meaningless
     PROJECTION_DISTANCE = 1000.0  # arbitrary "reach" for the direction vector, see draw()
@@ -22,12 +22,12 @@ class VelocityMarkers:
     LABEL_OFFSET_Y = 16
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship) -> None:
         """Draw prograde/retrograde markers while unbound; no-op while bound or near-stationary."""
-        if player.is_bound:
+        if ship.is_bound:
             return
 
-        relative = player.velocity.as_vector() - player.velocity_reference_frame()
+        relative = ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()
         if relative.length() < VelocityMarkers.MIN_SPEED:
             return
 
@@ -42,11 +42,11 @@ class VelocityMarkers:
         # only on true geometric direction, never on how fast the ship is moving.
         direction = relative.normalized() * VelocityMarkers.PROJECTION_DISTANCE
 
-        prograde = project_to_camera(player, direction, w, horizon_y, focal_length_px)
+        prograde = project_to_camera(ship, direction, w, horizon_y, focal_length_px)
         if prograde is not None:
             VelocityMarkers._draw_prograde(surface, fonts, prograde)
 
-        retrograde = project_to_camera(player, -direction, w, horizon_y, focal_length_px)
+        retrograde = project_to_camera(ship, -direction, w, horizon_y, focal_length_px)
         if retrograde is not None:
             VelocityMarkers._draw_retrograde(surface, fonts, retrograde)
 

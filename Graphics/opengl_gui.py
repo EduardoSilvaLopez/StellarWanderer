@@ -21,6 +21,7 @@ from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from game_environment import GameEnvironment
     from Galaxies.ore_fields import OreField
     from Galaxies.outpost import Outpost
@@ -31,7 +32,7 @@ class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
     Draw order: worlds farther than the star, the star, worlds nearer than the star, then the nearest world. The
-    SurfaceLight is built once per frame here from `Player.direction_to_star` and passed down to the renderers.
+    SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
     BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,
     so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame `image.tostring`."""
@@ -56,18 +57,19 @@ class OpenGLGui:
         width, height = pygame.display.get_window_size()
         self._ensure_surfaces(width, height)
 
+        ship = player.ship
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
-        OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=True)
-        LocalStar.draw(self.world_surface, width, height, environment, player)
-        OtherWorlds.draw(self.world_surface, width, height, environment, player, behind_star=False)
+        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
+        LocalStar.draw(self.world_surface, width, height, environment, ship)
+        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False)
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
-        light = SurfaceLight.of(player, environment) if player.is_bound else None
+        light = SurfaceLight.of(ship, environment) if ship.is_bound else None
         if light is not None:
-            NearestWorld.draw_surface(self.world_surface, width, height, environment, player, light.ground_colour())
+            NearestWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
         else:
-            LitWorlds.draw_nearest(self.world_surface, width, height, environment, player)
-        OutpostMarkers.draw(self.world_surface, width, height, environment, player)
+            LitWorlds.draw_nearest(self.world_surface, width, height, environment, ship)
+        OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
 
         self.overlay_surface.fill((0, 0, 0, 0))
         Cockpit.draw(
@@ -87,37 +89,37 @@ class OpenGLGui:
         self._draw_texture(self.world_surface, self.world_texture)
         if light is not None:
             Rocks.draw(
-                width, height, player,
-                RockBatches.visible_km2s(environment.nearest_world, player.position.x, player.position.z),
-                self._ore_fields(environment, player),
-                self._ore_mines(environment, player),
-                self._outposts(environment, player),
+                width, height, ship,
+                RockBatches.visible_km2s(environment.nearest_world, ship.position.x, ship.position.z),
+                self._ore_fields(environment, ship),
+                self._ore_mines(environment, ship),
+                self._outposts(environment, ship),
                 light,
             )
-        Laser.draw(width, height, player)
+        Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
         if dialog_surface is not None:
             self._draw_texture(dialog_surface, self.dialog_texture, blend=True)
 
-    def _ore_fields(self, environment: GameEnvironment, player: Player) -> List[OreField]:
+    def _ore_fields(self, environment: GameEnvironment, ship: Ship) -> List[OreField]:
         ore_fields: List[OreField] = []
         for km2 in environment.nearest_world.km2s:
-            if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
-                km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
+            if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
+                km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
                 ore_fields.extend(km2.ore_fields)
         return ore_fields
 
-    def _ore_mines(self, environment: GameEnvironment, player: Player) -> List[OreMine]:
+    def _ore_mines(self, environment: GameEnvironment, ship: Ship) -> List[OreMine]:
         mines: List[OreMine] = []
         for km2 in environment.nearest_world.km2s:
-            if (km2.longitude - km2.SIZE * 2 <= player.position.x < km2.longitude + km2.SIZE * 2 and
-                km2.latitude - km2.SIZE * 2 <= player.position.z < km2.latitude + km2.SIZE * 2):
+            if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
+                km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
                 for ore_field in km2.ore_fields:
                     mines.extend(ore_field.mines)
         return mines
 
-    def _outposts(self, environment: GameEnvironment, player: Player) -> List[Outpost]:
+    def _outposts(self, environment: GameEnvironment, ship: Ship) -> List[Outpost]:
         """Outposts of the nearest world (planets only) within draw distance of the ship.
 
         Taken from the world's own outposts, not from loaded Km2s, so they do not appear and disappear with
@@ -127,7 +129,7 @@ class OpenGLGui:
             return []
         return [
             outpost for outpost in world.outposts.values()
-            if math.hypot(outpost.longitude - player.position.x, outpost.latitude - player.position.z) < MAX_DEPTH
+            if math.hypot(outpost.longitude - ship.position.x, outpost.latitude - ship.position.z) < MAX_DEPTH
         ]
 
     def _ensure_surfaces(self, width: int, height: int) -> None:

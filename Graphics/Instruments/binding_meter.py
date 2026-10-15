@@ -8,7 +8,7 @@ from .common import draw_beveled_panel, bezel_depth
 from units import format_compact_distance, format_compact_speed
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class BindingMeter:
@@ -18,15 +18,15 @@ class BindingMeter:
     (BRAKING_RADIUS_MULTIPLE x radius distance).
 
     The "Approaching" readout is the signed rate of change of the distance to the nearest world
-    (`Player.approach_speed`: the velocity relative to the world along the line to its centre; positive approaching,
+    (`Navigation.approach_speed`: the velocity relative to the world along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
-    `-3 Km/s`). In the braking zone it turns red when `Player.collision_warning` holds: keeping its direction
-    relative to the world, the ship reaches the surface even braking with only `Player.COLLISION_BRAKE_FRACTION` of
+    `-3 Km/s`). In the braking zone it turns red when `Navigation.collision_warning` holds: keeping its direction
+    relative to the world, the ship reaches the surface even braking with only `Navigation.COLLISION_BRAKE_FRACTION` of
     `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
     """
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
         import game_environment as gem
         world = gem.current_environment.nearest_world
 
@@ -42,9 +42,9 @@ class BindingMeter:
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         # Meter spans from surface (1.0x radius distance) to braking zone (BRAKING_RADIUS_MULTIPLE x radius)
-        from Galaxies.People.player import Player
-        distance_from_centre = player.altitude_above_surface(world) + world.radius
-        distance_fraction = (distance_from_centre / world.radius - 1.0) / (Player.BRAKING_RADIUS_MULTIPLE - 1.0)
+        from Spaceships.navigation import Navigation
+        distance_from_centre = ship.navigation.distance_to_world_centre(world)
+        distance_fraction = (distance_from_centre / world.radius - 1.0) / (Navigation.BRAKING_RADIUS_MULTIPLE - 1.0)
         distance_fraction = min(1.0, max(0.0, distance_fraction))
 
         fill_pad = 3
@@ -55,14 +55,11 @@ class BindingMeter:
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_w - fill_pad * 2, filled)
         )
 
-        # Green when in the braking zone (within BRAKING_RADIUS_MULTIPLE x radius, not bound): the reference frame
-        # uses the planet's velocity, so braking/markers show direction relative to the planet.
-        in_braking_zone = (not player.is_bound and
-                           player._distance_to_world_centre(world) < Player.BRAKING_RADIUS_MULTIPLE * world.radius)
+        in_braking_zone = ship.navigation.in_braking_zone(world)
         label = label_font.render('NEAREST', True, BINDING_NEAR_GREEN if in_braking_zone else ACCENT_DIM)
         surface.blit(label, label.get_rect(midtop=(cluster_left + bar_w // 2, label_top)))
 
-        centre_dist = format_compact_distance(player.altitude_above_surface(world) + world.radius)
+        centre_dist = format_compact_distance(distance_from_centre)
 
         row_y = bar_rect.bottom + 2
         dist_label = label_font.render('Distance', True, ACCENT_DIM)
@@ -73,7 +70,7 @@ class BindingMeter:
         surface.blit(centre_text, centre_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
 
         # Red when, inside the braking zone, a collision is unavoidable even braking part of the time.
-        collision_warning = in_braking_zone and player.collision_warning(world)
+        collision_warning = in_braking_zone and ship.navigation.collision_warning(world)
 
         row_y += row_height
         speed_label = label_font.render('Approaching:', True, SPEED_WARNING_RED if collision_warning else ACCENT_DIM)
@@ -81,6 +78,6 @@ class BindingMeter:
 
         row_y += row_height
         speed_text = label_font.render(
-            format_compact_speed(player.approach_speed(world)), True, SPEED_WARNING_RED if collision_warning else ACCENT
+            format_compact_speed(ship.navigation.approach_speed(world)), True, SPEED_WARNING_RED if collision_warning else ACCENT
         )
         surface.blit(speed_text, speed_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))

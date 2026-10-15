@@ -228,7 +228,7 @@ def main() -> None:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
             elif event.type == pygame.MOUSEWHEEL:
-                if player_module.current_player.is_bound:  # the world map is only shown while bound
+                if player_module.current_player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
             elif event.type == pygame.VIDEORESIZE:
                 screen = resize_window(event.w, event.h)
@@ -239,6 +239,7 @@ def main() -> None:
         dt = clock.tick(FPS) / 1000.0
 
         player = player_module.current_player
+        ship = player.ship
         delta_game_seconds = dt * player.time_scale
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
@@ -247,50 +248,50 @@ def main() -> None:
 
         if player.time_scale == 1: # Yaw, pitch, scale disabled for > 1.
             # Yaw: Numpad 4 (left) and 6 (right)
-            player.update_yaw(
+            ship.attitude.update_yaw(
                 delta_game_seconds,
                 1 if keys[pygame.K_KP_4] else 0,
                 1 if keys[pygame.K_KP_6] else 0,
                 keys[pygame.K_s]
             )
 
-            # Pitch: Numpad 8 (up) and 2 (down), only while unbound
-            player.update_pitch(
+            # Pitch: Numpad 2 (nose up) and 8 (nose down)
+            ship.attitude.update_pitch(
                 delta_game_seconds,
-                1 if (keys[pygame.K_KP_2] and not player.is_bound) else 0,
-                1 if (keys[pygame.K_KP_8] and not player.is_bound) else 0,
+                1 if keys[pygame.K_KP_2] else 0,
+                1 if keys[pygame.K_KP_8] else 0,
                 keys[pygame.K_s]
             )
 
-            # Roll: Q (left) and E (right), only while unbound
-            player.update_roll(
+            # Roll: E (right) and Q (left)
+            ship.attitude.update_roll(
                 delta_game_seconds,
                 1 if keys[pygame.K_e] else 0,
                 1 if keys[pygame.K_q] else 0,
                 keys[pygame.K_s]
             )
         else: # reducing them automatically.
-            player.update_yaw(delta_game_seconds, 0, 0, 1)
-            player.update_pitch(delta_game_seconds, 0, 0, 1)
-            player.update_roll(delta_game_seconds, 0, 0, 1)
+            ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
+            ship.attitude.update_pitch(delta_game_seconds, 0, 0, 1)
+            ship.attitude.update_roll(delta_game_seconds, 0, 0, 1)
 
         # Always update position, even with no thrust keys held: W/A/D/X/KP_8/KP_2 now
         # control acceleration in all axes, so the ship keeps drifting on its
         # last velocity until thrust (or boundary clamp) changes it. Holding S
         # brakes instead, overriding all thrust keys in all three axes and stopping
         # all rotations (yaw, pitch, roll).
-        player.update_position_and_velocity(
+        ship.navigation.update_position_and_velocity(
             delta_game_seconds,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
-            (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if player.is_bound else 0,
+            (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if ship.is_bound else 0,
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )
-        player_module.current_player.ship.scanner.update_target()
+        ship.scanner.update_target()
         if (keys[pygame.K_SPACE]):
-            player_module.current_player.ship.scanner.activate(delta_game_seconds)
-        elif (player_module.current_player.ship.laser.firing):
-            player_module.current_player.ship.scanner.deactivate()
+            ship.scanner.activate(delta_game_seconds)
+        elif (ship.laser.firing):
+            ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
 

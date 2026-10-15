@@ -12,7 +12,7 @@ from ..constants import (
 )
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class Radar:
@@ -60,7 +60,7 @@ class Radar:
         return found
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, h: int, rect: pygame.Rect, player: Player, date_time: datetime) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, h: int, rect: pygame.Rect, ship: Ship, date_time: datetime) -> None:
         padding = max(6, int(rect.height * 0.04))
         half_height = rect.height / 2 - padding
         vertical_radius = half_height * Radar.ELLIPSE_FRACTION
@@ -73,7 +73,7 @@ class Radar:
             (centre_x - horizontal_radius, centre_y - vertical_radius, horizontal_radius * 2, vertical_radius * 2), 1
         )
 
-        position = player.position.as_vector()
+        position = ship.position.as_vector()
         previous_clip = surface.get_clip()
         surface.set_clip(rect.inflate(-2, -2))
 
@@ -82,7 +82,7 @@ class Radar:
             relative = object_position - position
             if relative.length() > Radar.MAX_DISTANCE:
                 continue
-            right, up, forward = player.camera_components(relative)
+            right, up, forward = ship.attitude.camera_components(relative)
             in_plane = Radar.log_fraction(math.hypot(right, forward))
             bearing = math.atan2(right, forward)
             foot = (centre_x + in_plane * horizontal_radius * math.sin(bearing),

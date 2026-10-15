@@ -36,10 +36,10 @@ def generate_default(self) -> None:
 **Module Map**:
 - `main.py`: entry point, game loop, window setup, starting and loading games
 - `game_environment.py`: Galaxy + current world (module-level `current_environment`)
-- `Galaxies/People/player.py`: Player: attitude, motion and binding (module-level `current_player`)
+- `Galaxies/People/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
 - `Galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock)
 - `Graphics/`: OpenGL rendering and the instruments
-- `Spaceships/`: Ship, `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
+- `Spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the nearest world); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `Persistency/`: save and load (Savefile)
 - `Dialogs/`: modal dialogs and their message texts
 - `GameLogging/`: logging and the galaxy almanack
@@ -49,9 +49,9 @@ def generate_default(self) -> None:
 
 ## Rules the code does not show
 
-- **Attitude names**: use yaw, pitch, roll and attitude consistently, with the meanings given in the `Player` docstring. Do not introduce synonyms. `Player.right`, `up` and `forward` are the source of truth.
+- **Attitude names**: use yaw, pitch, roll and attitude consistently, with the meanings given in the `Attitude` docstring. Do not introduce synonyms. `ship.attitude.right`, `up` and `forward` are the source of truth.
 - **Rock and mine `orientation` and rock `tilt` are different concepts** and keep their names.
-- **`bind_to`/`unbind_from` asymmetry is intentional.** Do not "fix" it to be symmetric (see the `Player` docstring).
+- **`bind_to`/`unbind_from` asymmetry is intentional.** Do not "fix" it to be symmetric (see the `Navigation` docstring).
 - **World orbit is derived, not stored.** A world's stellar position and velocity are pure functions of game time (`calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`. The world is not put in `UpdateQueue`; use the queue only for work that mutates state at intervals. Do not add per-call logging to these functions; they run every frame while unbound.
 - **Opening a dialog pauses game time.** While a modal loop runs (`main.run_modal_dialog`), nothing that advances game time is called, and the frame timer is restarted afterwards.
 - **Message texts live in the code**, next to the logic that shows them: build a `Message` (title, text, buttons) with f-strings and pass it to `show_message`, with an `on_result` callback that reads the pressed button's index.
@@ -65,7 +65,6 @@ def generate_default(self) -> None:
 
 ## Working Policies (for Claude)
 
-- **Save compatibility is required.** Saves made by older code must still load. Add fallbacks (defaults for missing fields, conversion of changed fields) in the load path only; always write the current format. Tell the user about each fallback added.
 - **Do not change code unless asked.** Analysis-only requests are answered in text; wait for an explicit go-ahead before editing.
 - **Ignore `DEVLOG.md`.** Do not read, analyse, quote or use it in any way, even when it is open in the IDE or the project summary points to it.
 - **Keep labels and comments accurate.** When behaviour changes, update the docstring or comment that describes it in the same change.
@@ -73,6 +72,6 @@ def generate_default(self) -> None:
 ## Testing Without a Window (for Claude)
 
 - Run headless with `SDL_VIDEODRIVER=dummy`, and `PYTHONIOENCODING=utf-8` when printing `Δ`, `°` or other non-ASCII text (the console is cp1252).
-- Start a game with `main.start_game('new', seed)`; load a save read-only with `Persistency.Savefile.Savefile.load_from_file(path)`. Changing `Player` state in memory is fine for a test; never call `Savefile.save()` in a test.
+- Start a game with `main.start_game('new', seed)`; load a save read-only with `Persistency.Savefile.Savefile.load_from_file(path)`. Changing the ship's state in memory (`player.ship.position`, `velocity`, `attitude`) is fine for a test; never call `Savefile.save()` in a test.
 - Render to a `pygame.Surface` and save the PNG to the session scratchpad, then view it with Read. Compare pixel colours with `get_at` for visibility checks.
 - The GL pass (`Rocks.draw`, `OpenGLGui.draw`) needs a real window: say so when it is untested.

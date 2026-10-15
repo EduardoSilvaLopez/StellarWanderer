@@ -11,7 +11,7 @@ from .constants import (
 from vector3 import Vector3
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from game_environment import GameEnvironment
     from Galaxies.world import World
 
@@ -71,20 +71,20 @@ class LitWorlds:
     @staticmethod
     def draw_world(
             surface: pygame.Surface, w: int, h: int, to_world: Vector3, to_star: Vector3, radius: float,
-            star_color: Tuple[int, int, int], player: Player
+            star_color: Tuple[int, int, int], ship: Ship
             ) -> None:
         """Draw one world as seen from the ship, lit by the star.
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
-        the active frame (as returned by Player.direction_to_world / direction_to_star)."""
+        the active frame (as returned by Navigation.direction_to_world / direction_to_star)."""
         from Graphics.Instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(h)
 
         distance = to_world.length()
         if distance <= radius:
             return
-        centre = player.camera_components(to_world) * (1.0 / distance)   # unit vector, camera frame
-        light = player.camera_components(to_star - to_world).normalized()  # from the world to the star
+        centre = ship.attitude.camera_components(to_world) * (1.0 / distance)   # unit vector, camera frame
+        light = ship.attitude.camera_components(to_star - to_world).normalized()  # from the world to the star
         cx, cy, cz = centre.x, centre.y, centre.z
 
         # A world too small to see is drawn as a small lit disc: inflate it to a minimum angular size.
@@ -145,10 +145,10 @@ class LitWorlds:
         surface.blit(layer, (x0, y0), area=pygame.Rect(0, 0, box_w, box_h))
 
     @staticmethod
-    def draw_nearest(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
+    def draw_nearest(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """The nearest world, lit by the star (used while unbound)."""
         world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
-        to_world = player.direction_to_world(world, environment.date_time)
-        to_star = player.direction_to_star(world, environment.date_time)
-        LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, player)
+        to_world = ship.navigation.direction_to_world(world, environment.date_time)
+        to_star = ship.navigation.direction_to_star(world, environment.date_time)
+        LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, ship)

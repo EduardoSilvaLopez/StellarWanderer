@@ -11,7 +11,7 @@ from ..rock_shape import rock_meshes, rotate
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from Galaxies.rock import Rock
     from Galaxies.ore_mine import OreMine
     from Galaxies.outpost import Outpost
@@ -27,7 +27,7 @@ class Scanner:
     """Draw a square scanner readout showing targeted rock, ore mine or outpost."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
         """Draw the scanner display.
 
         Mirrors whatever rock or ore mine is currently in the scanner's
@@ -58,13 +58,13 @@ class Scanner:
 
         text_y = rect.bottom + bevel_depth + 6
 
-        rock = player.ship.scanner.targeted_rock
-        mine = player.ship.scanner.targeted_mine
-        outpost = player.ship.scanner.targeted_outpost
+        rock = ship.scanner.targeted_rock
+        mine = ship.scanner.targeted_mine
+        outpost = ship.scanner.targeted_outpost
         if outpost is not None:
             Scanner._draw_scanned_outpost(surface, rect, outpost)
         elif rock is not None:
-            Scanner._draw_scanned_rock(surface, rect, player, rock)
+            Scanner._draw_scanned_rock(surface, rect, ship, rock)
             if rock.temperature > 0.0:
                 temperature_text = label_font.render(
                     f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock.temperature)
@@ -107,11 +107,11 @@ class Scanner:
         surface.blit(scaled, rect.topleft, area=crop)
 
     @staticmethod
-    def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, player: Player, rock: Rock) -> None:
+    def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, rock: Rock) -> None:
         """Render `rock`'s boulder inside `rect`, at the same relative orientation the player currently sees it
         from, normalized to its bounding cube so every rock, regardless of true size or distance, fills the square.
         The shape is the one the 3D view draws (Graphics/rock_shape.py); each triangle is shaded by its normal."""
-        view = math.radians(player.yaw)
+        view = math.radians(ship.attitude.yaw)
         cos_view, sin_view = math.cos(view), math.sin(view)
         tilt, orientation = np.array([rock.tilt]), np.array([rock.orientation])
 

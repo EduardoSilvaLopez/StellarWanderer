@@ -8,7 +8,7 @@ from datetime import datetime
 from ..constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from Galaxies.world import World
 
 MINE_MARK_COLOR = (255, 255, 0)
@@ -57,7 +57,7 @@ class WorldMap:
         return True
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, player: Player, date_time: datetime) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, ship: Ship, date_time: datetime) -> None:
         """Draw the world map.
 
         Args:
@@ -65,7 +65,7 @@ class WorldMap:
             fonts: Font manager
             mfd: Rectangle for the multi-function display
             h: Window height
-            player: Player object with position and world info
+            ship: Ship object with position and world info
             date_time: Current in-game date/time, for local year/day progress
         """
         import game_environment as gem
@@ -123,13 +123,13 @@ class WorldMap:
             def to_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
                 return WorldMap._map_point(lon, lat, radius, inner_area)
 
-            WorldMap._draw_contents(surface, fonts, h, world, player, to_pixel, inner_area)
+            WorldMap._draw_contents(surface, fonts, h, world, ship, to_pixel, inner_area)
             return
 
         # Zoomed: the window around the ship, `scale` metres per pixel, the ship at its centre. The flat offsets
         # are what the 3D view shows. Longitude wraps around the world; latitude stops at the poles.
         half_world = math.pi * radius
-        ship_lon, ship_lat = player.position.x, player.position.z
+        ship_lon, ship_lat = ship.position.x, ship.position.z
         centre_x, centre_y = inner_area.center
 
         def zoomed_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
@@ -145,7 +145,7 @@ class WorldMap:
         top = centre_y - (half_world / 2 - ship_lat) / scale
         bottom = centre_y - (-half_world / 2 - ship_lat) / scale
         pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left), round(bottom - top)), 1)
-        WorldMap._draw_contents(surface, fonts, h, world, player, zoomed_pixel, inner_area)
+        WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area)
         surface.set_clip(previous_clip)
 
     @staticmethod
@@ -161,7 +161,7 @@ class WorldMap:
         return f'{metres / 1000:.3g} Km' if metres >= 1000 else f'{metres:.3g} m'
 
     @staticmethod
-    def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: World, player: Player,
+    def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: World, ship: Ship,
                        to_pixel: PixelFunction, area: pygame.Rect) -> None:
         """Everything the map shows: the outposts (planets only; moons have none), the ore mines and the
         player. Rocks are not shown."""
@@ -169,7 +169,7 @@ class WorldMap:
         WorldMap._draw_mines(surface, world, to_pixel)
 
         # Player position as a brilliant dot
-        player_pixel = to_pixel(player.position.x, player.position.z)
+        player_pixel = to_pixel(ship.position.x, ship.position.z)
         if player_pixel is not None:
             dot_radius = max(2, int(h * 0.003))
             pygame.draw.circle(surface, ACCENT, player_pixel, dot_radius)

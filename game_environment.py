@@ -39,7 +39,7 @@ class GameEnvironment:
         time). A candidate only replaces the current nearest_world if it's more
         than NEAREST_WORLD_HYSTERESIS closer, to avoid flip-flopping between two
         similarly-distant worlds. Call only while unbound — see
-        Player.update_position_and_velocity."""
+        Navigation.update_position_and_velocity."""
         self._nearest_world_recheck_countdown -= 1
         if self._nearest_world_recheck_countdown > 0:
             return
@@ -54,24 +54,5 @@ class GameEnvironment:
                 self.nearest_world = world
                 current_distance = distance
 
-
-    @staticmethod
-    def new_game(seed: int) -> None:
-        '''Create a new game with the given seed, initializing GameEnvironment and Player singletons.
-
-        Args:
-            seed: The galactic seed for the new game (int)
-        '''
-        logger.info(f"Starting new game with seed: {seed}")
-
-        # Create a new GameEnvironment with the given seed
-        current_environment = GameEnvironment(seed, datetime.now())
-
-        # Spawn player in the first world they encounter
-        from Galaxies.People.player import Player, current_player
-        current_player = Player()
-        current_player.spawn_in_environment(current_environment)
-
-        logger.info("New game started")
 
 current_environment: GameEnvironment = None

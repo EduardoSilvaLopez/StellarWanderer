@@ -9,21 +9,21 @@ from OpenGL import GL, GLU
 from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class Laser:
     """Render the laser beam using the OpenGL depth buffer for occlusion."""
 
     @staticmethod
-    def draw(width: int, height: int, player: Player) -> None:
+    def draw(width: int, height: int, ship: Ship) -> None:
         """Draw the laser beam if the player is firing.
 
         Laser is a straight segment from just below the camera to its end point (Scanner.update_target in Spaceships/scanner.py):
         while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
         MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground.
         """
-        if not player.ship.laser.firing:
+        if not ship.laser.firing:
             return
 
         view_height = int(height * CONSOLE_TOP)
@@ -41,21 +41,21 @@ class Laser:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GL.glMultMatrixf(player.camera_matrix())
+        GL.glMultMatrixf(ship.attitude.camera_matrix())
         # X/Z made camera-relative on the CPU (double precision) instead of via
         # glTranslatef, to avoid float32 truncation at large world coordinates
         # — see the matching comment in Rocks.draw() for why.
-        if player.is_bound:
-            GL.glTranslatef(0.0, -player.position.y, 0.0)
+        if ship.is_bound:
+            GL.glTranslatef(0.0, -ship.position.y, 0.0)
             # Perpendicular vector (right): rotate forward 90° in XZ plane
-            yaw = math.radians(player.yaw)
+            yaw = math.radians(ship.attitude.yaw)
             right_axis = (math.cos(yaw), 0.0, -math.sin(yaw))
             up_axis = (0.0, 1.0, 0.0)
-            origin = (player.position.x, 0.0, player.position.z)
+            origin = (ship.position.x, 0.0, ship.position.z)
         else:
             # Unbound the beam is stored relative to the ship, along its own axes.
-            right_axis = player.right
-            up_axis = player.up
+            right_axis = ship.attitude.right
+            up_axis = ship.attitude.up
             origin = (0.0, 0.0, 0.0)
 
         # Laser beam cross-section half-size, in meters
@@ -77,14 +77,14 @@ class Laser:
                 for centre, base, right, up in zip((cx, cy, cz), origin, right_axis, up_axis)
             )
 
-        s_tr = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, 1, 1)
-        s_br = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, 1, -1)
-        s_bl = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, -1, -1)
-        s_tl = corner(player.ship.scanner.start_x, player.ship.scanner.start_y, player.ship.scanner.start_z, -1, 1)
-        e_tr = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, 1, 1)
-        e_br = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, 1, -1)
-        e_bl = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, -1, -1)
-        e_tl = corner(player.ship.scanner.end_x, player.ship.scanner.end_y, player.ship.scanner.end_z, -1, 1)
+        s_tr = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, 1, 1)
+        s_br = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, 1, -1)
+        s_bl = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, -1, -1)
+        s_tl = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, -1, 1)
+        e_tr = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, 1, 1)
+        e_br = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, 1, -1)
+        e_bl = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, -1, -1)
+        e_tl = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, -1, 1)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glColor3ub(*LASER_COLOR)

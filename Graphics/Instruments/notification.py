@@ -6,14 +6,14 @@ import pygame
 from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class notification_bar:
     """Draw a full-width notification bar at the bottom with red text."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, y: int, height: int, player: Player) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, y: int, height: int, ship: Ship) -> None:
         """Draw the notification bar."""
         # Draw background and border
         rect = pygame.Rect(0, y, w, height)
@@ -23,6 +23,6 @@ class notification_bar:
         # Render notification text in red, centered vertically with left padding
         text_font = fonts.get(max(10, int(height * 0.6)))
         pad = max(8, int(w * 0.02))
-        notification_text = text_font.render(player.ship.notification.message, True, (255, 64, 64))
+        notification_text = text_font.render(ship.notification.message, True, (255, 64, 64))
         text_rect = notification_text.get_rect(midleft=(rect.left + pad, rect.centery))
         surface.blit(notification_text, text_rect)

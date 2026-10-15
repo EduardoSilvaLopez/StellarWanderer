@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from functools import lru_cache
 import logging
+import math
 import os
 import random
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
@@ -75,7 +76,8 @@ class Person:
         
         self.empathy100: float = my_random.random() * 100
         self.sociability100: float = my_random.random() * 100
-        self.loyalty100: float = my_random.random() * 100 + self.reputation
+        self.loyalty100: float = my_random.random() * 100
+        self._adjust_loyalty(self.reputation - 5)
         self.sympathy100: float = 50.0
         self.sympathy_altered: bool = False
 
@@ -168,6 +170,10 @@ class Person:
 
         return result
 
+    def get_player_title(self, player: Player) -> str:
+        value_adjusted = player.those_who_share.reputation * (self.sympathy100 * 2) / 100
+        return political_entity.THOSE_WHO_SHARE.title_for(value_adjusted)
+
     def get_title(self) -> str:
         # Find out where this person is... as for now, guess Those-Who-Share
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
@@ -176,6 +182,10 @@ class Person:
         return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
 
     # 'Personality' traits change slower the more they approach the extremes of 0 and 100
+    def _adjust_loyalty(self, change: float) -> Person:
+        self.loyalty100 += change / (1 + abs(self.loyalty100 - 50))
+        self.loyalty100 = max(0, min(100, self.loyalty100))
+
     def adjust_sympathy(self, change: float) -> Person:
         self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
         self.sympathy100 = max(0, min(100, self.sympathy100))

@@ -42,7 +42,7 @@ class Conversation:
             result = Message(
                 title=title,
                 text=text,
-                buttons=[ button_dicts[0]['text'], button_dicts[1][0], button_dicts[2]['text'] ]
+                buttons=[ button_dicts[0]['text'], button_dicts[1]['text'], button_dicts[2]['text'] ]
             )
         return result
     

@@ -10,7 +10,7 @@ from .constants import (
 from Graphics.Instruments.common import view_geometry
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from game_environment import GameEnvironment
     from Galaxies.rock import Rock
     from Galaxies.ore_fields import OreField
@@ -22,7 +22,7 @@ class NearestWorld:
     ROCK_DEPTH_PERSPECTIVE = 0.5
 
     @staticmethod
-    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
+    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """Draw planet surface and rocks.
 
         Args:
@@ -30,23 +30,23 @@ class NearestWorld:
             w: Window width
             h: Window height
             environment: Game environment with current world
-            player: Player object with position
+            ship: Ship object with position
         """
-        NearestWorld.draw_surface(surface, w, h, environment, player, PLANET_GRAY)
+        NearestWorld.draw_surface(surface, w, h, environment, ship, PLANET_GRAY)
 
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
         ore_fields = []
         for km2 in environment.nearest_world.km2s:
-            if (km2.longitude - km2.SIZE*2 <= player.position.x < km2.longitude + km2.SIZE*2 and
-                km2.latitude - km2.SIZE*2 <= player.position.z < km2.latitude + km2.SIZE*2):
+            if (km2.longitude - km2.SIZE*2 <= ship.position.x < km2.longitude + km2.SIZE*2 and
+                km2.latitude - km2.SIZE*2 <= ship.position.z < km2.latitude + km2.SIZE*2):
                 rocks.extend(km2.rocks)
                 ore_fields.extend(km2.ore_fields)
-        NearestWorld.draw_ore_fields(surface, w, h, player, ore_fields, environment)
-        NearestWorld.draw_rocks(surface, w, h, player, rocks, environment)
+        NearestWorld.draw_ore_fields(surface, w, h, ship, ore_fields, environment)
+        NearestWorld.draw_rocks(surface, w, h, ship, rocks, environment)
 
     @staticmethod
-    def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player,
+    def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship,
                      colour: Tuple[int, int, int]) -> None:
         """Draw the planet below the horizon as seen from the player's altitude.
 
@@ -58,13 +58,13 @@ class NearestWorld:
         """
         view_h, centre_y, focal_length_px = view_geometry(h)
         world_radius = environment.nearest_world.radius
-        distance_to_center = world_radius + player.altitude_above_surface(environment.nearest_world)
+        distance_to_center = world_radius + ship.navigation.altitude_above_surface(environment.nearest_world)
 
         sin_angular = min(world_radius / distance_to_center, 0.9999)
         cos_angular = math.sqrt(1.0 - sin_angular * sin_angular)
 
-        down_right, down_up, down_forward = player.camera_components(
-            player.direction_down(environment.nearest_world, environment.date_time)
+        down_right, down_up, down_forward = ship.attitude.camera_components(
+            ship.navigation.direction_down(environment.nearest_world, environment.date_time)
         )
         nadir_x, nadir_y, nadir_z = down_right, -down_up, down_forward
 
@@ -124,7 +124,7 @@ class NearestWorld:
     def _camera_coordinates(world_x: float, world_z: float, player_x: float, player_z: float, sin_yaw: float, cos_yaw: float) -> Tuple[float, float]:
         """Yaw-only rotation of a world (x, z) offset into ship-relative (right, forward).
         While bound the ship only yaws (never pitches/rolls), so this 2-axis rotation is
-        used instead of the full 3D player.camera_components for rocks/ore fields."""
+        used instead of the full 3D ship.attitude.camera_components for rocks/ore fields."""
         offset_x = world_x - player_x
         offset_z = world_z - player_z
         right = offset_x * cos_yaw - offset_z * sin_yaw
@@ -146,7 +146,7 @@ class NearestWorld:
         return screen_x, screen_y
 
     @staticmethod
-    def draw_rocks(surface: pygame.Surface, w: int, h: int, player: Player, rocks: List[Rock], environment: GameEnvironment) -> None:
+    def draw_rocks(surface: pygame.Surface, w: int, h: int, ship: Ship, rocks: List[Rock], environment: GameEnvironment) -> None:
         """Draw rocks from the current world chunk as cubes on the surface.
 
         Each cube's 8 corners are projected individually through a pinhole-camera
@@ -158,10 +158,10 @@ class NearestWorld:
         """
         _, horizon_y, focal_length_px = view_geometry(h)
 
-        player_x = player.position.x
-        player_z = player.position.z
-        player_y = player.position.y
-        yaw = math.radians(player.yaw)
+        player_x = ship.position.x
+        player_z = ship.position.z
+        player_y = ship.position.y
+        yaw = math.radians(ship.attitude.yaw)
         sin_yaw = math.sin(yaw)
         cos_yaw = math.cos(yaw)
 
@@ -254,7 +254,7 @@ class NearestWorld:
                 pygame.draw.lines(surface, ROCK_EDGE_COLOR, True, face, edge_width)
 
     @staticmethod
-    def draw_ore_fields(surface: pygame.Surface, w: int, h: int, player: Player, ore_fields: List[OreField], environment: GameEnvironment) -> None:
+    def draw_ore_fields(surface: pygame.Surface, w: int, h: int, ship: Ship, ore_fields: List[OreField], environment: GameEnvironment) -> None:
         """Draw ore fields as circles on the planet surface.
 
         Ore fields are 2D circles centered at (x, z) on the ground (y=0),
@@ -262,10 +262,10 @@ class NearestWorld:
         """
         _, horizon_y, focal_length_px = view_geometry(h)
 
-        player_x = player.position.x
-        player_z = player.position.z
-        player_y = player.position.y
-        yaw = math.radians(player.yaw)
+        player_x = ship.position.x
+        player_z = ship.position.z
+        player_y = ship.position.y
+        yaw = math.radians(ship.attitude.yaw)
         sin_yaw = math.sin(yaw)
         cos_yaw = math.cos(yaw)
 

@@ -19,18 +19,18 @@ from .binding_meter import BindingMeter
 from .radar import Radar
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 class Console:
     """Draw instrument panel below the windshield with all component displays.
 
-    The left cluster shows one of two meters, chosen by `Player.is_bound`: the AltitudeMeter while bound (ALT), the
+    The left cluster shows one of two meters, chosen by `Ship.is_bound`: the AltitudeMeter while bound (ALT), the
     BindingMeter while unbound (NEAREST). The location readouts show yaw, pitch and roll as angle plus rate (Δ,
     deg/s); see Player for their meaning."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, date_time: datetime) -> None:
         """Draw the main console with all instruments."""
         top = int(h * CONSOLE_TOP)
         height = h - top
@@ -52,11 +52,11 @@ class Console:
         cluster_height = int(height * 0.46)
 
         # Draw altitude bar and location info
-        if player.is_bound:
-            AltitudeMeter.draw(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
+        if ship.is_bound:
+            AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
         else:
-            BindingMeter.draw(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
-        Console._draw_location_info(surface, fonts, w, h, player, cluster_left, cluster_top, cluster_height)
+            BindingMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
+        Console._draw_location_info(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
 
         bar_w = int(w * 0.028)
         compass_left_bound = cluster_left + bar_w + int(w * 0.15)
@@ -71,26 +71,26 @@ class Console:
         screen = mfd.inflate(old_depth * 2, old_depth * 2).inflate(-depth * 2, -depth * 2)
         draw_beveled_panel(surface, screen, depth=depth)
 
-        if player.is_bound:
-            Compass.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, compass_left_bound)
-            WorldMap.draw(surface, fonts, screen, h, player, date_time)
+        if ship.is_bound:
+            Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)
+            WorldMap.draw(surface, fonts, screen, h, ship, date_time)
         else:
-            Radar.draw(surface, fonts, h, screen, player, date_time)
+            Radar.draw(surface, fonts, h, screen, ship, date_time)
 
         # Scanner
-        Scanner.draw(surface, fonts, layout_w, h, player, cluster_top, cluster_height, mfd.right)
+        Scanner.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, mfd.right)
 
         # Cargo
         cargo_rect = pygame.Rect(0, 0, cargo_width, cluster_height)
         cargo_rect.top = cluster_top
         cargo_rect.right = w - cargo_margin
-        Cargo.draw(surface, fonts, h, player, cargo_rect)
+        Cargo.draw(surface, fonts, h, ship, cargo_rect)
 
         # Notification bar
         light = max(4, int(height * 0.045))
         notification_height = int(height * 0.12)
         notification_y = h - light * 2 - notification_height
-        notification_bar.draw(surface, fonts, w, notification_y, notification_height, player)
+        notification_bar.draw(surface, fonts, w, notification_y, notification_height, ship)
 
         # Indicator lights
         for i in range(10):
@@ -99,7 +99,7 @@ class Console:
             pygame.draw.rect(surface, color, (x, h - light * 2, light, light))
 
     @staticmethod
-    def _draw_location_info(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
+    def _draw_location_info(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
         """Draw location information: world/system labels and position readouts."""
         top = int(h * CONSOLE_TOP)
         height = h - top
@@ -124,21 +124,21 @@ class Console:
         coord_y = world_y + world_text.get_height() + int(height * 0.08)
         line_spacing = int(height * 0.06)
 
-        if player.is_bound:
+        if ship.is_bound:
             axis_lines = [
-                ('Altitude', player.position.y, player.velocity.y),
-                ('Longitude', player.position.x, player.velocity.x),
-                ('Latitude', player.position.z, player.velocity.z),
+                ('Altitude', ship.position.y, ship.velocity.y),
+                ('Longitude', ship.position.x, ship.velocity.x),
+                ('Latitude', ship.position.z, ship.velocity.z),
             ]
         else:
             axis_lines = [
-                ('x', player.position.x, player.velocity.x),
-                ('y', player.position.y, player.velocity.y),
-                ('z', player.position.z, player.velocity.z),
+                ('x', ship.position.x, ship.velocity.x),
+                ('y', ship.position.y, ship.velocity.y),
+                ('z', ship.position.z, ship.velocity.z),
             ]
 
         for label, position, velocity in axis_lines:
-            if player.is_bound:
+            if ship.is_bound:
                 text = f'{label}: {int(position)} Δ {int(velocity)}'
             else:
                 text = f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}'
@@ -149,9 +149,9 @@ class Console:
         world = gem.current_environment.nearest_world
         date_time = gem.current_environment.date_time
         attitude_lines = (
-            f'Yaw: {int(player.yaw)}° Δ {int(player.velocity.yaw)}',
-            f'Pitch: {int(player.pitch_angle(world, date_time))}° Δ {int(player.velocity.pitch)}',
-            f'Roll: {int(player.roll_angle(world, date_time))}° Δ {int(player.velocity.roll)}',
+            f'Yaw: {int(ship.attitude.yaw)}° Δ {int(ship.attitude.yaw_rate)}',
+            f'Pitch: {int(ship.navigation.pitch_angle(world, date_time))}° Δ {int(ship.attitude.pitch_rate)}',
+            f'Roll: {int(ship.navigation.roll_angle(world, date_time))}° Δ {int(ship.attitude.roll_rate)}',
         )
         for text in attitude_lines:
             surface.blit(label_font.render(text, True, ACCENT), (coord_x, coord_y))

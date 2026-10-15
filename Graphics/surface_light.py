@@ -16,7 +16,7 @@ from .constants import SURFACE_STARLIGHT
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 Colour = Tuple[int, int, int]
@@ -32,11 +32,11 @@ class SurfaceLight:
         self.tint: Tuple[float, float, float] = tint
 
     @staticmethod
-    def of(player: Player, environment: GameEnvironment) -> SurfaceLight:
-        """The sun as seen from `player`, which must be bound (the surface frame is only defined then)."""
+    def of(ship: Ship, environment: GameEnvironment) -> SurfaceLight:
+        """The sun as seen from `ship`, which must be bound (the surface frame is only defined then)."""
         world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
-        sun = player.direction_to_star(world, environment.date_time).normalized()
+        sun = ship.navigation.direction_to_star(world, environment.date_time).normalized()
         return SurfaceLight(sun, LitWorlds.light_tint(star.color))
 
     def brightness(self, normal_x: float, normal_y: float, normal_z: float) -> float:

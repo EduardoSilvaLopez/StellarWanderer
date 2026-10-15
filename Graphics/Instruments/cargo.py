@@ -7,7 +7,7 @@ from ..constants import ACCENT, ACCENT_DIM
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
 
 
 def format_quantity(value: float) -> str:
@@ -20,7 +20,7 @@ class Cargo:
     """Draw the CARGO list: one line per hold element, name and quantity."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, h: int, player: Player, rect: pygame.Rect) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect) -> None:
         """Draw the cargo hold contents."""
         label_font = fonts.get(max(9, int(h * 0.017)))
         label = label_font.render('CARGO', True, ACCENT_DIM)
@@ -32,7 +32,7 @@ class Cargo:
         pad = max(6, rect.width // 16)
         line_spacing = line_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
-        for element, quantity in player.ship.cargo_hold.serialize().items():
+        for element, quantity in ship.cargo_hold.serialize().items():
             line = line_font.render(f'{element.upper()}: {format_quantity(quantity)}', True, ACCENT)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

@@ -14,7 +14,7 @@ from .rock_batches import RockBatches
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from Galaxies.km2 import Km2
     from Galaxies.ore_fields import OreField
     from Galaxies.ore_mine import OreMine
@@ -25,7 +25,7 @@ class Rocks:
     """Render world-aligned rocks using the OpenGL depth buffer."""
 
     @staticmethod
-    def draw(width: int, height: int, player: Player, km2s: List[Km2], ore_fields: List[OreField], mines: List[OreMine],
+    def draw(width: int, height: int, ship: Ship, km2s: List[Km2], ore_fields: List[OreField], mines: List[OreMine],
              outposts: List[Outpost], light: SurfaceLight) -> None:
         """Draw the rocks of `km2s` (cached batches, see rock_batches.py) and the rest of the surface in a
         perspective OpenGL pass.
@@ -50,27 +50,27 @@ class Rocks:
         GL.glPushMatrix()
         GL.glLoadIdentity()
         # Maps the ship's right/up/forward axes onto OpenGL's eye axes (looking down -Z).
-        GL.glMultMatrixf(player.camera_matrix())
+        GL.glMultMatrixf(ship.attitude.camera_matrix())
         # X/Z are NOT translated here: at large enough world coordinates (far
         # from the origin), glTranslatef's float32 truncation would already
         # have destroyed sub-meter precision before the GPU ever sees it.
         # Instead, every vertex below is made camera-relative in Python
         # (double precision) before being handed to glVertex3f, so only
         # small, already-precise offsets ever get truncated to float32.
-        # Y doesn't need this treatment: while bound, player.position.y runs from
+        # Y doesn't need this treatment: while bound, ship.position.y runs from
         # Ship.HEIGHT up to (UNBIND_RADIUS_MULTIPLE - 1) x radius, about 1,200 km at most
         # on an earthlike planet, where float32 still resolves about 0.1 m.
-        GL.glTranslatef(0.0, -player.position.y, 0.0)
+        GL.glTranslatef(0.0, -ship.position.y, 0.0)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)
         Rocks._draw_ground(light)
 
-        OreFields.draw(ore_fields, player.position.x, player.position.z, light)
-        OreMines.draw(mines, player.position.x, player.position.z, light)
-        Outposts.draw(outposts, player.position.x, player.position.z, light)
+        OreFields.draw(ore_fields, ship.position.x, ship.position.z, light)
+        OreMines.draw(mines, ship.position.x, ship.position.z, light)
+        Outposts.draw(outposts, ship.position.x, ship.position.z, light)
 
-        RockBatches.draw(km2s, player.position.x, player.position.z, light)
+        RockBatches.draw(km2s, ship.position.x, ship.position.z, light)
 
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)

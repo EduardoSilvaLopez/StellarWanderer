@@ -237,28 +237,35 @@ CONVERSATIONS
 - show_message directly
 - Conversations architecture.
 
-### 2026-10-13 (5/10)
+### 2026-10-14 (5/10)
 - Fill up the conversations concept with current data.
 - Introduce conversation report in the person, save and load it.
 - Recalculate the loss of reputation with resources provison.
 - Expend energy, air, water and food during flight / passing of time / laser usage.
 - Fill up the person with the communication record.
+- Title depends on *relative* sympathy, and is mentioned.
 
-Extra time: 37h45' + 19:30-
+### 2026-10-15 (6/10)
+- Better structure of the ships whereabouts (big refactoring)
+- Bigger rocks
+- Finish the normal dialogs.
 
-Pending: Finish the outpost dialog with gimmicks.
-- Finish the normal dialogs as-is!
-- Chatting gives information about the world?
-- Reintroduce the joke?
-- Introduce "Whatevers"?
+Extra time: 40h45' + 
 
+- Reintroduce the joke? Steven Jones is not so loyal, index 1, 8:00-16:00
+- Why ages so similar?
 
-BACKLOG
+# BACKLOG
 * MAINTENANCE
   * Maintenance bar, show it.
   * Energy expense by move and laser. And show it.
   * Death by resource expenditure.
   * Move the zommed map on left-click + drag.
+  * Extra: Real orbits
+  * Extra: Spherification
+  * Extra: Pythonise all
+  * Extra: Bug search in all
+  * Extra: Better structure in all
 * BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
 * TRAVEL TO THE SUN (forbidden areas)
 * ASTEROIDS
@@ -272,3 +279,9 @@ BACKLOG
 ### Learning Python:
 
 https://docs.python.org/3.14/tutorial/modules.html
+
+# EDITION TRICKS
+
+Fold All Regions (Ctrl+K Ctrl+8)
+Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
+Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns into a list of signatures.

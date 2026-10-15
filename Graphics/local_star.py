@@ -9,7 +9,7 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from Spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
@@ -17,7 +17,7 @@ class LocalStar:
     """Renders the parent star of the current world as seen from the cockpit."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, player: Player) -> None:
+    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """Draw the local star at its true position in the sky.
 
         Drawn before the planet surface/horizon in the frame composition, so
@@ -29,9 +29,9 @@ class LocalStar:
         star = world.parent_orbit.parent_stellar_system
 
         from Graphics.Instruments.common import view_geometry, project_to_camera
-        star_vector = player.direction_to_star(world, environment.date_time)
+        star_vector = ship.navigation.direction_to_star(world, environment.date_time)
         _, horizon_y, focal_length_px = view_geometry(h)
-        projected = project_to_camera(player, star_vector, w, horizon_y, focal_length_px)
+        projected = project_to_camera(ship, star_vector, w, horizon_y, focal_length_px)
         if projected is None:
             return
         screen_x, screen_y = projected

@@ -32,28 +32,23 @@ class Savefile:
             )
         logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
-        from Galaxies.stellar_system import StellarSystem
+        player_data: dict = load_object['player']
+        system_data: dict = player_data['stellar_system']
         gem.current_environment.nearest_system = gem.current_environment.galaxy.add_stellar_system(
-            load_object['player']['stellar_system.x'],
-            load_object['player']['stellar_system.y'],
-            load_object['player']['stellar_system.z']
+            system_data['x'], system_data['y'], system_data['z']
             )
         from Galaxies.orbit import Orbit
-        current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(
-                float(load_object['player']['orbit.number'])
-                )
-        planet_idx: int = load_object['player']['planet.index']
-        moon_idx: int = load_object['player']['moon.index']
+        current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
+        planet_idx: int = player_data['planet']
+        moon_idx: int = player_data['moon']
         if moon_idx is None:
             gem.current_environment.nearest_world = current_orbit.planets[planet_idx]
         else:
             gem.current_environment.nearest_world = current_orbit.planets[planet_idx].moons[moon_idx]
 
+        position_data: dict = player_data['ship']['position']
         gem.current_environment.nearest_world.update_surroundings(
-            load_object['player']['position.y'],
-            load_object['player']['position.x'],
-            load_object['player']['position.z'],
-            game_date_time
+            position_data['y'], position_data['x'], position_data['z'], game_date_time
             )
 
         pem.current_player = pem.Player.deserialize(load_object['player'])

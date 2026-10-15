@@ -61,15 +61,15 @@ class Scanner:
     def update_target(self) -> None:
         """Recompute the beam's start and end from the ship's attitude and position, then the object it hits
         first. Called once per frame, so the scanner always shows what is in the crosshair."""
-        owner = self.ship.owner
+        ship = self.ship
         self.target = None
         offset = self.emitter_offset()
-        forward, up = owner.forward, owner.up
+        forward, up = ship.attitude.forward, ship.attitude.up
 
         # Unbound, the beam is stored relative to the ship. Bound, it is in surface coordinates and starts above
         # the ship's position, where forward is horizontal and up is vertical.
-        if owner.is_bound:
-            origin = (owner.position.x, owner.position.y, owner.position.z)
+        if ship.is_bound:
+            origin = (ship.position.x, ship.position.y, ship.position.z)
         else:
             origin = (0.0, 0.0, 0.0)
 
@@ -78,7 +78,7 @@ class Scanner:
             o + f * 5.0 - u * offset for o, f, u in zip(origin, forward, up)
         )
 
-        if not owner.is_bound:
+        if not ship.is_bound:
             self.end_x, self.end_y, self.end_z = (
                 o + f * self.MAX_LENGTH - u * offset for o, f, u in zip(origin, forward, up)
             )
@@ -90,7 +90,7 @@ class Scanner:
         self.end_z = origin[2] + forward[2] * self.MAX_LENGTH
 
         # No Km2 while bound means too high: nothing is in reach.
-        if owner.position.km2 is None:
+        if ship.position.km2 is None:
             return
 
         import game_environment as gem
@@ -154,7 +154,7 @@ class Scanner:
     def get_relevant_km2s(self, world: World) -> List[Km2]:
         """Km2s whose square lies within the beam's reach in longitude and latitude. A rough filter, applied
         before the per-object tests."""
-        position = self.ship.owner.position
+        position = self.ship.position
         reach = self.MAX_LENGTH
         return [
             km2 for km2 in world.km2s

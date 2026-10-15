@@ -10,16 +10,23 @@ from .laser import Laser
 from .cargo_hold import CargoHold
 from .scanner import Scanner
 from .notification import Notification
+from .kinematics import Position, Velocity
+from .attitude import Attitude
+from .navigation import Navigation
 from Updating import Updatable, update_queue
 if TYPE_CHECKING:
     from Galaxies.People.player import Player
 
 class Ship(Updatable):
-    """The ship's systems (scanner, laser, cargo hold) and its flight limits.
+    """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
+    laser, cargo hold) and its flight limits.
+
+    `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
+    east, y up, z north) or free in the star's frame.
 
     HEIGHT is the eye height above the ground while bound (4 m): the altitude never goes below it, and the spawn
-    height and the descent limit use it too. Rotation accelerations and speed limits (ANGULAR_ACC,
-    MAX_ANGULAR_SPEED) are shared with the player's attitude; see Player.
+    height and the descent limit use it too. Rotation acceleration, braking and speed limit (ANGULAR_ACC,
+    ANGULAR_BRAKE, MAX_ANGULAR_SPEED) are the same on every axis.
     """
 
     HEIGHT = 4 # meters, up to the camera
@@ -36,6 +43,11 @@ class Ship(Updatable):
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
+        self.is_bound: bool = False
+        self.position: Position = Position()
+        self.velocity: Velocity = Velocity()
+        self.attitude: Attitude = Attitude(self)
+        self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
         self.energy: int = 1e12 # 1 TWh - prolly too much but let us see.
         self.scanner: Scanner = Scanner(self)
@@ -46,9 +58,26 @@ class Ship(Updatable):
         self.next_update_at: Optional[datetime] = None
         self.update(gem.current_environment.date_time)
 
+    def spawn_in_environment(self, environment: gem.GameEnvironment) -> Ship:
+        """Place the ship, bound, in the first place found on the nearest world."""
+        self.is_bound = True
+        environment.nearest_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
+        central_km2 = next(km2 for km2 in environment.nearest_world.km2s if km2.longitude == 0 and km2.latitude == 0)
+        self.position.km2 = central_km2
+        self.position.x = central_km2.longitude + 500
+        self.position.y = Ship.HEIGHT
+        self.position.z = central_km2.latitude + 500
+        return self
+
     @staticmethod
     def load(owner: Player, src: dict) -> Ship:
         result = Ship(owner)
+        result.is_bound = src['is_bound']
+        result.position = Position.deserialize(src['position'])
+        result.velocity = Velocity.deserialize(src['velocity'])
+        result.attitude = Attitude.load(result, src['attitude'])
+        if result.is_bound:
+            result.position.km2 = gem.current_environment.nearest_world.get_km2_at(result.position.x, result.position.z)
         if 'last_update_at' in src:
             result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
         if 'maintenance' in src:
@@ -61,6 +90,10 @@ class Ship(Updatable):
 
     def serialize(self) -> dict:
         return {
+            'is_bound': self.is_bound,
+            'position': self.position.serialize(),
+            'velocity': self.velocity.serialize(),
+            'attitude': self.attitude.serialize(),
             'last_update_at' : self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
             'maintenance' : self.maintenance,
             'energy' : self.energy,
@@ -97,14 +130,14 @@ class Ship(Updatable):
         if self.cargo_hold.mines <= 0:
             self.notification.set("No mines available.")
             return
-        if not self.owner.is_bound:
+        if not self.is_bound:
             self.notification.set("Mines can only be placed on a world.")
             return
 
         # Check if rocks nearby.
-        player_lon: float = self.owner.position.x
-        player_lat: float = self.owner.position.z
-        player_yaw: float = self.owner.yaw
+        player_lon: float = self.position.x
+        player_lat: float = self.position.z
+        player_yaw: float = self.attitude.yaw
         from Galaxies.km2 import Km2
         relevant_km2s: List[Km2] = list()
         import game_environment as gem
