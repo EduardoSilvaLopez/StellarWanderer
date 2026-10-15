@@ -41,7 +41,9 @@ class Ship(Updatable):
 
     UPDATE_PERIOD = 24 * 60 * 60 # Large enough to avoid drifts.
 
-    def __init__(self, owner: Player) -> None:
+    ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+
+    def __init__(self, owner: Player, energy_max: float = 1e12) -> None:
         self.owner: Player = owner
         self.is_bound: bool = False
         self.position: Position = Position()
@@ -49,7 +51,8 @@ class Ship(Updatable):
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
-        self.energy: int = 1e12 # 1 TWh - prolly too much but let us see.
+        self.energy_max: float = energy_max  # 1 TWh - prolly too much but let us see. Full: a new ship starts full.
+        self.energy: float = energy_max
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
@@ -113,7 +116,7 @@ class Ship(Updatable):
         days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
 
         self.maintenance -=  0.001 * days
-        self.energy -=  1e+5 * days
+        self.energy -=  1e5 * days
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
         self.cargo_hold.food -= days

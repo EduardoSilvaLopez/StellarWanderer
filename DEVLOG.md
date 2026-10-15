@@ -258,6 +258,8 @@ RELEASE "The Three Powers" created, with installer.
 * MAINTENANCE
   * Extra: Real orbits
 
+Energy consumption europe per day. 42GWh
+
 Extra time: 40h45' + 12:30 - 
 
 # BACKLOG

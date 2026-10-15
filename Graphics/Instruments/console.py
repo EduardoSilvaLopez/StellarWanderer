@@ -13,6 +13,7 @@ from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
+from .resource_bars import ResourceBars
 from .notification import notification_bar
 from .altitude_meter import AltitudeMeter
 from .binding_meter import BindingMeter
@@ -46,6 +47,14 @@ class Console:
         cargo_margin = int(w * 0.03)
         layout_w = w - cargo_width - cargo_gap - cargo_margin
 
+        # Resource bars sit between the scanner and the cargo hold. The compass and the map move left to make room:
+        # the compass by half the bars' width, the map by less, so the compass dial clears the map's frame. The
+        # scanner is laid out to the left of the bars.
+        bars_w = int(w * 0.13)
+        bars_left = layout_w - bars_w
+        shift = bars_w // 2
+        map_shift = int(w * 0.047)
+
         # Left cluster: altitude bar and position coordinates
         cluster_left = int(w * 0.02)
         cluster_top = top + int(height * 0.24)
@@ -59,9 +68,9 @@ class Console:
         Console._draw_location_info(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
 
         bar_w = int(w * 0.028)
-        compass_left_bound = cluster_left + bar_w + int(w * 0.15)
+        compass_left_bound = cluster_left + bar_w + int(w * 0.15) - shift // 2
         mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
-        mfd.centerx = layout_w // 2 + mfd.width // 3
+        mfd.centerx = layout_w // 2 + mfd.width // 3 - map_shift
         mfd.centery = top + int(height * 0.44)
 
         # The MFD frame (bound: world map, unbound: radar) gets the same bezel as every other instrument.
@@ -78,7 +87,11 @@ class Console:
             Radar.draw(surface, fonts, h, screen, ship, date_time)
 
         # Scanner
-        Scanner.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, mfd.right)
+        Scanner.draw(surface, fonts, bars_left, h, ship, cluster_top, cluster_height, mfd.right)
+
+        # Resource bars
+        bars_rect = pygame.Rect(bars_left, cluster_top, bars_w, cluster_height)
+        ResourceBars.draw(surface, fonts, h, ship, bars_rect)
 
         # Cargo
         cargo_rect = pygame.Rect(0, 0, cargo_width, cluster_height)

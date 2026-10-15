@@ -132,6 +132,7 @@ class Navigation:
             if speed > 0:
                 decel = min(ship.BRAKE_ACC * delta_time, speed)
                 ship.velocity.set_vector(reference + relative * ((speed - decel) / speed))
+                self.ship.energy -= 5e4 * decel
         elif ship.is_bound:
             world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input, math.radians(attitude.yaw))
             accel = Vector3(
@@ -140,6 +141,7 @@ class Navigation:
                 world_accel_z * ship.FORWARD_BACKWARD_ACC,
             )
             ship.velocity.add_vector(accel * delta_time)
+            self.ship.energy -= 5e4 * sum(accel) * delta_time
         else:
             accel = (
                 attitude.right * (longitude_accel_input * ship.RIGHT_LEFT_ACC)
@@ -147,6 +149,7 @@ class Navigation:
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
             ship.velocity.add_vector(accel * delta_time)
+            self.ship.energy -= 5e4 * sum(accel) * delta_time
 
     def _update_position(self, delta_time: float) -> None:
         ship = self.ship

@@ -75,10 +75,10 @@ class Scanner:
                 surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, text_y)))
         elif mine is not None:
             Scanner._draw_scanned_mine(surface, rect, mine)
-            content_text = label_font.render(f'Content: {mine.content} Kg Ore', True, ACCENT)
+            content_text = label_font.render(f'Content: {int(mine.content)} Kg Ore', True, ACCENT)
             surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, text_y)))
             text_y += text_line_height
-            field_text = label_font.render(f'Field: {mine.parent_field.remaining_ore} Kg Ore', True, ACCENT)
+            field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
             surface.blit(field_text, field_text.get_rect(midtop=(rect.centerx, text_y)))
 
     @staticmethod

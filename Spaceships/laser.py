@@ -17,6 +17,8 @@ class Laser:
         self.firing = True
         if (self.hitting_rock):
             self.hitting_rock.increase_temperature(time_passed)
+            # 222Wh for 1 degree 1 ton. Laser can 500 degrees so ~10KWh per second.
+            self.ship.energy -= 20 * time_passed * Rock.TEMP_RISE_RATE
 
     def cease_fire(self) -> None:
         if (not self.firing):

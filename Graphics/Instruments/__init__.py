@@ -5,6 +5,7 @@ from .console import Console
 from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
+from .resource_bars import ResourceBars
 from .notification import notification_bar
 from .compass import Compass
 from .clock import Clock
@@ -16,6 +17,7 @@ __all__ = [
     'WorldMap',
     'Scanner',
     'Cargo',
+    'ResourceBars',
     'notification_bar',
     'Compass',
     'Clock',

@@ -51,7 +51,7 @@ class Attitude:
         self.yaw_rate = self._updated_rate(self.yaw_rate, clockwise - counterclockwise, delta_time, braking)
         angle = math.radians(self.yaw_rate * delta_time)
         self.forward, self.right = Vector3.rotate_pair(self.forward, self.right, angle)
-        # self.ship.energy -= delta_time * 1e6
+        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (counterclockwise + clockwise != 0) else 0)
         return self
 
     def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Attitude:
@@ -60,6 +60,7 @@ class Attitude:
         self.pitch_rate = self._updated_rate(self.pitch_rate, nose_up - nose_down, delta_time, braking)
         angle = math.radians(self.pitch_rate * delta_time)
         self.forward, self.up = Vector3.rotate_pair(self.forward, self.up, angle)
+        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (nose_up + nose_down != 0) else 0)
         return self
 
     def update_roll(self, delta_time: float, roll_right: int, roll_left: int, braking: bool = False) -> Attitude:
@@ -68,6 +69,7 @@ class Attitude:
         self.roll_rate = self._updated_rate(self.roll_rate, roll_left - roll_right, delta_time, braking)
         angle = math.radians(self.roll_rate * delta_time)
         self.right, self.up = Vector3.rotate_pair(self.right, self.up, angle)
+        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (roll_right + roll_left != 0) else 0)
         return self
 
     def camera_components(self, vector: Vector3) -> Vector3:
