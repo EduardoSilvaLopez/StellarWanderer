@@ -261,19 +261,17 @@ RELEASE "The Three Powers" created, with installer.
   * Maintenance bar, show it.
   * Extra: Move the zommed map on left-click + drag.
   * Death by resource expenditure.
+  * Extra: Spherification: Cancelled, study made.
 
-Energy consumption europe per day. 42GWh
-
-Extra time: 40h45' + 12:30 - 
+Extra time: 44h45' + 19:45-
 
 # BACKLOG
-  * Extra: Spherification
+* BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
   * Extra: Directories revamp, including snake_case.
   * Extra: Pythonise all
   * Extra: Bug search in all
   * Extra: Better structure in all.
   * Extra: Ages of people still too similar?
-* BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
 * TRAVEL TO THE SUN (forbidden areas)
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)

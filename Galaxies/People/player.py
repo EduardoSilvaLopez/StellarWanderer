@@ -25,6 +25,7 @@ class Player:
     def __init__(self) -> None:
         self.time_scale: int = 1  # Default time scale
         self.ship: Ship = Ship(self)
+        self.credits: int = 0
         self.those_who_share: PersonalStatus = PersonalStatus()
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
 
@@ -51,6 +52,7 @@ class Player:
             'planet': planet_index,
             'moon': moon_index,
             'ship': self.ship.serialize(),
+            'credits': self.credits,
             'political_status': {
                 'Those-Who-Share': self.those_who_share.serialize()
             }
@@ -60,6 +62,9 @@ class Player:
     def deserialize(loaded_attributes: dict) -> Player:
         result = Player()
         result.time_scale = loaded_attributes['time_scale']
+        if 'credits' in loaded_attributes:
+            result.credits = loaded_attributes['credits']
+
         update_queue.remove(result.ship)
         result.ship = Ship.load(result, loaded_attributes['ship'])
 
@@ -89,10 +94,17 @@ class Player:
         if self.is_dead:
             return
         self.is_dead = True
+
+        statistics: str = (
+            f"STATISTICS:\n\n"
+            f" * Denomination: {self.get_title()}\n\n"
+            f" * Federal Credits: {self.credits} Ȼ\n\n"
+            f" * Imperial Rank: Foreigner"
+        )
         show_message(
             Message(
                 title='GAME OVER',
-                text=reason,
+                text=f"\n{reason}\n\n{statistics}",
                 buttons=["Damn!"]
                 )
             , None #pending
