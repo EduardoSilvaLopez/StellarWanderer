@@ -253,15 +253,19 @@ CONVERSATIONS
 - Text in buttons smaller.
 - Person almanack.
 
+RELEASE "The Three Powers" created, with installer.
+
+* MAINTENANCE
+  * Extra: Real orbits
+
 Extra time: 40h45' + 12:30 - 
 
 # BACKLOG
-* MAINTENANCE
   * Maintenance bar, show it.
   * Energy expense by move and laser. And show it.
   * Death by resource expenditure.
-  * Move the zommed map on left-click + drag.
-  * Extra: Real orbits
+  * Extra: Move the zommed map on left-click + drag.
+  * Extra: Laser showing rocks too far away, when wide above sky?
   * Extra: Spherification
   * Extra: Directories revamp, including snake_case.
   * Extra: Pythonise all

@@ -26,9 +26,16 @@ class World:
 
     Orbits: every orbital period follows Kepler's third law around the parent's mass: a moon around its planet
     (`mass`, from the radius and EARTH_DENSITY), a planet around its star (`StellarSystem.mass`, estimated from the
-    star's radius). Every world starts `initial_degrees_in_orbit` from the reference direction at EPOCH.
-    `local_day_fraction` is the solar day at longitude 0 (0 = noon), so that start angle sets the starting time of
-    day; the game's date and time always start at EPOCH 00:00:00.
+    star's radius). Each orbit is an ellipse whose semi-major axis is `distance_to_parent`, with an `eccentricity`, an
+    `inclination` to the reference plane, a longitude of the ascending node and an argument of periapsis. These four
+    are drawn last in the constructor, so adding them changed no earlier value. Every world starts
+    `initial_degrees_in_orbit` from the periapsis direction at EPOCH, as a mean anomaly (the true angle for a circular
+    orbit). The spin axis stays on the reference z axis, so the inclination of a planet's orbit is its axial tilt
+    (seasons); a moon's inclination is relative to its planet's equator. `local_day_fraction` is the solar day at
+    longitude 0 (0 = noon); the game's date and time always start at EPOCH 00:00:00.
+
+    A world's position and velocity are pure functions of the date, memoised for the date of the last call only (one
+    entry each), so everything drawn or computed in a frame shares one evaluation per world.
     '''
 
     WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
@@ -36,7 +43,18 @@ class World:
     GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
     EARTH_DENSITY = 5514.0  # kg/m^3, assumed for every world (planets and moons alike)
 
+    # Orbit shape and tilt: |N(0, sigma)|, capped. A moon's distance is never below 3 planet radii, so with the
+    # eccentricity capped at 0.3 its periapsis stays above 2.1 planet radii.
+    ECCENTRICITY_SIGMA = 0.1
+    MAX_ECCENTRICITY = 0.3
+    PLANET_INCLINATION_SIGMA_DEGREES = 10.0
+    PLANET_MAX_INCLINATION_DEGREES = 30.0
+    MOON_INCLINATION_SIGMA_DEGREES = 5.0
+    MOON_MAX_INCLINATION_DEGREES = 20.0
+
     def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
+        self._position_cache: Optional[Tuple[datetime, Vector3]] = None
+        self._velocity_cache: Optional[Tuple[datetime, Vector3]] = None
 
         # No parent_planet? Well, then it is a big moon.
         if parent_planet:
@@ -146,6 +164,8 @@ class World:
             for _ in range(moons_count):
                 self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
 
+        self._generate_orbit_orientation(my_random)  # last: no value drawn above depends on it
+
         self.km2s: List[Km2] = []
         self._log_creation()
 
@@ -193,6 +213,34 @@ class World:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
 
+    def _generate_orbit_orientation(self, my_random: random.Random) -> None:
+        """Eccentricity, inclination, node longitude and periapsis argument of the orbit around the parent."""
+        if self.parent_planet:
+            sigma, limit = World.MOON_INCLINATION_SIGMA_DEGREES, World.MOON_MAX_INCLINATION_DEGREES
+        else:
+            sigma, limit = World.PLANET_INCLINATION_SIGMA_DEGREES, World.PLANET_MAX_INCLINATION_DEGREES
+        self.eccentricity: float = min(abs(my_random.gauss(0.0, World.ECCENTRICITY_SIGMA)), World.MAX_ECCENTRICITY)
+        self.inclination: float = math.radians(min(abs(my_random.gauss(0.0, sigma)), limit))
+        self.node_longitude: float = my_random.random() * math.tau
+        self.periapsis_argument: float = my_random.random() * math.tau
+        self._set_orbit_axes()
+
+    def _set_orbit_axes(self) -> None:
+        """The orbit's two in-plane axes in the reference frame: towards the periapsis, and a quarter turn on."""
+        cos_node, sin_node = math.cos(self.node_longitude), math.sin(self.node_longitude)
+        cos_incl, sin_incl = math.cos(self.inclination), math.sin(self.inclination)
+        cos_peri, sin_peri = math.cos(self.periapsis_argument), math.sin(self.periapsis_argument)
+        self._periapsis_axis: Tuple[float, float, float] = (
+            cos_node * cos_peri - sin_node * sin_peri * cos_incl,
+            sin_node * cos_peri + cos_node * sin_peri * cos_incl,
+            sin_peri * sin_incl,
+        )
+        self._quarter_axis: Tuple[float, float, float] = (
+            -cos_node * sin_peri - sin_node * cos_peri * cos_incl,
+            -sin_node * sin_peri + cos_node * cos_peri * cos_incl,
+            cos_peri * sin_incl,
+        )
+
     def almanack(self) -> str:
         '''Markdown almanack of this world.'''
         AU: int = 1.496e11
@@ -206,10 +254,15 @@ class World:
                 f"  * Distance from the star: {self.parent_orbit.distance_from_star/AU:.2f} AU\n"
                 f"  * Year: {(self.orbital_period / (365.2425 * 24 * 60 * 60)):.2f} Earth years\n"
                 )
+        orbit_shape: str = (
+                f"* Eccentricity: {self.eccentricity:.3f}\n"
+                f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
+                )
         outposts: str = f"* {len(self.outposts)} outposts.\n"
         text: str = (
             f"{heading} {kind} {self.name}\n"
             f"{parent_info}"
+            f"{orbit_shape}"
             f"* Seed: {self.seed}\n"
             f"* Radius: {int(self.radius/1000)} Km\n"
             f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
@@ -356,34 +409,63 @@ class World:
         return Vector3(centre.x + offset.x, centre.y - offset.y, centre.z + offset.z)
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
-        """Position of this world relative to its star, in the orbital frame (meters).
+        """Position of this world relative to its star, in the reference frame (meters).
 
-        x is the reference direction of the orbital angle (the world is at its
-        initial_degrees_in_orbit from it at EPOCH), y lies in the orbital plane in the
-        direction of motion, and z is perpendicular to the plane, positive when the orbit
-        is clockwise seen from above. A moon is its planet's position plus its own offset
-        around the planet, in the same plane.
+        The reference frame has its z axis along the spin axes, and x, y in the reference plane. The world follows
+        its elliptical orbit (see the class docstring); a moon is its planet's position plus its own offset around
+        the planet. Memoised for the date of the last call.
         """
-        orbital_angle = self._orbital_angle_rad(current_datetime)
-        distance = self.distance_to_parent
-        offset = Vector3(distance * math.cos(orbital_angle), distance * math.sin(orbital_angle), 0.0)
+        cached = self._position_cache
+        if cached is not None and cached[0] == current_datetime:
+            return cached[1]
+
+        anomaly = self._eccentric_anomaly(self._mean_anomaly_rad(current_datetime))
+        a, e = self.distance_to_parent, self.eccentricity
+        x = a * (math.cos(anomaly) - e)
+        y = a * math.sqrt(1.0 - e * e) * math.sin(anomaly)
+        p, q = self._periapsis_axis, self._quarter_axis
+        result = Vector3(x * p[0] + y * q[0], x * p[1] + y * q[1], x * p[2] + y * q[2])
         if self.parent_planet:
-            return self.parent_planet.calculate_stellar_position(current_datetime) + offset
-        return offset
+            result = self.parent_planet.calculate_stellar_position(current_datetime) + result
+
+        self._position_cache = (current_datetime, result)
+        return result
 
     def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
         """Velocity of this world relative to its star (meters per second), in the frame of calculate_stellar_position.
 
-        Assumes a circular orbit. The vector is tangent to the orbit; its length is the orbital speed.
-        A moon's velocity is its planet's velocity plus its own orbital velocity around the planet.
+        Tangent to the orbit, and faster near the periapsis. A moon's velocity is its planet's velocity plus its own
+        orbital velocity around the planet. Memoised for the date of the last call.
         """
-        orbital_angle = self._orbital_angle_rad(current_datetime)
-        angular_speed = math.tau / self.orbital_period
-        speed = self.distance_to_parent * angular_speed
-        own_velocity = Vector3(-speed * math.sin(orbital_angle), speed * math.cos(orbital_angle), 0.0)
+        cached = self._velocity_cache
+        if cached is not None and cached[0] == current_datetime:
+            return cached[1]
+
+        anomaly = self._eccentric_anomaly(self._mean_anomaly_rad(current_datetime))
+        a, e = self.distance_to_parent, self.eccentricity
+        rate = math.tau / self.orbital_period / (1.0 - e * math.cos(anomaly))  # d(anomaly)/dt
+        vx = -a * math.sin(anomaly) * rate
+        vy = a * math.sqrt(1.0 - e * e) * math.cos(anomaly) * rate
+        p, q = self._periapsis_axis, self._quarter_axis
+        result = Vector3(vx * p[0] + vy * q[0], vx * p[1] + vy * q[1], vx * p[2] + vy * q[2])
         if self.parent_planet:
-            return self.parent_planet.calculate_stellar_velocity(current_datetime) + own_velocity
-        return own_velocity
+            result = self.parent_planet.calculate_stellar_velocity(current_datetime) + result
+
+        self._velocity_cache = (current_datetime, result)
+        return result
+
+    def _eccentric_anomaly(self, mean_anomaly: float) -> float:
+        """Solves Kepler's equation, E - e sin E = M, for E by Newton's method."""
+        e = self.eccentricity
+        if e == 0.0:
+            return mean_anomaly
+        anomaly = mean_anomaly + e * math.sin(mean_anomaly)
+        for _ in range(20):
+            step = (anomaly - e * math.sin(anomaly) - mean_anomaly) / (1.0 - e * math.cos(anomaly))
+            anomaly -= step
+            if abs(step) < 1e-12:
+                break
+        return anomaly
 
     def surface_basis(self, longitude: float, latitude: float, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
         """East, up and north unit vectors at a surface point, in the star-centered basis."""
@@ -497,7 +579,7 @@ class World:
         elapsed_seconds = self._elapsed_seconds(current_datetime)
         return (elapsed_seconds % self.rotation_period) / self.rotation_period
 
-    def _orbital_angle_rad(self, current_datetime: datetime) -> float:
+    def _mean_anomaly_rad(self, current_datetime: datetime) -> float:
         return math.radians(self.initial_degrees_in_orbit) + math.tau * self.local_year_fraction(current_datetime)
 
     def _spin_angle_rad(self, current_datetime: datetime) -> float:

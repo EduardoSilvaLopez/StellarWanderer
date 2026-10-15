@@ -51,6 +51,7 @@ class Attitude:
         self.yaw_rate = self._updated_rate(self.yaw_rate, clockwise - counterclockwise, delta_time, braking)
         angle = math.radians(self.yaw_rate * delta_time)
         self.forward, self.right = Vector3.rotate_pair(self.forward, self.right, angle)
+        # self.ship.energy -= delta_time * 1e6
         return self
 
     def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Attitude:

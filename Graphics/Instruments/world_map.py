@@ -13,9 +13,10 @@ if TYPE_CHECKING:
 
 MINE_MARK_COLOR = (255, 255, 0)
 
-# Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, always centred on the ship.
+# Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, centred on the ship.
 # The scales are fixed values in metres per pixel (1, 2, 5, 10, ...) down to MIN_SCALE, so a step means the same
-# on every world; the coarsest level is the whole world.
+# on every world; the coarsest level is the whole world. A zoomed map can be dragged with the left button, and
+# recentres on the ship when the zoom changes or the button is released.
 MIN_SCALE = 1.0
 FIRST_ZOOM_RATIO = 1.5  # the first zoomed scale is at least this much finer than the whole-world map
 
@@ -32,29 +33,61 @@ class WorldMap:
     not shown.
 
     With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
-    centred on the ship (the ship's dot stays at the middle). The levels are fixed scales in metres per pixel (1, 2,
-    5, 10, ... down to MIN_SCALE, 1 m/px), after the whole-world map, which is level 0 (`_scale_levels`); one step
-    means the same on every world. A zoomed map uses the same scale on both axes and the flat offsets from the ship
-    (as the 3D view does), wraps longitude around the world, and draws the world's boundary where it falls. When the
-    mouse leaves, the map goes back to the whole world and the name returns. `main` polls the mouse once per frame
-    (`set_mouse`) and routes MOUSEWHEEL to `zoom` while bound."""
+    centred on the ship (the ship's dot stays at the middle until the map is dragged). The levels are fixed scales in
+    metres per pixel (1, 2, 5, 10, ... down to MIN_SCALE, 1 m/px), after the whole-world map, which is level 0
+    (`_scale_levels`); one step means the same on every world. A zoomed map uses the same scale on both axes and the
+    flat offsets from the ship (as the 3D view does), wraps longitude around the world, and draws the world's boundary
+    where it falls. A left-button drag over the zoomed map moves the content with the pointer, like a hand; releasing
+    the button, and any zoom change, recentre it on the ship. When the mouse leaves, the map goes back to the whole
+    world and the name returns (unless a drag is in progress). `main` polls the mouse once per frame (`set_mouse`)
+    and routes MOUSEWHEEL to `zoom` while bound."""
 
     mouse: Optional[Tuple[int, int]] = None  # last mouse position, None when the window has no mouse focus
     hovered: bool = False                    # whether, when the map was last drawn, the mouse was over it
     zoom_index: int = 0                      # 0 = the whole world; each step is a finer scale
+    dragging: bool = False                   # a left-button drag that started over the zoomed map is in progress
+    drag_position: Optional[Tuple[int, int]] = None  # the pointer at the previous frame of the drag
+    pan: Tuple[float, float] = (0.0, 0.0)    # screen pixels the content has moved since the drag started
+    area: Optional[pygame.Rect] = None       # the map's area, as last drawn
+    _was_pressed: bool = False
 
     @staticmethod
-    def set_mouse(position: Tuple[int, int], focused: bool) -> None:
-        """Called once per frame by the main loop with the mouse position and whether the window has the mouse."""
+    def set_mouse(position: Tuple[int, int], focused: bool, pressed: bool) -> None:
+        """Called once per frame by the main loop: the mouse position, whether the window has the mouse, and whether
+        the left button is down. A press starts a drag only when it begins over the zoomed map."""
+        was_pressed = WorldMap._was_pressed
+        WorldMap._was_pressed = pressed
         WorldMap.mouse = position if focused else None
+        if not pressed:
+            WorldMap.dragging = False
+            WorldMap.drag_position = None
+            WorldMap.pan = (0.0, 0.0)
+            return
+        if not was_pressed:
+            over_zoomed_map = WorldMap.area is not None and WorldMap.area.collidepoint(position) and WorldMap.zoom_index > 0
+            WorldMap.dragging = over_zoomed_map
+            WorldMap.drag_position = position if WorldMap.dragging else None
+            WorldMap.pan = (0.0, 0.0)
+        elif WorldMap.dragging and WorldMap.drag_position is not None:
+            pan_x, pan_y = WorldMap.pan
+            WorldMap.pan = (pan_x + position[0] - WorldMap.drag_position[0],
+                            pan_y + position[1] - WorldMap.drag_position[1])
+            WorldMap.drag_position = position
 
     @staticmethod
     def zoom(steps: int) -> bool:
         """Step the zoom (positive = closer) while the mouse is over the map. Returns whether it was."""
         if not WorldMap.hovered:
             return False
-        WorldMap.zoom_index = max(0, WorldMap.zoom_index + steps)  # draw() limits it to the finest level
+        WorldMap._set_zoom(max(0, WorldMap.zoom_index + steps))  # draw() limits it to the finest level
         return True
+
+    @staticmethod
+    def _set_zoom(index: int) -> None:
+        """Changes the zoom level; every change recentres the view on the ship."""
+        if index != WorldMap.zoom_index:
+            WorldMap.zoom_index = index
+            WorldMap.pan = (0.0, 0.0)
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, ship: Ship, date_time: datetime) -> None:
@@ -88,11 +121,12 @@ class WorldMap:
         inner_area = map_area.inflate(-map_padding * 2, -map_padding * 2)
 
         # The mouse over the map zooms it; leaving it goes back to the whole world.
+        WorldMap.area = inner_area
         WorldMap.hovered = WorldMap.mouse is not None and inner_area.collidepoint(WorldMap.mouse)
-        if not WorldMap.hovered:
-            WorldMap.zoom_index = 0
+        if not WorldMap.hovered and not WorldMap.dragging:
+            WorldMap._set_zoom(0)
         levels = WorldMap._scale_levels(2.0 * math.pi * radius / inner_area.width)
-        WorldMap.zoom_index = min(WorldMap.zoom_index, len(levels) - 1)
+        WorldMap._set_zoom(min(WorldMap.zoom_index, len(levels) - 1))
         scale = levels[WorldMap.zoom_index]
 
         # Header: the scale while the mouse is over the map, else the world's name; flanked by local year/day.
@@ -126,24 +160,27 @@ class WorldMap:
             WorldMap._draw_contents(surface, fonts, h, world, ship, to_pixel, inner_area)
             return
 
-        # Zoomed: the window around the ship, `scale` metres per pixel, the ship at its centre. The flat offsets
-        # are what the 3D view shows. Longitude wraps around the world; latitude stops at the poles.
+        # Zoomed: the window around the ship, `scale` metres per pixel, the ship at its centre until dragged. The flat
+        # offsets are what the 3D view shows. Longitude wraps around the world; latitude stops at the poles.
         half_world = math.pi * radius
         ship_lon, ship_lat = ship.position.x, ship.position.z
+        pan_x, pan_y = WorldMap.pan
+        # The content follows the pointer: moving it right or down moves the view's centre left or up.
+        centre_lon, centre_lat = ship_lon - pan_x * scale, ship_lat + pan_y * scale
         centre_x, centre_y = inner_area.center
 
         def zoomed_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
-            east = (lon - ship_lon + half_world) % (2.0 * half_world) - half_world  # the nearest copy of the point
+            east = (lon - centre_lon + half_world) % (2.0 * half_world) - half_world  # the nearest copy of the point
             x = centre_x + east / scale
-            y = centre_y - (lat - ship_lat) / scale
+            y = centre_y - (lat - centre_lat) / scale
             return (int(x), int(y)) if inner_area.collidepoint(x, y) else None
 
         previous_clip = surface.get_clip()
         surface.set_clip(inner_area)
-        left = centre_x + (-half_world - ship_lon) / scale
-        right = centre_x + (half_world - ship_lon) / scale
-        top = centre_y - (half_world / 2 - ship_lat) / scale
-        bottom = centre_y - (-half_world / 2 - ship_lat) / scale
+        left = centre_x + (-half_world - centre_lon) / scale
+        right = centre_x + (half_world - centre_lon) / scale
+        top = centre_y - (half_world / 2 - centre_lat) / scale
+        bottom = centre_y - (-half_world / 2 - centre_lat) / scale
         pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left), round(bottom - top)), 1)
         WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area)
         surface.set_clip(previous_clip)

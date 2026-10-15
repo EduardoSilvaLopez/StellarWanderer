@@ -233,8 +233,10 @@ def main() -> None:
             elif event.type == pygame.VIDEORESIZE:
                 screen = resize_window(event.w, event.h)
 
-        # The world map zooms while the mouse is over it (polled once per frame).
-        WorldMap.set_mouse(pygame.mouse.get_pos(), pygame.mouse.get_focused())
+        # The world map zooms while the mouse is over it, and drags with the left button (polled once per frame).
+        focused = pygame.mouse.get_focused()
+        left_pressed = focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
+        WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
         dt = clock.tick(FPS) / 1000.0
 
