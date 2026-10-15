@@ -55,7 +55,7 @@ def generate_default(self) -> None:
 - **World orbit is derived, not stored.** A world's stellar position and velocity are pure functions of game time (`calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). Never cache them; always pass `gem.current_environment.date_time`. The world is not put in `UpdateQueue`; use the queue only for work that mutates state at intervals. Do not add per-call logging to these functions; they run every frame while unbound.
 - **Opening a dialog pauses game time.** While a modal loop runs (`main.run_modal_dialog`), nothing that advances game time is called, and the frame timer is restarted afterwards.
 - **Message texts live in the code**, next to the logic that shows them: build a `Message` (title, text, buttons) with f-strings and pass it to `show_message`, with an `on_result` callback that reads the pressed button's index.
-- **Galaxy almanack**: `main` writes it on each new game and each load, overwriting the previous file. Its structure is in `Galaxy.almanack()`: each object writes its own part and calls its children.
+- **Almanacks** (`Logs/almanack.*.md`, written by `GameLogging/almanack.py`): `main` writes the galaxy's on each new game and each load, overwriting the previous file. Its structure is in `Galaxy.almanack()`: each object writes its own part and calls its children. The people's is blanked by `GameEnvironment.__init__` (so on every new game, load and F6, before any person exists) and each `Person` appends its own entry (`Person.almanack()`) when it is created. All almanack writes go through one ordered background writer; building the text is the caller's job, and every exception is ignored.
 
 ## Key Notes
 

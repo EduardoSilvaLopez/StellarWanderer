@@ -2,6 +2,7 @@ import datetime
 import logging
 import math
 from typing import List, Optional
+from GameLogging import reset_people_almanack
 from Galaxies.People.person import Person
 from Galaxies.galaxy import Galaxy
 from Galaxies.stellar_system import StellarSystem
@@ -16,14 +17,15 @@ class GameEnvironment:
     NEAREST_WORLD_RECHECK_FRAMES = 30  # ~0.5s at 60 FPS; a real-frame throttle, not game-time (time_scale can run to 1,000,000x)
     NEAREST_WORLD_HYSTERESIS = 0.05    # a candidate must be >5% closer to replace the current nearest_world, to avoid flip-flop
 
-    def __init__(self, galactic_seed: float, date_time: datetime.datetime, saved_alterations: Optional[dict]) -> None:
+    def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict], people_alterations: Optional[dict]) -> None:
+        reset_people_almanack()  # a new environment is a new game or a load: the people will be written as they are created
         self.date_time = date_time
-        if (saved_alterations): saved_alterations['date_time'] = date_time
-        self.galaxy: Galaxy = Galaxy(galactic_seed, saved_alterations)
+        if (galaxy_alterations): galaxy_alterations['date_time'] = date_time
+        self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations)
         self.nearest_world: World = None
         self.nearest_system: StellarSystem = None
         self._nearest_world_recheck_countdown: int = 0
-        self.persons: dict = dict()
+        self.persons: dict = people_alterations if people_alterations else {}
 
     def generate_default(self) -> None:
         from Galaxies.orbit import Orbit

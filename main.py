@@ -92,7 +92,7 @@ def start_game(action: str, value: object) -> float:
         elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
     else:
         logger.info(f"New game with seed: {value}")
-        gem.current_environment = gem.GameEnvironment(value, EPOCH, None)
+        gem.current_environment = gem.GameEnvironment(value, EPOCH, None, None)
         gem.current_environment.generate_default()
 
         # Spawn player in the first world they encounter

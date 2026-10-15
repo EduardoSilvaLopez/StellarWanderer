@@ -249,11 +249,11 @@ CONVERSATIONS
 - Better structure of the ships whereabouts (big refactoring)
 - Bigger rocks
 - Finish the normal dialogs.
+- Reintroduce the cash question.
+- Text in buttons smaller.
+- Person almanack.
 
-Extra time: 40h45' + 
-
-- Reintroduce the joke? Steven Jones is not so loyal, index 1, 8:00-16:00
-- Why ages so similar?
+Extra time: 40h45' + 12:30 - 
 
 # BACKLOG
 * MAINTENANCE
@@ -263,9 +263,11 @@ Extra time: 40h45' +
   * Move the zommed map on left-click + drag.
   * Extra: Real orbits
   * Extra: Spherification
+  * Extra: Directories revamp, including snake_case.
   * Extra: Pythonise all
   * Extra: Bug search in all
-  * Extra: Better structure in all
+  * Extra: Better structure in all.
+  * Extra: Ages of people still too similar?
 * BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
 * TRAVEL TO THE SUN (forbidden areas)
 * ASTEROIDS

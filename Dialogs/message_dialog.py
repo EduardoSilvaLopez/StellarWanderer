@@ -28,7 +28,8 @@ class MessageDialog(Dialog):
 
     Look: a textured panel (Resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
     (Resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
-    not pygame.font directly. One or more buttons, side by side when they fit, otherwise stacked."""
+    not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines when they
+    are long. One or more buttons, side by side when they fit, otherwise stacked."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -40,8 +41,9 @@ class MessageDialog(Dialog):
     BUTTON_MIN_WIDTH = 220
     BUTTON_HEIGHT = 40
     BUTTON_PADDING = 20    # each side of the label
+    BUTTON_PADDING_Y = 4   # above and below the label's lines
+    BUTTON_TEXT_WIDTH = 300  # a button label wraps to lines no wider than this
     BUTTON_GAP = 14
-    BUTTON_FONT_SIZE = 16
 
     def __init__(self, message: Message) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
@@ -68,34 +70,39 @@ class MessageDialog(Dialog):
 
     # ---- layout ----
 
+    def _button_lines(self, label: str) -> List[str]:
+        """The label, uppercase and wrapped to BUTTON_TEXT_WIDTH, as lines to draw."""
+        return self.wrap(label.upper(), body_font(self.BODY_SIZE), self.BUTTON_TEXT_WIDTH)
+
     def _layout_buttons(self) -> List[pygame.Rect]:
-        """One rectangle per button: side by side, centred, when they fit the width; otherwise stacked with
-        the same width, the last one at the bottom."""
+        """One rectangle per button, sized to its wrapped label. Side by side, centred, when they fit the width;
+        otherwise stacked with the same width, the last one at the bottom."""
         available = self.WIDTH - 2 * self.MARGIN
-        font = title_font(self.BUTTON_FONT_SIZE)
-        widths = [
-            min(available, max(self.BUTTON_MIN_WIDTH, font.size(label.upper())[0] + 2 * self.BUTTON_PADDING))
-            for label in self.message.buttons
-        ]
-        count = len(widths)
+        font = body_font(self.BODY_SIZE)
+        self._button_texts: List[List[str]] = [self._button_lines(label) for label in self.message.buttons]
+        sizes: List[Tuple[int, int]] = []
+        for lines in self._button_texts:
+            text_width = max(font.size(line)[0] for line in lines)
+            width = min(available, max(self.BUTTON_MIN_WIDTH, text_width + 2 * self.BUTTON_PADDING))
+            height = max(self.BUTTON_HEIGHT, font.get_linesize() * len(lines) + 2 * self.BUTTON_PADDING_Y)
+            sizes.append((width, height))
+        count = len(sizes)
         bottom = self.HEIGHT - self.MARGIN + 6
         rects: List[pygame.Rect] = []
 
-        row_width = sum(widths) + self.BUTTON_GAP * (count - 1)
+        row_width = sum(width for width, _ in sizes) + self.BUTTON_GAP * (count - 1)
         if row_width <= available:
             x = (self.WIDTH - row_width) // 2
-            for width in widths:
-                rects.append(pygame.Rect(x, bottom - self.BUTTON_HEIGHT, width, self.BUTTON_HEIGHT))
+            for width, height in sizes:
+                rects.append(pygame.Rect(x, bottom - height, width, height))
                 x += width + self.BUTTON_GAP
         else:
-            width = max(widths)
-            for index in range(count):
-                rect = pygame.Rect(0, 0, width, self.BUTTON_HEIGHT)
-                rect.midbottom = (
-                    self.WIDTH // 2,
-                    bottom - (count - 1 - index) * (self.BUTTON_HEIGHT + self.BUTTON_GAP),
-                )
-                rects.append(rect)
+            stack_width = max(width for width, _ in sizes)
+            rects = [pygame.Rect(0, 0, stack_width, height) for _, height in sizes]
+            y = bottom
+            for rect in reversed(rects):
+                rect.midbottom = (self.WIDTH // 2, y)
+                y -= rect.height + self.BUTTON_GAP
         return rects
 
     def _render_title(self) -> pygame.Surface:
@@ -216,15 +223,18 @@ class MessageDialog(Dialog):
             pygame.draw.polygon(surface, ACCENT, [(x, bottom), (x - 7, bottom - 10), (x + 7, bottom - 10)])
 
     def _draw_buttons(self, surface: pygame.Surface) -> None:
-        font = title_font(self.BUTTON_FONT_SIZE)
+        font = body_font(self.BODY_SIZE)
         several = len(self.button_rects) > 1
-        for index, (rect, text) in enumerate(zip(self.button_rects, self.message.buttons)):
+        for index, rect in enumerate(self.button_rects):
             # With several buttons the focused one is lit, so the player sees which Enter will press.
             lit = index == self.hover or (several and index == self.focus)
             pygame.draw.rect(surface, BUTTON_FILL_HOVER if lit else BUTTON_FILL, rect)
             pygame.draw.rect(surface, ACCENT, rect, 2)
-            label = font.render(text.upper(), True, ACCENT)
-            surface.blit(label, label.get_rect(center=rect.center))
+            lines = self._button_texts[index]
+            top = rect.centery - font.get_linesize() * len(lines) // 2
+            for line_index, line in enumerate(lines):
+                label = font.render(line, True, ACCENT)
+                surface.blit(label, label.get_rect(midtop=(rect.centerx, top + line_index * font.get_linesize())))
 
     def _button_at(self, position: Tuple[int, int]) -> Optional[int]:
         for index, rect in enumerate(self.button_rects):

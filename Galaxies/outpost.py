@@ -2,9 +2,11 @@ import copy
 import random
 import math
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
+from Updating import update_queue
+from Updating.updatable import Updatable
 from vector3 import Vector3
 
 import game_environment as gem
@@ -15,7 +17,7 @@ from Galaxies.People.person import Person
 
 logger = logging.getLogger(__name__)
 
-class Outpost:
+class Outpost(Updatable):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
     Outposts belong to planets (`World.outposts`, keyed by "lon lat"; the initial planet always has at least one).
@@ -40,15 +42,15 @@ class Outpost:
         self.planet = planet
         self.index = len(planet.outposts)
         self.seed: float = (planet.seed + self.index + 1) % Galaxies.constants.SEEDS_SCALING
-        my_random: random.Random = random.Random(self.seed)
+        self.my_random: random.Random = random.Random(self.seed)
 
-        self.name: str = self.generate_name(my_random)
+        self.name: str = self.generate_name(self.my_random)
         self.longitude: int = \
             0 if self.index == 0 else \
-            my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
-        self.latitude: int = my_random.randint(int(-self.planet.radius*math.pi/2), int(self.planet.radius*math.pi/2))
+            self.my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
+        self.latitude: int = self.my_random.randint(int(-self.planet.radius*math.pi/2), int(self.planet.radius*math.pi/2))
 
-        self.orientation: float = my_random.random() * 360
+        self.orientation: float = self.my_random.random() * 360
 
         self.staff: List[Person] = []
         self.work_shift: int = 4
@@ -63,9 +65,9 @@ class Outpost:
             if my_alterations:
                 self.saved_alterations = copy.deepcopy(my_alterations)
                 self.set_altered()
-        self.log_generation()
+        self._log_generation()
 
-    def log_generation(self) -> Outpost:
+    def _log_generation(self) -> Outpost:
         logger.info("OUTPOST created")
         logger.info(f"- Index {self.index}, Lon: {self.longitude}, Lat: {self.latitude}")
         logger.info(f"- Seed {self.seed}")
@@ -83,13 +85,31 @@ class Outpost:
                 Person(self.seed + 2, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
                 Person(self.seed + 3, self, 4, self.STAFF_AGE_MIN - 2, self.STAFF_AGE_MAX)
             ]
-        my_random: random.Random = random.Random(self.seed)
-        if my_random.random() < self.free_days:
+        shift = gem.current_environment.date_time.hour // 8
+        if self.my_random.random() < self.free_days:
             self.com_officer = self.staff[3]
         else:
-            self.com_officer = self.staff[gem.current_environment.date_time.hour // 8]
+            self.com_officer = self.staff[shift]
+        self.next_update_at: datetime =  gem.current_environment.date_time
+        self.next_update_at = self.next_update_at.replace(hour = 8 * shift, minute=0, second=0, microsecond=0)
+        self.next_update_at += timedelta(hours=8)
+        update_queue.add(self)
 
         return self
+
+    def get_next_update(self) -> datetime:
+        return self.next_update_at
+
+    def update(self, game_date_time: datetime) -> None:
+        ''' Next employee...'''
+        shift = game_date_time.hour // 8
+        if self.my_random.random() < self.free_days:
+            self.com_officer = self.staff[3]
+        else:
+            self.com_officer = self.staff[shift]
+        self.next_update_at += timedelta(hours=8)
+        update_queue.add(self)
+        pass
 
     def get_alteration_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)

@@ -47,6 +47,8 @@ class Conversation:
         return result
     
     def close(self, interaction_lines: List[str]):
+        self.interlocutor.last_communication_at = self.date_time
+        self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = interaction_lines
+        gem.current_environment.persons[self.interlocutor.seed] = self.interlocutor.serialize()
         self.interlocutor.log_update()
-        self.interlocutor.interactions[self.date_time] = interaction_lines
         logger.debug("Finished.")

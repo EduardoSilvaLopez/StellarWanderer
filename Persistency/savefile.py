@@ -25,10 +25,13 @@ class Savefile:
             load_object = json.load(f)
 
         game_date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
+        # JSON keys are text; the people are looked up by their float seed.
+        people_alterations = {float(seed): values for seed, values in load_object['environment']['persons'].items()}
         gem.current_environment = gem.GameEnvironment(
             load_object['environment']['galactic_seed'],
             game_date_time,
-            load_object['environment']['galaxy_alterations']
+            load_object['environment']['galaxy_alterations'],
+            people_alterations
             )
         logger.debug("Loaded seed: " + str(gem.current_environment.galaxy.seed))
 
@@ -88,8 +91,8 @@ class Savefile:
         player = pem.current_player
 
         persons_dict = {}
-        for person in env.persons.values():
-            persons_dict[person.seed] = person.serialize()
+        for key, person_dict in env.persons.items():
+            persons_dict[key] = person_dict
 
         data = {
             'environment': {

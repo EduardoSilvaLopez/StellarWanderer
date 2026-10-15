@@ -35,8 +35,6 @@ class ReportingInOutpost(Conversation):
 
     # region Greet and thank
     def greet_and_thank(self) -> None:
-        from Galaxies.People.player import current_player as player
-
         if self.interlocutor.last_communication_at and (gem.current_environment.date_time - self.interlocutor.last_communication_at).total_seconds() > 28 * 24 * 60 * 60:
             self.say_had_not_seen_you_thanks()
         elif self.interlocutor.last_communication_at:
@@ -189,12 +187,41 @@ class ReportingInOutpost(Conversation):
                 'text': 'Thank you for sharing',
                 'sympathy': -1 if self.interlocutor.loyalty100 > 10 else 10, # Took the hint
                 }
+                , {
+                'text': 'What about getting some cash?',
+                'reputation': -0.5 if self.interlocutor.loyalty100 > 10 else 0,
+                'sympathy': -5 if self.interlocutor.loyalty100 > 10 else 10,
+                }
             ]
 
         show_message(
             self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self.finish(button_index, buttons)
+            on_result=lambda button_index: self.say_what_the_fuck(button_index, buttons)
             )
+
+    def say_what_the_fuck(self, chosen_button: int, consequences: dict) -> ReportingInOutpost:
+        if chosen_button == 2:
+            subjective_title = self.interlocutor.get_player_title(player)
+            # Prepare the text:
+            text: str = f"That's a... joke?"
+            text += f"\n\nDon't make such jokes, {subjective_title}."
+            if self.interlocutor.loyalty100 < 10:
+                text += f"\n\nI mean... I *personally* don't mind but... better not."
+
+            # Prepare the buttons: Here I can pass on or even change the consequences :)
+            only_button = consequences[2]
+            only_button['text'] = 'Ok, nevermind'
+            buttons = [ only_button ]
+
+            show_message(
+                self.prepare_message(self.title, text, buttons),
+                on_result=lambda button_index: self.finish(button_index, buttons)
+                )
+            return self
+    
+        self.finish(chosen_button, consequences)
+        return self
+
     # endregion
 
     def greet_and_warn(self) -> None:
@@ -216,7 +243,7 @@ class ReportingInOutpost(Conversation):
             else:
                 presentation = f"\n\nI am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
 
-        is_conspiratory = self.interlocutor.loyalty100 > 20 and self.interlocutor.sociability100 > 80 and self.interlocutor.sympathy100 > 40
+        is_conspiratory = self.interlocutor.loyalty100 < 20 and self.interlocutor.sociability100 > 80 and self.interlocutor.sympathy100 > 40
 
         warning = None
         if self.interlocutor.sympathy100 > 80:
@@ -231,12 +258,14 @@ class ReportingInOutpost(Conversation):
             warning = f"You bring no ore, {subjective_title}. Please remember that you license will be revoked if you do not use what you are shared to help."
 
         bye = None
-        schedule = None
-        if (self.outpost.staff.index(self.interlocutor) // 8) < 3:
-            shift_start = 8 * (self.outpost.staff.index(self.interlocutor) // 8)
-            schedule = f"{shift_start}:00 to {shift_start + 8}:00"
         if is_conspiratory:
-            bye = f"Be careful, mate. I work here from {schedule}. Maybe we talk another time."
+            schedule = None
+            if self.outpost.staff.index(self.interlocutor) < 3:
+                shift_start = 8 * self.outpost.staff.index(self.interlocutor)
+                schedule = f"{shift_start}:00 to {shift_start + 8}:00"
+            else:
+                schedule = "time to time"
+            bye = f"Be careful. I work here from {schedule}. Maybe we talk more one day."
         else:
             bye = f"Long live the Community."
 
@@ -352,7 +381,7 @@ class ReportingInOutpost(Conversation):
                         " about money, money, money... I don't know. Scary."
                         "\n\nI like the Shining Throne's soap operas, as everybody. They have so many beautiful"
                         " things there! The arcades, the dresses... even the cutlery is beautiful!"
-                        "\n\nBut to live all the time thinking about honor and so... and most are 'selfs' and'"
+                        "\n\nBut to live all the time thinking about honor and so... and most are 'serfs' and'"
                         " 'servants', that's for sure not so nice as to be a member of the 'aristocracy'."
                     )
                 elif self.interlocutor.loyalty100 < 10 and self.interlocutor.sympathy100 > 60:

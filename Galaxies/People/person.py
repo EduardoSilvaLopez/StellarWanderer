@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 import pygame
 
 from Dialogs import Message, show_message
+from GameLogging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_logs
 from Galaxies.Politics import political_entity
 from Galaxies.Politics.personal_status import PersonalStatus
 from Spaceships.cargo_hold import CargoHold
@@ -100,15 +101,16 @@ class Person:
                 self.sympathy100 = my_alterations['sympathy']
                 self.sympathy_altered = True
             if 'interactions' in my_alterations:
-                for dt_str, lines in my_alterations.items():
+                for dt_str, lines in my_alterations['interactions'].items():
                     dt = datetime.fromisoformat(dt_str)
                     self.interactions[dt] = lines
         else:
-            gem.current_environment.persons[self.seed] = self
+            gem.current_environment.persons[self.seed] = self.serialize()
 
         self.log_update()
+        append_person_almanack(self)
 
-    def _load_portrait(self, my_random: random.Random) -> Person:
+    def _load_portrait(self, my_random: random.Random) -> Optional[str]:
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
         age_group: str = 'young' if age < 30\
             else 'adult' if age < 45\
@@ -130,7 +132,7 @@ class Person:
         candidates = sorted(name for name in names if name.startswith(filename_prefix))
         if not candidates:
             print(f"Warning: No person portrait starting with {filename_prefix} in {portraits_dir}")
-            return self
+            return None
         filename: str = my_random.choice(candidates)
 
         icon_path = os.path.join(portraits_dir, filename)
@@ -138,27 +140,48 @@ class Person:
             self.icon = pygame.image.load(icon_path)
         except Exception as e:
             print(f"Warning: Could not load person entity icon {filename}: {e}")
+            return None
 
-        return self
+        return icon_path
 
-    def log_update(self) -> Person:
+    def describe(self) -> str:
+        """The person's characteristics, one ' - ' line each: what the log and the almanack show."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
-        logger.info(
-            f"PERSON UPDATE: {self.get_full_name()}\n"
+        result: str =  (
             f" - ID: {self.seed}.\n"
             f" - {self.gender_group.name.capitalize()}, {self.race.name.capitalize()}\n"
             f" - D.O.B.: {self.dob.strftime("%Y-%m-%d")} ({age} y.o.)\n"
+            f" - Reputation: {self.reputation:.2f}%\n"
             f" - Empathy: {self.empathy100:.2f}%\n"
             f" - Sociability: {self.sociability100:.2f}%\n"
             f" - Loyalty: {self.loyalty100:.2f}%\n"
-            f" - Sympathy to the player: {self.sympathy100:.2f}%\n"
+            f" - Sympathy for the player: {self.sympathy100:.2f}%\n"
         )
+        
+        from Galaxies.outpost import Outpost        
+        if isinstance(self.residency, Outpost):
+            residency: str = (
+                f" - Residency: Outpost {self.residency.name}, planet {self.residency.planet.name}"
+                f", {self.residency.planet.parent_orbit.parent_stellar_system.name}\n"
+                )
+            result += residency
+        return result
+
+    def log_update(self) -> Person:
+        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{self.describe()}")
         return self
+
+    def almanack(self) -> str:
+        """Markdown entry for the people's almanack: name, portrait (if any) and characteristics."""
+        image = ''
+        if self.portrait:
+            image = f'<img src="{relative_path_from_logs(self.portrait)}" width="{ALMANACK_IMAGE_WIDTH}">\n\n'
+        return f"# {self.get_full_name()}\n\n{image}{self.describe()}\n"
 
     def serialize(self) -> dict:
         interactions_dict: dict = {}
         for int_date_time, int_lines in self.interactions.items():
-            interactions_dict[int_date_time.strftime("%Y-%m-%d")] = int_lines
+            interactions_dict[int_date_time.strftime("%Y-%m-%d %H:%M:%S")] = int_lines
 
         result: dict = { 'seed': self.seed }
         if self.last_communication_at:
@@ -179,7 +202,7 @@ class Person:
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
 
     def get_full_name(self) -> str:
-        return 'Comrade ComOfficer ' + self.name + ' ' + self.surname # No Chinese exception. Intentional.
+        return f"{self.get_title()} {self.name} {self.surname}" # No Chinese exception. Intentional.
 
     # 'Personality' traits change slower the more they approach the extremes of 0 and 100
     def _adjust_loyalty(self, change: float) -> Person:
