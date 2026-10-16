@@ -13,7 +13,7 @@ import numpy as np
 from OpenGL import GL
 from .constants import (
     STAR_CORONA_EXTENT, FLARE_SIZE_SHARE, FLARE_MAX_TIME_SCALE, GLARE_MAX, GLARE_RADIUS_SHARE,
-    GLARE_SIZE_SHARE, SPOT_DEPTH, SPOT_FRAME_SECONDS, SPOT_MAX_TURN_PER_FRAME,
+    GLARE_SIZE_OF_CORONA, SPOT_DEPTH, SPOT_FRAME_SECONDS, SPOT_MAX_TURN_PER_FRAME,
 )
 from .local_star import StarView, star_rgba
 from .star_surface import granulation, sunspots, sunspot_quads
@@ -147,15 +147,22 @@ class StarGl:
         _end_2d()
 
     @staticmethod
+    def glare_half_px(view: StarView) -> float:
+        """The glare's half-size in pixels: a multiple of the corona, so it is as big as the sun looks (and shrinks
+        with it, as the sun gets farther away)."""
+        return GLARE_SIZE_OF_CORONA * view.corona_px
+
+    @staticmethod
     def draw_glare(width: int, height: int, view: StarView, star: Star) -> None:
-        """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Added
-        to what is drawn (additive), so it brightens the sky and the worlds, and is under the cockpit."""
+        """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Its size
+        follows the sun's apparent size (glare_half_px). Added to what is drawn (additive), so it brightens the sky and
+        the worlds, and is under the cockpit."""
         distance = math.hypot(view.x - width / 2, view.y - height / 2)
         reach = GLARE_RADIUS_SHARE * height
         strength = GLARE_MAX * max(0.0, 1.0 - distance / reach) ** 2
         if strength <= 0.0:
             return
-        half = GLARE_SIZE_SHARE * height
+        half = StarGl.glare_half_px(view)
         _begin_2d(width, height)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive
         GL.glColor4f(star.color[0] / 255 * strength, star.color[1] / 255 * strength, star.color[2] / 255 * strength, 1.0)

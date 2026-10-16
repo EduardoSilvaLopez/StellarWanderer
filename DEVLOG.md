@@ -288,12 +288,12 @@ RELEASE "The Three Powers" created, with installer.
 
 * FULL OF STARS (work with chunks of the galaxy)
   * Phase 1: Left-handedness (was not necessary)
-
-Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
-
   * Phase 2: Isolate the star constructor
   * Phase 3: Fixed stars in memory
   * Phase 4: The system receives the fixed star
+
+Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
+
   * Phase 5: Show the fixed stars in the sky
   * OpenGL.acceleratesupport: No OpenGL_accelerate module loaded: No module named 'OpenGL_accelerate'
   * Extra: Bug search in all

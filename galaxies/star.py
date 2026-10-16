@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
 from galaxies.body import Body
+from galaxies.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, LIGHT_YEAR_M, STAR_COLOUR_VIVIDNESS
 
 if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
@@ -19,6 +20,30 @@ def cell_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
     return (math.floor(position[0]), math.floor(position[1]), math.floor(position[2]))
 
 
+def blackbody_rgb(temperature: float) -> tuple:
+    """The RGB colour of a blackbody at the temperature (K), from the standard curve fit (Tanner Helland's), clamped
+    to the range the fit is good for. Plain colour: no vividness applied (see _vivid)."""
+    t = min(max(temperature, 1000.0), 40000.0) / 100.0
+    red = 255.0 if t <= 66 else 329.698727446 * (t - 60) ** -0.1332047592
+    if t <= 66:
+        green = 99.4708025861 * math.log(t) - 161.1195681661
+    else:
+        green = 288.1221695283 * (t - 60) ** -0.0755148492
+    if t >= 66:
+        blue = 255.0
+    elif t <= 19:
+        blue = 0.0
+    else:
+        blue = 138.5177312231 * math.log(t - 10) - 305.0447927307
+    return tuple(round(min(max(c, 0.0), 255.0)) for c in (red, green, blue))
+
+
+def _vivid(colour: tuple, factor: float) -> tuple:
+    """The colour pushed away from its mean grey by factor (1.0 leaves it as it is), kept within 0 to 255."""
+    grey = sum(colour) / 3
+    return tuple(round(min(max(grey + (c - grey) * factor, 0.0), 255.0)) for c in colour)
+
+
 class Star(Body):
     """The star: the origin of the stellar frame, at rest. It has no surface: nothing binds to it.
 
@@ -26,8 +51,8 @@ class Star(Body):
     belongs to a stellar system once `attach_to` is called, which is what `stellar_system` returns.
     """
 
-    SOLAR_MASS = 1.989e30  # kg
-    SOLAR_RADIUS = 6.957e8  # m
+    BOLOMETRIC_ZERO_POINT = 3.0128e28  # W: the luminosity of magnitude 0 (IAU 2015 nominal zero point)
+    STEFAN_BOLTZMANN = 5.670e-8  # W m^-2 K^-4
 
     class Type(Enum):
         M = "Red dwarf (M)"
@@ -47,10 +72,11 @@ class Star(Body):
         my_random: random.Random = random.Random(self.seed)
         self.name: str = Star._generate_name(my_random)
         self.type: Star.Type = Star._generate_star_type(my_random)
-        self.color: tuple = self._generate_color(my_random)
         self.radius: int = self._generate_radius(my_random)
         self.mass: int = self._generate_mass(my_random)
         self.temperature: float = self._generate_temperature(my_random)
+        self.color: tuple = self._generate_color()  # after the temperature, which it depends on
+        self.luminosity: float = 4 * math.pi * self.radius ** 2 * Star.STEFAN_BOLTZMANN * self.temperature ** 4  # W
         self.rotation_period: float = self._generate_rotation_period(my_random)
         self.heat_radius: int = self._generate_heat_effect_distance(my_random)
         self.death_radius: int = self._generate_heat_death_distance(my_random)
@@ -92,32 +118,9 @@ class Star(Body):
         else:
             return Star.Type.O
 
-    def _generate_color(self, my_random: random.Random) -> tuple:
-
-        base_color: tuple = None
-        if self.type == Star.Type.M:
-            base_color = (255, 96, 96)
-        elif self.type == Star.Type.K:
-            base_color = (255, 192, 128)
-        elif self.type == Star.Type.G:
-            base_color = (255, 255, 128)
-        elif self.type == Star.Type.F:
-            base_color = (255, 255, 224)
-        elif self.type == Star.Type.A:
-            base_color = (255, 255, 255)
-        elif self.type == Star.Type.B:
-            base_color = (192, 192, 255)
-        elif self.type == Star.Type.O:
-            base_color = (96, 96, 255)
-
-        color_variation = (
-            -16 + my_random.randint(0, 32),
-            -16 + my_random.randint(0, 32),
-            -16 + my_random.randint(0, 32)
-        )
-
-        result = tuple(max(0, min(255, b + v)) for b, v in zip(base_color, color_variation))
-        return result
+    def _generate_color(self) -> tuple:
+        """The blackbody colour at the star's temperature, made more vivid by STAR_COLOUR_VIVIDNESS."""
+        return _vivid(blackbody_rgb(self.temperature), STAR_COLOUR_VIVIDNESS)
 
     def _generate_radius(self, my_random: random.Random) -> int:
         if self.type == Star.Type.M:
@@ -140,13 +143,13 @@ class Star(Body):
 
         # Typical masses per type (very approximate)
         typical_mass = {
-            Star.Type.M: 0.3 * Star.SOLAR_MASS,
-            Star.Type.K: 0.7 * Star.SOLAR_MASS,
-            Star.Type.G: 1.0 * Star.SOLAR_MASS,
-            Star.Type.F: 1.3 * Star.SOLAR_MASS,
-            Star.Type.A: 2.0 * Star.SOLAR_MASS,
-            Star.Type.B: 5.0 * Star.SOLAR_MASS,
-            Star.Type.O: 20.0 * Star.SOLAR_MASS
+            Star.Type.M: 5.967e29,  # kg
+            Star.Type.K: 1.3923e30,
+            Star.Type.G: 1.989e30,
+            Star.Type.F: 2.5857e30,
+            Star.Type.A: 3.978e30,
+            Star.Type.B: 9.945e30,
+            Star.Type.O: 3.978e31
         }.get(self.type, 1.0)
 
         return int(typical_mass * (0.98 + 0.04 * my_random.random()))
@@ -168,7 +171,7 @@ class Star(Body):
         }.get(self.type, 6000)  # fallback to G-like
 
         # Combine corrections (mild influence)
-        result = base_temp * (0.85 + 0.15 * self.mass / Star.SOLAR_MASS) * (0.9 + 0.1 * self.radius / Star.SOLAR_RADIUS)
+        result = base_temp * (0.85 + 0.15 * self.mass / 1.989e30) * (0.9 + 0.1 * self.radius / 6.957e8)
 
         # Add random scatter (±8%)
         result *= my_random.uniform(0.92, 1.08)
@@ -245,8 +248,6 @@ class Star(Body):
         radius, mass and temperature.'''
         AU: float = 1.496e11  # m
         GRAVITATIONAL_CONSTANT: float = 6.674e-11  # m^3 kg^-1 s^-2
-        SUN_TEMPERATURE: float = 5772.0  # K, the Sun's effective temperature
-        luminosity: float = (self.radius / Star.SOLAR_RADIUS) ** 2 * (self.temperature / SUN_TEMPERATURE) ** 4
         gravity: float = GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2
         equatorial_speed: float = 2 * math.pi * self.radius / self.rotation_period
         return (
@@ -254,14 +255,24 @@ class Star(Body):
             f"* Type: {self.type.value}\n"
             f"* Seed: {self.seed}\n"
             f"* Effective temperature: {self.temperature:.0f} K\n"
-            f"* Mass: {self.mass / Star.SOLAR_MASS:.3f} solar masses\n"
-            f"* Radius: {self.radius / Star.SOLAR_RADIUS:.3f} solar radii ({int(self.radius / 1000)} Km)\n"
+            f"* Mass: {self.mass:.3e} kg\n"
+            f"* Radius: {self.radius:.3e} m ({int(self.radius / 1000)} Km)\n"
             f"* Surface gravity: {gravity:.1f} m/s²\n"
-            f"* Luminosity: {luminosity:.3g} solar luminosities\n"
+            f"* Luminosity: {self.luminosity:.3e} W\n"
             f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed {equatorial_speed / 1000:.1f} Km/s\n"
             f"* Heat radius: {self.heat_radius / AU:.3f} AU, death radius: {self.death_radius / AU:.4f} AU\n"
             f"\n"
             )
+
+    @property
+    def absolute_magnitude(self) -> float:
+        """How bright the star is at the reference distance (ABSOLUTE_MAGNITUDE_DISTANCE_LY); lower is brighter."""
+        return -2.5 * math.log10(self.luminosity / Star.BOLOMETRIC_ZERO_POINT)
+
+    def apparent_magnitude(self, distance_m: float) -> float:
+        """How bright the star looks from distance_m meters away; lower is brighter."""
+        distance_ly = distance_m / LIGHT_YEAR_M
+        return self.absolute_magnitude + 5 * math.log10(distance_ly / ABSOLUTE_MAGNITUDE_DISTANCE_LY)
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, 0.0)

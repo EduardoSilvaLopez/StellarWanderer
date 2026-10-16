@@ -46,7 +46,7 @@ class ReportingInOutpost(Conversation):
 
     def _say_had_not_seen_you_thanks(self) -> None:
         # Prepare the text:
-        introduction: str = str()
+        introduction: str = ''
         if self.interlocutor.empathy100 < 0.2 or self.interlocutor.sympathy100 < 20:
             introduction += "I thought you were dead.\n\n"
         elif self.interlocutor.empathy100 > 0.8 or self.interlocutor.sympathy100 > 80:
@@ -59,12 +59,12 @@ class ReportingInOutpost(Conversation):
             title = self.interlocutor.get_player_title(player)
         else:
             logger.warning("Unknown political entity.")
-            title = str()
+            title = ''
         wants_to_chat: bool = self.interlocutor.sociability100 + self.interlocutor.sympathy100 > 100
         text: str = (
             f"{introduction}"
             f"Thank you for sharing, {title}."
-            f"{" You know if helps a lot." if self.interlocutor.loyalty100 > 50 else str()}"
+            f"{" You know if helps a lot." if self.interlocutor.loyalty100 > 50 else ''}"
             f"{"\n\nHow are you doing?" if wants_to_chat else "\n\nLong live the Community."}"
             )
 
@@ -99,7 +99,7 @@ class ReportingInOutpost(Conversation):
             f"{presentation}"
             f"\n\nThank you for the ore."
             f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else " As they say."}"
-            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else str()}"
+            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
             )
 
         # Prepare the buttons: If disloyal, will appreciate "wrong" answers.
@@ -137,8 +137,8 @@ class ReportingInOutpost(Conversation):
         text: str = (
             f"{presentation}"
             f"\n\nThank you for the ore, {player.get_title()}."
-            f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else str()}"
-            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else str()}"
+            f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else ''}"
+            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
             )
 
         # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
@@ -171,9 +171,9 @@ class ReportingInOutpost(Conversation):
         text: str = (
             f"{presentation}"
             f"\n\nThank you for sharing the ore, {player.get_title()}."
-            f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else str()}"
+            f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else ''}"
             f"\n\nWe will now replenish your resources and repair your ship."
-            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else str()}"
+            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
             )
 
         # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
@@ -310,15 +310,9 @@ class ReportingInOutpost(Conversation):
 
         # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
         buttons = [
-                {
-                'text': '<Ask about Those-Who-Share>',
-                }
-                , {
-                'text': '<Ask about places outside Those-Who-Share>',
-                }
-                , {
-                'text': 'Nevermind.',
-                }
+                { 'text': '<Ask about Those-Who-Share>' }
+                , { 'text': '<Ask about places outside Those-Who-Share>' }
+                , { 'text': 'Nevermind.' }
             ]
 
         show_message(
@@ -353,7 +347,7 @@ class ReportingInOutpost(Conversation):
                     text = (
                         "It's ok. There is worse. I guess. Look, I have to work."
                     )
-            else:
+            else:  # noqa: PLR5501
                 if self.interlocutor.loyalty100 > 80:
                     text = (
                         "From each according to ability, to each according to needs.\n\nWe are great."
@@ -400,7 +394,7 @@ class ReportingInOutpost(Conversation):
                         "\n\nThe Shining Throne, well, you know the soap operas, yes? Glory, knights and so on."
                         "\n\nWe are just Those-Who-Share. We build stuff."
                     )
-            else:
+            else:  # noqa: PLR5501
                 if self.interlocutor.loyalty100 > 80:
                     text = (
                             "UniDiv is a bunch of wealth-obsessed militaristic morons lost in the glories"

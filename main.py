@@ -47,9 +47,6 @@ WINDOW_SIZE = (1920, 1080)
 MIN_SIZE = (640, 400)
 FPS = 60
 
-STAR_COUNT = 260
-STAR_SEED = 20270101
-
 # Altitude change control
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
 MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()  # datetime tops out at year 9999;

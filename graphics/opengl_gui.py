@@ -9,6 +9,7 @@ from OpenGL import GL
 from .constants import SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
 from .deep_space import DeepSpace
+from .distant_stars import DistantStars
 from .local_star import view_of, erase
 from .star_gl import StarGl
 from .star_surface import visor_strength
@@ -35,8 +36,8 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    The sun is drawn in OpenGL, under the sky: the sky (DeepSpace, the worlds farther than the sun, a hole where the sun
-    is, the worlds nearer than the sun, the nearest body) is an RGBA texture with per-pixel alpha, so the sun shows through
+    The sun is drawn in OpenGL, under the sky: the sky (DeepSpace, the fixed stars, the worlds farther than the sun, a hole
+    where the sun is, the worlds nearer than the sun, the nearest body) is an RGBA texture with per-pixel alpha, so the sun shows through
     the hole, and the glare goes over the sky. See graphics/star_gl.py. The
     SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
@@ -67,6 +68,7 @@ class OpenGLGui:
         ship = player.ship
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
+        DistantStars.draw(self.world_surface, width, height, environment, ship)
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
         view = view_of(environment, ship, width, height)
         if view is not None:

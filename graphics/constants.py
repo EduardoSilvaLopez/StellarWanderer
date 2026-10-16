@@ -46,10 +46,6 @@ MINE_WARNING_A = (240, 196, 40)
 MINE_WARNING_B = (26, 26, 26)
 MINE_CAP_COLOR = (48, 51, 58)
 
-# Starfield
-STAR_COUNT = 260
-STAR_SEED = 20270101
-
 # Canopy geometry (as fractions of window)
 CANOPY_TOP = 0.055
 CANOPY_TOP_INSET = 0.105
@@ -90,7 +86,7 @@ FLARE_MAX_TIME_SCALE = 60  # above this time scale flares are not drawn: they wo
 FLARE_SIZE_SHARE = 0.6  # a flare's size, in disc radii
 GLARE_MAX = 0.5  # the glare's brightness at the sun's position when it is at the screen centre
 GLARE_RADIUS_SHARE = 0.6  # the glare fades out at this share of the window's height from the sun
-GLARE_SIZE_SHARE = 0.5  # the glare's half-size, in window heights
+GLARE_SIZE_OF_CORONA = 1.0  # the glare's half-size, in corona radii: it follows the sun's apparent size, not the window
 # Debug frame rate (graphics/debug_fps.py): source runs only.
 DEBUG_FPS_WINDOW_SECONDS = 0.5  # the rate is measured over this long
 DEBUG_FPS_POSITION = (12, 10)  # top-left corner of the window, in pixels
@@ -111,4 +107,6 @@ WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = wh
 WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
 OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky
 OUTPOST_DOT_RADIUS_PX = 2
+FIXED_STAR_DOT_RADIUS_PX = 1  # fixed stars are drawn in their own colour; they are far away, so tiny dots
+NAKED_EYE_LIMIT_MAGNITUDE = 6.0  # a fixed star is drawn only if its apparent magnitude is at most this (lower is brighter)
 LIT_WORLD_PIXEL_BUDGET = 80_000  # discs larger than this (in pixels) are shaded on a coarser grid

@@ -2,6 +2,7 @@ import copy
 from typing import List, Optional
 
 from galaxies import fixed_stars
+from galaxies.constants import INITIAL_STAR_POSITION
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
@@ -16,6 +17,7 @@ class Galaxy():
         self.fixed_stars: dict[tuple[int, int, int], Star] = {
             cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)
         }
+        self._fixed_star_positions: Optional[list[tuple[Star, tuple[float, float, float]]]] = None
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
         self.is_altered: bool = saved_alterations is not None and saved_alterations != {}
@@ -62,6 +64,17 @@ class Galaxy():
         if star is None:
             raise ValueError(f"No fixed star at galactic position {position}: fixed stars exist only around the initial star.")
         return star
+
+    def fixed_star_positions(self) -> list[tuple[Star, tuple[float, float, float]]]:
+        """Each fixed star except the initial one (the sun), with its position in the stellar frame, in meters.
+        The stars do not move, so the positions are worked out once."""
+        if self._fixed_star_positions is None:
+            self._fixed_star_positions = [
+                (star, fixed_stars.stellar_position(star.position))
+                for star in self.fixed_stars.values()
+                if star.position != INITIAL_STAR_POSITION
+            ]
+        return self._fixed_star_positions
 
     def add_stellar_system(self, star: Star) -> StellarSystem:
         """The stellar system of a star. The star is given, not generated; a system is only ever added once per cell."""

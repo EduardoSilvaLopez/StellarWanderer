@@ -1,6 +1,6 @@
 """Stellar Wanderer — first-person cockpit view.
 
-Draws the pilot's-seat view of the player's ship as vector art: the starfield
+Draws the pilot's-seat view of the player's ship as vector art: the sky
 seen through the canopy, the hull frame around it, and the instrument console.
 The panel on the upper right is the ship clock — it starts at
 500-01-01 00:00:00 and advances one second per real second.
@@ -27,7 +27,7 @@ class Gui:
 
         Renders in order:
         1. Deep space background
-        2. Starfield
+        2. Fixed stars
         3. Planet surface
         4. Rocks
         5. Cockpit hull and instrumentation
