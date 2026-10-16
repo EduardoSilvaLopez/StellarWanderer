@@ -61,10 +61,47 @@ import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(40)  # was 60; narrowed ~1/3 to better match real eye-to-screen viewing angle
 NEAR_CLIP = 0.5   # metres
 MAX_DEPTH = 2000  # metres
-LOCAL_STAR_MIN_RADIUS_PX = 1  # floor so a distant/small star never vanishes to 0px
-LOCAL_STAR_MAX_RADIUS_PX = 1500  # cap, so the star's glow surface stays bounded when the ship is close to it
-LOCAL_STAR_HALO_WIDTH_PX = 4  # extra radius of the semi-transparent glow ring around the star
-LOCAL_STAR_HALO_ALPHA = 90    # 0-255
+# The local star (graphics/local_star.py): a limb-darkened disc and its corona.
+STAR_LIMB_DARKENING = 0.5     # u in I(mu) = 1 - u (1 - mu): the rim's brightness is 1 - u of the centre's
+STAR_CORE_WHITENESS = 0.6     # the centre of the disc: the star's colour mixed this much towards white
+STAR_CORONA_EXTENT = 4.0      # the corona fades out at this many star radii from the centre
+STAR_CORONA_FALLOFF = 2.5     # the corona's brightness falls as (R / r) ** this
+STAR_CORONA_ALPHA = 150       # the corona's opacity at the rim, 0-255
+STAR_GLOW_MIN_PX = 14         # the corona's radius in pixels is never less: a distant star is a glowing point
+# The sun's surface and visor (graphics/star_surface.py). Granulation and sunspots are baked into its texture.
+GRANULATION_STRENGTH = 0.08   # how much the granules darken and brighten the disc
+GRANULE_CELL_SHARE = 0.04     # a granule's size, in disc radii
+SPOT_COUNT_MIN = 3           # sunspots: this many, and up to SPOT_COUNT_EXTRA more, by the star's seed
+SPOT_COUNT_EXTRA = 3
+SPOT_RADIUS_MIN = 0.05       # a spot's radius, in disc radii
+SPOT_RADIUS_MAX = 0.12
+SPOT_DEPTH = 0.45            # how much darker a spot's core is
+SPOT_FRAME_SECONDS = 1 / 30  # the real time of a frame, to work out how far a sunspot turns between two frames
+SPOT_MAX_TURN_PER_FRAME = 0.25  # above this share of a turn per frame, a sunspot would jump: it is not drawn
+VISOR_START_PX = 120         # the visor starts to darken the view when the sun's disc is this big on the screen
+VISOR_FULL_PX = 400          # and is at its darkest at this size
+VISOR_MAX_ALPHA = 0.8        # the darkest the visor makes the view (0 to 1)
+# The sun's flares and glare (graphics/star_flares.py, graphics/star_gl.py). Flares are in game time.
+FLARE_SLOT_SECONDS = 6 * 3600  # each slot of game time may hold one flare
+FLARE_CHANCE = 0.5            # the chance that a slot holds one
+FLARE_RISE_SECONDS = 60       # game seconds from start to peak
+FLARE_DECAY_SECONDS = 600     # game seconds from peak to a tenth
+FLARE_MAX_TIME_SCALE = 60     # above this time scale flares are not drawn: they would flicker
+FLARE_SIZE_SHARE = 0.6       # a flare's size, in disc radii
+GLARE_MAX = 0.5              # the glare's brightness at the sun's position when it is at the screen centre
+GLARE_RADIUS_SHARE = 0.6     # the glare fades out at this share of the window's height from the sun
+GLARE_SIZE_SHARE = 0.5       # the glare's half-size, in window heights
+# Debug frame rate (graphics/debug_fps.py): source runs only.
+DEBUG_FPS_WINDOW_SECONDS = 0.5  # the rate is measured over this long
+DEBUG_FPS_POSITION = (12, 10)    # top-left corner of the window, in pixels
+# Starlight on the cockpit and the heat vignette (graphics/starlight.py).
+STARLIGHT_TINT_MAX = 0.35     # share of the star's colour added to the cockpit at the death radius and nearer
+HEAT_VIGNETTE_COLOUR = (220, 30, 10)
+HEAT_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its maximum
+HEAT_VIGNETTE_INNER = 0.45    # the vignette starts at this share of the way from the centre to a corner
+FROST_VIGNETTE_COLOUR = (150, 205, 255)  # the cold side's vignette, pale blue
+FROST_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its minimum
+FROST_VIGNETTE_INNER = 0.45     # the vignette starts at this share of the way from the centre to a corner
 WORLD_ALBEDO = (128, 126, 124)  # base colour of every world (planets and moons) when lit by its star
 WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.

@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 import random
-from common.units import format_compact_distance
 import galaxies.constants
 from galaxies.body import Body
 from galaxies.star import Star
@@ -49,8 +48,8 @@ class StellarSystem:
         text: str = (
             f"## {self.name} ({self.political_entity.name})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
-            f"* {self.star.type} star, radius {format_compact_distance(self.star.radius)}\n"
         )
+        text += self.star.almanack()
         for orbit in self.orbits:
             for planet in orbit.planets:
                 text += planet.almanack()

@@ -146,7 +146,7 @@ class LitWorlds:
 
     @staticmethod
     def draw_nearest(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        """The nearest body, lit by the star (used while unbound). The star is not drawn here: LocalStar draws it."""
+        """The nearest body, lit by the star (used while unbound). The star is not drawn here: the OpenGL pass draws it (star_gl.py)."""
         body = environment.nearest_body
         if not body.is_world:
             return

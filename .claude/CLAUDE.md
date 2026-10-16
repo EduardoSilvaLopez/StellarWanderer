@@ -49,7 +49,7 @@ def generate_default(self) -> None:
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
 - `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the outpost texture generator
-- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `temp/` holds `pycache`, `Logs`, `build` and `dist` and can be deleted. `release/` holds the installer.
+- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `temp/` holds `pycache`, `Logs`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
 
 ## Rules the code does not show
 

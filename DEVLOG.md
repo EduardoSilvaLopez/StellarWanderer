@@ -277,24 +277,27 @@ RELEASE "The Three Powers" created, with installer.
   * Better-looking instruments on the left side.
   * Temperature: Bar, death conditions.
   * Sun can be nearest.
-
-Extra time: 46h15' + 5:30-
-
   * Temperature: Changes
   * Approaching replenishes energy.
+  * Halo of the star changes when near enough (but not too near...)
+  * Make the star cooler: flares, areas, effects on ship, temperature effects on vision.
+
+Extra time: 46h15' + 5:30- 11:30 + 14:00 -
+
   * Extra: Pythonise all. Internal methods "_", loops.
 
 # BACKLOG
-* REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
+* REAL STARS AROUND (work with chunks of the galaxy)
 * ASTEROIDS
   * Targeted body, not nearest body.
   * Extra: Bug search in all
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
-  * Extra: Ages of people still too similar?
+  * Open: Ages of people still too similar?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
-- Idea: credits are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and prominently shown in UniDiv.
+  * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
 * https://github.com/obra/superpowers#how-it-works
 * JOVIAN PLANETS (with forbidden area)
+* AI PERSONALITY?
 * SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
 
 ### Learning Python:

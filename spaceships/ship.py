@@ -47,7 +47,7 @@ class Ship(Updatable):
 
     ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     TEMP_MIN = -50
-    TEMP_DEFAULT = 50
+    TEMP_DEFAULT = 25
     TEMP_MAX = 50
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
@@ -151,11 +151,14 @@ class Ship(Updatable):
         self.maintenance -=  0.005 * days
         self.energy -=  1e5 * days
 
-        dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
-        if dist < gem.current_environment.nearest_system.star.heat_radius:
-            max = gem.current_environment.nearest_system.star.heat_radius
-            min = gem.current_environment.nearest_system.star.death_radius
-            self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - min)/(max - min)
+        if self.is_bound:
+            self.temperature = Ship.TEMP_DEFAULT
+        else:
+            dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
+            if dist < gem.current_environment.nearest_system.star.heat_radius:
+                max = gem.current_environment.nearest_system.star.heat_radius
+                min = gem.current_environment.nearest_system.star.death_radius
+                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - min)/(max - min)
 
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days

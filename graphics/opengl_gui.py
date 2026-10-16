@@ -9,7 +9,11 @@ from OpenGL import GL
 from .constants import SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
 from .deep_space import DeepSpace
-from .local_star import LocalStar
+from .local_star import view_of, erase
+from .star_gl import StarGl
+from .star_surface import visor_strength
+from .starlight import Starlight, HeatVignette, FrostVignette
+from .debug_fps import DebugFps
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
 from .nearest_world import NearestWorld
@@ -31,7 +35,9 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    Draw order: worlds farther than the star, the star, worlds nearer than the star, then the nearest body (when it is a world; the star is drawn as the star). The
+    The sun is drawn in OpenGL, under the sky: the sky (DeepSpace, the worlds farther than the sun, a hole where the sun
+    is, the worlds nearer than the sun, the nearest body) is an RGBA texture with per-pixel alpha, so the sun shows through
+    the hole, and the glare goes over the sky. See graphics/star_gl.py. The
     SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
     BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,
@@ -56,12 +62,15 @@ class OpenGLGui:
         # (the window frame takes part of it), cropping the frame and shifting mouse positions.
         width, height = pygame.display.get_window_size()
         self._ensure_surfaces(width, height)
+        DebugFps.tick()
 
         ship = player.ship
         self.world_surface.fill(SPACE_COLOR)
         DeepSpace.draw(self.world_surface, width, height)
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
-        LocalStar.draw(self.world_surface, width, height, environment, ship)
+        view = view_of(environment, ship, width, height)
+        if view is not None:
+            erase(self.world_surface, view, width, height)  # the sun shows through the sky here
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False)
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
@@ -81,12 +90,22 @@ class OpenGLGui:
             environment.date_time,
             player.time_scale,
         )
+        Starlight.tint_cockpit(self.overlay_surface, environment, ship)
+        HeatVignette.draw(self.overlay_surface, width, height, ship)
+        FrostVignette.draw(self.overlay_surface, width, height, ship)
+        DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
 
         GL.glViewport(0, 0, width, height)
         GL.glClearColor(8 / 255, 10 / 255, 24 / 255, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
-        self._draw_texture(self.world_surface, self.world_texture)
+        if view is not None:
+            seconds = (environment.date_time - environment.EPOCH).total_seconds()
+            StarGl.draw_star(width, height, view, seconds, player.time_scale)
+        self._draw_texture(self.world_surface, self.world_texture, blend=True)
+        if view is not None:
+            StarGl.draw_glare(width, height, view, view.star)
+            StarGl.draw_visor(width, height, visor_strength(view.disc_px))
         if light is not None:
             Rocks.draw(
                 width, height, ship,
@@ -135,7 +154,7 @@ class OpenGLGui:
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
         if self.world_surface is None or self.world_surface.get_size() != size:
-            self.world_surface = pygame.Surface(size).convert()
+            self.world_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.world_texture = self._make_texture(width, height)
             self.overlay_texture = self._make_texture(width, height)

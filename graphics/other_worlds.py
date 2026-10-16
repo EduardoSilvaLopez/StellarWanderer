@@ -21,7 +21,7 @@ class OtherWorlds:
         """Draw the other worlds at their true direction, bound or unbound, farthest first, each lit
         by the star (see LitWorlds).
 
-        Called twice per frame around LocalStar.draw: first with behind_star=True (worlds
+        Called twice per frame around the sun (its hole in the sky, see OpenGLGui.draw): first with behind_star=True (worlds
         farther than the star, which the star then covers), then with behind_star=False
         (worlds nearer than the star). The nearest body, when it is a world, is drawn afterwards, so it naturally
         hides the worlds behind it (while bound, as an opaque disc below the horizon).
