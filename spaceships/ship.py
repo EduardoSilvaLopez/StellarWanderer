@@ -43,6 +43,9 @@ class Ship(Updatable):
     UPDATE_PERIOD = 24 * 60 * 60 # Large enough to avoid drifts.
 
     ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    TEMP_MIN = -50
+    TEMP_MAX = 50
+    MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
@@ -52,8 +55,8 @@ class Ship(Updatable):
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
-        self.energy_max: float = Ship.ENERGY_MAX  # 1 TWh - prolly too much but let us see. Full: a new ship starts full.
         self.energy: float = Ship.ENERGY_MAX
+        self.temperature: float = 25.0
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
@@ -88,6 +91,8 @@ class Ship(Updatable):
             result.maintenance = src['maintenance']
         if 'energy' in src:
             result.energy = src['energy']
+        if 'temperature' in src:
+            result.temperature = src['temperature']
         result.cargo_hold = CargoHold.load(result, src['cargo_hold'])
         result.update(gem.current_environment.date_time)
         return result
@@ -101,6 +106,7 @@ class Ship(Updatable):
             'last_update_at' : self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
             'maintenance' : self.maintenance,
             'energy' : self.energy,
+            'temperature' : self.temperature,
             'cargo_hold': self.cargo_hold.serialize()
         }
 
@@ -126,6 +132,7 @@ class Ship(Updatable):
 
         old_maintenance: float = self.maintenance
         old_energy: float =  self.energy
+        old_temperature: float = self.temperature
         old_air: float = self.cargo_hold.air
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
@@ -136,8 +143,18 @@ class Ship(Updatable):
         self.cargo_hold.food -= days
 
         # Maintenance thresholds:
-        if self.maintenance <= 0.1 < old_maintenance:
+        if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:
             self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
+        elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
+            self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
+        elif self.temperature <= 35 < old_temperature:
+            self.notification.set("WARNING: It's getting hot in here. You wanna take your clothes off.")
+        elif self.temperature <= 45 < old_temperature:
+            self.notification.set("CRITICAL: The controls burn when you touch them. Leave this place.")
+        elif old_temperature <= -10 < self.temperature:
+            self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
+        elif old_temperature <= -35 < self.temperature:
+            self.notification.set("CRTICAL: Freezing. Leave this place or take measures *now*.")
         elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
@@ -153,6 +170,10 @@ class Ship(Updatable):
             self.owner.game_over('Your ship falls appart due to lack of maintenance. Your death is horrible but swift.')
         elif self.energy <= 0.0:
             self.owner.game_over('Your ship becomes a silent frozen box. Your death is slow but calm at the end.')
+        elif self.temperature <= self.TEMP_MIN:
+            self.owner.game_over('You freeze inside your ship. How this could happen, nobody knows.')
+        elif self.temperature > self.TEMP_MAX:
+            self.owner.game_over('You die of a heat stroke inside your ship. Better than burning alive or dying of the massive radioactivity around here, at least.')
         elif self.cargo_hold.air <= 0.0:
             self.owner.game_over('You die of CO2 intoxication. A somehow funny death but you are anyway dead.')
         elif self.cargo_hold.water <= -2.0: # Dying of thirst after 2 days without water.

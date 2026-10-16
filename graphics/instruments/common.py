@@ -12,6 +12,20 @@ from ..constants import (
     VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP,
 )
 from common.paths import resource_path
+from ..constants import ACCENT
+
+PANEL_TITLE_GAP = 6  # pixels between a panel's title and its box
+
+
+def panel_box_top(font: pygame.font.Font, title_top: int) -> int:
+    """Where the box of a panel starts, below its title, whose top is `title_top`."""
+    return title_top + font.get_linesize() + PANEL_TITLE_GAP
+
+
+def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int) -> None:
+    """A panel's title, centred on centre_x with its top at `top`."""
+    label = font.render(text, True, ACCENT)
+    surface.blit(label, label.get_rect(midtop=(centre_x, top)))
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship

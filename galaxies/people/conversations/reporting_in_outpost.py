@@ -459,13 +459,13 @@ class ReportingInOutpost(Conversation):
 
         # Reputation loss = need of stuff.
         rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 24
-        rep_loss_energy = -(ship.energy_max - ship.energy) * 5e-13 # W/o laser or acc, negligible...
+        rep_loss_energy = -(Ship.ENERGY_MAX - ship.energy) * 5e-13 # W/o laser or acc, negligible...
         rep_loss_air = -(28 - ship.cargo_hold.air) * 0.0006
         rep_loss_water = -(28 - ship.cargo_hold.air) * 0.0003
         rep_loss_food = -(28 - ship.cargo_hold.air) * 0.0006
 
         ship.maintenance = 0.8 if ship.maintenance < 0.8 else ship.maintenance
-        ship.energy = ship.energy_max
+        ship.energy = Ship.ENERGY_MAX
         cargo_hold.air = 28
         cargo_hold.water = 28
         cargo_hold.food = 28

@@ -7,7 +7,7 @@ from datetime import datetime
 from ..constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
-from .common import get_console_background, draw_beveled_panel, bezel_depth
+from .common import get_console_background, draw_beveled_panel, bezel_depth, panel_box_top
 from common.units import format_compact_distance
 from .compass import Compass
 from .world_map import WorldMap
@@ -86,18 +86,24 @@ class Console:
         else:
             Radar.draw(surface, fonts, h, screen, ship, date_time)
 
+        # The scanner and cargo titles sit on the top of the map's screen; their boxes, the resource bars and the
+        # cargo hold all start below the titles and end at the bottom of the cluster.
+        title_font = fonts.get(max(9, int(h * 0.017)))
+        box_top = panel_box_top(title_font, screen.top)
+        panel_bottom = cluster_top + cluster_height
+
         # Scanner
-        Scanner.draw(surface, fonts, bars_left, h, ship, cluster_top, cluster_height, mfd.right)
+        Scanner.draw(surface, fonts, bars_left, h, ship, screen.top, screen.bottom, mfd.right)
 
         # Resource bars
-        bars_rect = pygame.Rect(bars_left, cluster_top, bars_w, cluster_height)
+        bars_rect = pygame.Rect(bars_left, box_top, bars_w, panel_bottom - box_top)
         ResourceBars.draw(surface, fonts, h, ship, bars_rect)
 
         # Cargo
-        cargo_rect = pygame.Rect(0, 0, cargo_width, cluster_height)
-        cargo_rect.top = cluster_top
+        cargo_rect = pygame.Rect(0, 0, cargo_width, screen.bottom - box_top)
+        cargo_rect.top = box_top
         cargo_rect.right = w - cargo_margin
-        Cargo.draw(surface, fonts, h, ship, cargo_rect)
+        Cargo.draw(surface, fonts, h, ship, cargo_rect, screen.top)
 
         # Notification bar
         light = max(4, int(height * 0.045))

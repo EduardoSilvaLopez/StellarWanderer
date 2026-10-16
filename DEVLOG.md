@@ -271,22 +271,26 @@ RELEASE "The Three Powers" created, with installer.
   * Delete saves.
   * Extra: Directories revamp, including snake_case.
 
+* ICARUS: Travel to the sun.
+  * Vertical bars for the warning in maintenance (later temperature)
+  * Credits bar (hidden)
+  * Better-looking instruments on the left side.
+  * Temperature: Bar, death conditions.
+
 Extra time: 46h15' + 5:30-
 
-* Vertical bars for the warning in maintenance (later temperature)
-* Credits bar (hidden)
-* Temperature
-  * 'The heat kills you before radiation does... yay.
-  
-# BACKLOG
-  * Extra: Pythonise all
-  * Extra: Bug search in all
-  * Extra: Better structure in all.
-  * Extra: Ages of people still too similar?
-* TRAVEL TO THE SUN (forbidden areas)
+  * Sun can be nearest.
+  * Temperature: Changes
   * Approaching replenishes energy.
-* ASTEROIDS
+  * Extra: Pythonise all. Internal methods "_", loops.
+
+# BACKLOG
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
+* ASTEROIDS
+  * Targeted body, not nearest body.
+  * Extra: Bug search in all
+  * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
+  * Extra: Ages of people still too similar?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
 - Idea: credits are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and prominently shown in UniDiv.
 * https://github.com/obra/superpowers#how-it-works

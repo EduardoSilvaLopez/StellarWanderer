@@ -8,7 +8,7 @@ import pygame
 from ..constants import ACCENT, ACCENT_DIM, READOUT_BG, CONSOLE_EDGE_COLOR
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
-from .common import draw_beveled_panel, bezel_depth
+from .common import draw_beveled_panel, bezel_depth, draw_panel_title, panel_box_top
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -27,7 +27,7 @@ class Scanner:
     """Draw a square scanner readout showing targeted rock, ore mine or outpost."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_top: int, cluster_height: int, mfd_right: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, title_top: int, bottom: int, mfd_right: int) -> None:
         """Draw the scanner display.
 
         Mirrors whatever rock or ore mine is currently in the scanner's
@@ -42,16 +42,16 @@ class Scanner:
         label_font = fonts.get(max(9, int(h * 0.017)))
         text_line_height = label_font.get_height() + 2
 
-        margin = int(w * 0.04)
+        margin = int(w * 0.02)
         available = max(0, (w - margin) - (mfd_right + margin))
-        size = max(20, min(cluster_height - text_line_height, available))
+        box_top = panel_box_top(label_font, title_top)
+        size = max(20, min(bottom - box_top, available))  # the square ends at `bottom`; its text goes below it
 
         rect = pygame.Rect(0, 0, size, size)
-        rect.centery = cluster_top + (cluster_height - text_line_height) // 2
+        rect.top = box_top
         rect.right = w - margin
 
-        label = label_font.render('SCANNER', True, ACCENT_DIM)
-        surface.blit(label, label.get_rect(midbottom=(rect.centerx, rect.top - 6)))
+        draw_panel_title(surface, label_font, 'SCANNER', rect.centerx, title_top)
 
         bevel_depth = bezel_depth(h)
         draw_beveled_panel(surface, rect, depth=bevel_depth)
