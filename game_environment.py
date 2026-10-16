@@ -4,7 +4,10 @@ import math
 from typing import Optional
 from common.game_logging import reset_people_almanack
 from galaxies.body import Body
+from galaxies import fixed_stars
+from galaxies.constants import INITIAL_STAR_POSITION
 from galaxies.galaxy import Galaxy
+from galaxies.star import Star
 from galaxies.stellar_system import StellarSystem
 from galaxies.world import World
 from common.vector3 import Vector3
@@ -24,6 +27,8 @@ class GameEnvironment:
         if galaxy_alterations:
             galaxy_alterations['date_time'] = date_time
         self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations)
+        # Both a new game and a load come through here. Generated from the seed on every start; not used yet.
+        self.fixed_stars: list[Star] = fixed_stars.generate_region(galactic_seed)
         self.nearest_body: Body = None  # a world or the star of nearest_system
         self.nearest_system: StellarSystem = None
         self._nearest_body_recheck_countdown: int = 0
@@ -32,7 +37,7 @@ class GameEnvironment:
     def generate_default(self) -> None:
         from galaxies.orbit import Orbit
 
-        self.nearest_system = self.galaxy.add_stellar_system(26000.0, 0.0, 0.0)
+        self.nearest_system = self.galaxy.add_stellar_system(*INITIAL_STAR_POSITION)
         current_orbit: Orbit = self.nearest_system.get_orbit(3.0)
         self.nearest_body = current_orbit.planets[0].moons[0]
         logger.info(f"Initial world's radius: {self.nearest_body.radius}")

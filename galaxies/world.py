@@ -296,9 +296,9 @@ class World(Body):
     def _is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
-            and self.parent_orbit.parent_stellar_system.x == 26000\
-            and self.parent_orbit.parent_stellar_system.y == 0\
-            and self.parent_orbit.parent_stellar_system.z == 0
+            and (self.parent_orbit.parent_stellar_system.x,
+                 self.parent_orbit.parent_stellar_system.y,
+                 self.parent_orbit.parent_stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
 
     def set_altered(self) -> World:
         self.is_altered = True

@@ -21,7 +21,7 @@ class StellarSystem:
         self.x: float = x
         self.y: float = y
         self.z: float = z
-        self.seed: float = (self.parent_galaxy.seed + self.x*1e1 + self.y + self.z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
+        self.seed: float = StellarSystem.seed_of(self.parent_galaxy.seed, x, y, z)
         my_random: random.Random = random.Random(self.seed)
         self.political_entity = political_entity.THOSE_WHO_SHARE
         star_seed: float = (self.seed + 1) % galaxies.constants.SEEDS_SCALING
@@ -39,12 +39,17 @@ class StellarSystem:
 
         orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
         # the first-ever system must have three orbits.
-        if (x, y, z) == (26000, 0, 0):  # Original stellar system.
+        if (x, y, z) == galaxies.constants.INITIAL_STAR_POSITION:  # The initial stellar system.
             orbits_count = max(3, orbits_count)
         self.orbits: List[Orbit] = []
         for orbit_number in range(1, orbits_count+1):
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
+
+    @staticmethod
+    def seed_of(galaxy_seed: float, x: float, y: float, z: float) -> float:
+        '''The seed of the stellar system at galactic coordinates (x, y, z), in ly. Its star's seed is one more.'''
+        return (galaxy_seed + x*1e1 + y + z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
 
     def almanack(self) -> str:
         '''Markdown almanack'''
