@@ -286,14 +286,21 @@ RELEASE "The Three Powers" created, with installer.
   * Make the star cooler: flares, areas, effects on ship, temperature effects on vision.
   * Ruff installed... we're getting better with Python!
 
-Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 
+* FULL OF STARS (work with chunks of the galaxy)
+  * Phase 1: Left-handedness (was not necessary)
+
+Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
+
+  * Phase 2: Isolate the star constructor
+  * Phase 3: Fixed stars in memory
+  * Phase 4: The system receives the fixed star
+  * Phase 5: Show the fixed stars in the sky
+  * Extra: Bug search in all
 
 
 # BACKLOG
-* REAL STARS AROUND (work with chunks of the galaxy)
 * ASTEROIDS
   * Targeted body, not nearest body.
-  * Extra: Bug search in all
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Open: Ages of people still too similar?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)

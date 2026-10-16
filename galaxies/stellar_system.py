@@ -24,7 +24,9 @@ class StellarSystem:
         self.seed: float = (self.parent_galaxy.seed + self.x*1e1 + self.y + self.z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.political_entity = political_entity.THOSE_WHO_SHARE
-        self.star: Star = Star(self)  # the system's star, as a body ships can navigate to
+        star_seed: float = (self.seed + 1) % galaxies.constants.SEEDS_SCALING
+        self.star: Star = Star(star_seed, (x, y, z))  # the system's star, as a body ships can navigate to
+        self.star.attach_to(self)
         self.name: str = self.star.name + " System"
 
         self.is_altered: bool = False

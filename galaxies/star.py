@@ -5,10 +5,9 @@ from datetime import datetime
 from enum import Enum
 import math
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
-import galaxies.constants
 from galaxies.body import Body
 
 if TYPE_CHECKING:
@@ -16,7 +15,11 @@ if TYPE_CHECKING:
 
 
 class Star(Body):
-    """The star: the origin of the stellar frame, at rest. It has no surface: nothing binds to it."""
+    """The star: the origin of the stellar frame, at rest. It has no surface: nothing binds to it.
+
+    Everything about the star is generated from its seed alone; the galactic position (in ly) is only stored. The star
+    belongs to a stellar system once `attach_to` is called, which is what `stellar_system` returns.
+    """
 
     SOLAR_MASS = 1.989e30  # kg
     SOLAR_RADIUS = 6.957e8  # m
@@ -32,10 +35,11 @@ class Star(Body):
 
     is_world = False
 
-    def __init__(self, system: StellarSystem) -> None:
-        self.seed = (system.seed + 1) % galaxies.constants.SEEDS_SCALING
+    def __init__(self, seed: float, position: tuple[float, float, float]) -> None:
+        self.seed: float = seed
+        self.position: tuple[float, float, float] = position  # galactic coordinates, in ly
+        self._system: Optional[StellarSystem] = None
         my_random: random.Random = random.Random(self.seed)
-        self._system: StellarSystem = system
         self.name: str = Star._generate_name(my_random)
         self.type: Star.Type = Star._generate_star_type(my_random)
         self.color: tuple = self._generate_color(my_random)
@@ -259,6 +263,10 @@ class Star(Body):
 
     def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, 0.0)
+
+    def attach_to(self, system: StellarSystem) -> None:
+        """Make `system` the star's stellar system (what `stellar_system` returns)."""
+        self._system = system
 
     @property
     def stellar_system(self) -> StellarSystem:
