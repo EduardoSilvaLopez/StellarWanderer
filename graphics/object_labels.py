@@ -63,11 +63,11 @@ class ObjectLabels:
         if ship.is_bound:
             return
 
-        world = environment.nearest_world
-        star = world.parent_orbit.parent_stellar_system
+        body = environment.nearest_body
+        star = body.stellar_system
 
         # Draw star label
-        star_vector = ship.navigation.direction_to_star(world, environment.date_time)
+        star_vector = ship.navigation.direction_to_star(body, environment.date_time)
         projected = project_to_camera(ship, star_vector, w, horizon_y, focal_length_px)
         if projected is not None:
             screen_x, screen_y = projected

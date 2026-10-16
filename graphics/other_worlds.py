@@ -1,4 +1,4 @@
-"""Planets and moons other than the nearest world, drawn in the sky lit by the star."""
+"""Planets and moons other than the nearest body, drawn in the sky lit by the star."""
 
 from __future__ import annotations
 from typing import List, Tuple, TYPE_CHECKING
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class OtherWorlds:
-    """Renders every world of the stellar system except the nearest one."""
+    """Renders every world of the stellar system except the nearest body (when that is a world)."""
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship,
@@ -23,18 +23,18 @@ class OtherWorlds:
 
         Called twice per frame around LocalStar.draw: first with behind_star=True (worlds
         farther than the star, which the star then covers), then with behind_star=False
-        (worlds nearer than the star). The nearest world is drawn afterwards, so it naturally
+        (worlds nearer than the star). The nearest body, when it is a world, is drawn afterwards, so it naturally
         hides the worlds behind it (while bound, as an opaque disc below the horizon).
         """
-        to_star = ship.navigation.direction_to_star(environment.nearest_world, environment.date_time)
-        star = environment.nearest_world.parent_orbit.parent_stellar_system
+        to_star = ship.navigation.direction_to_star(environment.nearest_body, environment.date_time)
+        star = environment.nearest_body.stellar_system
         star_distance = to_star.length()
 
         worlds: List[Tuple[float, World, Vector3]] = []
         for world in environment.nearest_system.get_all_worlds():
-            if world is environment.nearest_world:
+            if world is environment.nearest_body:
                 continue
-            to_world = ship.navigation.direction_to_world(world, environment.date_time)
+            to_world = ship.navigation.direction_to_body(world, environment.date_time)
             distance = to_world.length()
             if (distance > star_distance) == behind_star:
                 worlds.append((distance, world, to_world))

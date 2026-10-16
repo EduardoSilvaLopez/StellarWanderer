@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import logging
 from common.units import format_compact_distance
 import galaxies.constants
+from galaxies.body import Body
 from galaxies.km2 import Km2
 from galaxies.rock import Rock
 from common.vector3 import Vector3
@@ -17,11 +18,12 @@ if TYPE_CHECKING:
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
     from galaxies.orbit import Orbit
+    from galaxies.stellar_system import StellarSystem
     from spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 
-class World:
+class World(Body):
     '''The generation is full of heuristic but playtested, hopefully realistic, factors.
 
     Orbits: every orbital period follows Kepler's third law around the parent's mass: a moon around its planet
@@ -37,6 +39,8 @@ class World:
     A world's position and velocity are pure functions of the date, memoised for the date of the last call only (one
     entry each), so everything drawn or computed in a frame shares one evaluation per world.
     '''
+
+    is_world = True
 
     WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
@@ -240,6 +244,10 @@ class World:
             -sin_node * sin_peri + cos_node * cos_peri * cos_incl,
             cos_peri * sin_incl,
         )
+
+    @property
+    def stellar_system(self) -> StellarSystem:
+        return self.parent_orbit.parent_stellar_system
 
     def almanack(self) -> str:
         '''Markdown almanack of this world.'''

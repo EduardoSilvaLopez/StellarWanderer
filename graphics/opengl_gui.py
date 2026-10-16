@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    Draw order: worlds farther than the star, the star, worlds nearer than the star, then the nearest world. The
+    Draw order: worlds farther than the star, the star, worlds nearer than the star, then the nearest body (when it is a world; the star is drawn as the star). The
     SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
     BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,

@@ -76,7 +76,7 @@ class LitWorlds:
         """Draw one world as seen from the ship, lit by the star.
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
-        the active frame (as returned by Navigation.direction_to_world / direction_to_star)."""
+        the active frame (as returned by Navigation.direction_to_body / direction_to_star)."""
         from graphics.instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(h)
 
@@ -146,9 +146,11 @@ class LitWorlds:
 
     @staticmethod
     def draw_nearest(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        """The nearest world, lit by the star (used while unbound)."""
-        world = environment.nearest_world
-        star = world.parent_orbit.parent_stellar_system
-        to_world = ship.navigation.direction_to_world(world, environment.date_time)
-        to_star = ship.navigation.direction_to_star(world, environment.date_time)
-        LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, ship)
+        """The nearest body, lit by the star (used while unbound). The star is not drawn here: LocalStar draws it."""
+        body = environment.nearest_body
+        if not body.is_world:
+            return
+        star = body.stellar_system
+        to_world = ship.navigation.direction_to_body(body, environment.date_time)
+        to_star = ship.navigation.direction_to_star(body, environment.date_time)
+        LitWorlds.draw_world(surface, w, h, to_world, to_star, body.radius, star.color, ship)

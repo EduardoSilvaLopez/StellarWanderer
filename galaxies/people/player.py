@@ -36,19 +36,23 @@ class Player:
         return self
 
     def serialize(self) -> dict:
-        world = gem.current_environment.nearest_world
-        if world.parent_planet:
-            planet_index = world.parent_planet.parent_orbit.planets.index(world.parent_planet)
-            moon_index = world.index
+        body = gem.current_environment.nearest_body
+        system = body.stellar_system
+        if not body.is_world:  # the star: it has no orbit, planet or moon
+            orbit_number = planet_index = moon_index = None
+        elif body.parent_planet:
+            orbit_number = body.parent_orbit.number
+            planet_index = body.parent_planet.parent_orbit.planets.index(body.parent_planet)
+            moon_index = body.index
         else:
-            planet_index = world.parent_orbit.planets.index(world)
+            orbit_number = body.parent_orbit.number
+            planet_index = body.parent_orbit.planets.index(body)
             moon_index = None
 
-        system = world.parent_orbit.parent_stellar_system
         return {
             'time_scale': self.time_scale,
             'stellar_system': {'x': system.x, 'y': system.y, 'z': system.z},
-            'orbit': world.parent_orbit.number,
+            'orbit': orbit_number,
             'planet': planet_index,
             'moon': moon_index,
             'ship': self.ship.serialize(),

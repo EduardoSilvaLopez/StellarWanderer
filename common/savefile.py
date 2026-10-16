@@ -66,18 +66,21 @@ class Savefile:
             system_data['x'], system_data['y'], system_data['z']
             )
         from galaxies.orbit import Orbit
-        current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
-        planet_idx: int = player_data['planet']
-        moon_idx: int = player_data['moon']
-        if moon_idx is None:
-            gem.current_environment.nearest_world = current_orbit.planets[planet_idx]
+        if player_data['orbit'] is None:  # the star was the nearest body
+            gem.current_environment.nearest_body = gem.current_environment.nearest_system.star
         else:
-            gem.current_environment.nearest_world = current_orbit.planets[planet_idx].moons[moon_idx]
+            current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
+            planet_idx: int = player_data['planet']
+            moon_idx: int = player_data['moon']
+            if moon_idx is None:
+                gem.current_environment.nearest_body = current_orbit.planets[planet_idx]
+            else:
+                gem.current_environment.nearest_body = current_orbit.planets[planet_idx].moons[moon_idx]
 
         position_data: dict = player_data['ship']['position']
-        gem.current_environment.nearest_world.update_surroundings(
-            position_data['y'], position_data['x'], position_data['z'], game_date_time
-            )
+        world = gem.current_environment.nearest_world  # None for the star: no surroundings to load
+        if world is not None:
+            world.update_surroundings(position_data['y'], position_data['x'], position_data['z'], game_date_time)
 
         pem.current_player = pem.Player.deserialize(load_object['player'])
 

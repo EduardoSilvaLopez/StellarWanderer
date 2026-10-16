@@ -132,8 +132,9 @@ class Console:
 
         # World and system labels
         import game_environment as gem
-        stellar_system = gem.current_environment.nearest_world.parent_orbit.parent_stellar_system
-        world_name = gem.current_environment.nearest_world.name
+        nearest_body = gem.current_environment.nearest_body
+        stellar_system = nearest_body.stellar_system
+        world_name = nearest_body.name
         star_name = stellar_system.name
         stellar_label = world_name + ", " + star_name + " System"
         world_text = world_font.render(stellar_label, True, ACCENT)
@@ -165,12 +166,12 @@ class Console:
             surface.blit(line_text, (coord_x, coord_y))
             coord_y += line_spacing
 
-        world = gem.current_environment.nearest_world
+        body = gem.current_environment.nearest_body
         date_time = gem.current_environment.date_time
         attitude_lines = (
             f'Yaw: {int(ship.attitude.yaw)}° Δ {int(ship.attitude.yaw_rate)}',
-            f'Pitch: {int(ship.navigation.pitch_angle(world, date_time))}° Δ {int(ship.attitude.pitch_rate)}',
-            f'Roll: {int(ship.navigation.roll_angle(world, date_time))}° Δ {int(ship.attitude.roll_rate)}',
+            f'Pitch: {int(ship.navigation.pitch_angle(body, date_time))}° Δ {int(ship.attitude.pitch_rate)}',
+            f'Roll: {int(ship.navigation.roll_angle(body, date_time))}° Δ {int(ship.attitude.roll_rate)}',
         )
         for text in attitude_lines:
             surface.blit(label_font.render(text, True, ACCENT), (coord_x, coord_y))

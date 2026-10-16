@@ -33,7 +33,7 @@ class OutpostMarkers:
             if planet.parent_planet is not None or not planet.outposts:
                 continue
             centre = planet.calculate_stellar_position(date_time)
-            # Stellar distance, also while bound (Navigation.distance_to_world_centre assumes unbound).
+            # Stellar distance, also while bound (Navigation.distance_to_body_centre assumes unbound).
             if (ship_position - centre).length() >= Navigation.BRAKING_RADIUS_MULTIPLE * planet.radius:
                 continue
             for outpost in planet.outposts.values():
