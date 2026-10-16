@@ -6,124 +6,7 @@ Learn modern technologies by building a prototype of a game I always dreamed abo
 ## Mission
 Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype for a solo space game with realistic dimensions (time included), which implies never saving the world itself but only the changes caused by the player. The setting is the “world after the disaster” of my sci-fi concept, in the year 700.
 
-## Log
-
-### 2026-09-07 (3/7)
-
-Introducing this log, previous version is the OpenOffice Write document "Vission, Mission, Log.odt"
-
-### 2026-09-08 (4/7)
-
-Laser logic moved to its own object.
-
-### 2026-09-09 (5/7)
-
-Calculate real end of the laser, so lasers hit rocks.
-The rock is hit and its temperature has risen... but it does not show. Also, not saving the increased temp yet.
-
-### 2026-09-10 (6/7)
-
-### 2026-09-13 (7/7)
-
-Refactor "alterations" to include the datetime.
-Saved and loaded the alterations. This works BUT applying afterwards, does not.
-Stuck there in a circular import. And ugly code around it. World.ensure_surroundings.
-
-### 2026-09-14 (1/8)
-
-Laser essentials look finished :)
-
-### 2026-09-15 (2/8)
-
-Rocks more lively (orientation, buried). Star and planet name.
-
-Laser cooling: new feature.
-- Propagate the alterations_timestamp ? So that on re-create, it can be compared with Player's time.
-- The caller must be give the time difference? time_passed? Makes sense as external callers know the player, add because of it. Is somehow counter-intuitive.
-
-### 2026-09-16 (3/8)
-
-Laser cooling. Thoughts.
-- The moment of re-creation is clearly "add".
-- There is no "unload" yet. Later a queue, and special events when joining the queue? A queue of events sorted by time. "Update" as concept. There is an "apply saved alterations" (in the constructor) but then again an "update" to new dates.
-
-### 2026-09-17 (4/8)
-
-Update queue works. Now we have not only to put new objects in, but take them out when they fall out of scope. Out of memory or out of update? Seems that out of update could be enough, out of memory means saving
-silently, which looks like something we do only when we abandon the world. A memory of 800.000.000 Km or more is however daunting. We could keep only the altered ones! Yep, that's the trick.
-
-Done. All altered Km2 are "immortal", keep being updated even if far away. In a next step, this should be changed... "saved alterations" becomes "last alterations" and is overwritten when dequeue? As for now, better move to other things and so test the current implementation a bit.
-- Did not test if they are SAVED even if war away.
-
-### 2026-09-18 (5/8)
-
-Rocks have tilt, they are also more buried.
-
-Unquere the Km2 far away but... no, do not take them from memory, this is unnecessary (they are only the altered ones).
-
-DAMN.
-
-My whole strategy means unvisited altered rocks are not updated to the game time when saved.
-I have to update anyway, there is no 'updating window' - or - I must save the 'last changed at' on every object.
-... this prolly includes separating the children from the date_time in the alteration dictionaries anyway.
-
-### 2026-09-21 (6/8)
-
-Still stuck with the update problematic. I need a new strategy. A clear one, and a *SCALABLE* one. Keeping all altered objects in the world updating is, let us be honest, not scalable.
-
-So... let us make saved alterations just this, saved alterations. One-use thing, not correctly typified, used for save and load and that was it.
-
-Let us store next and last updates in memory, and queue and dequeue.
-
-Extra time: 20:00 - 21:30
-
-Stuck in the new singleton strategy, which creates lots of problems, damn it.
-
-### 2026-09-22 (7/8)
-
-New release! As the alterations are now saved and recovered.
-
-### 2026-09-23 (8/8)
-
-Stuck at: too rapid movement provokes no environment -> Resolved.
-Starting to set mines. Plan:
-1) Rocks get a "composition". It is only a [0.0, 1.0[ range.
-2) A new composition ("ore rich") gives a reserved color palette (yellow-ish)
-3) Rocks near and in front of the ship are presented in a scanner, together with "size" and "ore" %.
-4) Heating the rock over 10,000° provokes that the floor is painted with the color of the rock and the rock disappears. This is two alterations: one in the world ("ore field") and another in the rock ("molten").
-
-On extra time
-5) The player gets an inventory: mines and ore.
-6) Mines can be placed. It position and orientation come from the ship.
-7) Once placed, mines start accumulating ore.
-8) "Laser" the mine collects the ore.
-
-### 2026-09-27 (1/9)
-Here. The mine did not seem to update correctly after absent... corrected.
-
-MAKE AND MOVE THE SUN
-1) Create the size and color of the sun.
-2) Create and update the position of the world - here. Created, but not updated during gameplay.
-3) Transform the player coordinates and orientation into stellar coordinates.
-4) Use this data to represent the sun in the right position.
-
-On extra time:
-5) Adjust distance from star to star type, to make the star more visible :) . Ok, it does not work bcs it is not realistic in all fucking games worldwide :D .
-Rocks look strange in the north pole. Trying to correct this: Looks corrected, test still.
-
-Extra time: +10h15'
-
-### 2026-09-28 (2/9)
-
-Oktoberfest. Remaining extra time +8h
-
-### 2026-09-29 (3/9)
-
-Oktoberfest. Remaining extra time +5h45'
-
-### 2026-09-30 (4/9)
-
-Oktoberfest. Remaining extra time +3h30'
+## Log (after 2026-10-01, see Git for history)
 
 ### 2026-10-01 (5/9)
 
@@ -291,17 +174,15 @@ RELEASE "The Three Powers" created, with installer.
   * Phase 2: Isolate the star constructor
   * Phase 3: Fixed stars in memory
   * Phase 4: The system receives the fixed star
-
-Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
-
   * Phase 5: Show the fixed stars in the sky
-  * OpenGL.acceleratesupport: No OpenGL_accelerate module loaded: No module named 'OpenGL_accelerate'
   * Extra: Bug search in all
 
+Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
 
 # BACKLOG
 * ASTEROIDS
   * Targeted body, not nearest body.
+  * 
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Open: Ages of people still too similar?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
@@ -310,6 +191,8 @@ Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
 * JOVIAN PLANETS (with forbidden area)
 * AI PERSONALITY?
 * SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
+* REST
+  * Getting energy from the star when near enough.
 
 ### Learning Python:
 
