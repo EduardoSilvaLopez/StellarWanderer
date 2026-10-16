@@ -10,7 +10,32 @@ import game_environment as gem
 import Galaxies.People.player as pem
 from paths import data_path, SAVEFILES_DIR
 
+# A save's file name is the name typed in the starting dialog (or the default), plus ".json".
+SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
+SAVE_NAME_MAX_LENGTH = 40
+
+
 class Savefile:
+
+    @staticmethod
+    def clean_name(text: str) -> str:
+        '''A typed name made safe for a file name: printable, no path or reserved characters, no ".json" ending,
+        at most SAVE_NAME_MAX_LENGTH characters. Empty when nothing usable is left.'''
+        cleaned = ''.join(c for c in text if c.isprintable() and c not in SAVE_NAME_FORBIDDEN).strip()
+        if cleaned.lower().endswith('.json'):
+            cleaned = cleaned[:-len('.json')].strip()
+        return cleaned[:SAVE_NAME_MAX_LENGTH].strip()
+
+    @staticmethod
+    def default_name() -> str:
+        '''The name of a save when none is typed: the seed and the game's date and time, to the second.'''
+        env = gem.current_environment
+        time_text = env.date_time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', 'T').replace(':', '_')[:19]
+        return 'Savefile ' + str(env.galaxy.seed) + ' ' + time_text
+
+    @staticmethod
+    def exists(name: str) -> bool:
+        return os.path.exists(data_path(SAVEFILES_DIR, name + '.json'))
 
     @staticmethod
     def load_from_file(filepath: str) -> None:
@@ -61,7 +86,7 @@ class Savefile:
         '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        savefiles = glob.glob(data_path(SAVEFILES_DIR, 'Savefile *.json'))
+        savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
         
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
@@ -85,8 +110,19 @@ class Savefile:
         Savefile.load_from_file(latest_file)
 
     @staticmethod
-    def save() -> None:
-        '''Saves the current state of the game to a JSON file, from the GameEnvironment and Player singletons.'''
+    def save() -> bool:
+        '''F5: saves the game under the default name. If that name is taken (another save in the same game second),
+        nothing is saved. Returns whether it saved.'''
+        name = Savefile.default_name()
+        if Savefile.exists(name):
+            return False
+        Savefile.save_as(name)
+        return True
+
+    @staticmethod
+    def save_as(name: str) -> None:
+        '''Saves the current state of the game to `name` (a clean name, see clean_name), from the GameEnvironment and
+        Player singletons. Replaces a save of that name.'''
         env = gem.current_environment
         player = pem.current_player
 
@@ -103,11 +139,8 @@ class Savefile:
             }
             , 'player': player.serialize()
         }
-        file_name = env.date_time.strftime('%Y-%m-%d %H:%M:%S')
-        file_name = file_name.replace(' ', 'T').replace(':', '_')[:19]
-        file_name = 'Savefile ' + str(env.galaxy.seed) + ' ' + file_name + '.json'
         os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
-        file_name = data_path(SAVEFILES_DIR, file_name)
-        logger.info("New savefile's name: " + file_name)
-        with open(file_name, 'w', encoding='utf-8') as f:
+        file_path = data_path(SAVEFILES_DIR, name + '.json')
+        logger.info("New savefile's name: " + file_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

@@ -108,7 +108,7 @@ class ReportingInOutpost(Conversation):
                 {
                 'text': 'Long live',
                 'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
-                'sympathy': 0.1 if self.interlocutor.loyalty100 > 10 else -1,
+                'sympathy': 0.5 if self.interlocutor.loyalty100 > 10 else -2,
                 }
                 , {
                 'text': 'Thank you for sharing',
@@ -458,7 +458,7 @@ class ReportingInOutpost(Conversation):
             self.interlocutor.adjust_sympathy(my_consequences['sympathy'])
 
         # Reputation loss = need of stuff.
-        rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 12
+        rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 24
         rep_loss_energy = -(ship.energy_max - ship.energy) * 5e-13 # W/o laser or acc, negligible...
         rep_loss_air = -(28 - ship.cargo_hold.air) * 0.0006
         rep_loss_water = -(28 - ship.cargo_hold.air) * 0.0003
@@ -475,7 +475,7 @@ class ReportingInOutpost(Conversation):
         cargo_hold.mines = 5
 
         # Reputation gain: ore
-        rep_gain_ore = 0.02 * cargo_hold.ore
+        rep_gain_ore = 0.01 * cargo_hold.ore
         cargo_hold.ore = 0
 
         rep_loss = rep_loss_maintenance \
@@ -497,6 +497,7 @@ class ReportingInOutpost(Conversation):
             f"\n * Mines: {rep_loss_mines:.6f}"
             f"\n   Total loss: {rep_loss:.6f}"
             f"\n * Ore: {rep_gain_ore:.6f}"
+            f"\n   Grand Total: {rep_change:.6f}"
             )
 
         if rep_change > 0.0:

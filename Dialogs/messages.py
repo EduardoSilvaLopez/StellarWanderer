@@ -63,6 +63,15 @@ def show_message(message: Message, on_result: Optional[ResultCallback] = None) -
     _pending.append(PendingMessage(message, on_result))
 
 
+def confirm(title: str, text: str, confirm_label: str, on_confirm: Callable[[], None]) -> None:
+    """Queue a two-button message: `on_confirm` runs only when the first button (`confirm_label`) is pressed.
+    Cancel and Esc do nothing."""
+    def on_result(index: Optional[int]) -> None:
+        if index == 0:
+            on_confirm()
+    show_message(Message(title, text, [confirm_label, 'Cancel']), on_result)
+
+
 def next_pending_message() -> Optional[PendingMessage]:
     """Remove and return the oldest pending message, or None."""
     return _pending.pop(0) if _pending else None

@@ -129,7 +129,7 @@ class Ship(Updatable):
         old_air: float = self.cargo_hold.air
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
-        self.maintenance -=  0.001 * days
+        self.maintenance -=  0.005 * days
         self.energy -=  1e5 * days
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
@@ -140,13 +140,13 @@ class Ship(Updatable):
             self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
         elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
-        elif self.cargo_hold.air <= 5.0 < old_air:
+        elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
             self.notification.set('WARNING: Ship needs air refill. Remain near an outpost.')
         elif self.cargo_hold.air <= 2.0 < old_air:
             self.notification.set('CRITICAL: Ship needs air refill. Go immediately to an outpost.')
-        elif self.cargo_hold.water <= 2.0 < old_water:
+        elif self.cargo_hold.water <= CargoHold.WARNING_DAYS['water'] < old_water:
             self.notification.set('CRITICAL: Ship needs water refill. Go immediately to an outpost.')
-        elif self.cargo_hold.food <= 2.0 < old_food:
+        elif self.cargo_hold.food <= CargoHold.WARNING_DAYS['food'] < old_food:
             self.notification.set('CRITICAL: You need food refill. Go immediately to an outpost.')
 
         if self.maintenance <= 0.0:

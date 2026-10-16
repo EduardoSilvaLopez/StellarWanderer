@@ -28,7 +28,8 @@ import game_environment as gem
 import Galaxies.People.player as player_module
 from Persistency.savefile import Savefile
 from Dialogs import (
-    Dialog, DialogResult, Message, MessageDialog, StartingDialog, next_pending_message, run_in_window, show_message
+    Dialog, DialogResult, Message, MessageDialog, StartingDialog, confirm, next_pending_message, run_in_window,
+    show_message
 )
 from Graphics.opengl_gui import OpenGLGui
 from Graphics.Instruments.world_map import WorldMap
@@ -133,6 +134,54 @@ def open_starting_dialog(
     return run_modal_dialog(StartingDialog(game_running=game_running), screen, gui, fonts, clock)
 
 
+def show_pending_messages(
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """Show the queued messages in order (show_message), each answer going to its callback.
+    Returns (keep running, window): closing the window while a message is open stops the game."""
+    pending_message = next_pending_message()
+    while pending_message is not None:
+        result, screen = run_modal_dialog(MessageDialog(pending_message.message), screen, gui, fonts, clock)
+        if result[0] == 'exit':
+            return False, screen
+        if pending_message.on_result is not None:
+            pending_message.on_result(result[1])  # the pressed button's index, None for Esc
+        pending_message = next_pending_message()
+    return True, screen
+
+
+def write_save(name: str) -> None:
+    """Save the game as `name`; a file that cannot be written is reported in a message."""
+    try:
+        Savefile.save_as(name)
+    except OSError as error:
+        show_message(Message(
+            title='SAVE FAILED',
+            text=f"The game could not be saved as '{name}': {error.strerror or error}.",
+            buttons=["OK"]
+        ))
+
+
+def save_from_menu(
+        name: str, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """Save from the starting dialog. '' is the default name, which is not saved over an existing file (the same
+    game second). A name in use asks first; Overwrite saves, Cancel does nothing. Returns (keep running, window)."""
+    if not name:
+        if not Savefile.exists(Savefile.default_name()):
+            write_save(Savefile.default_name())
+    elif Savefile.exists(name):
+        confirm(
+            title='OVERWRITE SAVE?',
+            text=f"A save named '{name}' already exists. Saving will overwrite it.",
+            confirm_label='Overwrite',
+            on_confirm=lambda: write_save(name),
+        )
+    else:
+        write_save(name)
+    return show_pending_messages(screen, gui, fonts, clock)
+
+
 def open_start_menu(
         screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
         elapsed: float, game_running: bool
@@ -141,6 +190,9 @@ def open_start_menu(
     result, screen = open_starting_dialog(screen, gui, fonts, clock, game_running)
     if result[0] == 'exit':
         return False, screen, elapsed
+    if result[0] == 'save':
+        keep_running, screen = save_from_menu(result[1], screen, gui, fonts, clock)
+        return keep_running, screen, elapsed
     if result[0] in ('new', 'load'):
         elapsed = start_game(*result)
     return True, screen, elapsed
@@ -205,16 +257,7 @@ def main() -> None:
     running = True
     while running:
         # Messages asked for by game code (show_message) open here, at the start of a frame.
-        pending_message = next_pending_message()
-        while pending_message is not None and running:
-            result, screen = run_modal_dialog(
-                MessageDialog(pending_message.message), screen, gui, fonts, clock
-            )
-            if result[0] == 'exit':
-                running = False
-            elif pending_message.on_result is not None:
-                pending_message.on_result(result[1])  # the pressed button's index, None for Esc
-            pending_message = next_pending_message()
+        running, screen = show_pending_messages(screen, gui, fonts, clock)
         if not running:
             break
 
@@ -228,11 +271,7 @@ def main() -> None:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    result, screen = open_starting_dialog(screen, gui, fonts, clock)
-                    if result[0] == 'exit':
-                        running = False
-                    elif result[0] in ('new', 'load'):
-                        elapsed = start_game(*result)
+                    running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=True)
                 elif event.key == pygame.K_KP_PLUS:
                     player_module.current_player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:

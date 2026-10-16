@@ -263,8 +263,16 @@ RELEASE "The Three Powers" created, with installer.
   * Death by resource expenditure.
   * Extra: Spherification: Cancelled, study made.
 
-Extra time: 44h45' + 19:45-
+* BETTER STARTING DIALOG:
+  * More beautiful.
+  * Save games with a name.
+  * Overwrite saves.
+  * "Instructions" screen.
+  * Delete saves.
 
+Extra time: 46h15' + 5:30-
+
+  
 # BACKLOG
 * BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
   * Extra: Directories revamp, including snake_case.

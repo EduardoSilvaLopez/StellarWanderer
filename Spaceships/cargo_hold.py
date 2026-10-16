@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 
 
 class CargoHold:
+    # Days left at which air, water and food show their warning: red in the cargo list, and the ship's notice.
+    WARNING_DAYS = {'air': 5.0, 'water': 2.0, 'food': 2.0}
+
     def __init__(self, ship: Ship) -> None:
         self.parent_ship: Ship = ship
 
