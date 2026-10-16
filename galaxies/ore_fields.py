@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import random
-logger = logging.getLogger(__name__)
 
 from galaxies.ore_mine import OreMine
 
@@ -12,12 +11,12 @@ if TYPE_CHECKING:
     from galaxies.km2 import Km2
     from galaxies.rock import Rock
 
+logger = logging.getLogger(__name__)
 
 class OreField:
     EXTRACTION_PER_SECOND: float = 1 / 3600  # One Kg per hour, later depends on mine.
 
     def __init__(self) -> None:
-        from galaxies.ore_mine import OreMine
         self.parent_km2: Km2 = None
         self.longitude: int = 0
         self.latitude: int = 0
@@ -27,7 +26,7 @@ class OreField:
         self.initial_color: tuple = (0, 0, 0)
         self.color: tuple = (0, 0, 0)
         self.orientation: float = 0.0
-        self.mines: List[OreMine] = list()
+        self.mines: List[OreMine] = []
 
     @staticmethod
     def generate_new(original_rock: Rock) -> OreField:

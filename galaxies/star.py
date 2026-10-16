@@ -28,7 +28,7 @@ class Star(Body):
         F = "Yellow-white (F)"
         A = "White (A)"
         B = "Blue (B)"
-        O = "Blue giant (O)"
+        O = "Blue giant (O)"  # noqa: E741
 
     is_world = False
 

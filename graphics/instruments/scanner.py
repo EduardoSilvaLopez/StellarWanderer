@@ -8,7 +8,7 @@ import pygame
 from ..constants import ACCENT
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
-from .common import draw_beveled_panel, bezel_depth, draw_panel_title, panel_box_top
+from .common import draw_beveled_panel, bezel_depth, panel_box_top
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -36,31 +36,38 @@ class Scanner:
         the player sees ahead. Rocks take priority if somehow both are set.
 
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
-        hot it is, and below the square, if it is ore rich, its purity. The square always leaves room
-        for the purity line.
+        hot it is. If it is ore rich, its purity is written above the square, in place of the title.
+        A mine's content is written above the square, in place of the title, and its field's remaining
+        ore inside the square, at the bottom.
         """
         label_font = fonts.get(max(9, int(h * 0.017)))
-        text_line_height = label_font.get_height() + 2
 
         margin = int(w * 0.02)
         available = max(0, (w - margin) - (mfd_right + margin))
         box_top = panel_box_top(label_font, title_top)
-        size = max(20, min(bottom - box_top, available))  # the square ends at `bottom`; its text goes below it
+        size = max(20, min(bottom - box_top, available))  # the square ends at `bottom`
 
         rect = pygame.Rect(0, 0, size, size)
         rect.top = box_top
         rect.right = w - margin
 
-        draw_panel_title(surface, label_font, 'SCANNER', rect.centerx, title_top)
-
         bevel_depth = bezel_depth(h)
         draw_beveled_panel(surface, rect, depth=bevel_depth)
-
-        text_y = rect.bottom + bevel_depth + 6
 
         rock = ship.scanner.targeted_rock
         mine = ship.scanner.targeted_mine
         outpost = ship.scanner.targeted_outpost
+        # What the square shows (outposts first, then rocks, then mines), and the title above it. An ore rich rock
+        # shows its purity, a mine its content, in place of the title.
+        ore_rock = rock if outpost is None and rock is not None and rock.is_ore_rich() else None
+        shown_mine = mine if outpost is None and rock is None else None
+        if ore_rock is not None:
+            title = label_font.render(f'Ore Purity: {round(ore_rock.get_purity() * 100)}%', True, (255, 255, 0))
+        elif shown_mine is not None:
+            title = label_font.render(f'Content: {int(shown_mine.content)} Kg Ore', True, ACCENT)
+        else:
+            title = label_font.render('SCANNER', True, ACCENT)
+        surface.blit(title, title.get_rect(midtop=(rect.centerx, title_top)))
         if outpost is not None:
             Scanner._draw_scanned_outpost(surface, rect, outpost)
         elif rock is not None:
@@ -70,16 +77,10 @@ class Scanner:
                     f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock.temperature)
                 )
                 surface.blit(temperature_text, temperature_text.get_rect(center=rect.center))
-            if rock.is_ore_rich():
-                purity_text = label_font.render(f'Ore Purity: {round(rock.get_purity() * 100)}%', True, (255, 255, 0))
-                surface.blit(purity_text, purity_text.get_rect(midtop=(rect.centerx, text_y)))
         elif mine is not None:
             Scanner._draw_scanned_mine(surface, rect, mine)
-            content_text = label_font.render(f'Content: {int(mine.content)} Kg Ore', True, ACCENT)
-            surface.blit(content_text, content_text.get_rect(midtop=(rect.centerx, text_y)))
-            text_y += text_line_height
             field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
-            surface.blit(field_text, field_text.get_rect(midtop=(rect.centerx, text_y)))
+            surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
 
     @staticmethod
     def _temperature_color(temperature: float) -> Tuple[int, int, int]:
