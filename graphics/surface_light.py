@@ -35,8 +35,8 @@ class SurfaceLight:
     def of(ship: Ship, environment: GameEnvironment) -> SurfaceLight:
         """The sun as seen from `ship`, which must be bound (the surface frame is only defined then)."""
         world = environment.nearest_world
-        star = world.parent_orbit.parent_stellar_system
         sun = ship.navigation.direction_to_star(world, environment.date_time).normalized()
+        star = world.parent_orbit.parent_stellar_system.star
         return SurfaceLight(sun, LitWorlds.light_tint(star.color))
 
     def brightness(self, normal_x: float, normal_y: float, normal_z: float) -> float:

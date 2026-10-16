@@ -69,7 +69,6 @@ class Player:
         if 'credits' in loaded_attributes:
             result.credits = loaded_attributes['credits']
 
-        update_queue.remove(result.ship)
         result.ship = Ship.load(result, loaded_attributes['ship'])
 
         for entity_name, values in loaded_attributes['political_status'].items():

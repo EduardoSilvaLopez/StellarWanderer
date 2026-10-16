@@ -150,7 +150,7 @@ class LitWorlds:
         body = environment.nearest_body
         if not body.is_world:
             return
-        star = body.stellar_system
+        star = body.stellar_system.star # Can be the body.
         to_world = ship.navigation.direction_to_body(body, environment.date_time)
         to_star = ship.navigation.direction_to_star(body, environment.date_time)
         LitWorlds.draw_world(surface, w, h, to_world, to_star, body.radius, star.color, ship)

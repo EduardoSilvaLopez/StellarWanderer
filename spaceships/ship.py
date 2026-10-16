@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
 
+import logging
 from common.dialogs.messages import Message, show_message
 from galaxies.ore_fields import OreField
 from galaxies.ore_mine import OreMine
@@ -17,6 +18,8 @@ from .navigation import Navigation
 from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
     from galaxies.people.player import Player
+
+logger = logging.getLogger(__name__)
 
 class Ship(Updatable):
     """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
@@ -40,10 +43,11 @@ class Ship(Updatable):
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
 
-    UPDATE_PERIOD = 24 * 60 * 60 # Large enough to avoid drifts.
+    UPDATE_PERIOD = 60 * 60
 
     ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     TEMP_MIN = -50
+    TEMP_DEFAULT = 50
     TEMP_MAX = 50
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
@@ -56,7 +60,7 @@ class Ship(Updatable):
         self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
         self.energy: float = Ship.ENERGY_MAX
-        self.temperature: float = 25.0
+        self.temperature: float = Ship.TEMP_DEFAULT
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = CargoHold(self)
@@ -78,7 +82,7 @@ class Ship(Updatable):
 
     @staticmethod
     def load(owner: Player, src: dict) -> Ship:
-        result = Ship(owner)
+        result = owner.ship
         result.is_bound = src['is_bound']
         result.position = Position.deserialize(src['position'])
         result.velocity = Velocity.deserialize(src['velocity'])
@@ -94,7 +98,6 @@ class Ship(Updatable):
         if 'temperature' in src:
             result.temperature = src['temperature']
         result.cargo_hold = CargoHold.load(result, src['cargo_hold'])
-        result.update(gem.current_environment.date_time)
         return result
 
     def serialize(self) -> dict:
@@ -117,7 +120,10 @@ class Ship(Updatable):
         if self.last_update_at is None:
             self.last_update_at = game_date_time
             self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
-            update_queue.add(self)
+            if self in update_queue._queue:
+                logger.error("Ship still in the queue.")
+            else:
+                update_queue.add(self)
             return
         
         days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
@@ -126,7 +132,13 @@ class Ship(Updatable):
 
         self.last_update_at = game_date_time
         self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
-        update_queue.add(self)
+        self.next_update_at = self.next_update_at.replace(minute=0).replace(second=0)
+            # Better for debugging.
+
+        if self in update_queue._queue:
+            logger.error("Ship still in the queue.")
+        else:
+            update_queue.add(self)
 
     def reduce_resources(self, days: float) -> Ship:
 
@@ -138,6 +150,13 @@ class Ship(Updatable):
         old_food: float = self.cargo_hold.food
         self.maintenance -=  0.005 * days
         self.energy -=  1e5 * days
+
+        dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
+        if dist < gem.current_environment.nearest_system.star.heat_radius:
+            max = gem.current_environment.nearest_system.star.heat_radius
+            min = gem.current_environment.nearest_system.star.death_radius
+            self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - min)/(max - min)
+
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
         self.cargo_hold.food -= days
@@ -147,13 +166,13 @@ class Ship(Updatable):
             self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
         elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
-        elif self.temperature <= 35 < old_temperature:
+        elif old_temperature <= 35 < self.temperature:
             self.notification.set("WARNING: It's getting hot in here. You wanna take your clothes off.")
-        elif self.temperature <= 45 < old_temperature:
+        elif old_temperature <= 45 < self.temperature:
             self.notification.set("CRITICAL: The controls burn when you touch them. Leave this place.")
-        elif old_temperature <= -10 < self.temperature:
+        elif self.temperature <= -10 < old_temperature:
             self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
-        elif old_temperature <= -35 < self.temperature:
+        elif self.temperature <= -35 < old_temperature:
             self.notification.set("CRTICAL: Freezing. Leave this place or take measures *now*.")
         elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')

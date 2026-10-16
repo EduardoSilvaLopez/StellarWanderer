@@ -50,7 +50,7 @@ class Radar:
         import game_environment as gem
         system = gem.current_environment.nearest_body.stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
-            (Vector3(0.0, 0.0, 0.0), system.color, RADAR_STAR_DOT_RADIUS)
+            (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS)
         ]
         for world in system.get_all_worlds():
             if world.parent_planet:

@@ -29,7 +29,7 @@ class Orbit:
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.distance_from_star: int = self._calculate_distance_from_star(my_random)
+        self.distance_from_star: int = self._generate_distance_from_star(my_random)
 
         self.planets: List[World] = []
         world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1) # >1 is extraordinary!
@@ -40,9 +40,9 @@ class Orbit:
             second_world = World(self, None, self.saved_alterations)
             self.planets.append(second_world)
 
-    def _calculate_distance_from_star(self, my_random: random) -> float:
+    def _generate_distance_from_star(self, my_random: random) -> float:
         # Tuned to give ~1 AU for orbit number 3 and size of a G-type star.
-        return 24.0 * self.parent_stellar_system.radius * self.number**2
+        return 24.0 * self.parent_stellar_system.star.radius * self.number**2
 
     def set_altered(self) -> Orbit:
         self.is_altered = True

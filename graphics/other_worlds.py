@@ -27,7 +27,6 @@ class OtherWorlds:
         hides the worlds behind it (while bound, as an opaque disc below the horizon).
         """
         to_star = ship.navigation.direction_to_star(environment.nearest_body, environment.date_time)
-        star = environment.nearest_body.stellar_system
         star_distance = to_star.length()
 
         worlds: List[Tuple[float, World, Vector3]] = []
@@ -39,5 +38,6 @@ class OtherWorlds:
             if (distance > star_distance) == behind_star:
                 worlds.append((distance, world, to_world))
 
+        star = environment.nearest_body.stellar_system.star
         for _, world, to_world in sorted(worlds, key=lambda item: item[0], reverse=True):
             LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, ship)

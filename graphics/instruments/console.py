@@ -135,8 +135,8 @@ class Console:
         nearest_body = gem.current_environment.nearest_body
         stellar_system = nearest_body.stellar_system
         world_name = nearest_body.name
-        star_name = stellar_system.name
-        stellar_label = world_name + ", " + star_name + " System"
+        system_name = stellar_system.name
+        stellar_label = world_name + ", " + system_name
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
 

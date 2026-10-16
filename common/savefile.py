@@ -5,7 +5,6 @@ import glob
 import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
-from spaceships.ship import Ship
 import game_environment as gem
 import galaxies.people.player as pem
 from common.paths import data_path, SAVEFILES_DIR
@@ -45,6 +44,9 @@ class Savefile:
             filepath: Path to the savefile to load
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
+        from common.updating import update_queue
+        update_queue.clear()
+        
         logger.info(f"Loading savefile: {filepath}")
         with open(filepath, 'r', encoding='utf-8') as f:
             load_object = json.load(f)

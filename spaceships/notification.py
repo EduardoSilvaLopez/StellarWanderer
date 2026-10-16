@@ -16,8 +16,15 @@ class Notification(Updatable):
         self.next_update_at: Optional[datetime] = None
 
     def set(self, message: str) -> Notification:
+        if message == '':
+            return
+        
         self.message = message
-        self.next_update_at = gem.current_environment.date_time + timedelta(seconds = 60*60)
+        self.next_update_at = gem.current_environment.date_time + timedelta(seconds = 60)
+
+        from galaxies.people.player import current_player
+        current_player.time_scale = 1
+
         if self not in update_queue:
             update_queue.add(self)
         return self

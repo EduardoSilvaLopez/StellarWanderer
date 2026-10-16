@@ -64,7 +64,7 @@ class ObjectLabels:
             return
 
         body = environment.nearest_body
-        star = body.stellar_system
+        system = body.stellar_system
 
         # Draw star label
         star_vector = ship.navigation.direction_to_star(body, environment.date_time)
@@ -72,7 +72,7 @@ class ObjectLabels:
         if projected is not None:
             screen_x, screen_y = projected
             label_surf, rect = ObjectLabels._render_label(
-                label_font, star.name, format_compact_distance(star_vector.length()),
+                label_font, system.star.name, format_compact_distance(star_vector.length()),
                 int(screen_x), int(screen_y)
             )
             surface.blit(label_surf, rect)
@@ -80,7 +80,7 @@ class ObjectLabels:
         # Draw labels for all worlds in the stellar system. get_all_worlds() lists each
         # planet before its moons, so the planet's label rectangle is known for its moons.
         drawn_rects: Dict[World, pygame.Rect] = {}
-        for world_obj in star.get_all_worlds():
+        for world_obj in system.get_all_worlds():
             world_vector = world_obj.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
             projected = project_to_camera(ship, world_vector, w, horizon_y, focal_length_px)
             if projected is None:

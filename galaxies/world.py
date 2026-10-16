@@ -98,7 +98,7 @@ class World(Body):
 
         # Kepler's third law around the parent, a planet or the star (two-body: both masses count).
         parent_mass: float = \
-            self.parent_planet.mass if self.parent_planet else self.parent_orbit.parent_stellar_system.mass
+            self.parent_planet.mass if self.parent_planet else self.parent_orbit.parent_stellar_system.star.mass
         self.orbital_period: float = math.tau * math.sqrt(
             self.distance_to_parent ** 3 / (World.GRAVITATIONAL_CONSTANT * (parent_mass + self.mass))
         )

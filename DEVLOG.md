@@ -276,10 +276,10 @@ RELEASE "The Three Powers" created, with installer.
   * Credits bar (hidden)
   * Better-looking instruments on the left side.
   * Temperature: Bar, death conditions.
+  * Sun can be nearest.
 
 Extra time: 46h15' + 5:30-
 
-  * Sun can be nearest.
   * Temperature: Changes
   * Approaching replenishes energy.
   * Extra: Pythonise all. Internal methods "_", loops.

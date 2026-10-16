@@ -14,9 +14,6 @@ if TYPE_CHECKING:
 
 class StellarSystem:
 
-    SOLAR_MASS = 1.989e30  # kg
-    SOLAR_RADIUS = 6.957e8  # m
-
     def __init__(self, parent_galaxy: Galaxy, x: float, y: float, z: float, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
         self.parent_galaxy: Galaxy = parent_galaxy
@@ -26,11 +23,9 @@ class StellarSystem:
         self.z: float = z
         self.seed: float = (self.parent_galaxy.seed + self.x*1e1 + self.y + self.z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
-        self.color, self.color_name, self.radius, self.heat_radius, self.death_radius = self._generate_star_type(my_random)
-        self.mass: float = self._estimate_mass()
         self.political_entity = political_entity.THOSE_WHO_SHARE
-        self.name: str = self._generate_name(my_random)
         self.star: Star = Star(self)  # the system's star, as a body ships can navigate to
+        self.name: str = self.star.name + " System"
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -49,105 +44,12 @@ class StellarSystem:
             new_orbit = Orbit(self, orbit_number, self.saved_alterations)
             self.orbits.append(new_orbit)
 
-    def _generate_star_type(self, rnd: random.Random) -> tuple:
-        color_code = rnd.random()
-        base_color: tuple = None
-        color_name: str = str()
-        radius: int = 0
-        deadly_heat_effect_radius_factor: float = 100
-        heat_effect_radius_factor: float = 200
-
-        if color_code <= 0.75:  # M, red dwarf
-            base_color = (255, 96, 96)
-            color_name = 'Red dwarf (M)'
-            radius = int(200000000 * (0.4 + 1.2 * rnd.random()))
-            deadly_heat_effect_radius_factor = 9.43
-            heat_effect_radius_factor = 23.6
-
-        elif color_code <= 0.88:  # K, Orange-ish
-            base_color = (255, 192, 128)
-            color_name = 'K'
-            radius = int(550000000 * (0.9 + 0.2 * rnd.random()))
-            deadly_heat_effect_radius_factor = 15.3
-            heat_effect_radius_factor = 38.1
-
-        elif color_code <= 0.96:  # G, Yellow(-ish)
-            base_color = (255, 255, 128)
-            color_name = 'Yellow star (G)'
-            radius = int(700000000 * (0.95 + 0.1 * rnd.random()))
-            deadly_heat_effect_radius_factor = 20.0
-            heat_effect_radius_factor = 50.0
-
-        elif color_code <= 0.99:  # F, yellow-white
-            base_color = (255, 255, 224)
-            color_name = 'F'
-            radius = int(880000000 * (0.9 + 0.2 * rnd.random()))
-            deadly_heat_effect_radius_factor = 27.5
-            heat_effect_radius_factor = 68.8
-
-        elif color_code <= 0.997:  # A, White
-            base_color = (255, 255, 255)
-            color_name = 'White (A)'
-            radius = int(1300000000 * (0.75 + 0.5 * rnd.random()))
-            deadly_heat_effect_radius_factor = 61.3
-            heat_effect_radius_factor = 153.0
-
-        elif color_code <= 0.999999:  # B, Blue-white
-            base_color = (192, 192, 255)
-            color_name = 'Blue (B)'
-            radius = int(3500000000 * (0.85 + 0.3 * rnd.random()))
-            deadly_heat_effect_radius_factor = 147.7
-            heat_effect_radius_factor = 369.2
-
-        else:  # O, Blue giant
-            base_color = (96, 96, 255)
-            color_name = 'Blue giant (O)'
-            radius = int(10500000000 * (0.3 + 0.6 * rnd.random()))
-            deadly_heat_effect_radius_factor = 1482.0
-            heat_effect_radius_factor = 3704.0
-
-        color_variation = (
-            -16 + rnd.randint(0, 32),
-            -16 + rnd.randint(0, 32),
-            -16 + rnd.randint(0, 32)
-        )
-        star_color = tuple(max(0, min(255, b + v)) for b, v in zip(base_color, color_variation))
-        return star_color,\
-            color_name,\
-            radius,\
-            radius * deadly_heat_effect_radius_factor,\
-            radius * heat_effect_radius_factor\
-
-    def _estimate_mass(self) -> float:
-        """Main-sequence mass (kg) from the radius: R ~ M^0.8 up to one solar radius, R ~ M^0.57 above.
-        Derived from the radius so it consumes no random numbers."""
-        radius_ratio = self.radius / StellarSystem.SOLAR_RADIUS
-        exponent = 1.0 / 0.8 if radius_ratio <= 1.0 else 1.0 / 0.57
-        return StellarSystem.SOLAR_MASS * radius_ratio ** exponent
-
-    def _generate_name(self, my_random: random.Random) -> str:
-        """Generate a random name for the world."""
-        vocals = "aeiouaeio" # repeating the most common.
-        consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
-        name = ""
-        for sylIdx in range(1, my_random.randint(3, 6)):
-            if (my_random.random() < 0.4):
-                name += my_random.choice(consonants)
-            name += my_random.choice(vocals)
-            if (my_random.random() < 0.4):
-                name += my_random.choice(consonants)
-
-        if (my_random.random() < 0.5):
-            name += "eia"
-
-        return name.capitalize()
-
     def almanack(self) -> str:
         '''Markdown almanack'''
         text: str = (
-            f"## Stellar system '{self.name}' ({self.political_entity.name})\n"
+            f"## {self.name} ({self.political_entity.name})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
-            f"* {self.color_name} star, radius {format_compact_distance(self.radius)}\n"
+            f"* {self.star.type} star, radius {format_compact_distance(self.star.radius)}\n"
         )
         for orbit in self.orbits:
             for planet in orbit.planets:

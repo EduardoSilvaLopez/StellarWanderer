@@ -26,7 +26,7 @@ class LocalStar:
         check needed here.
         """
         body = environment.nearest_body
-        star = body.stellar_system
+        star = body.stellar_system.star
 
         from graphics.instruments.common import view_geometry, project_to_camera
         star_vector = ship.navigation.direction_to_star(body, environment.date_time)
