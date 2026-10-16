@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional
 
-from Updating import Updatable, update_queue
+from common.updating import Updatable, update_queue
 
 import game_environment as gem
 

@@ -25,9 +25,9 @@ from .constants import SURFACE_STARLIGHT
 from .rock_shape import FACES, rock_meshes, rotate
 
 if TYPE_CHECKING:
-    from Galaxies.km2 import Km2
-    from Galaxies.rock import Rock
-    from Galaxies.world import World
+    from galaxies.km2 import Km2
+    from galaxies.rock import Rock
+    from galaxies.world import World
     from .surface_light import SurfaceLight
 
 # The cached colours are reused until the sun has moved this far. At 0.1 degrees the brightness changes by less

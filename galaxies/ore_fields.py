@@ -4,19 +4,19 @@ import logging
 import random
 logger = logging.getLogger(__name__)
 
-from Galaxies.ore_mine import OreMine
+from galaxies.ore_mine import OreMine
 
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
-    from Galaxies.km2 import Km2
-    from Galaxies.rock import Rock
+    from galaxies.km2 import Km2
+    from galaxies.rock import Rock
 
 class OreField:
     EXTRACTION_PER_SECOND: float = 1 / 3600 # One Kg per hour, later depends on mine.
 
     def __init__(self):
-        from Galaxies.ore_mine import OreMine
+        from galaxies.ore_mine import OreMine
         self.parent_km2: Km2 = None
         self.longitude: int = 0
         self.latitude: int = 0

@@ -11,24 +11,25 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import pygame
 
-from Dialogs import Message, show_message
-from GameLogging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_logs
-from Galaxies.Politics import political_entity
-from Galaxies.Politics.personal_status import PersonalStatus
-from Spaceships.cargo_hold import CargoHold
+from common.dialogs import Message, show_message
+from common.game_logging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_logs
+from galaxies.politics import political_entity
+from galaxies.politics.personal_status import PersonalStatus
+from spaceships.cargo_hold import CargoHold
 import game_environment as gem
+from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from Galaxies.outpost import Outpost
-    from Galaxies.People.player import Player
+    from galaxies.outpost import Outpost
+    from galaxies.people.player import Player
 
-PEOPLE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'people')
+PEOPLE_DIR = resource_path('people')
 
 logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=None)
 def _read_names(file_name: str) -> Tuple[str, ...]:
-    """The non-empty lines of Resources/people/<file_name>, read once. A missing file gives no names."""
+    """The non-empty lines of common/resources/people/<file_name>, read once. A missing file gives no names."""
     try:
         with open(os.path.join(PEOPLE_DIR, file_name), encoding='utf-8') as file:
             return tuple(line.strip() for line in file if line.strip())
@@ -117,12 +118,12 @@ class Person:
             else 'mature' if age < 65\
             else 'old'
 
-        from Galaxies.outpost import Outpost
+        from galaxies.outpost import Outpost
         occupation: str = 'outpost.com' if isinstance(self.residency, Outpost)\
             else 'generic'
         
         filename_prefix: str = occupation + "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
-        portraits_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'portraits')
+        portraits_dir = resource_path('portraits')
         try:
             names = os.listdir(portraits_dir)
         except OSError:
@@ -158,7 +159,7 @@ class Person:
             f" - Sympathy for the player: {self.sympathy100:.2f}%\n"
         )
         
-        from Galaxies.outpost import Outpost        
+        from galaxies.outpost import Outpost        
         if isinstance(self.residency, Outpost):
             residency: str = (
                 f" - Residency: Outpost {self.residency.name}, planet {self.residency.planet.name}"

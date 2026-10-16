@@ -3,13 +3,13 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING
 import pygame
-from vector3 import Vector3
+from common.vector3 import Vector3
 from .constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
-    from Galaxies.outpost import Outpost
+    from galaxies.outpost import Outpost
     from game_environment import GameEnvironment
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class OutpostMarkers:
@@ -25,7 +25,7 @@ class OutpostMarkers:
 
         `visible` is False when the outpost is on the far side of its planet (its surface normal points
         away from the ship). Such outposts still get a label, but no dot."""
-        from Spaceships.navigation import Navigation
+        from spaceships.navigation import Navigation
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
         result = []
@@ -48,7 +48,7 @@ class OutpostMarkers:
         """Draw a dot for every visible outpost in braking distance. Only while unbound, like labels."""
         if ship.is_bound:
             return
-        from .Instruments.common import view_geometry, project_to_camera
+        from .instruments.common import view_geometry, project_to_camera
         _, horizon_y, focal_length_px = view_geometry(h)
         for _, point, visible in OutpostMarkers.in_braking_distance(environment, ship):
             if not visible:

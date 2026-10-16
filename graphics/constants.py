@@ -1,7 +1,7 @@
 """Shared graphics constants and palette for the cockpit view."""
 
-# The font of the cockpit instruments and of the message dialogs' body text: a file in Resources/fonts (SIL OFL).
-# Change it here to change both. The dialogs' body size goes with it (Dialogs/dialog_fonts.py).
+# The font of the cockpit instruments and of the message dialogs' body text: a file in common/resources/fonts (SIL OFL).
+# Change it here to change both. The dialogs' body size goes with it (common/dialogs/dialog_fonts.py).
 FONT_FILE = 'Oxanium.ttf'
 
 # Color palette

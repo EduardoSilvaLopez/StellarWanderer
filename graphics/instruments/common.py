@@ -5,15 +5,16 @@ import math
 import os
 import pygame
 from typing import Optional, Tuple, TYPE_CHECKING
-from vector3 import Vector3
+from common.vector3 import Vector3
 from ..constants import (
     CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     CONSOLE, HULL_EDGE_COLOR, HULL_DARK, READOUT_BG, CONSOLE_EDGE_COLOR,
     VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP,
 )
+from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 _cockpit_background: Optional[pygame.Surface] = None
@@ -60,7 +61,7 @@ def get_cockpit_background(w: int, h: int) -> pygame.Surface:
     """
     global _cockpit_background
     if _cockpit_background is None:
-        texture_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'textures', 'cockpit_background.png')
+        texture_path = resource_path('textures', 'cockpit_background.png')
         try:
             image = pygame.image.load(texture_path)
             result = pygame.transform.scale(image, (w, h))

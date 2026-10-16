@@ -1,6 +1,6 @@
-"""Textured OpenGL outpost buildings: flat boxes with a door on one long wall (Resources/textures/outpost.png).
+"""Textured OpenGL outpost buildings: flat boxes with a door on one long wall (common/resources/textures/outpost.png).
 
-The atlas layout is described in Tools/generate_outpost_texture.py. The door faces the outpost's
+The atlas layout is described in tools/generate_outpost_texture.py. The door faces the outpost's
 orientation (degrees clockwise from north, as for rocks and mines), so local +z is the door wall.
 
 The building is 24 m x 12 m x 6 m (Outpost.WIDTH/DEPTH/HEIGHT), two levels of 3 m with the ledge at 3 m. The texture
@@ -14,7 +14,7 @@ a rigid flag (a flag cannot wave in vacuum) held out by a rod, drawn on both fac
 only drawn: the scanner's box, HEIGHT and CLEARED_RADIUS do not include it.
 
 Windows, lamps and indicator lights are painted after the weathering, so they stay bright; at night they dim with the
-rest, as the lighting is applied by vertex colour. To regenerate the texture: python Tools/generate_outpost_texture.py
+rest, as the lighting is applied by vertex colour. To regenerate the texture: python tools/generate_outpost_texture.py
 (numpy + pygame, seeded, so the result is repeatable; the previous texture is kept as outpost.Backup.png).
 """
 
@@ -26,18 +26,19 @@ import os
 
 import pygame
 from OpenGL import GL, GLU
+from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from Galaxies.outpost import Outpost
+    from galaxies.outpost import Outpost
     from .surface_light import SurfaceLight
 
 logger = logging.getLogger(__name__)
 
 ATLAS_WIDTH = 2048
 ATLAS_HEIGHT = 1024
-TEXTURE_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'outpost.png')
+TEXTURE_PATH = resource_path('textures', 'outpost.png')
 
-# Atlas regions (x, y, w, h) in pixels; must match Tools/generate_outpost_texture.py.
+# Atlas regions (x, y, w, h) in pixels; must match tools/generate_outpost_texture.py.
 FRONT = (0, 0, 960, 240)
 BACK = (0, 248, 960, 240)
 LEFT = (976, 0, 480, 240)

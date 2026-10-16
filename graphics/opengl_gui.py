@@ -20,12 +20,12 @@ from .laser import Laser
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
-    from Spaceships.ship import Ship
+    from galaxies.people.player import Player
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from Galaxies.ore_fields import OreField
-    from Galaxies.outpost import Outpost
-    from Galaxies.ore_mine import OreMine
+    from galaxies.ore_fields import OreField
+    from galaxies.outpost import Outpost
+    from galaxies.ore_mine import OreMine
 
 
 class OpenGLGui:

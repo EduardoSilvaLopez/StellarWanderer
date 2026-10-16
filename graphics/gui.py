@@ -15,7 +15,7 @@ from .cockpit import Cockpit
 from .constants import SPACE_COLOR
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from galaxies.people.player import Player
     from game_environment import GameEnvironment
 
 

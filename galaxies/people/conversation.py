@@ -3,11 +3,11 @@ from abc import abstractmethod
 from datetime import datetime
 
 import logging
-from Dialogs.messages import Message
+from common.dialogs.messages import Message
 
 import game_environment as gem
-from Galaxies.People.person import Person
-from Galaxies.outpost import Outpost
+from galaxies.people.person import Person
+from galaxies.outpost import Outpost
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Conversation:
     @abstractmethod
     def generate(interlocutor: Person) -> Conversation:
         if isinstance(interlocutor.residency, Outpost):
-            from .Conversations.reporting_in_outpost import ReportingInOutpost
+            from .conversations.reporting_in_outpost import ReportingInOutpost
             return ReportingInOutpost(interlocutor, interlocutor.residency).start()
 
     def __init__(self, interlocutor: Person):

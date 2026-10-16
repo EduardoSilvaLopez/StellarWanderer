@@ -14,11 +14,11 @@ from .rock_batches import RockBatches
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
-    from Galaxies.km2 import Km2
-    from Galaxies.ore_fields import OreField
-    from Galaxies.ore_mine import OreMine
-    from Galaxies.outpost import Outpost
+    from spaceships.ship import Ship
+    from galaxies.km2 import Km2
+    from galaxies.ore_fields import OreField
+    from galaxies.ore_mine import OreMine
+    from galaxies.outpost import Outpost
 
 
 class Rocks:

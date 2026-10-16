@@ -7,14 +7,14 @@ from .constants import (
     LOG_LEVEL, LOG_FORMAT, LOG_DATE_FORMAT, LOG_DIR, LOG_FILE_NAME,
     LOG_MAX_BYTES, LOG_BACKUP_COUNT
 )
-from paths import data_path
+from common.paths import data_path
 
 
 def configure_logging() -> None:
     """Set up logging with both console and rotating file handlers.
 
     Configures the root logger to write to console (StreamHandler) and to a
-    rotating log file (RotatingFileHandler) in the Logs/ directory (inside the
+    rotating log file (RotatingFileHandler) in the Logs directory (inside the
     data folder, see paths.data_path).
     Should be called once at application startup, before any other logging.
     """

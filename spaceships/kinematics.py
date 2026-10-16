@@ -4,10 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from vector3 import Vector3
+from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from Galaxies.km2 import Km2
+    from galaxies.km2 import Km2
 
 
 class _Components:

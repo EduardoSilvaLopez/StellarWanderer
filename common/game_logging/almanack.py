@@ -1,4 +1,4 @@
-"""Writes the almanacks in Logs/: the galaxy's (almanack.galaxy.md, at game start or load) and the people's
+"""Writes the almanacks in the Logs folder (temp/Logs from source): the galaxy's (almanack.galaxy.md, at game start or load) and the people's
 (almanack.people.md, blank at game start or load, then one entry per person as each is created).
 
 The text is always built in the calling thread, from the objects as they are now (cheap, no I/O), so the
@@ -12,11 +12,11 @@ import queue
 import threading
 
 from .constants import LOG_DIR, ALMANACK_FILE_NAME, ALMANACK_PEOPLE_FILE_NAME
-from paths import data_path
+from common.paths import data_path
 
 if TYPE_CHECKING:
-    from Galaxies.galaxy import Galaxy
-    from Galaxies.People.person import Person
+    from galaxies.galaxy import Galaxy
+    from galaxies.people.person import Person
 
 # One worker does every write, in the order they were asked for, so a reset can never overtake the entries that
 # follow it. It is a daemon thread: it never keeps the game from closing.

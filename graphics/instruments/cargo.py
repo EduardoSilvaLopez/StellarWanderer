@@ -7,7 +7,7 @@ from ..constants import ACCENT, ACCENT_DIM, BINDING_MARK_RED
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 def format_quantity(value: float) -> str:

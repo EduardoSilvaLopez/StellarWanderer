@@ -2,12 +2,12 @@ import datetime
 import logging
 import math
 from typing import List, Optional
-from GameLogging import reset_people_almanack
-from Galaxies.People.person import Person
-from Galaxies.galaxy import Galaxy
-from Galaxies.stellar_system import StellarSystem
-from Galaxies.world import World
-from vector3 import Vector3
+from common.game_logging import reset_people_almanack
+from galaxies.people.person import Person
+from galaxies.galaxy import Galaxy
+from galaxies.stellar_system import StellarSystem
+from galaxies.world import World
+from common.vector3 import Vector3
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class GameEnvironment:
         self.persons: dict = people_alterations if people_alterations else {}
 
     def generate_default(self) -> None:
-        from Galaxies.orbit import Orbit
+        from galaxies.orbit import Orbit
 
         self.nearest_system = self.galaxy.add_stellar_system(26000.0, 0.0, 0.0)
         current_orbit: Orbit = self.nearest_system.get_orbit(3.0)

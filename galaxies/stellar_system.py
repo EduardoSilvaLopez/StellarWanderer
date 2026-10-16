@@ -2,13 +2,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 import random
-from units import format_compact_distance
-import Galaxies.constants
-from Galaxies.world import World
-from Galaxies.orbit import Orbit
-from Galaxies.Politics import political_entity
+from common.units import format_compact_distance
+import galaxies.constants
+from galaxies.world import World
+from galaxies.orbit import Orbit
+from galaxies.politics import political_entity
 if TYPE_CHECKING:
-    from Galaxies.galaxy import Galaxy
+    from galaxies.galaxy import Galaxy
 
 class StellarSystem:
 
@@ -22,7 +22,7 @@ class StellarSystem:
         self.x: float = x
         self.y: float = y
         self.z: float = z
-        self.seed: float = (self.parent_galaxy.seed + self.x*1e1 + self.y + self.z*1e-5 + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (self.parent_galaxy.seed + self.x*1e1 + self.y + self.z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
         self.color, self.color_name, self.radius = self._generate_star_type(my_random)
         self.mass: float = self._estimate_mass()

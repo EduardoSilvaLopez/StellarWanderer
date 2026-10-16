@@ -4,16 +4,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import pygame
 from datetime import datetime
-from .Instruments.canopy import Canopy
-from .Instruments.console import Console
-from .Instruments.clock import Clock
-from .Instruments.crosshair import Crosshair
-from .Instruments.political_info import PoliticalInfo
+from .instruments.canopy import Canopy
+from .instruments.console import Console
+from .instruments.clock import Clock
+from .instruments.crosshair import Crosshair
+from .instruments.political_info import PoliticalInfo
 from .object_labels import ObjectLabels
 from .velocity_markers import VelocityMarkers
 
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from galaxies.people.player import Player
 
 
 class Cockpit:

@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 
 import logging
 
-from Updating.updatable import Updatable
-from Updating.update_queue import update_queue
+from common.updating import Updatable
+from common.updating import update_queue
 
 
 if TYPE_CHECKING:
-    from Galaxies.ore_fields import OreField
+    from galaxies.ore_fields import OreField
 
 logger = logging.getLogger(__name__)
 

@@ -18,22 +18,27 @@ Controls:
 from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Tuple
+import os
 import sys
+
+# The compiled bytecode goes to temp/pycache, not next to each source file. Set before the project's imports.
+if not getattr(sys, 'frozen', False):
+    sys.pycache_prefix = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp', 'pycache')
 
 import pygame
 import logging; logger = logging.getLogger(__name__)
-from GameLogging import configure_logging, write_almanack_async
-from Graphics.font_cache import FontCache
+from common.game_logging import configure_logging, write_almanack_async
+from graphics.font_cache import FontCache
 import game_environment as gem
-import Galaxies.People.player as player_module
-from Persistency.savefile import Savefile
-from Dialogs import (
+import galaxies.people.player as player_module
+from common.savefile import Savefile
+from common.dialogs import (
     Dialog, DialogResult, Message, MessageDialog, StartingDialog, confirm, next_pending_message, run_in_window,
     show_message
 )
-from Graphics.opengl_gui import OpenGLGui
-from Graphics.Instruments.world_map import WorldMap
-from Updating.update_queue import update_queue
+from graphics.opengl_gui import OpenGLGui
+from graphics.instruments.world_map import WorldMap
+from common.updating import update_queue
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1920, 1080)

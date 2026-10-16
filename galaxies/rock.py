@@ -7,11 +7,11 @@ from datetime import datetime, timedelta
 import math
 from typing import TYPE_CHECKING, Optional
 
-from Updating.updatable import Updatable
-from Updating.update_queue import update_queue
+from common.updating import Updatable
+from common.updating import update_queue
 
 if TYPE_CHECKING:
-    from Galaxies.km2 import Km2
+    from galaxies.km2 import Km2
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class Rock(Updatable):
         self.tilt: float = my_random.random() * 45
         self.composition: float = self._calculate_initial_composition(my_random)
         self.initial_color: tuple = self._calculate_initial_color(my_random)
-        # Seed of the rock's irregular shape (Graphics/rock_shape.py). Drawn last, so every value above is as before.
+        # Seed of the rock's irregular shape (graphics/rock_shape.py). Drawn last, so every value above is as before.
         self.shape_seed: int = my_random.getrandbits(32)
         self.temperature: float = 0.0
         self.adjust_color()

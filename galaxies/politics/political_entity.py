@@ -3,6 +3,7 @@ import os
 import random
 import pygame
 from typing import Optional
+from common.paths import resource_path
 
 
 class PoliticalEntity:
@@ -21,8 +22,8 @@ class PoliticalEntity:
                 return self.titles[k]
 
     def _load_icon(self, icon_filename: str) -> None:
-        """Load the icon image from Resources/textures."""
-        icon_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Resources', 'textures', icon_filename)
+        """Load the icon image from common/resources/textures."""
+        icon_path = resource_path('textures', icon_filename)
         try:
             self.icon = pygame.image.load(icon_path)
         except Exception as e:

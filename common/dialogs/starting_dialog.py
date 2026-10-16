@@ -16,10 +16,11 @@ from .message_dialog import MessageDialog
 from .messages import Message
 
 logger = logging.getLogger(__name__)
-from paths import data_path, SAVEFILES_DIR
-from Persistency.savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
+from common.paths import data_path, SAVEFILES_DIR
+from common.savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
+from common.paths import resource_path
 
-ICON_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'presentation', 'game_icon.png')
+ICON_PATH = resource_path('presentation', 'game_icon.png')
 DOUBLE_CLICK_MS = 400
 
 

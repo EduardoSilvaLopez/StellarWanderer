@@ -1,11 +1,11 @@
 from __future__ import annotations
 import logging
 
-from Dialogs.messages import Message, show_message
-from Galaxies.Politics import political_entity
-from Galaxies.Politics.personal_status import PersonalStatus
-from Spaceships.ship import Ship
-from Updating import update_queue
+from common.dialogs.messages import Message, show_message
+from galaxies.politics import political_entity
+from galaxies.politics.personal_status import PersonalStatus
+from spaceships.ship import Ship
+from common.updating import update_queue
 import game_environment as gem
 
 logger = logging.getLogger(__name__)

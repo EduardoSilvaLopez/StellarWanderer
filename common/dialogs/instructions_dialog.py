@@ -13,22 +13,24 @@ from .dialog_fonts import body_font, title_font
 from .message_dialog import MessageDialog
 
 INSTRUCTIONS: List[Tuple[str, List[str]]] = [
+    ("Worlds", [
+        "Fly close to a planet or moon to 'bind' to its surface. Fly away from it to 'unbind'.",
+        "When the appoximation bar title is green - the coordinates change. Use brake to align with the body's movement.",
+        "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look around.",
+        "The scanner shows what is in the crosshair. Hold Space to activate it (whichever that means in context).",
+    ]),
     ("Flying", [
         "A / D: thrust left / right. W / X: thrust forward / back. Numpad 8 / 2: climb / descend (while bound to a world).",
         "Numpad 4 / 6: turn left / right. Numpad 8 / 2 (while unbound): nose up / down. E / Q (while unbound): roll right / left.",
         "S: brake on all axes, and stop all turning.",
-        "Numpad + / -: faster / slower time. Turning is off above normal speed, so the ship holds its attitude.",
-    ]),
-    ("Worlds", [
-        "Fly close to a planet or moon to bind to its surface. Fly away from it to be free again.",
-        "While bound, the map in the middle shows the world: the mouse wheel zooms when the pointer is over it, and a left-button drag moves the view. Releasing the button centres it on the ship again.",
-        "The scanner shows what is in the crosshair. Hold Space to fire the laser at it.",
+        "Numpad + / -: faster / slower time.",
     ]),
     ("Mining", [
-        "M: place an ore mine where the ship is. It needs a mine in the cargo hold, and there must be no rock nearby.",
+        "Heat a rock to melt it, crearing an ore field.",
+        "M: place an ore mine in front of the ship.",
     ]),
     ("Keeping alive", [
-        "Maintenance and energy run down over time, and so do the air, water and food in the cargo hold.",
+        "Maintenance, energy, air, water and food are spent... don't let them go too down.",
         "Outposts restore them. Watch the bars and the cargo: a critical warning means go to an outpost now.",
     ]),
     ("Game", [

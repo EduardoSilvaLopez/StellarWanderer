@@ -7,13 +7,13 @@ import pygame
 from .constants import (
     PLANET_GRAY, ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
 )
-from Graphics.Instruments.common import view_geometry
+from graphics.instruments.common import view_geometry
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from Galaxies.rock import Rock
-    from Galaxies.ore_fields import OreField
+    from galaxies.rock import Rock
+    from galaxies.ore_fields import OreField
 
 
 class NearestWorld:

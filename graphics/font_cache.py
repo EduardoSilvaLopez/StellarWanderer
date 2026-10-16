@@ -5,8 +5,9 @@ import pygame
 
 from .constants import FONT_FILE
 from .fallback_font import FALLBACK_FONTS, FallbackFont
+from common.paths import resource_path
 
-FONTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'fonts')
+FONTS_DIR = resource_path('fonts')
 
 
 class FontCache:
@@ -27,7 +28,7 @@ class FontCache:
 
     @staticmethod
     def _load(size: int, bold: bool) -> FallbackFont:
-        """FONT_FILE from Resources/fonts, with the system font for characters it lacks. Bold is synthesised:
+        """FONT_FILE from common/resources/fonts, with the system font for characters it lacks. Bold is synthesised:
         pygame cannot pick a weight of a variable font."""
         try:
             primary = pygame.font.Font(os.path.join(FONTS_DIR, FONT_FILE), size)

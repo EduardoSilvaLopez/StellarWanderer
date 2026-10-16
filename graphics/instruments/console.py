@@ -8,7 +8,7 @@ from ..constants import (
     CONSOLE_TOP, CONSOLE_EDGE_COLOR, HULL_DARK, ACCENT, ACCENT_DIM, AMBER, ACCENT_DIM,
 )
 from .common import get_console_background, draw_beveled_panel, bezel_depth
-from units import format_compact_distance
+from common.units import format_compact_distance
 from .compass import Compass
 from .world_map import WorldMap
 from .scanner import Scanner
@@ -20,7 +20,7 @@ from .binding_meter import BindingMeter
 from .radar import Radar
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class Console:

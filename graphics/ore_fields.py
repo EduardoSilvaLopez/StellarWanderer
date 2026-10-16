@@ -7,9 +7,10 @@ import os
 
 import pygame
 from OpenGL import GL
+from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from Galaxies.ore_fields import OreField
+    from galaxies.ore_fields import OreField
     from .surface_light import SurfaceLight
 
 
@@ -91,13 +92,7 @@ class OreFields:
         - Black (0) becomes fully opaque (alpha 255)
         - Gray values map proportionally
         """
-        texture_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "Resources",
-            "textures",
-            "ore_field.png"
-        )
+        texture_path = resource_path("textures", "ore_field.png")
         # Load image (will be RGB or RGBA)
         img = pygame.image.load(texture_path)
         w, h = img.get_size()

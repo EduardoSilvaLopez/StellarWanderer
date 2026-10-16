@@ -7,17 +7,17 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import logging
-from units import format_compact_distance
-import Galaxies.constants
-from Galaxies.km2 import Km2
-from Galaxies.rock import Rock
-from vector3 import Vector3
+from common.units import format_compact_distance
+import galaxies.constants
+from galaxies.km2 import Km2
+from galaxies.rock import Rock
+from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from Galaxies.ore_mine import OreMine
-    from Galaxies.outpost import Outpost
-    from Galaxies.orbit import Orbit
-    from Spaceships.ship import Ship
+    from galaxies.ore_mine import OreMine
+    from galaxies.outpost import Outpost
+    from galaxies.orbit import Orbit
+    from spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class World:
             self.index = len(self.parent_orbit.planets)
             seed_origin: float = self.parent_orbit.seed
 
-        self.seed: float = (seed_origin + self.index + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (seed_origin + self.index + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\
@@ -127,7 +127,7 @@ class World:
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         # Outposts (planets only): one is generated at least on the initial planet.
-        from Galaxies.outpost import Outpost
+        from galaxies.outpost import Outpost
         self.outposts: dict = {}
         if not self.parent_planet:
             outposts_count = int(abs(my_random.gauss(1.0, 1.5)))

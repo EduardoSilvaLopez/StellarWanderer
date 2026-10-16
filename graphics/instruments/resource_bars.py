@@ -6,7 +6,7 @@ import pygame
 from ..constants import ACCENT, ACCENT_DIM, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 # The bar's colour by how much is left: red when empty, amber at half, green when full.
 GRADIENT = ((0.0, BINDING_MARK_RED), (0.5, AMBER), (1.0, BINDING_NEAR_GREEN))

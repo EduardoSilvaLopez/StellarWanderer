@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
-from vector3 import Vector3
+from common.vector3 import Vector3
 
 if TYPE_CHECKING:
     from .ship import Ship

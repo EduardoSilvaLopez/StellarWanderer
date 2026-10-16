@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Dict, Tuple
 import logging
 import math
 
-from vector3 import Vector3, rotate_2d
+from common.vector3 import Vector3, rotate_2d
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from Galaxies.world import World
+    from galaxies.world import World
     from .ship import Ship
 
 logger = logging.getLogger(__name__)

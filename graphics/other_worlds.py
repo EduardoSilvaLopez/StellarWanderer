@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 from typing import List, Tuple, TYPE_CHECKING
-from vector3 import Vector3
+from common.vector3 import Vector3
 import pygame
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from Galaxies.world import World
-    from Spaceships.ship import Ship
+    from galaxies.world import World
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 

@@ -11,10 +11,10 @@ from ..rock_shape import rock_meshes, rotate
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
-    from Galaxies.rock import Rock
-    from Galaxies.ore_mine import OreMine
-    from Galaxies.outpost import Outpost
+    from spaceships.ship import Ship
+    from galaxies.rock import Rock
+    from galaxies.ore_mine import OreMine
+    from galaxies.outpost import Outpost
 
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
@@ -84,7 +84,7 @@ class Scanner:
     @staticmethod
     def _temperature_color(temperature: float) -> Tuple[int, int, int]:
         """The colour for a rock temperature above 0: one of TEMPERATURE_COLORS, by quarters of Rock.TEMP_MAX."""
-        from Galaxies.rock import Rock
+        from galaxies.rock import Rock
         quarter = int(temperature / Rock.TEMP_MAX * len(TEMPERATURE_COLORS))
         return TEMPERATURE_COLORS[min(len(TEMPERATURE_COLORS) - 1, max(0, quarter))]
 
@@ -110,7 +110,7 @@ class Scanner:
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, rock: Rock) -> None:
         """Render `rock`'s boulder inside `rect`, at the same relative orientation the player currently sees it
         from, normalized to its bounding cube so every rock, regardless of true size or distance, fills the square.
-        The shape is the one the 3D view draws (Graphics/rock_shape.py); each triangle is shaded by its normal."""
+        The shape is the one the 3D view draws (graphics/rock_shape.py); each triangle is shaded by its normal."""
         view = math.radians(ship.attitude.yaw)
         cos_view, sin_view = math.cos(view), math.sin(view)
         tilt, orientation = np.array([rock.tilt]), np.array([rock.orientation])

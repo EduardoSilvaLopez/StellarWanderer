@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Uni
 import math
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
-    from Galaxies.world import World
-    from Galaxies.km2 import Km2
-    from Galaxies.rock import Rock
-    from Galaxies.ore_mine import OreMine
-    from Galaxies.outpost import Outpost
+    from spaceships.ship import Ship
+    from galaxies.world import World
+    from galaxies.km2 import Km2
+    from galaxies.rock import Rock
+    from galaxies.ore_mine import OreMine
+    from galaxies.outpost import Outpost
 
 # Everything the beam can hit.
 Target = Union['Rock', 'OreMine', 'Outpost']
@@ -17,12 +17,12 @@ Target = Union['Rock', 'OreMine', 'Outpost']
 class Scanner:
     """Aiming and targeting: what the crosshair hits (rocks, ore mines, outposts) and ore collection.
 
-    The scanner decides what is targeted; the laser (Spaceships/laser.py) only fires at it. While bound, the beam
-    (drawn by Graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
+    The scanner decides what is targeted; the laser (spaceships/laser.py) only fires at it. While bound, the beam
+    (drawn by graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
     slope from the emitter (`emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
     MAX_LENGTH metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their
     distance pass over the beam. `targeted_rock` and `targeted_mine` are what the scanner panel
-    (Graphics/Instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
+    (graphics/instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
     collects from.
     """
 
@@ -38,20 +38,20 @@ class Scanner:
         self.end_y = 0.0
         self.end_z = 0.0
 
-    # Imported here, not at module level: Galaxies.ore_mine needs Spaceships.Ship to load first.
+    # Imported here, not at module level: galaxies.ore_mine needs spaceships.ship to load first.
     @property
     def targeted_rock(self) -> Optional[Rock]:
-        from Galaxies.rock import Rock
+        from galaxies.rock import Rock
         return self.target if isinstance(self.target, Rock) else None
 
     @property
     def targeted_mine(self) -> Optional[OreMine]:
-        from Galaxies.ore_mine import OreMine
+        from galaxies.ore_mine import OreMine
         return self.target if isinstance(self.target, OreMine) else None
 
     @property
     def targeted_outpost(self) -> Optional[Outpost]:
-        from Galaxies.outpost import Outpost
+        from galaxies.outpost import Outpost
         return self.target if isinstance(self.target, Outpost) else None
 
     def emitter_offset(self) -> float:
@@ -108,7 +108,7 @@ class Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise
         switch the beam on, heating the targeted rock if there is one. Uses the target found by this frame's
         update_target, so it does not search again."""
-        from Spaceships.cargo_hold import CargoHold
+        from spaceships.cargo_hold import CargoHold
 
         if self.targeted_mine is not None:
             self.ship.laser.cease_fire()
@@ -232,7 +232,7 @@ class Scanner:
         """t-value where the beam first enters the outpost building, or None. The building is a box of
         Outpost.WIDTH x HEIGHT x DEPTH standing on the ground at (longitude, latitude), with its width along local x
         and its depth along local z; the door is on the local +z side, so orientation is the heading the door faces."""
-        from Galaxies.outpost import Outpost
+        from galaxies.outpost import Outpost
         return self._beam_enters_oriented_box(
             (outpost.longitude, Outpost.HEIGHT / 2, outpost.latitude),
             (Outpost.WIDTH / 2, Outpost.HEIGHT / 2, Outpost.DEPTH / 2),
@@ -276,7 +276,7 @@ class Scanner:
     def is_rock_targeted(self, rock: Rock) -> Optional[float]:
         """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
         rock.size, centred on (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation.
-        The boulder drawn inside it (Graphics/rock_shape.py) touches the cube on every axis, but is not the whole
+        The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is not the whole
         cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
         half = rock.size / 2.0
         return self._beam_enters_oriented_box(

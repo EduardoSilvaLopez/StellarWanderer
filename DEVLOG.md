@@ -269,18 +269,21 @@ RELEASE "The Three Powers" created, with installer.
   * Overwrite saves.
   * "Instructions" screen.
   * Delete saves.
+  * Extra: Directories revamp, including snake_case.
 
 Extra time: 46h15' + 5:30-
 
+* Vertical bars for the warning in maintenance (later temperature)
+* Temperature
+  * 'The heat kills you before radiation does... yay.
   
 # BACKLOG
-* BETTER STARTING DIALOG: Save games with a name. Overwrite saves. Delete saves. Instructions dialog.
-  * Extra: Directories revamp, including snake_case.
   * Extra: Pythonise all
   * Extra: Bug search in all
   * Extra: Better structure in all.
   * Extra: Ages of people still too similar?
 * TRAVEL TO THE SUN (forbidden areas)
+  * Approaching replenishes energy.
 * ASTEROIDS
 * REAL STARS AROUND (galactic sector? just chunks of 1000 ly?)
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)

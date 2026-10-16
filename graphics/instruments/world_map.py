@@ -8,8 +8,8 @@ from datetime import datetime
 from ..constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
-    from Galaxies.world import World
+    from spaceships.ship import Ship
+    from galaxies.world import World
 
 MINE_MARK_COLOR = (255, 255, 0)
 

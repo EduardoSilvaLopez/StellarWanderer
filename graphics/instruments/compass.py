@@ -7,7 +7,7 @@ import pygame
 from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class Compass:

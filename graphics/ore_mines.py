@@ -21,7 +21,7 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from Galaxies.ore_mine import OreMine
+    from galaxies.ore_mine import OreMine
     from .surface_light import SurfaceLight
 
 
@@ -56,7 +56,7 @@ class OreMines:
         """Camera-relative (x, y, z, u) points around a mine's circumference.
 
         Rotated by the mine's orientation using the same convention as
-        the rocks (Graphics/rock_shape.py, rotate; no tilt term — mines stand vertical). Longitude/
+        the rocks (graphics/rock_shape.py, rotate; no tilt term — mines stand vertical). Longitude/
         latitude are made relative to the player here, in double precision,
         before reaching glVertex3f — see the comment in Rocks.draw() for why.
         """

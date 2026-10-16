@@ -5,14 +5,14 @@ from datetime import datetime
 from typing import Any, List, Tuple, TYPE_CHECKING
 import math
 import pygame
-from vector3 import Vector3
+from common.vector3 import Vector3
 from ..constants import (
     ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR, RADAR_MOON_COLOR,
     RADAR_STAR_DOT_RADIUS, RADAR_WORLD_DOT_RADIUS, RADAR_MOON_DOT_RADIUS,
 )
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class Radar:

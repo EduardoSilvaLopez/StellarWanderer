@@ -5,10 +5,10 @@ from typing import Any, TYPE_CHECKING
 import pygame
 from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, SPEED_WARNING_RED
 from .common import draw_beveled_panel, bezel_depth
-from units import format_compact_distance, format_compact_speed
+from common.units import format_compact_distance, format_compact_speed
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class BindingMeter:
@@ -42,7 +42,7 @@ class BindingMeter:
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         # Meter spans from surface (1.0x radius distance) to braking zone (BRAKING_RADIUS_MULTIPLE x radius)
-        from Spaceships.navigation import Navigation
+        from spaceships.navigation import Navigation
         distance_from_centre = ship.navigation.distance_to_world_centre(world)
         distance_fraction = (distance_from_centre / world.radius - 1.0) / (Navigation.BRAKING_RADIUS_MULTIPLE - 1.0)
         distance_fraction = min(1.0, max(0.0, distance_fraction))

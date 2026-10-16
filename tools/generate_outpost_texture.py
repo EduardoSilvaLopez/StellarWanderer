@@ -1,6 +1,6 @@
-"""Generate Resources/textures/outpost.png, the texture of the outpost building and its flag.
+"""Generate common/resources/textures/outpost.png, the texture of the outpost building and its flag.
 
-Run from the project root:  python Tools/generate_outpost_texture.py
+Run from the project root:  python tools/generate_outpost_texture.py
 
 The building is 24 m x 12 m x 6 m, two levels of 3 m. Atlas 2048 x 1024, 40 pixels per metre on every face:
     front wall (door side, 24 x 6 m)   x 0..960,      y 0..240
@@ -10,7 +10,7 @@ The building is 24 m x 12 m x 6 m, two levels of 3 m. Atlas 2048 x 1024, 40 pixe
     right side (12 x 6 m)              x 976..1456,   y 248..488
     flag       (3:2, any size on the quad)  x 1472..1856, y 0..256
     steel      (plain patch, for the flagpole)  x 1472..1504, y 264..296
-Keep this layout when replacing the PNG by hand (Graphics/outposts.py has the same rectangles).
+Keep this layout when replacing the PNG by hand (graphics/outposts.py has the same rectangles).
 
 It is a building for a world without air or water: sealed hatches and a docking collar, round portholes, thermal
 radiator panels, gold insulation foil, thruster clusters with soot, EVA handrails, a sensor dome and beacons. No
@@ -28,9 +28,9 @@ import numpy as np
 import pygame
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-OUTPUT = os.path.join(ROOT, 'Resources', 'textures', 'outpost.png')
-EMBLEM = os.path.join(ROOT, 'Resources', 'textures', 'PoliticalEntity.1.png')
-STENCIL_FONT = os.path.join(ROOT, 'Resources', 'fonts', 'Orbitron.ttf')
+OUTPUT = os.path.join(ROOT, 'common', 'resources', 'textures', 'outpost.png')
+EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.1.png')
+STENCIL_FONT = os.path.join(ROOT, 'common', 'resources', 'fonts', 'Orbitron.ttf')
 
 ATLAS_W, ATLAS_H = 2048, 1024
 

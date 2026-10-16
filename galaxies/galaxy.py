@@ -2,7 +2,7 @@ import copy
 import random
 from typing import List, Optional
 
-from Galaxies.stellar_system import StellarSystem
+from galaxies.stellar_system import StellarSystem
 
 '''The whole galaxy. We won't have more than one.'''
 class Galaxy():

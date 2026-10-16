@@ -10,7 +10,10 @@
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPYCACHEPREFIX": "${workspaceFolder}/temp/pycache"
+            }
         }
     ]
 }

@@ -8,12 +8,12 @@ import pygame
 from .constants import (
     WORLD_ALBEDO, WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET,
 )
-from vector3 import Vector3
+from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from Galaxies.world import World
+    from galaxies.world import World
 
 
 class LitWorlds:
@@ -77,7 +77,7 @@ class LitWorlds:
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
         the active frame (as returned by Navigation.direction_to_world / direction_to_star)."""
-        from Graphics.Instruments.common import view_geometry
+        from graphics.instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(h)
 
         distance = to_world.length()

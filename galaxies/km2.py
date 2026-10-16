@@ -7,12 +7,12 @@ from typing import List, TYPE_CHECKING, Optional
 
 import logging
 
-import Galaxies.constants
-from Galaxies.rock import Rock
-from Galaxies.ore_fields import OreField
+import galaxies.constants
+from galaxies.rock import Rock
+from galaxies.ore_fields import OreField
 
 if TYPE_CHECKING:
-    from Galaxies.world import World
+    from galaxies.world import World
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Km2:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
-        self.seed: float = (self.parent_world.seed + 1e3*self.longitude + 1e-6*self.latitude + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (self.parent_world.seed + 1e3*self.longitude + 1e-6*self.latitude + 1) % galaxies.constants.SEEDS_SCALING
 
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()
@@ -56,7 +56,7 @@ class Km2:
         for i in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 1000)
             rock_lat = self.latitude + my_random.randint(0, 1000)
-            from Galaxies.outpost import Outpost
+            from galaxies.outpost import Outpost
             if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat - outpost_center[1]) < Outpost.CLEARED_RADIUS:
                 continue # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
             rock_key = f"{rock_lon} {rock_lat}"

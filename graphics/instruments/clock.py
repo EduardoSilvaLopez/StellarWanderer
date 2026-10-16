@@ -7,12 +7,12 @@ import pygame
 from ..constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
 
 if __name__ == '__main__':
-    from Galaxies.People.player import Player
+    from galaxies.people.player import Player
 else:
     import sys
     sys.path.insert(0, '../..')
     try:
-        from Galaxies.People.player import Player
+        from galaxies.people.player import Player
     except ImportError:
         Player = None
 

@@ -5,10 +5,10 @@ import glob
 import logging; logger = logging.getLogger(__name__)
 from datetime import datetime
 
-from Spaceships.ship import Ship
+from spaceships.ship import Ship
 import game_environment as gem
-import Galaxies.People.player as pem
-from paths import data_path, SAVEFILES_DIR
+import galaxies.people.player as pem
+from common.paths import data_path, SAVEFILES_DIR
 
 # A save's file name is the name typed in the starting dialog (or the default), plus ".json".
 SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
@@ -65,7 +65,7 @@ class Savefile:
         gem.current_environment.nearest_system = gem.current_environment.galaxy.add_stellar_system(
             system_data['x'], system_data['y'], system_data['z']
             )
-        from Galaxies.orbit import Orbit
+        from galaxies.orbit import Orbit
         current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
         planet_idx: int = player_data['planet']
         moon_idx: int = player_data['moon']

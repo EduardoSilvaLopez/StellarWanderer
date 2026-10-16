@@ -6,7 +6,7 @@ import pygame
 from ..constants import CONSOLE_TOP, ACCENT
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class Crosshair:

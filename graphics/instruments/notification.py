@@ -6,7 +6,7 @@ import pygame
 from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class notification_bar:

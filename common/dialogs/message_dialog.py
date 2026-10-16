@@ -8,8 +8,9 @@ import pygame
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
 from .messages import Message
+from common.paths import resource_path
 
-TEXTURE_PATH = os.path.join(os.path.dirname(__file__), '..', 'Resources', 'textures', 'dialog_background.png')
+TEXTURE_PATH = resource_path('textures', 'dialog_background.png')
 
 ACCENT = (94, 234, 212)        # same as the cockpit accent
 ACCENT_DIM = (34, 92, 92)
@@ -26,8 +27,8 @@ class MessageDialog(Dialog):
     Enter or Space press the focused button (the first at the start); Tab, Left and Right move the focus,
     and the mouse moves it too.
 
-    Look: a textured panel (Resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
-    (Resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
+    Look: a textured panel (common/resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
+    (common/resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
     not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines when they
     are long. One or more buttons, side by side when they fit, otherwise stacked."""
 

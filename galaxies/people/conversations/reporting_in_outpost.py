@@ -4,10 +4,10 @@ from datetime import datetime
 import logging
 
 import game_environment as gem
-from Dialogs.messages import show_message
-from Galaxies.Politics.political_entity import PoliticalEntity
-from Galaxies.outpost import Outpost
-from Spaceships.ship import Ship
+from common.dialogs.messages import show_message
+from galaxies.politics.political_entity import PoliticalEntity
+from galaxies.outpost import Outpost
+from spaceships.ship import Ship
 from ..player import current_player as player
 from ..person import Person
 from ..conversation import Conversation
@@ -225,7 +225,7 @@ class ReportingInOutpost(Conversation):
     # endregion
 
     def greet_and_warn(self) -> None:
-        from Galaxies.People.player import current_player as player
+        from galaxies.people.player import current_player as player
 
         subjective_title = self.interlocutor.get_player_title(player)
 
@@ -302,7 +302,7 @@ class ReportingInOutpost(Conversation):
             )
 
     def greet_why_back(self) -> None:
-        from Galaxies.People.player import current_player as player
+        from galaxies.people.player import current_player as player
         subjective_title = self.interlocutor.get_player_title(player)
 
         # Prepare the text:

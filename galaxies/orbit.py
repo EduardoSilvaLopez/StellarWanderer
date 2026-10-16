@@ -3,10 +3,10 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, List, Optional
 
-import Galaxies.constants
-from Galaxies.world import World
+import galaxies.constants
+from galaxies.world import World
 if TYPE_CHECKING:
-    from Galaxies.stellar_system import StellarSystem
+    from galaxies.stellar_system import StellarSystem
 
 '''An orbit can have 2 planets, even more later - but very seldom.'''
 class Orbit:
@@ -18,7 +18,7 @@ class Orbit:
                  ) -> None:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number
-        self.seed: float = (self.parent_stellar_system.seed + self.number + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (self.parent_stellar_system.seed + self.number + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
         self.is_altered: bool = False

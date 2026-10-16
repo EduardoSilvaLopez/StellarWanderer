@@ -11,12 +11,12 @@ vertex colours (no GL lighting state). Lit: the ground, ore fields, mines, outpo
 from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple
 
-from vector3 import Vector3
+from common.vector3 import Vector3
 from .constants import SURFACE_STARLIGHT
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 Colour = Tuple[int, int, int]

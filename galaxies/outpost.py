@@ -5,15 +5,15 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from Updating import update_queue
-from Updating.updatable import Updatable
-from vector3 import Vector3
+from common.updating import update_queue
+from common.updating import Updatable
+from common.vector3 import Vector3
 
 import game_environment as gem
-import Galaxies.constants
-from Galaxies.world import World
-from Galaxies.km2 import Km2
-from Galaxies.People.person import Person
+import galaxies.constants
+from galaxies.world import World
+from galaxies.km2 import Km2
+from galaxies.people.person import Person
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class Outpost(Updatable):
     def __init__(self, planet: World, saved_alterations: dict):
         self.planet = planet
         self.index = len(planet.outposts)
-        self.seed: float = (planet.seed + self.index + 1) % Galaxies.constants.SEEDS_SCALING
+        self.seed: float = (planet.seed + self.index + 1) % galaxies.constants.SEEDS_SCALING
         self.my_random: random.Random = random.Random(self.seed)
 
         self.name: str = self.generate_name(self.my_random)

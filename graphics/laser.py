@@ -9,7 +9,7 @@ from OpenGL import GL, GLU
 from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_COLOR
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
 
 
 class Laser:
@@ -19,7 +19,7 @@ class Laser:
     def draw(width: int, height: int, ship: Ship) -> None:
         """Draw the laser beam if the player is firing.
 
-        Laser is a straight segment from just below the camera to its end point (Scanner.update_target in Spaceships/scanner.py):
+        Laser is a straight segment from just below the camera to its end point (Scanner.update_target in spaceships/scanner.py):
         while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
         MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground.
         """

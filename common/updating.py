@@ -1,8 +1,34 @@
-"""Singleton queue for managing periodic updates of Updatable objects."""
+"""Time-based updates: the Updatable interface and the singleton queue that calls them when they are due."""
 
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List
-from .updatable import Updatable
+
+
+class Updatable(ABC):
+    """Abstract base class for objects that support time-based updates.
+
+    Classes implementing this interface will be managed by UpdateQueue,
+    which calls update() when get_next_update() has passed.
+    """
+
+    @abstractmethod
+    def get_next_update(self) -> datetime:
+        """Return the datetime when this object should next be updated.
+
+        Returns:
+            datetime: The next scheduled update time.
+        """
+        pass
+
+    @abstractmethod
+    def update(self, game_date_time: datetime) -> None:
+        """Perform the update operation.
+
+        This method is called by UpdateQueue when the current time has
+        passed the time returned by get_next_update().
+        """
+        pass
 
 
 class UpdateQueue:

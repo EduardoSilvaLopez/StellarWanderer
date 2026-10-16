@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 import math
 
-from Dialogs.messages import Message, show_message
-from Galaxies.ore_fields import OreField
-from Galaxies.ore_mine import OreMine
+from common.dialogs.messages import Message, show_message
+from galaxies.ore_fields import OreField
+from galaxies.ore_mine import OreMine
 import game_environment as gem
 from .laser import Laser
 from .cargo_hold import CargoHold
@@ -14,9 +14,9 @@ from .notification import Notification
 from .kinematics import Position, Velocity
 from .attitude import Attitude
 from .navigation import Navigation
-from Updating import Updatable, update_queue
+from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
-    from Galaxies.People.player import Player
+    from galaxies.people.player import Player
 
 class Ship(Updatable):
     """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
@@ -176,7 +176,7 @@ class Ship(Updatable):
         player_lon: float = self.position.x
         player_lat: float = self.position.z
         player_yaw: float = self.attitude.yaw
-        from Galaxies.km2 import Km2
+        from galaxies.km2 import Km2
         relevant_km2s: List[Km2] = list()
         import game_environment as gem
         world = gem.current_environment.nearest_world

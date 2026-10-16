@@ -9,7 +9,7 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from Spaceships.ship import Ship
+    from spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
@@ -28,7 +28,7 @@ class LocalStar:
         world = environment.nearest_world
         star = world.parent_orbit.parent_stellar_system
 
-        from Graphics.Instruments.common import view_geometry, project_to_camera
+        from graphics.instruments.common import view_geometry, project_to_camera
         star_vector = ship.navigation.direction_to_star(world, environment.date_time)
         _, horizon_y, focal_length_px = view_geometry(h)
         projected = project_to_camera(ship, star_vector, w, horizon_y, focal_length_px)

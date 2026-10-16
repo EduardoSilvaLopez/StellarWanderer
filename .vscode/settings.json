@@ -1,0 +1,6 @@
+{
+    // Compiled bytecode goes to temp/pycache for everything run from the VS Code terminal (tests, linters).
+    "terminal.integrated.env.windows": {
+        "PYTHONPYCACHEPREFIX": "${workspaceFolder}\\temp\\pycache"
+    }
+}
