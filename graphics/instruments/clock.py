@@ -27,7 +27,7 @@ class Clock:
         label_font = fonts.get(max(9, int(h * 0.016)))
 
         # Format the time display
-        text = Clock.format_ship_time(date_time)
+        text = Clock._format_ship_time(date_time)
 
         digits = digit_font.render(text, True, ACCENT)
         label = label_font.render('SHIP TIME', True, ACCENT_DIM)
@@ -37,7 +37,7 @@ class Clock:
             rate_color = ACCENT_DIM if time_scale == Player.TIME_SCALE_MIN else AMBER
         else:
             rate_color = ACCENT_DIM
-        rate = label_font.render(Clock.format_time_scale(time_scale), True, rate_color)
+        rate = label_font.render(Clock._format_time_scale(time_scale), True, rate_color)
 
         pad = max(8, int(h * 0.014))
         gap = max(10, int(w * 0.012))
@@ -58,12 +58,12 @@ class Clock:
         surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
 
     @staticmethod
-    def format_ship_time(moment: datetime) -> str:
+    def _format_ship_time(moment: datetime) -> str:
         """Format ISO 8601 layout without zero-padding the year, e.g. '700-01-01 00:00:00'."""
         return (f'{moment.year}-{moment.month:02d}-{moment.day:02d} '
                 f'{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}')
 
     @staticmethod
-    def format_time_scale(scale: int) -> str:
+    def _format_time_scale(scale: int) -> str:
         """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'."""
         return f'x{scale:,}'.replace(',', ' ')

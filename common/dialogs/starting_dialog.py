@@ -109,14 +109,14 @@ class StartingDialog(Dialog):
                                      self.HEIGHT - self.LIST_TOP - self.EXIT_ROW_HEIGHT)
         self.exit_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.EXIT_ROW_HEIGHT + 12, 200, 32)
 
-        self.load_savefiles()
+        self._load_savefiles()
 
     @property
-    def max_visible(self) -> int:
+    def _max_visible(self) -> int:
         """How many savefile rows fit in the list."""
         return self.list_rect.height // self.ITEM_HEIGHT
 
-    def load_savefiles(self) -> None:
+    def _load_savefiles(self) -> None:
         """Load list of available savefiles."""
         self.savefiles = []
         if os.path.exists(data_path(SAVEFILES_DIR)):
@@ -156,10 +156,10 @@ class StartingDialog(Dialog):
         return pygame.Rect(self.list_rect.x + 5, y, self.list_rect.width - 40, self.ITEM_HEIGHT - 5)
 
     def _visible_indices(self) -> range:
-        return range(self.scroll_offset, min(self.scroll_offset + self.max_visible, len(self.savefiles)))
+        return range(self.scroll_offset, min(self.scroll_offset + self._max_visible, len(self.savefiles)))
 
     def _scroll_to(self, offset: int) -> None:
-        self.scroll_offset = max(0, min(max(0, len(self.savefiles) - self.max_visible), offset))
+        self.scroll_offset = max(0, min(max(0, len(self.savefiles) - self._max_visible), offset))
 
     def _select(self, index: int) -> None:
         """Select a savefile and scroll so that it is visible."""
@@ -167,8 +167,8 @@ class StartingDialog(Dialog):
         if index >= 0:
             if index < self.scroll_offset:
                 self._scroll_to(index)
-            elif index >= self.scroll_offset + self.max_visible:
-                self._scroll_to(index - self.max_visible + 1)
+            elif index >= self.scroll_offset + self._max_visible:
+                self._scroll_to(index - self._max_visible + 1)
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the dialog: seed input, New Game button, scrollable savefile list, Exit game button."""
@@ -244,10 +244,10 @@ class StartingDialog(Dialog):
                 surface.blit(text, (rect.x + 10, rect.y + 8))
 
             # Scrollbar if needed
-            if len(self.savefiles) > self.max_visible:
+            if len(self.savefiles) > self._max_visible:
                 scrollbar_height = self.list_rect.height - 10
                 scroll_fraction = self.scroll_offset / len(self.savefiles)
-                thumb_height = max(20, scrollbar_height * (self.max_visible / len(self.savefiles)))
+                thumb_height = max(20, scrollbar_height * (self._max_visible / len(self.savefiles)))
                 thumb_y = self.list_rect.top + 5 + scroll_fraction * (scrollbar_height - thumb_height)
                 scrollbar_x = self.list_rect.right - 20  # inside the list, clear of the entries
                 pygame.draw.rect(surface, (60, 60, 80), (scrollbar_x, self.list_rect.top + 5, 10, scrollbar_height))
@@ -264,10 +264,7 @@ class StartingDialog(Dialog):
 
     def _savefile_at(self, position: Tuple[int, int]) -> Optional[int]:
         """The visible savefile under `position`, or None."""
-        for i in self._visible_indices():
-            if self._savefile_rect(i).collidepoint(position):
-                return i
-        return None
+        return next((i for i in self._visible_indices() if self._savefile_rect(i).collidepoint(position)), None)
 
     def _ask_delete(self, index: int) -> None:
         """Right-click on a save: the question, Delete or Cancel."""
@@ -287,7 +284,7 @@ class StartingDialog(Dialog):
             logger.warning(f"Could not delete the savefile: {error}")
         self.selected_index = -1
         self.hover_index = None
-        self.load_savefiles()
+        self._load_savefiles()
         self._scroll_to(self.scroll_offset)
 
     def _click_savefile(self, index: int) -> Optional[DialogResult]:

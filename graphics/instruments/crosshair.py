@@ -1,12 +1,8 @@
 """Crosshair centered in the canopy to indicate forward direction."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
 import pygame
 from ..constants import CONSOLE_TOP, ACCENT
-
-if TYPE_CHECKING:
-    from spaceships.ship import Ship
 
 
 class Crosshair:

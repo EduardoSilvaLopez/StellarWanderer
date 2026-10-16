@@ -2,12 +2,14 @@ import json
 import os
 import glob
 
-import logging; logger = logging.getLogger(__name__)
+import logging
 from datetime import datetime
 
 import game_environment as gem
 import galaxies.people.player as pem
 from common.paths import data_path, SAVEFILES_DIR
+
+logger = logging.getLogger(__name__)
 
 # A save's file name is the name typed in the starting dialog (or the default), plus ".json".
 SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
@@ -46,7 +48,7 @@ class Savefile:
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
         from common.updating import update_queue
         update_queue.clear()
-        
+
         logger.info(f"Loading savefile: {filepath}")
         with open(filepath, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
@@ -92,26 +94,26 @@ class Savefile:
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
         savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
-        
+
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
-        
+
         # Parse datetime from filename and find the most recent
         # Filename format: "Savefile {seed} {datetime}.json"
         # DateTime format in filename: "YYYY-MM-DDTHH_MM_SS"
         latest_file = None
         latest_datetime = None
-        
+
         for filepath in savefiles:
             file_datetime = os.path.getmtime(filepath)
-            
+
             if latest_datetime is None or file_datetime > latest_datetime:
                 latest_datetime = file_datetime
                 latest_file = filepath
-        
+
         if latest_file is None:
             raise FileNotFoundError("No valid savefiles found with datetime information.")
-        
+
         Savefile.load_from_file(latest_file)
 
     @staticmethod
@@ -131,9 +133,7 @@ class Savefile:
         env = gem.current_environment
         player = pem.current_player
 
-        persons_dict = {}
-        for key, person_dict in env.persons.items():
-            persons_dict[key] = person_dict
+        persons_dict = dict(env.persons)
 
         data = {
             'environment': {

@@ -31,7 +31,7 @@ class Dialog:
         """Handle one event; return a result when the dialog is finished, else None."""
         raise NotImplementedError
 
-    def panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
+    def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
         """Where the panel sits in a window of `window_size`: centred, scaled down (never up) to fit."""
         window_width, window_height = window_size
         scale = min(1.0, window_width / self.width, window_height / self.height)
@@ -43,14 +43,14 @@ class Dialog:
         """Copy of `event` with a mouse position mapped from window to dialog coordinates."""
         if not hasattr(event, 'pos'):
             return event
-        rect, scale = self.panel_layout(window_size)
+        rect, scale = self._panel_layout(window_size)
         x, y = event.pos
         attributes = {**event.dict, 'pos': (int((x - rect.left) / scale), int((y - rect.top) / scale))}
         return pygame.event.Event(event.type, attributes)
 
     def render_panel(self, window_size: Tuple[int, int]) -> Tuple[pygame.Surface, pygame.Rect]:
         """The drawn panel, already scaled for the window, and the rectangle where it goes."""
-        rect, scale = self.panel_layout(window_size)
+        rect, scale = self._panel_layout(window_size)
         panel = pygame.Surface((self.width, self.height))
         self.draw(panel)
         if scale != 1.0:

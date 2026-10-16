@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import math
-import os
 import pygame
 from typing import Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
@@ -27,6 +26,7 @@ def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str,
     label = font.render(text, True, ACCENT)
     surface.blit(label, label.get_rect(midtop=(centre_x, top)))
 
+
 if TYPE_CHECKING:
     from spaceships.ship import Ship
 
@@ -35,6 +35,7 @@ _cockpit_background: Optional[pygame.Surface] = None
 _windshield_frame_texture: Optional[pygame.Surface] = None
 # (w, h, console height, the cockpit background it was made from, the scaled console background)
 _console_background: Optional[Tuple[int, int, int, pygame.Surface, pygame.Surface]] = None
+
 
 def view_geometry(h: int, horizon_fraction: float = 0.5) -> Tuple[int, int, float]:
     """(view_h, horizon_y, focal_length_px) for a view of window height h.

@@ -4,18 +4,14 @@ from datetime import datetime, timedelta
 from enum import Enum
 from functools import lru_cache
 import logging
-import math
 import os
 import random
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 import pygame
 
-from common.dialogs import Message, show_message
 from common.game_logging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_logs
 from galaxies.politics import political_entity
-from galaxies.politics.personal_status import PersonalStatus
-from spaceships.cargo_hold import CargoHold
 import game_environment as gem
 from common.paths import resource_path
 
@@ -26,6 +22,7 @@ if TYPE_CHECKING:
 PEOPLE_DIR = resource_path('people')
 
 logger = logging.getLogger(__name__)
+
 
 @lru_cache(maxsize=None)
 def _read_names(file_name: str) -> Tuple[str, ...]:
@@ -42,17 +39,18 @@ def _pick_name(my_random: random.Random, file_name: str) -> str:
     names = _read_names(file_name)
     return my_random.choice(names) if names else ''
 
+
 class Person:
     class Race(Enum):
         ASIAN = 1
         BLACK = 2
         WHITE = 3
 
-    class GenderGroup(Enum): # aesthetically speaking, identification can be done later.
+    class GenderGroup(Enum):  # aesthetically speaking, identification can be done later.
         MALE = 1
         FEMALE = 2
 
-    def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70):
+    def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70) -> None:
         my_random = random.Random(seed)
         self.seed: float = seed
 
@@ -65,7 +63,7 @@ class Person:
 
         self.gender_group = Person.GenderGroup.MALE
         rnd = my_random.random()
-        if rnd > 0.55: # sue me :D
+        if rnd > 0.55:  # sue me :D
             self.gender_group = Person.GenderGroup.FEMALE
 
         # All these can change later: mixed heritage, gender-fluid...
@@ -75,7 +73,7 @@ class Person:
         self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
         self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
         self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3)
-        
+
         self.empathy100: float = my_random.random() * 100
         self.sociability100: float = my_random.random() * 100
         self.loyalty100: float = my_random.random() * 100
@@ -84,14 +82,14 @@ class Person:
         self.sympathy_altered: bool = False
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
-        self.dob = gem.current_environment.date_time + timedelta(seconds = -seconds_after_birth)
+        self.dob = gem.current_environment.date_time + timedelta(seconds=-seconds_after_birth)
 
         self.residency: Any = residency
         self.last_communication_at: Optional[datetime] = None
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
         self.portrait = self._load_portrait(my_random)
-        
+
         self.interactions: dict = {}
         if self.seed in gem.current_environment.persons:
             # Apply alterations.
@@ -121,14 +119,14 @@ class Person:
         from galaxies.outpost import Outpost
         occupation: str = 'outpost.com' if isinstance(self.residency, Outpost)\
             else 'generic'
-        
+
         filename_prefix: str = occupation + "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
         portraits_dir = resource_path('portraits')
         try:
             names = os.listdir(portraits_dir)
         except OSError:
             names = []
-            
+
         # Sorted, so the same seed always picks the same portrait whatever order the OS lists the files in.
         candidates = sorted(name for name in names if name.startswith(filename_prefix))
         if not candidates:
@@ -145,10 +143,10 @@ class Person:
 
         return icon_path
 
-    def describe(self) -> str:
+    def _describe(self) -> str:
         """The person's characteristics, one ' - ' line each: what the log and the almanack show."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
-        result: str =  (
+        result: str = (
             f" - ID: {self.seed}.\n"
             f" - {self.gender_group.name.capitalize()}, {self.race.name.capitalize()}\n"
             f" - D.O.B.: {self.dob.strftime("%Y-%m-%d")} ({age} y.o.)\n"
@@ -158,8 +156,8 @@ class Person:
             f" - Loyalty: {self.loyalty100:.2f}%\n"
             f" - Sympathy for the player: {self.sympathy100:.2f}%\n"
         )
-        
-        from galaxies.outpost import Outpost        
+
+        from galaxies.outpost import Outpost
         if isinstance(self.residency, Outpost):
             residency: str = (
                 f" - Residency: Outpost {self.residency.name}, planet {self.residency.planet.name}"
@@ -169,7 +167,7 @@ class Person:
         return result
 
     def log_update(self) -> Person:
-        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{self.describe()}")
+        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{self._describe()}")
         return self
 
     def almanack(self) -> str:
@@ -177,14 +175,14 @@ class Person:
         image = ''
         if self.portrait:
             image = f'<img src="{relative_path_from_logs(self.portrait)}" width="{ALMANACK_IMAGE_WIDTH}">\n\n'
-        return f"# {self.get_full_name()}\n\n{image}{self.describe()}\n"
+        return f"# {self.get_full_name()}\n\n{image}{self._describe()}\n"
 
     def serialize(self) -> dict:
-        interactions_dict: dict = {}
-        for int_date_time, int_lines in self.interactions.items():
-            interactions_dict[int_date_time.strftime("%Y-%m-%d %H:%M:%S")] = int_lines
+        interactions_dict: dict = {
+            int_date_time.strftime("%Y-%m-%d %H:%M:%S"): int_lines for int_date_time, int_lines in self.interactions.items()
+        }
 
-        result: dict = { 'seed': self.seed }
+        result: dict = {'seed': self.seed}
         if self.last_communication_at:
             result['last_communication_at'] = str(self.last_communication_at)
         if self.sympathy_altered:
@@ -203,7 +201,7 @@ class Person:
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
 
     def get_full_name(self) -> str:
-        return f"{self.get_title()} {self.name} {self.surname}" # No Chinese exception. Intentional.
+        return f"{self.get_title()} {self.name} {self.surname}"  # No Chinese exception. Intentional.
 
     # 'Personality' traits change slower the more they approach the extremes of 0 and 100
     def _adjust_loyalty(self, change: float) -> Person:

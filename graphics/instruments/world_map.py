@@ -43,12 +43,12 @@ class WorldMap:
     and routes MOUSEWHEEL to `zoom` while bound."""
 
     mouse: Optional[Tuple[int, int]] = None  # last mouse position, None when the window has no mouse focus
-    hovered: bool = False                    # whether, when the map was last drawn, the mouse was over it
-    zoom_index: int = 0                      # 0 = the whole world; each step is a finer scale
-    dragging: bool = False                   # a left-button drag that started over the zoomed map is in progress
+    hovered: bool = False  # whether, when the map was last drawn, the mouse was over it
+    zoom_index: int = 0  # 0 = the whole world; each step is a finer scale
+    dragging: bool = False  # a left-button drag that started over the zoomed map is in progress
     drag_position: Optional[Tuple[int, int]] = None  # the pointer at the previous frame of the drag
-    pan: Tuple[float, float] = (0.0, 0.0)    # screen pixels the content has moved since the drag started
-    area: Optional[pygame.Rect] = None       # the map's area, as last drawn
+    pan: Tuple[float, float] = (0.0, 0.0)  # screen pixels the content has moved since the drag started
+    area: Optional[pygame.Rect] = None  # the map's area, as last drawn
     _was_pressed: bool = False
 
     @staticmethod
@@ -255,13 +255,13 @@ class WorldMap:
             text = font.render(outpost.name, True, (255, 255, 255))
             rect = text.get_rect()
             if x > centre_x:
-                rect.right = x - gap_x     # right half: label on the left
+                rect.right = x - gap_x  # right half: label on the left
             else:
-                rect.left = x + gap_x      # left half: label on the right
+                rect.left = x + gap_x  # left half: label on the right
             if y > centre_y:
-                rect.bottom = y - gap_y    # lower half: label above
+                rect.bottom = y - gap_y  # lower half: label above
             else:
-                rect.top = y + gap_y       # upper half: label below
+                rect.top = y + gap_y  # upper half: label below
             rect.clamp_ip(area)
             surface.blit(text, rect)
             pygame.draw.circle(surface, (255, 255, 255), (x, y), 2)

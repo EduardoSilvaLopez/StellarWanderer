@@ -1,10 +1,11 @@
 import copy
-import random
 from typing import List, Optional
 
 from galaxies.stellar_system import StellarSystem
 
 '''The whole galaxy. We won't have more than one.'''
+
+
 class Galaxy():
 
     def __init__(self, user_given_seed: float, saved_alterations: dict) -> None:
@@ -33,7 +34,7 @@ class Galaxy():
             for system in self.stellar_systems:
                 if system.is_altered:
                     system_alterations: Optional[dict] = system.get_alterations()
-                    if system_alterations is not None and len(system_alterations) > 0:
+                    if system_alterations:
                         star_alterations[system.get_alterations_key()] = system_alterations
                     else:
                         star_alterations.pop(system.get_alterations_key(), None)
@@ -46,8 +47,7 @@ class Galaxy():
             f"A guide of the universe as generated.\n"
             f"\n"
             )
-        for system in self.stellar_systems:
-            text += system.almanack()
+        text += ''.join(system.almanack() for system in self.stellar_systems)
         return text
 
     def add_stellar_system(self, x: float, y: float, z: float) -> StellarSystem:

@@ -26,7 +26,7 @@ if not getattr(sys, 'frozen', False):
     sys.pycache_prefix = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp', 'pycache')
 
 import pygame
-import logging; logger = logging.getLogger(__name__)
+import logging
 from common.game_logging import configure_logging, write_almanack_async
 from graphics.font_cache import FontCache
 import game_environment as gem
@@ -40,6 +40,8 @@ from graphics.opengl_gui import OpenGLGui
 from graphics.instruments.world_map import WorldMap
 from common.updating import update_queue
 
+logger = logging.getLogger(__name__)
+
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1920, 1080)
 MIN_SIZE = (640, 400)
@@ -50,7 +52,7 @@ STAR_SEED = 20270101
 
 # Altitude change control
 ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds() # datetime tops out at year 9999;
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()  # datetime tops out at year 9999;
 EPOCH = gem.GameEnvironment.EPOCH
 
 
@@ -312,7 +314,7 @@ def main() -> None:
 
         keys = pygame.key.get_pressed()
 
-        if player.time_scale == 1: # Yaw, pitch, scale disabled for > 1.
+        if player.time_scale == 1:  # Yaw, pitch, scale disabled for > 1.
             # Yaw: Numpad 4 (left) and 6 (right)
             ship.attitude.update_yaw(
                 delta_game_seconds,
@@ -336,7 +338,7 @@ def main() -> None:
                 1 if keys[pygame.K_q] else 0,
                 keys[pygame.K_s]
             )
-        else: # reducing them automatically.
+        else:  # reducing them automatically.
             ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
             ship.attitude.update_pitch(delta_game_seconds, 0, 0, 1)
             ship.attitude.update_roll(delta_game_seconds, 0, 0, 1)
@@ -354,9 +356,9 @@ def main() -> None:
             keys[pygame.K_s]
         )
         ship.scanner.update_target()
-        if (keys[pygame.K_SPACE]):
+        if keys[pygame.K_SPACE]:
             ship.scanner.activate(delta_game_seconds)
-        elif (ship.laser.firing):
+        elif ship.laser.firing:
             ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
@@ -365,6 +367,7 @@ def main() -> None:
         pygame.display.flip()
 
     pygame.quit()
+
 
 if __name__ == '__main__':
     logger.debug('Starting application.')

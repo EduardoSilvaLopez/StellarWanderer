@@ -1,8 +1,6 @@
 from __future__ import annotations
-from enum import Enum
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
-import math
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship

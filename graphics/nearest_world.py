@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 import math
 import pygame
 from .constants import (
-    PLANET_GRAY, ROCK_EDGE_COLOR, LASER_COLOR, NEAR_CLIP
+    PLANET_GRAY, ROCK_EDGE_COLOR, NEAR_CLIP
 )
 from graphics.instruments.common import view_geometry
 

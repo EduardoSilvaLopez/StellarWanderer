@@ -8,7 +8,7 @@ cockpit. Flares are in game time (star_flares), and not drawn above FLARE_MAX_TI
 
 from __future__ import annotations
 import math
-from typing import Dict, Tuple, TYPE_CHECKING
+from typing import Callable, Dict, Tuple, TYPE_CHECKING
 import numpy as np
 from OpenGL import GL
 from .constants import (
@@ -31,7 +31,7 @@ SPOT_TEXTURE_SIZE = 32  # a sunspot is a soft dark blob, this many texels across
 _textures: Dict[Tuple, int] = {}
 
 
-def _texture(key: Tuple, make_array) -> int:
+def _texture(key: Tuple, make_array: Callable[[], np.ndarray]) -> int:
     """The texture for `key`, made from make_array() the first time (in the current OpenGL context)."""
     texture = _textures.get(key)
     if texture is None:

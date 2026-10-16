@@ -40,11 +40,12 @@ _SUN_TOLERANCE_COS = math.cos(math.radians(SUN_TOLERANCE_DEGREES))
 # Faces facing down are a little darker (dust and shadow in the hollows), up to this share, on top of the sun.
 DOWNWARD_DARKENING = 0.18
 
+
 class RockBatch:
     """The rocks of one Km2 as arrays. Valid while the Km2's rock list is unchanged (see `is_current`)."""
 
     def __init__(self, km2: Km2) -> None:
-        self.origin_x: int = km2.longitude   # vertices are relative to the Km2's corner: small, float32-safe
+        self.origin_x: int = km2.longitude  # vertices are relative to the Km2's corner: small, float32-safe
         self.origin_z: int = km2.latitude
         self.rocks: Tuple[Rock, ...] = tuple(km2.rocks)
         count = len(self.rocks)
@@ -77,7 +78,7 @@ class RockBatch:
         """False once a rock has melted away (the only way rocks leave a Km2, and none are added after creation)."""
         return len(self.rocks) == len(km2.rocks)
 
-    def refresh_glow(self) -> None:
+    def _refresh_glow(self) -> None:
         """The heat glow (rock.color above rock.initial_color). Only rocks that are hot, or were last frame,
         are looked at, so a cold Km2 costs one pass over its rocks and nothing else. A glow that actually
         changes marks the cached colours as out of date."""
@@ -92,7 +93,7 @@ class RockBatch:
 
     def colours(self, light: SurfaceLight) -> np.ndarray:
         """Per-vertex colours (uint8, one per vertex), recomputed only when the sun has moved more than
-        SUN_TOLERANCE_DEGREES or a glow has changed (call `refresh_glow` first); otherwise the same array again."""
+        SUN_TOLERANCE_DEGREES or a glow has changed (call `_refresh_glow` first); otherwise the same array again."""
         sun = (light.sun.x, light.sun.y, light.sun.z)
         if self._cached_colours is not None and not self._glow_changed:
             cached = self._cached_sun
@@ -109,16 +110,16 @@ class RockBatch:
         sun = np.array(sun_direction, dtype=np.float64)
         facing = self.face_normals @ sun
         brightness = SURFACE_STARLIGHT + (1.0 - SURFACE_STARLIGHT) * np.maximum(0.0, facing)
-        shaded = (self.face_colours * brightness[..., None]).astype(np.int32)   # truncates, like SurfaceLight.shade
+        shaded = (self.face_colours * brightness[..., None]).astype(np.int32)  # truncates, like SurfaceLight.shade
         lit = np.minimum(255, shaded + self.glow[:, None, :])
         return np.ascontiguousarray(np.repeat(lit, 3, axis=1).reshape(-1, 3), dtype=np.uint8)
 
     def draw(self, player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw inside the camera setup of Rocks.draw. The translation is the Km2's offset from the camera, computed
         in double precision first, so only a small number reaches float32."""
-        if not len(self.rocks):
+        if not self.rocks:
             return
-        self.refresh_glow()
+        self._refresh_glow()
         colours = self.colours(light)
         GL.glPushMatrix()
         GL.glTranslatef(self.origin_x - player_x, 0.0, self.origin_z - player_z)

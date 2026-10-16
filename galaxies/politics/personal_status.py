@@ -1,6 +1,6 @@
 class PersonalStatus:
-    def __init__(self):
-        self.reputation: float = 1.0    
+    def __init__(self) -> None:
+        self.reputation: float = 1.0
 
     @staticmethod
     def deserialize(source: dict) -> PersonalStatus:

@@ -36,7 +36,7 @@ class Radar:
     ELLIPSE_FRACTION = 0.55  # vertical radius of the ellipse relative to the same half-height
 
     @staticmethod
-    def log_fraction(distance: float) -> float:
+    def _log_fraction(distance: float) -> float:
         """0 at MIN_DISTANCE or closer, 1 at MAX_DISTANCE or farther, logarithmic in between."""
         if distance <= Radar.MIN_DISTANCE:
             return 0.0
@@ -83,11 +83,11 @@ class Radar:
             if relative.length() > Radar.MAX_DISTANCE:
                 continue
             right, up, forward = ship.attitude.camera_components(relative)
-            in_plane = Radar.log_fraction(math.hypot(right, forward))
+            in_plane = Radar._log_fraction(math.hypot(right, forward))
             bearing = math.atan2(right, forward)
             foot = (centre_x + in_plane * horizontal_radius * math.sin(bearing),
                     centre_y - in_plane * vertical_radius * math.cos(bearing))
-            height = math.copysign(Radar.log_fraction(abs(up)), up) * bar_length
+            height = math.copysign(Radar._log_fraction(abs(up)), up) * bar_length
             projected.append((foot, height, colour, dot_radius))
 
         for foot, height, colour, dot_radius in sorted(projected, key=lambda item: item[0][1]):

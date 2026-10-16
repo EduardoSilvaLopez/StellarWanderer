@@ -3,7 +3,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
 import math
-import os
 
 import pygame
 from OpenGL import GL
@@ -68,7 +67,7 @@ class OreFields:
 
         # Four corners of the quad, rotated around center
         corners = [(-1, -1), (1, -1), (1, 1), (-1, 1)]  # local coordinates
-        uv_coords = [(0, 1), (1, 1), (1, 0), (0, 0)]    # UV for quad
+        uv_coords = [(0, 1), (1, 1), (1, 0), (0, 0)]  # UV for quad
 
         GL.glBegin(GL.GL_QUADS)
         for (local_x, local_z), (u, v) in zip(corners, uv_coords):
@@ -99,7 +98,6 @@ class OreFields:
 
         # Create a new surface with RGBA
         result = pygame.Surface((w, h), pygame.SRCALPHA, 32)
-        result_data = pygame.image.tostring(result, 'RGBA')
 
         # Get image data as pixel array and process each pixel
         img_data = pygame.image.tostring(img, 'RGB')

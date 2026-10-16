@@ -15,17 +15,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class Rock(Updatable):
-    TEMP_RISE_RATE = 500.0 # Temp. raise for a 1 square cube rock in 1 second.
-    BASE_COOLING_PERIOD = 60 * 60 # Once per hour.
-    COOLING_FACTOR = 0.999 # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX = 2000.0 # Boom.
+    TEMP_RISE_RATE = 500.0  # Temp. raise for a 1 square cube rock in 1 second.
+    BASE_COOLING_PERIOD = 60 * 60  # Once per hour.
+    COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
+    TEMP_MAX = 2000.0  # Boom.
     ORE_RICH_THRESHOLD = 0.9998
 
-    def __init__(self, parent_Km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict):
+    def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
         import random
-        self.parent_km2: Km2 = parent_Km2
-        my_random: Random = random.Random(parent_Km2.seed + 1e3*latitude + longitude)
+        self.parent_km2: Km2 = parent_km2
+        my_random: Random = random.Random(parent_km2.seed + 1e3*latitude + longitude)
         self.size: float = abs(my_random.lognormvariate(math.log(10), 0.8))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
@@ -39,7 +40,7 @@ class Rock(Updatable):
         # Seed of the rock's irregular shape (graphics/rock_shape.py). Drawn last, so every value above is as before.
         self.shape_seed: int = my_random.getrandbits(32)
         self.temperature: float = 0.0
-        self.adjust_color()
+        self._adjust_color()
 
         self.last_updated_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
@@ -47,16 +48,16 @@ class Rock(Updatable):
         if saved_parent_alterations is not None:
             rock_alterations = saved_parent_alterations.get(alterations_key)
             if rock_alterations is not None:
-                self.set_last_updated(datetime.strptime(rock_alterations['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f'))
-                if ('temperature' in rock_alterations):
+                self._set_last_updated(datetime.strptime(rock_alterations['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f'))
+                if 'temperature' in rock_alterations:
                     self.temperature = rock_alterations['temperature']
-                    self.adjust_color()
+                    self._adjust_color()
 
-                self.next_update_at = self.last_updated_at + timedelta(seconds = 1)
+                self.next_update_at = self.last_updated_at + timedelta(seconds=1)
                 update_queue.add(self)
                 logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
-    def set_last_updated(self, new_date_time: datetime) -> Rock:
+    def _set_last_updated(self, new_date_time: datetime) -> Rock:
         self.last_updated_at = new_date_time
         if not self.parent_km2.is_altered:
             self.parent_km2.set_altered()
@@ -84,13 +85,13 @@ class Rock(Updatable):
             return
 
         if self.next_update_at is None:
-            return # Already running.
+            return  # Already running.
 
         cooling_period = self.BASE_COOLING_PERIOD * self.size**0.66
         if self.last_updated_at is None:
             # No idea how much type passed. For rocks, this is critical. Prepare for next time and leave.
             self.last_updated_at = game_date_time
-            self.next_update_at = game_date_time + timedelta(seconds = cooling_period)
+            self.next_update_at = game_date_time + timedelta(seconds=cooling_period)
             update_queue.add(self)
             logger.info(f"Rock ready to be updated next time. Queue size: {len(update_queue._queue)}")
             return
@@ -104,11 +105,11 @@ class Rock(Updatable):
             self.next_update_at = None
             logger.info(f"Rock won't be updated anymore, too cold. Queue size: {len(update_queue._queue)}")
         else:
-            self.next_update_at = game_date_time + timedelta(seconds = cooling_period)
+            self.next_update_at = game_date_time + timedelta(seconds=cooling_period)
             update_queue.add(self)
 
-        self.adjust_color()
-        self.set_last_updated(game_date_time)
+        self._adjust_color()
+        self._set_last_updated(game_date_time)
 
         logger.debug(f"Temperature reduced: {self.temperature}. Queue size: {len(update_queue._queue)}")
 
@@ -117,7 +118,7 @@ class Rock(Updatable):
             return
 
         if self.next_update_at is None:
-            return # Already not updating.
+            return  # Already not updating.
 
         self.next_update_at = None
         update_queue.remove(self)
@@ -127,8 +128,8 @@ class Rock(Updatable):
         if not self.get_alterations():
             return
         if self.next_update_at is not None:
-            return # Already updating.
-        self.next_update_at = update_time # Immediately
+            return  # Already updating.
+        self.next_update_at = update_time  # Immediately
         update_queue.add(self)
         logger.info(f"Rock will be updated again, at {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
@@ -167,7 +168,7 @@ class Rock(Updatable):
 
         return (base_r, base_g, base_b)
 
-    def adjust_color(self) -> Rock:
+    def _adjust_color(self) -> Rock:
         temperature_increase = int(math.sqrt(self.temperature))
         self.color = tuple(min(value + temperature_increase, 255) for value in self.initial_color)
         return self
@@ -176,13 +177,13 @@ class Rock(Updatable):
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
 
-        if (self.temperature >= Rock.TEMP_MAX):
+        if self.temperature >= Rock.TEMP_MAX:
             self.temperature = 0.0
             self.parent_km2.melt_rock(self)
             return
 
-        self.adjust_color()
+        self._adjust_color()
         if self.next_update_at is None:
             import game_environment as gem
-            self.start_updating(gem.current_environment.date_time) # First time we just get ready anyway.
+            self.start_updating(gem.current_environment.date_time)  # First time we just get ready anyway.
         return self

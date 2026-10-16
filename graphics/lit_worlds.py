@@ -13,7 +13,6 @@ from common.vector3 import Vector3
 if TYPE_CHECKING:
     from spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from galaxies.world import World
 
 
 class LitWorlds:
@@ -83,12 +82,12 @@ class LitWorlds:
         distance = to_world.length()
         if distance <= radius:
             return
-        centre = ship.attitude.camera_components(to_world) * (1.0 / distance)   # unit vector, camera frame
+        centre = ship.attitude.camera_components(to_world) * (1.0 / distance)  # unit vector, camera frame
         light = ship.attitude.camera_components(to_star - to_world).normalized()  # from the world to the star
         cx, cy, cz = centre.x, centre.y, centre.z
 
         # A world too small to see is drawn as a small lit disc: inflate it to a minimum angular size.
-        rho = max(radius / distance, WORLD_MIN_RADIUS_PX / focal)        # sin of the angular radius
+        rho = max(radius / distance, WORLD_MIN_RADIUS_PX / focal)  # sin of the angular radius
         rho = min(rho, 0.999)
         angular_radius = math.asin(rho)
 
@@ -106,7 +105,7 @@ class LitWorlds:
         grid_w, grid_h = -(-box_w // step), -(-box_h // step)
         xs = ((x0 + (np.arange(grid_w, dtype=np.float32) + 0.5) * step - w / 2) / focal).astype(np.float32)
         ys = ((horizon_y - (y0 + (np.arange(grid_h, dtype=np.float32) + 0.5) * step)) / focal).astype(np.float32)
-        x, y = np.meshgrid(xs, ys)                                       # ray (x, y, 1), not normalised
+        x, y = np.meshgrid(xs, ys)  # ray (x, y, 1), not normalised
         norm_sq = x * x + y * y + 1.0
         norm = np.sqrt(norm_sq)
 
@@ -115,9 +114,9 @@ class LitWorlds:
         cross_y = cx - x * cz
         cross_z = x * cy - y * cx
         sin_sq = (cross_x ** 2 + cross_y ** 2 + cross_z ** 2) / norm_sq
-        disc = rho * rho - sin_sq                                        # >= 0 where the ray hits the sphere
-        along = (x * cx + y * cy + cz) / norm                            # cos of that angle
-        hit_distance = along - np.sqrt(np.clip(disc, 0.0, None))         # in units of the distance to the centre
+        disc = rho * rho - sin_sq  # >= 0 where the ray hits the sphere
+        along = (x * cx + y * cy + cz) / norm  # cos of that angle
+        hit_distance = along - np.sqrt(np.clip(disc, 0.0, None))  # in units of the distance to the centre
 
         ray_dot_light = (x * light.x + y * light.y + light.z) / norm
         shade = np.clip((hit_distance * ray_dot_light - (cx * light.x + cy * light.y + cz * light.z)) / rho, 0.0, 1.0)
@@ -150,7 +149,7 @@ class LitWorlds:
         body = environment.nearest_body
         if not body.is_world:
             return
-        star = body.stellar_system.star # Can be the body.
+        star = body.stellar_system.star  # Can be the body.
         to_world = ship.navigation.direction_to_body(body, environment.date_time)
         to_star = ship.navigation.direction_to_star(body, environment.date_time)
         LitWorlds.draw_world(surface, w, h, to_world, to_star, body.radius, star.color, ship)

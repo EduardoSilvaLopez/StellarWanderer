@@ -1,9 +1,8 @@
 import datetime
 import logging
 import math
-from typing import List, Optional
+from typing import Optional
 from common.game_logging import reset_people_almanack
-from galaxies.people.person import Person
 from galaxies.body import Body
 from galaxies.galaxy import Galaxy
 from galaxies.stellar_system import StellarSystem
@@ -12,16 +11,18 @@ from common.vector3 import Vector3
 
 logger = logging.getLogger(__name__)
 
+
 class GameEnvironment:
     EPOCH = datetime.datetime(700, 1, 1)
 
     NEAREST_BODY_RECHECK_FRAMES = 30  # ~0.5s at 60 FPS; a real-frame throttle, not game-time (time_scale can run to 1,000,000x)
-    NEAREST_BODY_HYSTERESIS = 0.05    # a candidate must be >5% closer to replace the current nearest_body, to avoid flip-flop
+    NEAREST_BODY_HYSTERESIS = 0.05  # a candidate must be >5% closer to replace the current nearest_body, to avoid flip-flop
 
     def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict], people_alterations: Optional[dict]) -> None:
         reset_people_almanack()  # a new environment is a new game or a load: the people will be written as they are created
         self.date_time = date_time
-        if (galaxy_alterations): galaxy_alterations['date_time'] = date_time
+        if galaxy_alterations:
+            galaxy_alterations['date_time'] = date_time
         self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations)
         self.nearest_body: Body = None  # a world or the star of nearest_system
         self.nearest_system: StellarSystem = None

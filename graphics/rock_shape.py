@@ -14,9 +14,9 @@ import numpy as np
 
 # Radial lumpiness: three random directions stretch or squash the rock (a potato, not a ball), each vertex is then
 # pulled in a little at random, which makes the facets. Tones vary a little from face to face.
-LUMP_AMPLITUDE = 0.60 # Less round as with 0.40
-FACET_MIN = 0.45 # Less round as with 0.60
-LUMP_MIN = 0.3   # a vertex is never pulled through the centre
+LUMP_AMPLITUDE = 0.60  # Less round as with 0.40
+FACET_MIN = 0.45  # Less round as with 0.60
+LUMP_MIN = 0.3  # a vertex is never pulled through the centre
 TONE_RANGE = 0.08
 # Planes that break the boulder: each one cuts off whatever lies beyond it, at a distance from the centre within
 # these bounds (the lumpy body is about one unit across).
@@ -55,7 +55,7 @@ def _icosphere() -> Tuple[np.ndarray, np.ndarray]:
 
 
 _UNIT_VERTICES, _TRIANGLES = _icosphere()
-FACES = len(_TRIANGLES)   # 80 triangles per rock
+FACES = len(_TRIANGLES)  # 80 triangles per rock
 
 
 def rotate(points: np.ndarray, tilt: np.ndarray, orientation: np.ndarray) -> np.ndarray:
@@ -72,7 +72,7 @@ def rotate(points: np.ndarray, tilt: np.ndarray, orientation: np.ndarray) -> np.
 _GOLDEN = np.uint64(0x9E3779B97F4A7C15)
 _MIX_1 = np.uint64(0xBF58476D1CE4E5B9)
 _MIX_2 = np.uint64(0x94D049BB133111EB)
-_UNIFORMS_PER_ROCK = 6 + 3 + len(_UNIT_VERTICES) + FACES + 3 * CUT_PLANES_MAX + 1   # lumps, facets, tones, cuts
+_UNIFORMS_PER_ROCK = 6 + 3 + len(_UNIT_VERTICES) + FACES + 3 * CUT_PLANES_MAX + 1  # lumps, facets, tones, cuts
 
 
 def _uniforms(seeds: Sequence[int], count: int) -> np.ndarray:
@@ -101,10 +101,10 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
     tones_start = facets_start + vertex_count
     cut_start = tones_start + FACES
 
-    height = 2.0 * uniform[:, 0:3] - 1.0                                   # three random directions, uniform on the sphere
+    height = 2.0 * uniform[:, 0:3] - 1.0  # three random directions, uniform on the sphere
     angle = 2.0 * np.pi * uniform[:, 3:6]
     radius = np.sqrt(1.0 - height ** 2)
-    directions = np.stack((radius * np.cos(angle), radius * np.sin(angle), height), axis=-1)   # (count, 3, 3)
+    directions = np.stack((radius * np.cos(angle), radius * np.sin(angle), height), axis=-1)  # (count, 3, 3)
     amplitudes = LUMP_AMPLITUDE * (2.0 * uniform[:, 6:9] - 1.0)
     facets = FACET_MIN + (1.0 - FACET_MIN) * uniform[:, facets_start:tones_start]
     tones = 1.0 - TONE_RANGE + 2.0 * TONE_RANGE * uniform[:, tones_start:cut_start]
@@ -126,12 +126,12 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
         beyond = np.maximum(0.0, np.einsum('nvk,nk->nv', shaped, cut_normals[:, k]) - cut_offsets[:, k:k + 1])
         shaped = shaped - beyond[..., None] * cut_normals[:, k][:, None, :]
 
-    vertices = shaped / np.abs(shaped).max(axis=1, keepdims=True)         # fill [-1, 1] on every axis
+    vertices = shaped / np.abs(shaped).max(axis=1, keepdims=True)  # fill [-1, 1] on every axis
 
-    triangles = vertices[:, _TRIANGLES]                                    # (count, FACES, 3, 3)
+    triangles = vertices[:, _TRIANGLES]  # (count, FACES, 3, 3)
     normals = np.cross(triangles[:, :, 1] - triangles[:, :, 0], triangles[:, :, 2] - triangles[:, :, 0])
-    inward = (normals * triangles.mean(axis=2)).sum(axis=2) < 0.0          # the shape surrounds the origin
-    triangles[inward] = triangles[inward][:, [0, 2, 1]]                    # swap two corners: flips the winding
+    inward = (normals * triangles.mean(axis=2)).sum(axis=2) < 0.0  # the shape surrounds the origin
+    triangles[inward] = triangles[inward][:, [0, 2, 1]]  # swap two corners: flips the winding
     normals[inward] *= -1.0
     normals /= np.maximum(np.linalg.norm(normals, axis=2), 1e-12)[..., None]
     return triangles, normals, tones

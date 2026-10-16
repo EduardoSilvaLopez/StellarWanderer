@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
 
 '''An orbit can have 2 planets, even more later - but very seldom.'''
+
+
 class Orbit:
 
     def __init__(self,
@@ -32,7 +34,7 @@ class Orbit:
         self.distance_from_star: int = self._generate_distance_from_star(my_random)
 
         self.planets: List[World] = []
-        world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1) # >1 is extraordinary!
+        world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1)  # >1 is extraordinary!
 
         first_world = World(self, None, self.saved_alterations)
         self.planets.append(first_world)
@@ -58,10 +60,10 @@ class Orbit:
             for world in self.planets:
                 if world.is_altered:
                     world_alterations: Optional[dict] = world.get_alterations()
-                    if world_alterations is not None and len(world_alterations) > 0:
+                    if world_alterations:
                         alterations[world.get_alterations_key()] = world_alterations
                     else:
                         alterations.pop(world.get_alterations_key())
-        if len(alterations) <= 0:
+        if not alterations:
             return None
         return alterations

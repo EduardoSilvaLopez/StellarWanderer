@@ -6,16 +6,17 @@ logger = logging.getLogger(__name__)
 
 from galaxies.ore_mine import OreMine
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
     from galaxies.rock import Rock
 
-class OreField:
-    EXTRACTION_PER_SECOND: float = 1 / 3600 # One Kg per hour, later depends on mine.
 
-    def __init__(self):
+class OreField:
+    EXTRACTION_PER_SECOND: float = 1 / 3600  # One Kg per hour, later depends on mine.
+
+    def __init__(self) -> None:
         from galaxies.ore_mine import OreMine
         self.parent_km2: Km2 = None
         self.longitude: int = 0
@@ -29,7 +30,7 @@ class OreField:
         self.mines: List[OreMine] = list()
 
     @staticmethod
-    def generate_new(original_rock: Rock):
+    def generate_new(original_rock: Rock) -> OreField:
         result = OreField()
         result.parent_km2 = original_rock.parent_km2
         result.longitude = original_rock.longitude
@@ -40,8 +41,8 @@ class OreField:
 
         my_random = random.Random(original_rock.parent_km2.seed + original_rock.latitude + original_rock.longitude + result.radius)
         result.orientation = my_random.random() * 360.0
-        result.parent_km2.set_altered() # Any ore field is an alteration by definition.
-        
+        result.parent_km2.set_altered()  # Any ore field is an alteration by definition.
+
         return result
 
     @staticmethod
@@ -59,7 +60,7 @@ class OreField:
 
         list_of_mines = serialized_dict.get('mines')
         result.mines = [OreMine(result, saved_attributes=mine_dict) for mine_dict in list_of_mines]
-                
+
         return result
 
     def serialize(self) -> dict:

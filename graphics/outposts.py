@@ -44,15 +44,15 @@ BACK = (0, 248, 960, 240)
 LEFT = (976, 0, 480, 240)
 RIGHT = (976, 248, 480, 240)
 ROOF = (0, 496, 960, 480)
-FLAG = (1472, 0, 384, 256)    # the flag, 3:2
-METAL = (1472, 264, 32, 32)   # plain steel, for the flagpole and its fittings
+FLAG = (1472, 0, 384, 256)  # the flag, 3:2
+METAL = (1472, 264, 32, 32)  # plain steel, for the flagpole and its fittings
 
 # The flagpole stands on the front left corner of the roof and rises above it. It is only drawn: the
 # outpost's HEIGHT, its box for the scanner and the cleared ground do not include it.
-POLE_RISE = 5.0             # metres above the roof
-POLE_HALF_WIDTH = 0.07      # the pole is a square 0.14 m across
-POLE_INSET = 0.8            # from the corner of the roof
-FLAG_WIDTH = 3.0            # a rigid flag, held out by a rod (a flag cannot wave without air)
+POLE_RISE = 5.0  # metres above the roof
+POLE_HALF_WIDTH = 0.07  # the pole is a square 0.14 m across
+POLE_INSET = 0.8  # from the corner of the roof
+FLAG_WIDTH = 3.0  # a rigid flag, held out by a rod (a flag cannot wave without air)
 FLAG_HEIGHT = 2.0
 
 
@@ -128,7 +128,8 @@ class Outposts:
         # Flagpole on the front left corner of the roof, with its flag held out to the right of the door wall.
         def box(x0: float, x1: float, y0: float, y1: float, z0: float, z1: float) -> None:
             """A steel box in the building's local coordinates: four sides and the top."""
-            corners = lambda *points: [corner(*point) for point in points]
+            def corners(*points: Tuple[float, float, float]) -> List[Tuple[float, float, float]]:
+                return [corner(*point) for point in points]
             uvs = [(0, 0), (1, 0), (1, 1), (0, 1)]
             quad(METAL, door_normal, corners((x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)), uvs)
             quad(METAL, (-sin_a, 0.0, -cos_a), corners((x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0)), uvs)
@@ -140,12 +141,12 @@ class Outposts:
         pole_x, pole_z = -width + POLE_INSET, depth - POLE_INSET
         pole_top = height + POLE_RISE
         half = POLE_HALF_WIDTH
-        box(pole_x - 0.3, pole_x + 0.3, height, height + 0.12, pole_z - 0.3, pole_z + 0.3)                    # base plate
-        box(pole_x - half, pole_x + half, height, pole_top, pole_z - half, pole_z + half)                    # pole
-        box(pole_x - 0.1, pole_x + 0.1, pole_top, pole_top + 0.2, pole_z - 0.1, pole_z + 0.1)                # finial
+        box(pole_x - 0.3, pole_x + 0.3, height, height + 0.12, pole_z - 0.3, pole_z + 0.3)  # base plate
+        box(pole_x - half, pole_x + half, height, pole_top, pole_z - half, pole_z + half)  # pole
+        box(pole_x - 0.1, pole_x + 0.1, pole_top, pole_top + 0.2, pole_z - 0.1, pole_z + 0.1)  # finial
         flag_top = pole_top - 0.25
         flag_x0, flag_x1 = pole_x + half, pole_x + half + FLAG_WIDTH
-        box(flag_x0, flag_x1, flag_top, flag_top + 0.06, pole_z - 0.03, pole_z + 0.03)                       # rod
+        box(flag_x0, flag_x1, flag_top, flag_top + 0.06, pole_z - 0.03, pole_z + 0.03)  # rod
         flag_bottom = flag_top - FLAG_HEIGHT
         # Both faces of the cloth, a hair apart so they do not fight; the back is seen mirrored, as on a real flag.
         for offset, normal, uvs in (

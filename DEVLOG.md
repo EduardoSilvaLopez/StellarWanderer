@@ -281,10 +281,13 @@ RELEASE "The Three Powers" created, with installer.
   * Approaching replenishes energy.
   * Halo of the star changes when near enough (but not too near...)
   * Make the star cooler: flares, areas, effects on ship, temperature effects on vision.
+  * Approaching replenishes energy.
+  * Halo of the star changes when near enough (but not too near...)
+  * Make the star cooler: flares, areas, effects on ship, temperature effects on vision.
 
-Extra time: 46h15' + 5:30- 11:30 + 14:00 -
+Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30
 
-  * Extra: Pythonise all. Internal methods "_", loops.
+  * Correct the scanner ore purity
 
 # BACKLOG
 * REAL STARS AROUND (work with chunks of the galaxy)

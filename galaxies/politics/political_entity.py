@@ -1,5 +1,4 @@
 from __future__ import annotations
-import os
 import random
 import pygame
 from typing import Optional
@@ -16,10 +15,8 @@ class PoliticalEntity:
         self.settlement_names_1 = names_1
         self.settlement_names_2 = names_2
 
-    def title_for(self, reputation: float) -> str:
-        for k in sorted(self.titles, reverse=True):
-            if reputation >= k:
-                return self.titles[k]
+    def title_for(self, reputation: float) -> Optional[str]:
+        return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
 
     def _load_icon(self, icon_filename: str) -> None:
         """Load the icon image from common/resources/textures."""
@@ -33,12 +30,13 @@ class PoliticalEntity:
         return self.settlement_names_1[my_random.randint(0, len(self.settlement_names_1) - 1)]\
             + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
 
+
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         "Those-Who-Share",
         (192, 0, 0),
         "PoliticalEntity.1.png",
         {
-            float('-inf'): 'Prisioner',
+         float('-inf'): 'Prisioner',
             -30: 'Dependent',
             -10: 'Student',
             0: 'Citizen',
@@ -48,12 +46,12 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             10000: 'Premier'
         },
         [
-            'Hard', 'Necessary', 'Tough', 'Realistic', 'Iron',
+         'Hard', 'Necessary', 'Tough', 'Realistic', 'Iron',
             'Complex', 'Vital', 'Important', 'Relevant', 'Critical',
             'Noble', 'Consequential', 'Helpful'
         ],
         [
-            'Hope', 'Reality', 'Task', 'Work', 'Duty',
+         'Hope', 'Reality', 'Task', 'Work', 'Duty',
             'Plan', 'Issue', 'Target', 'Outcome'
         ]
     )

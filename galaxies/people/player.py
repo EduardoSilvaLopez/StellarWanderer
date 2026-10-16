@@ -5,7 +5,6 @@ from common.dialogs.messages import Message, show_message
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from spaceships.ship import Ship
-from common.updating import update_queue
 import game_environment as gem
 
 logger = logging.getLogger(__name__)
@@ -91,7 +90,7 @@ class Player:
         else:
             logger.warning("Unknown political entity.")
             return str()
-    
+
     def game_over(self, reason: str) -> None:
         """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
         if self.is_dead:
@@ -110,7 +109,8 @@ class Player:
                 text=f"\n{reason}\n\n{statistics}",
                 buttons=["Damn!"]
                 )
-            , None #pending
+            , None  # pending
             )
+
 
 current_player: Player = None

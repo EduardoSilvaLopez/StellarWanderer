@@ -7,6 +7,8 @@ from .constants import ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
     from galaxies.world import World
+    from graphics.fallback_font import FallbackFont
+    from graphics.font_cache import FontCache
     from spaceships.ship import Ship
     from game_environment import GameEnvironment
 
@@ -31,7 +33,7 @@ class ObjectLabels:
     LABEL_OFFSET_Y = -4  # pixels from object center to the top of the label (negative = up)
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
+    def draw(surface: pygame.Surface, fonts: FontCache, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """Draw labels: outposts in braking distance (bound and unbound), and the star and all worlds
         while unbound.
 
@@ -98,7 +100,7 @@ class ObjectLabels:
             surface.blit(label_surf, rect)
 
     @staticmethod
-    def _render_label(font, name: str, distance: str, center_x: int, center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:
+    def _render_label(font: FallbackFont, name: str, distance: str, center_x: int, center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:
         """Render a single object label; returns its surface and its screen rectangle."""
         text = f'{name} {distance}'
         label_surf = font.render(text, True, ACCENT)

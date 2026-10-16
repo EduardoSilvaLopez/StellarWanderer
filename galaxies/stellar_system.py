@@ -11,6 +11,7 @@ from galaxies.politics import political_entity
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
 
+
 class StellarSystem:
 
     def __init__(self, parent_galaxy: Galaxy, x: float, y: float, z: float, saved_alterations: dict) -> None:
@@ -36,7 +37,7 @@ class StellarSystem:
 
         orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
         # the first-ever system must have three orbits.
-        if (x, y, z) == (26000, 0, 0): # Original stellar system.
+        if (x, y, z) == (26000, 0, 0):  # Original stellar system.
             orbits_count = max(3, orbits_count)
         self.orbits: List[Orbit] = []
         for orbit_number in range(1, orbits_count+1):
@@ -50,9 +51,7 @@ class StellarSystem:
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )
         text += self.star.almanack()
-        for orbit in self.orbits:
-            for planet in orbit.planets:
-                text += planet.almanack()
+        text += ''.join(planet.almanack() for orbit in self.orbits for planet in orbit.planets)
         return text
 
     def set_altered(self) -> StellarSystem:
@@ -69,11 +68,11 @@ class StellarSystem:
             for orbit in self.orbits:
                 if orbit.is_altered:
                     orbit_alterations: Optional[dict] = orbit.get_alterations()
-                    if orbit_alterations is not None and len(orbit_alterations) > 0:
+                    if orbit_alterations:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
                     else:
                         alterations.pop(orbit.get_alterations_key())
-        if len(alterations) <= 0:
+        if not alterations:
             return None
         return alterations
 

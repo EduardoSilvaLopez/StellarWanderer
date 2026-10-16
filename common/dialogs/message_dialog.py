@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import List, Optional, Tuple
-import os
 import pygame
 
 from .dialog import Dialog, DialogResult
@@ -12,7 +11,7 @@ from common.paths import resource_path
 
 TEXTURE_PATH = resource_path('textures', 'dialog_background.png')
 
-ACCENT = (94, 234, 212)        # same as the cockpit accent
+ACCENT = (94, 234, 212)  # same as the cockpit accent
 ACCENT_DIM = (34, 92, 92)
 TEXT_COLOR = (205, 232, 232)
 BUTTON_FILL = (16, 52, 56)
@@ -41,8 +40,8 @@ class MessageDialog(Dialog):
     PARAGRAPH_GAP = 12
     BUTTON_MIN_WIDTH = 220
     BUTTON_HEIGHT = 40
-    BUTTON_PADDING = 20    # each side of the label
-    BUTTON_PADDING_Y = 4   # above and below the label's lines
+    BUTTON_PADDING = 20  # each side of the label
+    BUTTON_PADDING_Y = 4  # above and below the label's lines
     BUTTON_TEXT_WIDTH = 300  # a button label wraps to lines no wider than this
     BUTTON_GAP = 14
 
@@ -51,8 +50,8 @@ class MessageDialog(Dialog):
         self.message: Message = message
 
         self.button_rects: List[pygame.Rect] = self._layout_buttons()
-        self.hover: Optional[int] = None   # the button under the mouse
-        self.focus: int = 0                # the button Enter or Space press
+        self.hover: Optional[int] = None  # the button under the mouse
+        self.focus: int = 0  # the button Enter or Space press
 
         self._title_surface: pygame.Surface = self._render_title()
         self.divider_y: int = self.MARGIN - 4 + self._title_surface.get_height() + 12
@@ -61,10 +60,10 @@ class MessageDialog(Dialog):
             self.MARGIN, self.divider_y + 16,
             self.WIDTH - 2 * self.MARGIN, buttons_top - 18 - (self.divider_y + 16)
         )
-        self.lines: List[Tuple[str, int]] = []   # (text, y offset inside the text area)
+        self.lines: List[Tuple[str, int]] = []  # (text, y offset inside the text area)
         self.content_height: int = 0
         self._layout_text()
-        self.scroll: int = 0                     # pixels scrolled down
+        self.scroll: int = 0  # pixels scrolled down
 
         self._texture: Optional[pygame.Surface] = None
         self._texture_loaded: bool = False
@@ -154,11 +153,11 @@ class MessageDialog(Dialog):
         self.content_height = y
 
     @property
-    def max_scroll(self) -> int:
+    def _max_scroll(self) -> int:
         return max(0, self.content_height - self.text_rect.height)
 
     def _scroll_by(self, pixels: int) -> None:
-        self.scroll = max(0, min(self.max_scroll, self.scroll + pixels))
+        self.scroll = max(0, min(self._max_scroll, self.scroll + pixels))
 
     # ---- drawing ----
 
@@ -213,13 +212,13 @@ class MessageDialog(Dialog):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
 
     def _draw_scroll_indicators(self, surface: pygame.Surface) -> None:
-        if self.max_scroll <= 0:
+        if self._max_scroll <= 0:
             return
         x = self.text_rect.right + 12
         if self.scroll > 0:
             top = self.text_rect.top + 4
             pygame.draw.polygon(surface, ACCENT, [(x, top), (x - 7, top + 10), (x + 7, top + 10)])
-        if self.scroll < self.max_scroll:
+        if self.scroll < self._max_scroll:
             bottom = self.text_rect.bottom - 4
             pygame.draw.polygon(surface, ACCENT, [(x, bottom), (x - 7, bottom - 10), (x + 7, bottom - 10)])
 
@@ -238,10 +237,7 @@ class MessageDialog(Dialog):
                 surface.blit(label, label.get_rect(midtop=(rect.centerx, top + line_index * font.get_linesize())))
 
     def _button_at(self, position: Tuple[int, int]) -> Optional[int]:
-        for index, rect in enumerate(self.button_rects):
-            if rect.collidepoint(position):
-                return index
-        return None
+        return next((index for index, rect in enumerate(self.button_rects) if rect.collidepoint(position)), None)
 
     # ---- events ----
 
@@ -275,7 +271,7 @@ class MessageDialog(Dialog):
             elif event.key == pygame.K_HOME:
                 self.scroll = 0
             elif event.key == pygame.K_END:
-                self.scroll = self.max_scroll
+                self.scroll = self._max_scroll
 
         elif event.type == pygame.MOUSEWHEEL:
             line = int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)

@@ -55,7 +55,7 @@ def generate_default(self) -> None:
 
 - **Attitude names**: use yaw, pitch, roll and attitude consistently, with the meanings given in the `Attitude` docstring. Do not introduce synonyms. `ship.attitude.right`, `up` and `forward` are the source of truth.
 - **Rock and mine `orientation` and rock `tilt` are different concepts** and keep their names.
-- **`bind_to`/`unbind_from` asymmetry is intentional.** Do not "fix" it to be symmetric (see the `Navigation` docstring).
+- **`_bind_to`/`_unbind_from` asymmetry is intentional.** Do not "fix" it to be symmetric (see the `Navigation` docstring).
 - **World orbit is derived, not stored.** A world's stellar position and velocity are pure functions of game time (`calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). The only caching allowed is the one inside them: each world remembers the result for the date of its last call, so a frame evaluates each world once. Do not store them anywhere else, and always pass `gem.current_environment.date_time`. The world is not put in `UpdateQueue`; use the queue only for work that mutates state at intervals. Do not add per-call logging to these functions; they run every frame while unbound.
 - **Opening a dialog pauses game time.** While a modal loop runs (`main.run_modal_dialog`), nothing that advances game time is called, and the frame timer is restarted afterwards.
 - **Message texts live in the code**, next to the logic that shows them: build a `Message` (title, text, buttons) with f-strings and pass it to `show_message`, with an `on_result` callback that reads the pressed button's index.

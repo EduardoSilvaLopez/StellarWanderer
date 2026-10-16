@@ -16,11 +16,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class Km2:
 
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
-    def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict):
+    def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict) -> None:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
@@ -51,29 +52,29 @@ class Km2:
 
         all_rocks_alterations: Optional[dict] = own_alterations.get('rocks') if own_alterations is not None else None
         molten_rocks: Optional[dict] = own_alterations.get('molten_rocks') if own_alterations is not None else None
-        outpost_center = (self.outpost.longitude, self.outpost.latitude)\
-            if self.outpost else None
-        for i in range(int(rocks_count)):
+        outpost_center = ((self.outpost.longitude, self.outpost.latitude)
+                          if self.outpost else None)
+        for _ in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 1000)
             rock_lat = self.latitude + my_random.randint(0, 1000)
             from galaxies.outpost import Outpost
             if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat - outpost_center[1]) < Outpost.CLEARED_RADIUS:
-                continue # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
+                continue  # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
             rock_key = f"{rock_lon} {rock_lat}"
             if molten_rocks is not None and rock_key in molten_rocks:
                 logger.debug(f"Molten rock detected at ({rock_key})")
                 self.molten_rocks.append(rock_key)
                 continue
-            newRock = Rock(
+            new_rock = Rock(
                 self,
                 rock_lon,
                 rock_lat,
                 all_rocks_alterations
                 )
-            self.rocks.append(newRock)
+            self.rocks.append(new_rock)
 
         ore_fields: Optional[dict] = own_alterations.get('ore_fields') if own_alterations is not None else None
-        if ore_fields and len(ore_fields) > 0:
+        if ore_fields:
             self.ore_fields = [OreField.generate_loaded(self, f) for f in ore_fields]
 
         if self.is_altered:

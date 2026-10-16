@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, List, Optional
 import math
 
 import logging
-from common.dialogs.messages import Message, show_message
 from galaxies.ore_fields import OreField
 from galaxies.ore_mine import OreMine
 import game_environment as gem
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class Ship(Updatable):
     """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
     laser, cargo hold) and its flight limits.
@@ -33,7 +33,7 @@ class Ship(Updatable):
     ANGULAR_BRAKE, MAX_ANGULAR_SPEED) are the same on every axis.
     """
 
-    HEIGHT = 4 # meters, up to the camera
+    HEIGHT = 4  # meters, up to the camera
 
     UP_DOWN_ACC = 5.0  # meters per second squared
     RIGHT_LEFT_ACC = 10  # meters per second squared
@@ -45,7 +45,7 @@ class Ship(Updatable):
 
     UPDATE_PERIOD = 60 * 60
 
-    ENERGY_MAX = 1e12 #Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    ENERGY_MAX = 1e12  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     TEMP_MIN = -50
     TEMP_DEFAULT = 25
     TEMP_MAX = 50
@@ -106,10 +106,10 @@ class Ship(Updatable):
             'position': self.position.serialize(),
             'velocity': self.velocity.serialize(),
             'attitude': self.attitude.serialize(),
-            'last_update_at' : self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'maintenance' : self.maintenance,
-            'energy' : self.energy,
-            'temperature' : self.temperature,
+            'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'maintenance': self.maintenance,
+            'energy': self.energy,
+            'temperature': self.temperature,
             'cargo_hold': self.cargo_hold.serialize()
         }
 
@@ -125,10 +125,10 @@ class Ship(Updatable):
             else:
                 update_queue.add(self)
             return
-        
+
         days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
 
-        self.reduce_resources(days)
+        self._reduce_resources(days)
 
         self.last_update_at = game_date_time
         self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
@@ -140,25 +140,25 @@ class Ship(Updatable):
         else:
             update_queue.add(self)
 
-    def reduce_resources(self, days: float) -> Ship:
+    def _reduce_resources(self, days: float) -> Ship:
 
         old_maintenance: float = self.maintenance
-        old_energy: float =  self.energy
+        old_energy: float = self.energy
         old_temperature: float = self.temperature
         old_air: float = self.cargo_hold.air
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
-        self.maintenance -=  0.005 * days
-        self.energy -=  1e5 * days
+        self.maintenance -= 0.005 * days
+        self.energy -= 1e5 * days
 
         if self.is_bound:
             self.temperature = Ship.TEMP_DEFAULT
         else:
             dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
             if dist < gem.current_environment.nearest_system.star.heat_radius:
-                max = gem.current_environment.nearest_system.star.heat_radius
-                min = gem.current_environment.nearest_system.star.death_radius
-                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - min)/(max - min)
+                heat_radius = gem.current_environment.nearest_system.star.heat_radius
+                death_radius = gem.current_environment.nearest_system.star.death_radius
+                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - death_radius)/(heat_radius - death_radius)
 
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
@@ -198,9 +198,9 @@ class Ship(Updatable):
             self.owner.game_over('You die of a heat stroke inside your ship. Better than burning alive or dying of the massive radioactivity around here, at least.')
         elif self.cargo_hold.air <= 0.0:
             self.owner.game_over('You die of CO2 intoxication. A somehow funny death but you are anyway dead.')
-        elif self.cargo_hold.water <= -2.0: # Dying of thirst after 2 days without water.
+        elif self.cargo_hold.water <= -2.0:  # Dying of thirst after 2 days without water.
             self.owner.game_over('You die of dehydration. A truly horrible death.')
-        elif self.cargo_hold.food <= -14.0: # Starvation at 14 days without food.
+        elif self.cargo_hold.food <= -14.0:  # Starvation at 14 days without food.
             self.owner.game_over('You die of hunger. A slow and horrible death.')
 
         return self
@@ -224,11 +224,11 @@ class Ship(Updatable):
         import game_environment as gem
         world = gem.current_environment.nearest_world
         for km2 in world.km2s:
-            if (km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude\
-                and (1 + km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude:
+            if ((km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude
+                    and (1 + km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude):
                 continue
-            if (km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude\
-                and (1 + km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude:
+            if ((km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude
+                    and (1 + km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude):
                 continue
             relevant_km2s.append(km2)
 
@@ -246,7 +246,7 @@ class Ship(Updatable):
                 if angle_diff > 45:
                     continue
                 hitting_a_rock = True
-                break        
+                break
             if hitting_a_rock:
                 break
         if hitting_a_rock:

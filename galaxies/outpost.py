@@ -12,10 +12,10 @@ from common.vector3 import Vector3
 import game_environment as gem
 import galaxies.constants
 from galaxies.world import World
-from galaxies.km2 import Km2
 from galaxies.people.person import Person
 
 logger = logging.getLogger(__name__)
+
 
 class Outpost(Updatable):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
@@ -38,13 +38,13 @@ class Outpost(Updatable):
     STAFF_AGE_MIN = 25
     STAFF_AGE_MAX = 60
 
-    def __init__(self, planet: World, saved_alterations: dict):
+    def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
         self.seed: float = (planet.seed + self.index + 1) % galaxies.constants.SEEDS_SCALING
         self.my_random: random.Random = random.Random(self.seed)
 
-        self.name: str = self.generate_name(self.my_random)
+        self.name: str = self._generate_name(self.my_random)
         self.longitude: int = \
             0 if self.index == 0 else \
             self.my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
@@ -78,7 +78,7 @@ class Outpost(Updatable):
         if self.saved_alterations and 'last_visited' in self.saved_alterations:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 
-        if not len(self.staff):
+        if not self.staff:
             self.staff = [
                 Person(self.seed + 0, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
                 Person(self.seed + 1, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
@@ -90,8 +90,8 @@ class Outpost(Updatable):
             self.com_officer = self.staff[3]
         else:
             self.com_officer = self.staff[shift]
-        self.next_update_at: datetime =  gem.current_environment.date_time
-        self.next_update_at = self.next_update_at.replace(hour = 8 * shift, minute=0, second=0, microsecond=0)
+        self.next_update_at: datetime = gem.current_environment.date_time
+        self.next_update_at = self.next_update_at.replace(hour=8 * shift, minute=0, second=0, microsecond=0)
         self.next_update_at += timedelta(hours=8)
         update_queue.add(self)
 
@@ -119,7 +119,7 @@ class Outpost(Updatable):
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime('%Y-%m-%d %H:%M:%S.%f')
             alterations['com_officer_seed'] = self.com_officer.seed
-        if not len(alterations):
+        if not alterations:
             return None
         return alterations
 
@@ -129,7 +129,7 @@ class Outpost(Updatable):
             self.planet.set_altered()
         return self
 
-    def set_last_visited(self, new_value: datetime) -> Outpost:
+    def _set_last_visited(self, new_value: datetime) -> Outpost:
         self.last_visited = new_value
         self.set_altered()
         return self
@@ -138,11 +138,11 @@ class Outpost(Updatable):
         """Where the outpost is, in the stellar frame, moving with its planet."""
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
-    def generate_name(self, my_random: random.Random) -> str:
+    def _generate_name(self, my_random: random.Random) -> str:
         return self.planet.parent_orbit.parent_stellar_system.political_entity.generate_outpost_name(my_random)
 
     def communicate(self) -> Outpost:
         import game_environment as gem
         self.com_officer.communicate_from(self)
-        self.set_last_visited(gem.current_environment.date_time)
+        self._set_last_visited(gem.current_environment.date_time)
         return self

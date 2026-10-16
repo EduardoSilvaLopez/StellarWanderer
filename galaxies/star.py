@@ -37,7 +37,7 @@ class Star(Body):
         my_random: random.Random = random.Random(self.seed)
         self._system: StellarSystem = system
         self.name: str = Star._generate_name(my_random)
-        self.type : Star.Type = Star._generate_star_type(my_random)
+        self.type: Star.Type = Star._generate_star_type(my_random)
         self.color: tuple = self._generate_color(my_random)
         self.radius: int = self._generate_radius(my_random)
         self.mass: int = self._generate_mass(my_random)
@@ -49,21 +49,21 @@ class Star(Body):
     @staticmethod
     def _generate_name(my_random: random.Random) -> str:
         """Generate a random name for the world."""
-        vocals = "aeiouaeio" # repeating the most common.
+        vocals = "aeiouaeio"  # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
         name = ""
-        for sylIdx in range(1, my_random.randint(3, 6)):
-            if (my_random.random() < 0.4):
+        for _ in range(1, my_random.randint(3, 6)):
+            if my_random.random() < 0.4:
                 name += my_random.choice(consonants)
             name += my_random.choice(vocals)
-            if (my_random.random() < 0.4):
+            if my_random.random() < 0.4:
                 name += my_random.choice(consonants)
 
-        if (my_random.random() < 0.5):
+        if my_random.random() < 0.5:
             name += "eia"
 
         return name.capitalize()
-    
+
     @staticmethod
     def _generate_star_type(my_random: random.Random) -> Star.Type:
         rnd = my_random.random()
@@ -142,7 +142,7 @@ class Star(Body):
 
         return int(typical_mass * (0.98 + 0.04 * my_random.random()))
 
-    def _generate_temperature(self, my_random: random.Random):
+    def _generate_temperature(self, my_random: random.Random) -> float:
         """
         Estimate a realistic stellar effective temperature (Kelvin)
         using spectral type + mass + radius + random variation.
@@ -166,14 +166,14 @@ class Star(Body):
 
         return result
 
-    def _generate_rotation_period(self, my_random: random.Random):
+    def _generate_rotation_period(self, my_random: random.Random) -> float:
         """
         Compute a realistic stellar rotation period (seconds)
         using temperature-based rotation regimes + randomness.
         """
         # Determine rotation velocity range from temperature
         if self.temperature < 4500:
-            v_min, v_max = 1, 15        # km/s
+            v_min, v_max = 1, 15  # km/s
         elif self.temperature < 6000:
             v_min, v_max = 2, 20
         elif self.temperature < 7000:

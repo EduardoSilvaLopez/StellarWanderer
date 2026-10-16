@@ -31,16 +31,16 @@ class Navigation:
     BRAKING_RADIUS_MULTIPLE radii from the centre. Only a world can be bound to: the star is never bound to (the
     ship is not expected to get that near), however close the ship is to it.
 
-    `bind_to` and `unbind_from` are deliberately asymmetric: `bind_to` snaps the ship level (yaw only; pitch and
-    roll are discarded), because a ship always starts level on a surface. `unbind_from` keeps the full attitude,
+    `_bind_to` and `_unbind_from` are deliberately asymmetric: `_bind_to` snaps the ship level (yaw only; pitch and
+    roll are discarded), because a ship always starts level on a surface. `_unbind_from` keeps the full attitude,
     round-tripping the three axes through `World.surface_vector_to_stellar`, so free flight keeps whatever attitude
     the ship had while bound. Do not "fix" this to be symmetric.
     """
 
-    BIND_RADIUS_MULTIPLE = 1.1           # bind at or inside this distance from the world's centre, in radii
-    UNBIND_RADIUS_MULTIPLE = 1.2         # unbind beyond this distance from the world's centre, in radii
-    BRAKING_RADIUS_MULTIPLE = 10         # braking/markers use the body's velocity inside this distance, in radii
-    COLLISION_BRAKE_FRACTION = 0.5       # share of BRAKE_ACC assumed available when judging a collision
+    BIND_RADIUS_MULTIPLE = 1.1  # bind at or inside this distance from the world's centre, in radii
+    UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
+    BRAKING_RADIUS_MULTIPLE = 10  # braking/markers use the body's velocity inside this distance, in radii
+    COLLISION_BRAKE_FRACTION = 0.5  # share of BRAKE_ACC assumed available when judging a collision
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -114,10 +114,10 @@ class Navigation:
             environment.refresh_nearest_body(ship.position.as_vector())
         body = environment.nearest_body
         if ship.is_bound and ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
-            self.unbind_from(body)
+            self._unbind_from(body)
         elif (not ship.is_bound and body.is_world  # the star is never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
-            self.bind_to(body)
+            self._bind_to(body)
 
         if ship.is_bound:
             world = environment.nearest_world
@@ -181,8 +181,8 @@ class Navigation:
         for label, vector in rows.items():
             logger.info(f"{label:>16}|  {vector[0]}  |  {vector[1]}  |  {vector[2]}")
 
-    def bind_to(self, world: World) -> Navigation:
-        # Intentionally yaw-only: binding snaps the ship level, unlike unbind_from, which keeps the attitude.
+    def _bind_to(self, world: World) -> Navigation:
+        # Intentionally yaw-only: binding snaps the ship level, unlike _unbind_from, which keeps the attitude.
         logger.info(f"Arriving to {world.name}.")
 
         ship = self.ship
@@ -220,8 +220,8 @@ class Navigation:
         ship.is_bound = True
         return self
 
-    def unbind_from(self, world: World) -> Navigation:
-        # Intentionally keeps the full attitude: unlike bind_to, which snaps the ship level.
+    def _unbind_from(self, world: World) -> Navigation:
+        # Intentionally keeps the full attitude: unlike _bind_to, which snaps the ship level.
         logger.info(f"Leaving {world.name}.")
 
         ship = self.ship

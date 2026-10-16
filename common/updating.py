@@ -34,7 +34,7 @@ class Updatable(ABC):
 class UpdateQueue:
     """Internal UpdateQueue class. Use the module-level `update_queue` instance."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the update queue."""
         self._queue: List[Updatable] = []
 
@@ -79,11 +79,13 @@ class UpdateQueue:
         # Update each object and remove it from the queue
         for obj in to_update:
             self.remove(obj)
-            obj.update(current_date_time) # May re-insert.
+            obj.update(current_date_time)  # May re-insert.
 
     def __len__(self) -> int:
         """Return the number of objects currently in the queue."""
         return len(self._queue)
 
 # Singleton instance: use this anywhere in the application
+
+
 update_queue = UpdateQueue()

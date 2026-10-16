@@ -15,13 +15,13 @@ from galaxies.rock import Rock
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
     from galaxies.orbit import Orbit
     from galaxies.stellar_system import StellarSystem
     from spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
+
 
 class World(Body):
     '''The generation is full of heuristic but playtested, hopefully realistic, factors.
@@ -42,7 +42,7 @@ class World(Body):
 
     is_world = True
 
-    WORLD_MIN_RADIUS = 300000 # Spherical celestial object.
+    WORLD_MIN_RADIUS = 300000  # Spherical celestial object.
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
     GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
     EARTH_DENSITY = 5514.0  # kg/m^3, assumed for every world (planets and moons alike)
@@ -91,9 +91,9 @@ class World(Body):
             self.distance_to_parent: int = self._generate_orbital_distance_of_big_moon(my_random)
         else:
             self.distance_to_parent: int = int(parent_orbit.distance_from_star)
-        
+
         self.initial_degrees_in_orbit: float = my_random.random() * 360.0
-        
+
         self.mass: float = 4.0 / 3.0 * math.pi * self.radius ** 3 * World.EARTH_DENSITY
 
         # Kepler's third law around the parent, a planet or the star (two-body: both masses count).
@@ -107,7 +107,7 @@ class World(Body):
 
         self.rocks_prevalence: float = my_random.random()
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
-        if self.parent_planet is not None and self.parent_planet.is_initial_planet():
+        if self.parent_planet is not None and self.parent_planet._is_initial_planet():
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.33 * my_random.random()
@@ -135,12 +135,12 @@ class World(Body):
         self.outposts: dict = {}
         if not self.parent_planet:
             outposts_count = int(abs(my_random.gauss(1.0, 1.5)))
-            if self.is_initial_planet() and outposts_count <= 0:
+            if self._is_initial_planet() and outposts_count <= 0:
                 outposts_count = 1
-            
+
             all_outposts_alterations = self.saved_alterations.get('outposts')\
                 if self.saved_alterations else None
-            
+
             for _ in range(outposts_count):
                 # Added one by one, so each outpost sees the previous ones when it takes its index.
                 outpost = Outpost(self, all_outposts_alterations)
@@ -149,12 +149,11 @@ class World(Body):
         # Register mines in its Km2:
         self.registered_mines: List[tuple] = []
         if self.saved_alterations and 'Km2s' in self.saved_alterations:
-            for km2_alt in self.saved_alterations['Km2s'].values():
-                if 'ore_fields' in km2_alt:
-                    for field_dict in km2_alt['ore_fields']:
-                        if 'mines' in field_dict:
-                            for mine_dict in field_dict['mines']:
-                                self.registered_mines.append((mine_dict['longitude'], mine_dict['latitude']))
+            self.registered_mines.extend(
+                (mine_dict['longitude'], mine_dict['latitude'])
+                for km2_alt in self.saved_alterations['Km2s'].values() if 'ore_fields' in km2_alt
+                for field_dict in km2_alt['ore_fields'] if 'mines' in field_dict
+                for mine_dict in field_dict['mines'])
 
         # Moons:
         self.moons: List[World] = []
@@ -163,7 +162,7 @@ class World(Body):
             while moons_count < 0:
                 moons_count = int(my_random.gauss(2.0, 1.0))
             # Initial moon's clause.
-            if not moons_count and self.is_initial_planet():
+            if not moons_count and self._is_initial_planet():
                 moons_count = 1
             for _ in range(moons_count):
                 self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
@@ -175,16 +174,16 @@ class World(Body):
 
     def _generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
-        vocals = "aeiouaeio" # repeating the most common.
+        vocals = "aeiouaeio"  # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
         name = ""
-        for sylIdx in range(1, my_random.randint(3, 6)):
-            if (my_random.random() < 0.5):
+        for _ in range(1, my_random.randint(3, 6)):
+            if my_random.random() < 0.5:
                 name += my_random.choice(consonants)
             name += my_random.choice(vocals)
-            if (my_random.random() < 0.5):
+            if my_random.random() < 0.5:
                 name += my_random.choice(consonants)
-        
+
         return name.capitalize()
 
     def _generate_moon_name(self, my_random: random.Random) -> str:
@@ -278,15 +277,14 @@ class World(Body):
             f"* % Ore prevalence: {100*self.ore_prevalence:.2f}%\n"
             f"\n"
             )
-        for moon in self.moons:
-            text += moon.almanack()
+        text += ''.join(moon.almanack() for moon in self.moons)
         return text
 
     def _log_creation(self) -> World:
         if self.parent_planet:
-            logger.info(f"NEW MOON CREATED")
+            logger.info("NEW MOON CREATED")
         else:
-            logger.info(f"NEW PLANET CREATED")
+            logger.info("NEW PLANET CREATED")
 
         logger.info(f" - Orbit(Index): {int(self.parent_orbit.number)} ({self.index})")
         logger.info(f" - Name: {self.name}, Seed: {self.seed}")
@@ -295,7 +293,7 @@ class World(Body):
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
 
-    def is_initial_planet(self) -> bool:
+    def _is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
             and self.parent_orbit.parent_stellar_system.x == 26000\
@@ -326,30 +324,30 @@ class World(Body):
         if self.saved_alterations is not None and self.saved_alterations.get('Km2s') is not None:
             km2_alterations = copy.deepcopy(self.saved_alterations['Km2s'])
         for km2 in self.km2s:
-            if km2.is_altered: # There is no "no longer altered"
+            if km2.is_altered:  # There is no "no longer altered"
                 km2_alt = km2.get_alterations()
-                if km2_alt is not None and len(km2_alt) > 0:
+                if km2_alt:
                     km2_alterations[km2.get_alterations_key()] = km2_alt
-        if km2_alterations is not None and len(km2_alterations) > 0:
+        if km2_alterations:
             result['Km2s'] = km2_alterations
 
         moon_alterations: dict = dict()
         for moon in self.moons:
             one_moon_alterations: Optional[dict] = moon.get_alterations()
-            if one_moon_alterations is not None and len(one_moon_alterations) > 0:
+            if one_moon_alterations:
                 moon_alterations[moon.get_alterations_key()] = one_moon_alterations
-        if moon_alterations is not None and len(moon_alterations) > 0:
+        if moon_alterations:
             result['moons'] = moon_alterations
 
         all_outposts_alterations: dict = dict()
         for alt_key, outpost in self.outposts.items():
             outpost_alterations: Optional[dict] = outpost.get_alterations()
-            if outpost_alterations is not None and len(outpost_alterations) > 0:
+            if outpost_alterations:
                 all_outposts_alterations[alt_key] = outpost_alterations
-        if all_outposts_alterations is not None and len(all_outposts_alterations) > 0:
+        if all_outposts_alterations:
             result['outposts'] = all_outposts_alterations
 
-        if len(result) <= 0:
+        if not result:
             return None
         return result
 
@@ -374,30 +372,31 @@ class World(Body):
 
         to_stop_updating: List[Km2] = self.km2s.copy()
 
-        if (center_alt <= World.SURROUNDINGS_RADIUS):
+        if center_alt <= World.SURROUNDINGS_RADIUS:
             surrounding_chunks = World.SURROUNDINGS_RADIUS // Km2.SIZE
             for lon_delta in range(-surrounding_chunks, surrounding_chunks + 1):
                 for lat_delta in range(-surrounding_chunks, surrounding_chunks + 1):
                     target_longitude = longitude + lon_delta * Km2.SIZE
                     target_latitude = latitude + lat_delta * Km2.SIZE
-                    tgt_Km2 = next(
+                    target_km2 = next(
                         (km2 for km2 in self.km2s if km2.longitude == target_longitude and km2.latitude == target_latitude),
                         None
                         )
-                    if tgt_Km2 is None:
-                        new_Km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
-                        self.km2s.append(new_Km2)
+                    if target_km2 is None:
+                        new_km2 = Km2(self, target_longitude, target_latitude, self.saved_alterations)
+                        self.km2s.append(new_km2)
                         continue
                     else:
-                        to_stop_updating.remove(tgt_Km2)
-                    if not tgt_Km2.is_altered: continue
-                    tgt_Km2.start_updating(game_date_time)
+                        to_stop_updating.remove(target_km2)
+                    if not target_km2.is_altered:
+                        continue
+                    target_km2.start_updating(game_date_time)
 
-        for tgt_Km2 in to_stop_updating:
-            if tgt_Km2.is_altered:
-                tgt_Km2.stop_updating()
+        for target_km2 in to_stop_updating:
+            if target_km2.is_altered:
+                target_km2.stop_updating()
             else:
-                self.km2s.remove(tgt_Km2)
+                self.km2s.remove(target_km2)
 
         if count_before != len(self.km2s):
             logger.debug(f"The world has now {len(self.km2s)} Km2 loaded.")
@@ -408,7 +407,7 @@ class World(Body):
                 if int(outpost.latitude // Km2.SIZE) == int(km2.latitude // Km2.SIZE):
                     return outpost
         return None
-    
+
     def surface_point_stellar(self, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Stellar position (metres) of a point on this world's surface, given in surface coordinates.
         Same convention as Navigation._stellar_position_from_surface, with altitude 0."""
@@ -504,12 +503,12 @@ class World(Body):
         return self.surface_vector_to_stellar_with_basis(vector, basis)
 
     def stellar_vector_to_surface_with_basis(self, vector: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
-        """Cheap half of stellar_vector_to_surface: apply an already-computed basis."""
+        """Cheap half of _stellar_vector_to_surface: apply an already-computed basis."""
         east_hat, up_hat, north_hat = basis
         star_basis = Vector3(vector[0], -vector[1], vector[2])
         return Vector3(star_basis.dot(east_hat), star_basis.dot(up_hat), star_basis.dot(north_hat))
 
-    def stellar_vector_to_surface(self, vector: Vector3, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+    def _stellar_vector_to_surface(self, vector: Vector3, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Express a stellar direction in surface (east, up, north) components."""
         basis = self.surface_basis(longitude, latitude, current_datetime)
         return self.stellar_vector_to_surface_with_basis(vector, basis)
@@ -558,14 +557,14 @@ class World(Body):
     def stellar_to_surface_velocity_with_basis(
             self, stellar_vel: Vector3, altitude: float, latitude: float,
             current_datetime: datetime, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
-        """Cheap half of stellar_to_surface_velocity: apply an already-computed basis."""
+        """Cheap half of _stellar_to_surface_velocity: apply an already-computed basis."""
         east_hat, up_hat, north_hat = basis
         world_vel = self.calculate_stellar_velocity(current_datetime)
         relative = Vector3(stellar_vel[0] - world_vel.x, -stellar_vel[1] + world_vel.y, stellar_vel[2] - world_vel.z)
         spin_speed = self.spin_speed_at(altitude, latitude)
         return Vector3(relative.dot(east_hat) - spin_speed, relative.dot(up_hat), relative.dot(north_hat))
 
-    def stellar_to_surface_velocity(self, stellar_vel: Vector3, longitude: float, altitude: float, latitude: float, current_datetime: datetime) -> Vector3:
+    def _stellar_to_surface_velocity(self, stellar_vel: Vector3, longitude: float, altitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Inverse of Navigation._stellar_velocity_from_surface: (east, up, north) velocity for a stellar velocity."""
         basis = self.surface_basis(longitude, latitude, current_datetime)
         return self.stellar_to_surface_velocity_with_basis(stellar_vel, altitude, latitude, current_datetime, basis)

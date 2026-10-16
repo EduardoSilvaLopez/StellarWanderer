@@ -14,12 +14,13 @@ if TYPE_CHECKING:
 # Everything the beam can hit.
 Target = Union['Rock', 'OreMine', 'Outpost']
 
+
 class Scanner:
     """Aiming and targeting: what the crosshair hits (rocks, ore mines, outposts) and ore collection.
 
     The scanner decides what is targeted; the laser (spaceships/laser.py) only fires at it. While bound, the beam
     (drawn by graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
-    slope from the emitter (`emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
+    slope from the emitter (`_emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
     MAX_LENGTH metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their
     distance pass over the beam. `targeted_rock` and `targeted_mine` are what the scanner panel
     (graphics/instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
@@ -54,7 +55,7 @@ class Scanner:
         from galaxies.outpost import Outpost
         return self.target if isinstance(self.target, Outpost) else None
 
-    def emitter_offset(self) -> float:
+    def _emitter_offset(self) -> float:
         """How far below the camera the scanner beam starts: half the ship's height."""
         return self.ship.HEIGHT / 2
 
@@ -63,7 +64,7 @@ class Scanner:
         first. Called once per frame, so the scanner always shows what is in the crosshair."""
         ship = self.ship
         self.target = None
-        offset = self.emitter_offset()
+        offset = self._emitter_offset()
         forward, up = ship.attitude.forward, ship.attitude.up
 
         # Unbound, the beam is stored relative to the ship. Bound, it is in surface coordinates and starts above
@@ -108,7 +109,6 @@ class Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise
         switch the beam on, heating the targeted rock if there is one. Uses the target found by this frame's
         update_target, so it does not search again."""
-        from spaceships.cargo_hold import CargoHold
 
         if self.targeted_mine is not None:
             self.ship.laser.cease_fire()
@@ -122,7 +122,7 @@ class Scanner:
             outpost: Outpost = self.targeted_outpost
             outpost.communicate()
             return self
-        
+
         self.ship.laser.fire(self.targeted_rock, time_passed)
         return self
 
@@ -142,16 +142,16 @@ class Scanner:
     def _candidates(self, world: World) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
         """Every target within reach, each with the test that finds where the beam enters it. Outposts are
         not inside Km2s: when they become targets, yield them from world.outposts here, with their own filter."""
-        for km2 in self.get_relevant_km2s(world):
+        for km2 in self._get_relevant_km2s(world):
             for rock in km2.rocks:
                 yield rock, self.is_rock_targeted
             for field in km2.ore_fields:
                 for mine in field.mines:
-                    yield mine, self.is_mine_targeted
+                    yield mine, self._is_mine_targeted
             if km2.outpost:
                 yield km2.outpost, self.is_outpost_targeted
 
-    def get_relevant_km2s(self, world: World) -> List[Km2]:
+    def _get_relevant_km2s(self, world: World) -> List[Km2]:
         """Km2s whose square lies within the beam's reach in longitude and latitude. A rough filter, applied
         before the per-object tests."""
         position = self.ship.position
@@ -240,7 +240,7 @@ class Scanner:
             outpost.orientation,
         )
 
-    def is_mine_targeted(self, mine: OreMine) -> Optional[float]:
+    def _is_mine_targeted(self, mine: OreMine) -> Optional[float]:
         """t-value where the beam first enters the mine, or None. A mine is a vertical cylinder of radius
         MINE_RADIUS and height MINE_HEIGHT, standing on the ground at (longitude, latitude). Being rotationally
         symmetric, it needs no un-rotation, unlike rocks."""
@@ -282,4 +282,3 @@ class Scanner:
         return self._beam_enters_oriented_box(
             (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
         )
-

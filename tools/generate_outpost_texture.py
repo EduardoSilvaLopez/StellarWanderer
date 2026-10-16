@@ -231,9 +231,9 @@ def radiator(surface: pygame.Surface, rect: pygame.Rect, label: str = '') -> Non
 def mli_patch(surface: pygame.Surface, rect: pygame.Rect, rng: np.random.Generator) -> None:
     """Gold insulation foil: crinkled ridges that catch the light, taped at the edges."""
     w, h = rect.size
-    crumple = fbm(rng, w, h, max(2, w // 10), 3)                 # soft crumpled relief
+    crumple = fbm(rng, w, h, max(2, w // 10), 3)  # soft crumpled relief
     fine = noise(rng, w, h, w // 2, h // 2)
-    slope = np.gradient(crumple, axis=1) + 0.7 * np.gradient(crumple, axis=0)   # facets facing the light are brighter
+    slope = np.gradient(crumple, axis=1) + 0.7 * np.gradient(crumple, axis=0)  # facets facing the light are brighter
     lightness = np.clip(0.92 + 5.5 * slope + 0.08 * (fine - 0.5), 0.5, 1.45)
     foil = np.array(GOLD_FOIL, np.float32)[None, None, :] * lightness[..., None]
     patch = to_surface(foil)
@@ -312,7 +312,7 @@ def window_socket(surface: pygame.Surface, rect: pygame.Rect) -> None:
     pygame.draw.rect(surface, (10, 12, 16), rect)
 
 
-LIT_TONES = (((206, 224, 230), (128, 160, 178)), ((248, 214, 158), (206, 142, 78)))   # cool white, warm amber
+LIT_TONES = (((206, 224, 230), (128, 160, 178)), ((248, 214, 158), (206, 142, 78)))  # cool white, warm amber
 
 
 def glass_fill(size: Tuple[int, int], lit: bool, tone: int, rng: np.random.Generator) -> pygame.Surface:
@@ -328,8 +328,8 @@ def glass_fill(size: Tuple[int, int], lit: bool, tone: int, rng: np.random.Gener
             colour = (int(44 - 24 * t), int(60 - 30 * t), int(80 - 40 * t))
         pygame.draw.line(glass, colour, (0, row), (w, row))
     if lit:
-        pygame.draw.rect(glass, (255, 255, 250, 200), (2, 1, w - 4, 2))   # the ceiling light strip
-        for _ in range(max(1, w // 45)):   # consoles, as a few low dark shapes
+        pygame.draw.rect(glass, (255, 255, 250, 200), (2, 1, w - 4, 2))  # the ceiling light strip
+        for _ in range(max(1, w // 45)):  # consoles, as a few low dark shapes
             bx, bw = int(rng.integers(0, max(1, w - 10))), int(rng.integers(8, 20))
             pygame.draw.rect(glass, (50, 62, 74, int(rng.integers(50, 100))), (bx, h - int(rng.integers(5, 10)), bw, 12))
     else:
@@ -391,19 +391,19 @@ def base_wall(rng: np.random.Generator, w: int = 960, h: int = 240) -> pygame.Su
     surface.fill(PANEL)
     panel_grid(surface, pygame.Rect(0, 14, w, LEVEL_SPLIT - 14), 80, 60, PANEL_LIGHT, rng)
     panel_grid(surface, pygame.Rect(0, LEVEL_SPLIT + 8, w, h - LEVEL_SPLIT - 8 - 16), 80, 60, PANEL, rng)
-    trim(surface, pygame.Rect(0, 0, w, 14), FRAME, 40)                                    # parapet
-    trim(surface, pygame.Rect(0, LEVEL_SPLIT - 8, w, 16), FRAME_DARK)                     # ledge between the levels
-    pygame.draw.rect(surface, RED, (0, LEVEL_SPLIT - 2, w, 4))                            # the entity's red band
+    trim(surface, pygame.Rect(0, 0, w, 14), FRAME, 40)  # parapet
+    trim(surface, pygame.Rect(0, LEVEL_SPLIT - 8, w, 16), FRAME_DARK)  # ledge between the levels
+    pygame.draw.rect(surface, RED, (0, LEVEL_SPLIT - 2, w, 4))  # the entity's red band
     shadow = pygame.Surface((w, 12), pygame.SRCALPHA)
     for i in range(12):
         pygame.draw.line(shadow, (0, 0, 0, 64 - i * 5), (0, i), (w, i))
     surface.blit(shadow, (0, LEVEL_SPLIT + 8))
-    trim(surface, pygame.Rect(0, h - 16, w, 16), PLINTH)                                   # plinth
+    trim(surface, pygame.Rect(0, h - 16, w, 16), PLINTH)  # plinth
     return surface
 
 
 def paint_front(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]]:
-    w, h = 960, 240
+    h = 240
     surface = base_wall(rng)
     light: List[Emissive] = []
     floor = h - 16
@@ -441,7 +441,7 @@ def paint_front(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive
 
 
 def paint_back(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]]:
-    w, h = 960, 240
+    h = 240
     surface = base_wall(rng)
     light: List[Emissive] = []
     floor = h - 16
@@ -549,8 +549,7 @@ def paint_roof(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]
     hazard(surface, pygame.Rect(hatch.left - 8, hatch.bottom + 8, hatch.width + 16, 8))
     # The top of this image is the front edge of the roof, so the lettering is turned to read from the door side.
     stencil(surface, 'OP-03', (300, 440), 28, (200, 202, 204), rotation=180)
-    for centre in ((36, 36), (924, 36), (36, 444), (924, 444)):
-        light.append(lamp(centre, (255, 70, 60), 5))
+    light.extend(lamp(centre, (255, 70, 60), 5) for centre in ((36, 36), (924, 36), (36, 444), (924, 444)))
     light.append(lamp((dish[0] + 58, dish[1] - 34), (255, 70, 60), 4))
     return surface, light
 

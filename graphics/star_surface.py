@@ -27,9 +27,9 @@ SPOT_MIN_FRONT = 0.1  # a spot is not drawn when its centre is this close to the
 
 
 class Sunspot(NamedTuple):
-    latitude: float   # radians, at game time 0
+    latitude: float  # radians, at game time 0
     longitude: float  # radians, at game time 0; it grows by 2 pi per rotation period
-    radius: float     # in disc radii
+    radius: float  # in disc radii
 
 
 class SpotQuad(NamedTuple):
@@ -67,14 +67,12 @@ def granulation(width: int, height: int, centre_x: float, centre_y: float, disc_
 def sunspots(star_seed: float) -> List[Sunspot]:
     """The star's sunspots: a few, by the star's seed."""
     rnd = _random(star_seed, 29)
-    spots: List[Sunspot] = []
-    for _ in range(SPOT_COUNT_MIN + rnd.randrange(SPOT_COUNT_EXTRA + 1)):
-        spots.append(Sunspot(
-            latitude=rnd.uniform(-0.6, 0.6),
-            longitude=rnd.uniform(-math.pi / 2, math.pi / 2),
-            radius=rnd.uniform(SPOT_RADIUS_MIN, SPOT_RADIUS_MAX),
-        ))
-    return spots
+    count = SPOT_COUNT_MIN + rnd.randrange(SPOT_COUNT_EXTRA + 1)
+    return [Sunspot(
+        latitude=rnd.uniform(-0.6, 0.6),
+        longitude=rnd.uniform(-math.pi / 2, math.pi / 2),
+        radius=rnd.uniform(SPOT_RADIUS_MIN, SPOT_RADIUS_MAX),
+    ) for _ in range(count)]
 
 
 def sunspot_quads(spots: List[Sunspot], game_seconds: float, rotation_period: float) -> List[SpotQuad]:

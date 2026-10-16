@@ -8,6 +8,7 @@ from common.updating import Updatable, update_queue
 
 import game_environment as gem
 
+
 class Notification(Updatable):
     """Holds a message. Not scheduled by default: it is only updated if its owner puts it in UpdateQueue."""
 
@@ -16,11 +17,11 @@ class Notification(Updatable):
         self.next_update_at: Optional[datetime] = None
 
     def set(self, message: str) -> Notification:
-        if message == '':
+        if not message:
             return
-        
+
         self.message = message
-        self.next_update_at = gem.current_environment.date_time + timedelta(seconds = 60)
+        self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
 
         from galaxies.people.player import current_player
         current_player.time_scale = 1

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class OreMine(Updatable):
     EXTRACTION_PERIOD: int = 3600
     # Geometry of a mine: a vertical cylinder standing on the ground. Graphics draws it with these and
@@ -28,8 +29,8 @@ class OreMine(Updatable):
             longitude: int = 0,
             latitude: int = 0,
             orientation: float = 0.0,
-            saved_attributes: dict = None
-            ):
+            saved_attributes: Optional[dict] = None
+            ) -> None:
         self.parent_field: OreField = parent_field
         self.is_altered: bool = False
         if saved_attributes is None:
@@ -76,13 +77,13 @@ class OreMine(Updatable):
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
-        if not game_date_time: # stop updating
+        if not game_date_time:  # stop updating
             return
 
         if self.last_updated_at is None:
             # This mine did not start working. Start now.
             self.last_updated_at = game_date_time
-            self.next_update_at = game_date_time + timedelta(seconds= self.EXTRACTION_PERIOD)
+            self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
             update_queue.add(self)
             logger.info(f"Mine at {self.longitude}, {self.latitude} starts to work.")
             return
@@ -90,16 +91,16 @@ class OreMine(Updatable):
         time_passed = game_date_time - self.last_updated_at
         periods_passed = time_passed.total_seconds() // OreMine.EXTRACTION_PERIOD
         # May be under 1, save the rest for the next.
-        self.last_updated_at += timedelta(seconds = periods_passed * OreMine.EXTRACTION_PERIOD)
-        
-        ore_extracted = self.parent_field.extract(periods_passed) # Later: mine quality.
+        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+
+        ore_extracted = self.parent_field.extract(periods_passed)  # Later: mine quality.
         self.content += ore_extracted
         if self.parent_field.remaining_ore <= 0:
-            logger.info(f"Mine won't be updated anymore, field depleted.")
+            logger.info("Mine won't be updated anymore, field depleted.")
             self.next_update_at = None
             return
 
-        self.next_update_at = game_date_time + timedelta(seconds = self.EXTRACTION_PERIOD)
+        self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
         update_queue.add(self)
 
         logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, {ore_extracted} ore extracted.")
