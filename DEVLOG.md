@@ -274,6 +274,7 @@ RELEASE "The Three Powers" created, with installer.
 Extra time: 46h15' + 5:30-
 
 * Vertical bars for the warning in maintenance (later temperature)
+* Credits bar (hidden)
 * Temperature
   * 'The heat kills you before radiation does... yay.
   
