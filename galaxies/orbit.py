@@ -55,7 +55,7 @@ class Orbit:
         return str(self.number)
 
     def get_alterations(self) -> Optional[dict]:
-        alterations = dict()
+        alterations = {}
         if self.is_altered:
             for world in self.planets:
                 if world.is_altered:
@@ -63,7 +63,7 @@ class Orbit:
                     if world_alterations:
                         alterations[world.get_alterations_key()] = world_alterations
                     else:
-                        alterations.pop(world.get_alterations_key())
+                        alterations.pop(world.get_alterations_key(), None)
         if not alterations:
             return None
         return alterations

@@ -66,8 +66,9 @@ class Savefile:
 
         player_data: dict = load_object['player']
         system_data: dict = player_data['stellar_system']
-        gem.current_environment.nearest_system = gem.current_environment.galaxy.add_stellar_system(
-            system_data['x'], system_data['y'], system_data['z']
+        galaxy = gem.current_environment.galaxy
+        gem.current_environment.nearest_system = galaxy.add_stellar_system(
+            galaxy.fixed_star_at((system_data['x'], system_data['y'], system_data['z']))
             )
         from galaxies.orbit import Orbit
         if player_data['orbit'] is None:  # the star was the nearest body

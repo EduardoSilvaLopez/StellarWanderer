@@ -14,6 +14,11 @@ if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
 
 
+def cell_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
+    """The integer cell (1 ly) that contains a galactic position. A star's cell is its key in the galaxy."""
+    return (math.floor(position[0]), math.floor(position[1]), math.floor(position[2]))
+
+
 class Star(Body):
     """The star: the origin of the stellar frame, at rest. It has no surface: nothing binds to it.
 
@@ -263,6 +268,11 @@ class Star(Body):
 
     def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, 0.0)
+
+    @property
+    def cell(self) -> tuple[int, int, int]:
+        """The integer cell that contains the star: its key in the galaxy."""
+        return cell_of(self.position)
 
     def attach_to(self, system: StellarSystem) -> None:
         """Make `system` the star's stellar system (what `stellar_system` returns)."""

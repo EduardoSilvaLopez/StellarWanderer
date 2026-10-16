@@ -14,18 +14,15 @@ if TYPE_CHECKING:
 
 class StellarSystem:
 
-    def __init__(self, parent_galaxy: Galaxy, x: float, y: float, z: float, saved_alterations: dict) -> None:
-        ''' Using galactic coordinates here. Whatever that may mean in the future (unit will prolly not meters).'''
+    def __init__(self, parent_galaxy: Galaxy, star: Star, saved_alterations: dict) -> None:
+        ''' Using galactic coordinates here, in ly: the system is where its star is. The star is given by the galaxy.'''
         self.parent_galaxy: Galaxy = parent_galaxy
         self.entity_name: str = 'Those-Who-Share'
-        self.x: float = x
-        self.y: float = y
-        self.z: float = z
-        self.seed: float = StellarSystem.seed_of(self.parent_galaxy.seed, x, y, z)
+        self.x, self.y, self.z = star.position
+        self.seed: float = StellarSystem.seed_of(self.parent_galaxy.seed, self.x, self.y, self.z)
         my_random: random.Random = random.Random(self.seed)
         self.political_entity = political_entity.THOSE_WHO_SHARE
-        star_seed: float = (self.seed + 1) % galaxies.constants.SEEDS_SCALING
-        self.star: Star = Star(star_seed, (x, y, z))  # the system's star, as a body ships can navigate to
+        self.star: Star = star  # the system's star, as a body ships can navigate to
         self.star.attach_to(self)
         self.name: str = self.star.name + " System"
 
@@ -39,7 +36,7 @@ class StellarSystem:
 
         orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
         # the first-ever system must have three orbits.
-        if (x, y, z) == galaxies.constants.INITIAL_STAR_POSITION:  # The initial stellar system.
+        if self.star.position == galaxies.constants.INITIAL_STAR_POSITION:  # The initial stellar system.
             orbits_count = max(3, orbits_count)
         self.orbits: List[Orbit] = []
         for orbit_number in range(1, orbits_count+1):
@@ -67,7 +64,8 @@ class StellarSystem:
         return self
 
     def get_alterations_key(self) -> str:
-        return str(self.x) + " " + str(self.y) + " " + str(self.z)
+        '''The integer cell of the star, so that the key is the same whatever the float position.'''
+        return " ".join(str(c) for c in self.star.cell)
 
     def get_alterations(self) -> Optional[dict]:
         alterations = dict()
@@ -78,7 +76,7 @@ class StellarSystem:
                     if orbit_alterations:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
                     else:
-                        alterations.pop(orbit.get_alterations_key())
+                        alterations.pop(orbit.get_alterations_key(), None)
         if not alterations:
             return None
         return alterations

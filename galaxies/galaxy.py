@@ -1,6 +1,8 @@
 import copy
 from typing import List, Optional
 
+from galaxies import fixed_stars
+from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
 '''The whole galaxy. We won't have more than one.'''
@@ -10,6 +12,10 @@ class Galaxy():
 
     def __init__(self, user_given_seed: float, saved_alterations: dict) -> None:
         self.seed: float = user_given_seed
+        # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
+        self.fixed_stars: dict[tuple[int, int, int], Star] = {
+            cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)
+        }
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
         self.is_altered: bool = saved_alterations is not None and saved_alterations != {}
@@ -50,7 +56,18 @@ class Galaxy():
         text += ''.join(system.almanack() for system in self.stellar_systems)
         return text
 
-    def add_stellar_system(self, x: float, y: float, z: float) -> StellarSystem:
-        new_system = StellarSystem(self, x, y, z, self.saved_alterations)
+    def fixed_star_at(self, position: tuple[float, float, float]) -> Star:
+        """The fixed star in the cell that contains the galactic position (in ly). Only the region has fixed stars."""
+        star: Optional[Star] = self.fixed_stars.get(cell_of(position))
+        if star is None:
+            raise ValueError(f"No fixed star at galactic position {position}: fixed stars exist only around the initial star.")
+        return star
+
+    def add_stellar_system(self, star: Star) -> StellarSystem:
+        """The stellar system of a star. The star is given, not generated; a system is only ever added once per cell."""
+        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.star.cell == star.cell), None)
+        if existing is not None:
+            return existing
+        new_system = StellarSystem(self, star, self.saved_alterations)
         self.stellar_systems.append(new_system)
         return new_system

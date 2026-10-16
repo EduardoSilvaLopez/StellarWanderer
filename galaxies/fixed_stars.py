@@ -24,13 +24,12 @@ from galaxies.constants import (
     SECTOR_SIZE,
     SEEDS_SCALING,
 )
-from galaxies.star import Star
+from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 
 REPORT_RADIUS = 40.0  # ly: the radius around the initial star in which the log counts the stars
-MAX_PLACEMENT_TRIES = 50  # attempts to find a free cell for a star before giving up on it
 
 
 def sector_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
@@ -63,24 +62,16 @@ def _poisson(my_random: random.Random, mean: float) -> int:
     return count
 
 
-def _cell_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
-    return (math.floor(position[0]), math.floor(position[1]), math.floor(position[2]))
-
-
 def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int], used_cells: set[tuple[int, int, int]]) -> list[Star]:
     """The random stars of one sector. `used_cells` holds the cells taken so far, in the whole region; it is updated."""
     my_random: random.Random = random.Random(_sector_seed(galaxy_seed, sector))
     origin: tuple[float, float, float] = _sector_origin(sector)
     stars: list[Star] = []
     for _ in range(_poisson(my_random, FIXED_STARS_MEAN_PER_SECTOR)):
-        for _ in range(MAX_PLACEMENT_TRIES):
-            position: tuple[float, float, float] = tuple(c + my_random.random() * SECTOR_SIZE for c in origin)
-            if _cell_of(position) not in used_cells:
-                break
-        else:
-            logger.warning(f"No free cell found in sector {sector}; a star is left out.")
-            continue
-        used_cells.add(_cell_of(position))
+        position: tuple[float, float, float] = tuple(c + my_random.random() * SECTOR_SIZE for c in origin)
+        if cell_of(position) in used_cells:
+            continue # Ok, skip. Not a problem.
+        used_cells.add(cell_of(position))
         stars.append(Star(float(my_random.getrandbits(48)), position))
     return stars
 
@@ -90,7 +81,7 @@ def generate_region(galaxy_seed: float) -> list[Star]:
     initial_star_seed: float = (StellarSystem.seed_of(galaxy_seed, *INITIAL_STAR_POSITION) + 1) % SEEDS_SCALING
     initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION)
     stars: list[Star] = [initial_star]
-    used_cells: set[tuple[int, int, int]] = {_cell_of(INITIAL_STAR_POSITION)}
+    used_cells: set[tuple[int, int, int]] = {cell_of(INITIAL_STAR_POSITION)}
 
     centre: tuple[int, int, int] = sector_of(INITIAL_STAR_POSITION)
     per_sector_counts: list[int] = []
