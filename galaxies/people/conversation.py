@@ -20,7 +20,7 @@ class Conversation:
             return ReportingInOutpost(interlocutor, interlocutor.residency).start()
 
     def __init__(self, interlocutor: Person) -> None:
-        self.interlocutor: Person = interlocutor
+        self.interlocutor: Person = interlocutor.meet()
         self.date_time: datetime = gem.current_environment.date_time
         self.interaction_lines: List[str] = []
 

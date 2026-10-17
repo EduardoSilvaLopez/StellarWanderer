@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import logging
 from common.units import format_compact_distance
 import galaxies.constants
+import knowledge
 from galaxies.body import Body
 from galaxies.km2 import Km2
 from galaxies.rock import Rock
@@ -202,7 +203,17 @@ class World(Body):
         self._generate_orbit_orientation(my_random)  # last: no value drawn above depends on it
 
         self.km2s: List[Km2] = []
+        self._learn()
         self._log_creation()
+
+    def _learn(self) -> None:
+        """Adds this world to the player's knowledge (see knowledge.py): a planet with its (so far empty) moons, a moon in its planet."""
+        system_key: str = self.parent_orbit.parent_stellar_system.get_alterations_key()
+        orbit_key: str = self.parent_orbit.get_alterations_key()
+        if self.parent_planet:
+            knowledge.current_knowledge.learn_moon(system_key, orbit_key, self.parent_planet.get_alterations_key(), self.get_alterations_key())
+        else:
+            knowledge.current_knowledge.learn_planet(system_key, orbit_key, self.get_alterations_key())
 
     def _generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
@@ -301,24 +312,22 @@ class World(Body):
                 f"* Distance from the planet: {format_compact_distance(self.distance_to_parent)}\n"
                 f"* Month: {(self.orbital_period / (24 * 60 * 60)):.2f} Earth days\n"
                 ) if self.parent_planet else (
-                f"* Orbit number {int(self.parent_orbit.number)}\n"
-                f"  * Distance from the star: {self.parent_orbit.distance_from_star/AU:.2f} AU\n"
-                f"  * Year: {(self.orbital_period / (365.2425 * 24 * 60 * 60)):.2f} Earth years\n"
+                f"* Distance from the star: {self.parent_orbit.distance_from_star/AU:.2f} AU\n"
+                f"* Year: {(self.orbital_period / (365.2425 * 24 * 60 * 60)):.2f} Earth years\n"
                 )
         orbit_shape: str = (
                 f"* Eccentricity: {self.eccentricity:.3f}\n"
                 f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
                 )
-        outposts: str = f"* {len(self.outposts)} outposts.\n"
+        outposts:str = ', '.join(f"'{o.name}'" for o in self.outposts.values()) if self.outposts else "None"
         text: str = (
             f"{heading} {kind} {self.name}\n"
             f"{parent_info}"
             f"{orbit_shape}"
-            f"* Seed: {self.seed}\n"
             f"* Radius: {int(self.radius/1000)} Km\n"
             f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
-            f"{outposts}"
             f"* % Ore prevalence: {100*self.ore_prevalence:.2f}%\n"
+            f"* Outposts: {outposts}\n"
             f"\n"
             )
         text += ''.join(moon.almanack() for moon in self.moons)
@@ -332,10 +341,10 @@ class World(Body):
 
         logger.info(f" - Orbit(Index): {int(self.parent_orbit.number)} ({self.index})")
         logger.info(f" - Name: {self.name}, Seed: {self.seed}")
-        logger.info(f" - Distance to parent: {'{:,}'.format(int(self.distance_to_parent))}")
+        logger.info(f" - Distance to parent: {f'{int(self.distance_to_parent):,}'}")
         if not self.parent_planet:
-            logger.info(f" - Farthest stable moon orbit (Hill sphere): {'{:,}'.format(int(self.moon_limit))}")
-        logger.info(f" - Radius: {'{:,}'.format(int(self.radius))}")
+            logger.info(f" - Farthest stable moon orbit (Hill sphere): {f'{int(self.moon_limit):,}'}")
+        logger.info(f" - Radius: {f'{int(self.radius):,}'}")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
 
@@ -362,11 +371,11 @@ class World(Body):
             return None
 
         logger.debug(f"get_alterations() Called for {self.name}.")
-        result: Optional[dict] = dict()
+        result: Optional[dict] = {}
 
         # Km2 objects only exist near the player, so start from the alterations loaded from the
         # savefile (Km2s not in memory must survive the next save), then overlay the live Km2s.
-        km2_alterations: dict = dict()
+        km2_alterations: dict = {}
         if self.saved_alterations is not None and self.saved_alterations.get('Km2s') is not None:
             km2_alterations = copy.deepcopy(self.saved_alterations['Km2s'])
         for km2 in self.km2s:
@@ -377,7 +386,7 @@ class World(Body):
         if km2_alterations:
             result['Km2s'] = km2_alterations
 
-        moon_alterations: dict = dict()
+        moon_alterations: dict = {}
         for moon in self.moons:
             one_moon_alterations: Optional[dict] = moon.get_alterations()
             if one_moon_alterations:
@@ -385,7 +394,7 @@ class World(Body):
         if moon_alterations:
             result['moons'] = moon_alterations
 
-        all_outposts_alterations: dict = dict()
+        all_outposts_alterations: dict = {}
         for alt_key, outpost in self.outposts.items():
             outpost_alterations: Optional[dict] = outpost.get_alterations()
             if outpost_alterations:
@@ -449,8 +458,8 @@ class World(Body):
 
     def get_outpost_for(self, km2: Km2) -> Optional[Outpost]:
         for outpost in self.outposts.values():
-            if int(outpost.longitude // Km2.SIZE) == int(km2.longitude // Km2.SIZE):
-                if int(outpost.latitude // Km2.SIZE) == int(km2.latitude // Km2.SIZE):
+            if int(outpost.longitude // Km2.SIZE) == int(km2.longitude // Km2.SIZE)\
+                 and (outpost.latitude // Km2.SIZE) == int(km2.latitude // Km2.SIZE):
                     return outpost
         return None
 

@@ -91,9 +91,13 @@ class Person:
         self.portrait = self._load_portrait(my_random)
 
         self.interactions: dict = {}
+        # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
+        # (see meet). None until then; a person is in `persons` only from that moment on.
+        self.first_met_at: Optional[str] = None
         if self.seed in gem.current_environment.persons:
             # Apply alterations.
             my_alterations = gem.current_environment.persons[self.seed]
+            self.first_met_at = my_alterations['first_met_at']
             if 'last_communication_at' in my_alterations and my_alterations.get('last_communication_at'):
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
             if 'sympathy' in my_alterations:
@@ -103,8 +107,6 @@ class Person:
                 for dt_str, lines in my_alterations['interactions'].items():
                     dt = datetime.fromisoformat(dt_str)
                     self.interactions[dt] = lines
-        else:
-            gem.current_environment.persons[self.seed] = self.serialize()
 
         self.log_update()
         append_person_almanack(self)
@@ -143,28 +145,33 @@ class Person:
 
         return icon_path
 
-    def _describe(self) -> str:
-        """The person's characteristics, one ' - ' line each: what the log and the almanack show."""
+    def description_fields(self) -> list[tuple[str, str]]:
+        """The person's characteristics as (label, value): what the log, the almanack and the people dialog show. The
+        label is empty for the gender and race, which are shown as a plain line."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
-        result: str = (
-            f" - ID: {self.seed}.\n"
-            f" - {self.gender_group.name.capitalize()}, {self.race.name.capitalize()}\n"
-            f" - D.O.B.: {self.dob.strftime("%Y-%m-%d")} ({age} y.o.)\n"
-            f" - Reputation: {self.reputation:.2f}%\n"
-            f" - Empathy: {self.empathy100:.2f}%\n"
-            f" - Sociability: {self.sociability100:.2f}%\n"
-            f" - Loyalty: {self.loyalty100:.2f}%\n"
-            f" - Sympathy for the player: {self.sympathy100:.2f}%\n"
-        )
+        result: list[tuple[str, str]] = [
+            ('ID', f"{self.seed}."),
+            ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
+            ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({age} y.o.)"),
+            ('Reputation', f"{self.reputation:.2f}%"),
+            ('Empathy', f"{self.empathy100:.2f}%"),
+            ('Sociability', f"{self.sociability100:.2f}%"),
+            ('Loyalty', f"{self.loyalty100:.2f}%"),
+            ('Sympathy for the player', f"{self.sympathy100:.2f}%"),
+        ]
 
         from galaxies.outpost import Outpost
         if isinstance(self.residency, Outpost):
-            residency: str = (
-                f" - Residency: Outpost {self.residency.name}, planet {self.residency.planet.name}"
-                f", {self.residency.planet.parent_orbit.parent_stellar_system.name}\n"
-                )
-            result += residency
+            result.append((
+                'Residency',
+                f"Outpost {self.residency.name}, planet {self.residency.planet.name}"
+                f", {self.residency.planet.parent_orbit.parent_stellar_system.name}"
+            ))
         return result
+
+    def _describe(self) -> str:
+        """The person's characteristics, one ' - ' line each: what the log and the almanack show."""
+        return ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
 
     def log_update(self) -> Person:
         logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{self._describe()}")
@@ -182,7 +189,7 @@ class Person:
             int_date_time.strftime("%Y-%m-%d %H:%M:%S"): int_lines for int_date_time, int_lines in self.interactions.items()
         }
 
-        result: dict = {'seed': self.seed}
+        result: dict = {'seed': self.seed, 'first_met_at': self.first_met_at}
         if self.last_communication_at:
             result['last_communication_at'] = str(self.last_communication_at)
         if self.sympathy_altered:
@@ -191,6 +198,28 @@ class Person:
             result['interactions'] = interactions_dict
 
         return result
+
+    def _place(self) -> str:
+        """Where this person is: their residence with its moon (if any), planet and star system. For now the residence is
+        always an outpost, on a planet; a person with any other residence has no place yet."""
+        from galaxies.outpost import Outpost
+        if not isinstance(self.residency, Outpost):
+            return ''
+        world = self.residency.planet
+        place: str = f"{self.residency.name}, "
+        if world.parent_planet:
+            place += f"moon {world.name}, planet {world.parent_planet.name}"
+        else:
+            place += f"planet {world.name}"
+        return f"{place}, {world.parent_orbit.parent_stellar_system.name}"
+
+    def meet(self) -> Person:
+        """The player talks to this person (a Conversation starts): from now on they are in `persons`, with the place
+        they were first met at, which is written once."""
+        if self.first_met_at is None:
+            self.first_met_at = self._place()
+            gem.current_environment.persons[self.seed] = self.serialize()
+        return self
 
     def get_player_title(self, player: Player) -> str:
         value_adjusted = player.those_who_share.reputation * (self.sympathy100 * 2) / 100

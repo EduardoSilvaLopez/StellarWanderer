@@ -179,18 +179,23 @@ class MessageDialog(Dialog):
         pygame.draw.line(surface, ACCENT, (self.MARGIN, self.divider_y), (self.WIDTH - self.MARGIN, self.divider_y), 2)
         pygame.draw.line(surface, ACCENT_DIM, (self.MARGIN, self.divider_y + 3), (self.WIDTH - self.MARGIN, self.divider_y + 3), 1)
 
-        font = body_font(self.BODY_SIZE)
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)
+        self._draw_content(surface)
+        surface.set_clip(previous_clip)
+
+        self._draw_scroll_bar(surface)
+        self._draw_buttons(surface)
+
+    def _draw_content(self, surface: pygame.Surface) -> None:
+        """The scrolled content, in the text area (the clip is already set to it). A subclass with other content (see
+        knowledge_dialogs.py) replaces this and _layout_text, and keeps the rest."""
+        font = body_font(self.BODY_SIZE)
         for text, y in self.lines:
             line_y = self.text_rect.top + y - self.scroll
             if line_y + font.get_linesize() < self.text_rect.top or line_y > self.text_rect.bottom:
                 continue
             surface.blit(font.render(text, True, TEXT_COLOR), (self.text_rect.left, line_y))
-        surface.set_clip(previous_clip)
-
-        self._draw_scroll_bar(surface)
-        self._draw_buttons(surface)
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
         outer = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)

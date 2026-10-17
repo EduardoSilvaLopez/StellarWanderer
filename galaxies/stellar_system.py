@@ -5,6 +5,7 @@ import logging
 import math
 import random
 import galaxies.constants
+import knowledge
 from common.units import format_compact_distance
 from galaxies.body import Body
 from galaxies.star import Star
@@ -30,6 +31,7 @@ class StellarSystem:
         self.star: Star = star  # the system's star, as a body ships can navigate to
         self.star.attach_to(self)
         self.name: str = self.star.name + " System"
+        knowledge.current_knowledge.learn_system(self.get_alterations_key())
 
         self.is_altered: bool = False
         self.saved_alterations: Optional[dict] = None
@@ -87,7 +89,7 @@ class StellarSystem:
         text += self.star.almanack()
         AU: float = 1.496e11  # m. The almanack is for players: AU, like the planets' entries.
         text += "### Orbits\n" + ''.join(
-            f"* Orbit {int(orbit.number)}: {orbit.kind.value}, {orbit.distance_from_star / AU:.2f} AU\n"
+            f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"
             for orbit in self.orbits
         )
         text += ''.join(planet.almanack() for orbit in self.orbits for planet in orbit.planets)

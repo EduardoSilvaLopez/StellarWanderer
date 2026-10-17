@@ -41,12 +41,13 @@ def generate_default(self) -> None:
 **Module Map**:
 - `main.py`: entry point, game loop, window setup, starting and loading games
 - `game_environment.py`: Galaxy + current world (module-level `current_environment`)
+- `knowledge.py`: the keys of the stellar bodies generated so far (module-level `current_knowledge`), saved at the root of the savefile
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
 - `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star
 - `graphics/`: OpenGL rendering and the instruments
 - `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the fixed body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `common/`: shared code, used by every layer (it is not a strict layer: `savefile.py` and `dialogs/starting_dialog.py` know the game)
-  - `dialogs/`: modal dialogs and their message texts
+  - `dialogs/`: modal dialogs and their message texts; `knowledge_dialogs.py` shows the known systems and the people met (opened by the two buttons of `graphics/instruments/cockpit_buttons.py`)
   - `game_logging/`: logging and the galaxy almanack
   - `savefile.py`: save and load (Savefile)
   - `updating.py`: time-based updates (UpdateQueue, Updatable)
@@ -82,6 +83,6 @@ def generate_default(self) -> None:
 
 - Set `PYTHONPYCACHEPREFIX` (to the session scratchpad) when running Python, so no `__pycache__` folders appear beside the sources. `main.py` sets `sys.pycache_prefix` to `temp/pycache` itself.
 - Run headless with `SDL_VIDEODRIVER=dummy`, and `PYTHONIOENCODING=utf-8` when printing `Δ`, `°` or other non-ASCII text (the console is cp1252).
-- Start a game with `main.start_game('new', seed)`; load a save read-only with `common.savefile.Savefile.load_from_file(path)`. Changing the ship's state in memory (`player.ship.position`, `velocity`, `attitude`) is fine for a test; never call `Savefile.save()` in a test.
+- Start a game with `main.start_game('new', seed)`; load a save read-only with `common.savefile.Savefile.load_from_file(path)`. Changing the ship's state in memory (`player.ship.position`, `velocity`, `attitude`) is fine for a test. A test may save (`Savefile.save()`, which refuses to replace a save of the same name; never `save_as` with an existing name), as long as it overwrites no existing file. The new file becomes the latest save (what F6 loads), so delete that one file, and only it, when the test is done.
 - Render to a `pygame.Surface` and save the PNG to the session scratchpad, then view it with Read. Compare pixel colours with `get_at` for visibility checks.
 - The GL pass (`Rocks.draw`, `OpenGLGui.draw`) needs a real window: say so when it is untested.

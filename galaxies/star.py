@@ -246,21 +246,18 @@ class Star(Body):
     def almanack(self) -> str:
         '''Markdown almanack of the star: its astronomical data. The luminosity and gravity are estimated from the
         radius, mass and temperature.'''
-        AU: float = 1.496e11  # m
         GRAVITATIONAL_CONSTANT: float = 6.674e-11  # m^3 kg^-1 s^-2
         gravity: float = GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2
         equatorial_speed: float = 2 * math.pi * self.radius / self.rotation_period
         return (
             f"### Star {self.name}\n"
             f"* Type: {self.type.value}\n"
-            f"* Seed: {self.seed}\n"
             f"* Effective temperature: {self.temperature:.0f} K\n"
             f"* Mass: {self.mass:.3e} kg\n"
             f"* Radius: {self.radius:.3e} m ({int(self.radius / 1000)} Km)\n"
             f"* Surface gravity: {gravity:.1f} m/s²\n"
             f"* Luminosity: {self.luminosity:.3e} W\n"
             f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed {equatorial_speed / 1000:.1f} Km/s\n"
-            f"* Heat radius: {self.heat_radius / AU:.3f} AU, death radius: {self.death_radius / AU:.4f} AU\n"
             f"\n"
             )
 

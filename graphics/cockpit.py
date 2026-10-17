@@ -8,6 +8,7 @@ from .instruments.canopy import Canopy
 from .instruments.console import Console
 from .instruments.clock import Clock
 from .instruments.crosshair import Crosshair
+from .instruments.cockpit_buttons import CockpitButtons
 from .instruments.political_info import PoliticalInfo
 from .object_labels import ObjectLabels
 from .target_marker import TargetMarker
@@ -39,6 +40,6 @@ class Cockpit:
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)
         TargetMarker.draw(surface, w, h, gem.current_environment, player.ship)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
-        PoliticalInfo.draw(surface, fonts, w, h, player)
+        CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h, player))
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)

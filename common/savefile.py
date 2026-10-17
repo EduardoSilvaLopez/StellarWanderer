@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 
 import game_environment as gem
+import knowledge
 import galaxies.people.player as pem
 from common.paths import data_path, SAVEFILES_DIR
 
@@ -53,6 +54,8 @@ class Savefile:
         with open(filepath, 'r', encoding='utf-8') as f:
             load_object = json.load(f)
 
+        # Before the environment: the systems it generates add to the knowledge.
+        knowledge.current_knowledge = knowledge.Knowledge.deserialize(load_object['knowledge'])
         game_date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
         # JSON keys are text; the people are looked up by their float seed.
         people_alterations = {float(seed): values for seed, values in load_object['environment']['persons'].items()}
@@ -148,6 +151,7 @@ class Savefile:
                 'persons': persons_dict
             }
             , 'player': player.serialize()
+            , 'knowledge': knowledge.current_knowledge.serialize()
         }
         os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
         file_path = data_path(SAVEFILES_DIR, name + '.json')

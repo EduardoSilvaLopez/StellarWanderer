@@ -37,18 +37,19 @@ class PoliticalInfo:
         return top_inset + (bottom_inset - top_inset) * fraction
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> None:
-        """Draw political entity info in the top-left hull area, under the canopy's top rail."""
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> int:
+        """Draw political entity info in the top-left hull area, under the canopy's top rail. Returns the y of the
+        bottom of what it drew (where the cockpit buttons start)."""
         import game_environment as gem
 
         stellar_system = gem.current_environment.targeted_body.stellar_system
         entity = stellar_system.political_entity
 
-        if entity is None:
-            return
-
         x = PoliticalInfo.PADDING_X
         y = int(h * CANOPY_TOP) + PoliticalInfo.PADDING_Y
+
+        if entity is None:
+            return y
 
         # Name: as large as fits the hull width at the top of the text (the pillar
         # only narrows slightly over the text's own height, so this is a safe bound).
@@ -56,12 +57,12 @@ class PoliticalInfo:
         text_surface = fonts.render_to_fit(entity.name, entity.color, max(1, int(max_text_width)), PoliticalInfo.MAX_FONT_SIZE)
         surface.blit(text_surface, (x, y))
 
+        icon_y = y + text_surface.get_height() + PoliticalInfo.GAP
         if entity.icon is None:
-            return
+            return icon_y
 
         # Icon: the largest square that still fits the hull width at its own
         # bottom edge, the narrowest point of its vertical span.
-        icon_y = y + text_surface.get_height() + PoliticalInfo.GAP
         icon_size = PoliticalInfo.MAX_ICON_SIZE
         while icon_size > PoliticalInfo.MIN_ICON_SIZE:
             available = PoliticalInfo._hull_edge_x(icon_y + icon_size, w, h) - x - PoliticalInfo.EDGE_MARGIN
@@ -71,3 +72,4 @@ class PoliticalInfo:
 
         scaled_icon = pygame.transform.scale(entity.icon, (icon_size, icon_size))
         surface.blit(scaled_icon, (x, icon_y))
+        return icon_y + icon_size

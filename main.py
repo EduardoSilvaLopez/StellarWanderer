@@ -30,13 +30,15 @@ import logging
 from common.game_logging import configure_logging, write_almanack_async
 from graphics.font_cache import FontCache
 import game_environment as gem
+import knowledge
 import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
-    Dialog, DialogResult, Message, MessageDialog, StartingDialog, confirm, next_pending_message, run_in_window,
-    show_message
+    Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, PeopleDialog, StartingDialog, confirm,
+    next_pending_message, run_in_window, show_message
 )
 from graphics.opengl_gui import OpenGLGui
+from graphics.instruments.cockpit_buttons import SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
 from common.updating import update_queue
 
@@ -97,6 +99,7 @@ def start_game(action: str, value: object) -> float:
         elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
     else:
         logger.info(f"New game with seed: {value}")
+        knowledge.current_knowledge = knowledge.Knowledge()  # before the environment: its systems add to it
         gem.current_environment = gem.GameEnvironment(value, EPOCH, None, None)
         gem.current_environment.generate_default()
 
@@ -293,6 +296,10 @@ def main() -> None:
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and CockpitButtons.hit(event.pos) is not None:
+                dialog = KnownSystemsDialog() if CockpitButtons.hit(event.pos) == SYSTEMS else PeopleDialog()
+                result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
+                running = result[0] != 'exit'
             elif event.type == pygame.MOUSEWHEEL:
                 if player_module.current_player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it

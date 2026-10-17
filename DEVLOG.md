@@ -185,10 +185,12 @@ RELEASE "The Three Powers" created, with installer.
   * Less ore in the initial super-moon.
   * Rock colors a bit brighter.
 
-Extra time: 58h30' + 13:30 - 15:15
+Extra time: 58h30' + 13:30 - 15:15 + 17:45 - 
 
 * MISSIONS
-  * 
+  * In-game almanacks (saving systems known even if unchanged)
+  * Eliminate file almanacks.
+  * When next level: offer in show_message to check new button (missions)
 
 # BACKLOG
 * ASTEROIDS (II)

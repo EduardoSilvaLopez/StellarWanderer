@@ -37,6 +37,7 @@ class Outpost(Updatable):
 
     STAFF_AGE_MIN = 25
     STAFF_AGE_MAX = 60
+    STAFF_SIZE = 4  # three shifts and a substitute
 
     def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
@@ -73,18 +74,28 @@ class Outpost(Updatable):
         logger.info(f"- Seed {self.seed}")
         return self
 
+    def staff_member(self, index: int) -> Person:
+        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute. His or her seed is the
+        outpost's plus the index."""
+        last = index == self.STAFF_SIZE - 1
+        return Person(self.seed + index, self, 4 if last else 5,
+                      self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+
+    def person_with_seed(self, seed: float) -> Optional[Person]:
+        """The staff member of this outpost with that seed, or None if the seed is not one of its staff. Created again
+        when the staff has not been prepared (nobody has visited the outpost in this session)."""
+        for index in range(self.STAFF_SIZE):
+            if self.seed + index == seed:
+                return self.staff[index] if self.staff else self.staff_member(index)
+        return None
+
     def prepare(self) -> Outpost:
         ''' Prepare for visit.'''
         if self.saved_alterations and 'last_visited' in self.saved_alterations:
             self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
 
         if not self.staff:
-            self.staff = [
-                Person(self.seed + 0, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
-                Person(self.seed + 1, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
-                Person(self.seed + 2, self, 5, self.STAFF_AGE_MIN, self.STAFF_AGE_MAX),
-                Person(self.seed + 3, self, 4, self.STAFF_AGE_MIN - 2, self.STAFF_AGE_MAX)
-            ]
+            self.staff = [self.staff_member(index) for index in range(self.STAFF_SIZE)]
         shift = gem.current_environment.date_time.hour // 8
         if self.my_random.random() < self.free_days:
             self.com_officer = self.staff[3]

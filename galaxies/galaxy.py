@@ -76,6 +76,15 @@ class Galaxy():
             ]
         return self._fixed_star_positions
 
+    def system_of_key(self, key: str) -> Optional[StellarSystem]:
+        """The stellar system with that alterations key (its star's cell, "26010 10 10"), generated if it was not yet.
+        None if no fixed star is there."""
+        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.get_alterations_key() == key), None)
+        if existing is not None:
+            return existing
+        star: Optional[Star] = self.fixed_stars.get(tuple(int(c) for c in key.split()))
+        return self.add_stellar_system(star) if star is not None else None
+
     def add_stellar_system(self, star: Star) -> StellarSystem:
         """The stellar system of a star. The star is given, not generated; a system is only ever added once per cell."""
         existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.star.cell == star.cell), None)
