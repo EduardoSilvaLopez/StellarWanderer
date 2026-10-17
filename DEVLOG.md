@@ -185,7 +185,7 @@ RELEASE "The Three Powers" created, with installer.
   * Less ore in the initial super-moon.
   * Rock colors a bit brighter.
 
-Extra time: 58h30' + 13:30 -
+Extra time: 58h30' + 13:30 - 15:15
 
 # BACKLOG
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
@@ -193,6 +193,9 @@ Extra time: 58h30' + 13:30 -
   * Outpost gives coordinates as prize?
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Open: Ages of people still too similar?
+
+In-Game almanack... must be saved, part of the save file.
+
 * OROGRAPHY
   * Craters
   * Terrain elevation / sinkage.
