@@ -48,7 +48,7 @@ class Radar:
         """Stellar-frame position, dot colour and dot radius of the star and of every world in its system.
         Moons get a different colour and a smaller dot than planets."""
         import game_environment as gem
-        system = gem.current_environment.nearest_body.stellar_system
+        system = gem.current_environment.targeted_body.stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
             (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS)
         ]

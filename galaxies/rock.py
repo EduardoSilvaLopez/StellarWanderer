@@ -20,7 +20,8 @@ class Rock(Updatable):
     TEMP_RISE_RATE = 500.0  # Temp. raise for a 1 square cube rock in 1 second.
     BASE_COOLING_PERIOD = 60 * 60  # Once per hour.
     COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX = 2000.0  # Boom.
+    TEMP_MAX_MU = 7.3 # Gives around 2000
+    TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
 
     def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
@@ -39,6 +40,7 @@ class Rock(Updatable):
         self.initial_color: tuple = self._calculate_initial_color(my_random)
         # Seed of the rock's irregular shape (graphics/rock_shape.py). Drawn last, so every value above is as before.
         self.shape_seed: int = my_random.getrandbits(32)
+        self.max_temperature: float = my_random.lognormvariate(Rock.TEMP_MAX_MU, Rock.TEMP_MAX_SIGMA)
         self.temperature: float = 0.0
         self._adjust_color()
 
@@ -162,9 +164,9 @@ class Rock(Updatable):
             base_g = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
             base_b = 32 + my_random.randint(0, 8)
         else:
-            base_r = 96 + my_random.randint(0, 32)
-            base_g = 96 + my_random.randint(0, 32)
-            base_b = 80 + my_random.randint(0, 32)
+            base_r = 104 + my_random.randint(0, 32)
+            base_g = 104 + my_random.randint(0, 32)
+            base_b = 88 + my_random.randint(0, 32)
 
         return (base_r, base_g, base_b)
 
@@ -177,7 +179,7 @@ class Rock(Updatable):
         delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
         self.temperature += delta_temp
 
-        if self.temperature >= Rock.TEMP_MAX:
+        if self.temperature >= self.max_temperature:
             self.temperature = 0.0
             self.parent_km2.melt_rock(self)
             return

@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import pygame
 from .deep_space import DeepSpace
-from .nearest_world import NearestWorld
+from .fixed_world import FixedWorld
 from .cockpit import Cockpit
 from .constants import SPACE_COLOR
 
@@ -43,7 +43,7 @@ class Gui:
 
         # Draw space and celestial objects
         DeepSpace.draw(surface, w, h)
-        NearestWorld.draw(surface, w, h, environment, player.ship)
+        FixedWorld.draw(surface, w, h, environment, player.ship)
 
         # Draw cockpit frame and instruments
         Cockpit.draw(surface, fonts, w, h, player, environment.date_time, player.time_scale)

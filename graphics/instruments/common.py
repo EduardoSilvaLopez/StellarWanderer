@@ -41,7 +41,7 @@ def view_geometry(h: int, horizon_fraction: float = 0.5) -> Tuple[int, int, floa
     """(view_h, horizon_y, focal_length_px) for a view of window height h.
 
     horizon_fraction places the horizon within view_h; 0.5 is used by
-    draw_surface, ObjectLabels and the sun (star_gl). NearestWorld.draw_rocks/
+    draw_surface, ObjectLabels and the sun (star_gl). FixedWorld.draw_rocks/
     draw_ore_fields pass 0.52 instead — kept as a parameter so either
     value is preserved without forcing a behavior change.
     """

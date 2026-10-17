@@ -17,6 +17,9 @@ class OreFields:
     """Render textured ore fields on the ground."""
 
     ORE_FIELD_HEIGHT = 0.05  # Small offset above the ground to avoid z-fighting.
+    # The texture's paper background is not pure white (it runs from about 224 to 255 grey): every grey at or above this
+    # is fully transparent, or the whole quad would show as a faint lighter square.
+    TEXTURE_CLEAR_GRAY = 224
     _ore_field_texture_id: Optional[int] = None
 
     @staticmethod
@@ -87,9 +90,9 @@ class OreFields:
         """Load and process the ore field texture from the resource file.
 
         The texture is processed to convert grayscale intensity to alpha:
-        - White (255) becomes fully transparent (alpha 0)
+        - Grays at or above TEXTURE_CLEAR_GRAY become fully transparent (alpha 0), the paper background included
         - Black (0) becomes fully opaque (alpha 255)
-        - Gray values map proportionally
+        - Grays below it map proportionally
         """
         texture_path = resource_path("textures", "ore_field.png")
         # Load image (will be RGB or RGBA)
@@ -109,9 +112,9 @@ class OreFields:
             r = img_data[i]
             g = img_data[i + 1]
             b = img_data[i + 2]
-            # Convert RGB to grayscale, then invert for alpha
+            # Convert RGB to grayscale, then invert for alpha, with the paper background cut to zero
             grayscale = int(0.299 * r + 0.587 * g + 0.114 * b)
-            alpha = 255 - grayscale
+            alpha = max(0, OreFields.TEXTURE_CLEAR_GRAY - grayscale) * 255 // OreFields.TEXTURE_CLEAR_GRAY
             result_pixels.extend([r, g, b, alpha])
 
         # Create surface from the processed pixel data

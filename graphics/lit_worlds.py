@@ -22,9 +22,9 @@ class LitWorlds:
     treated as parallel). Cost depends on the size of the disc on screen, not on the world.
 
     Every world drawn in the sky (planets and moons) is lit this way. Worlds too small to see are drawn as a small
-    lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, including the nearest one
-    (`draw_nearest`). While bound, every world except the nearest is lit; the nearest is the disc below the horizon,
-    lit by the sun like the ground (`NearestWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
+    lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, including the targeted one
+    (`draw_targeted`). While bound, every world except the targeted one is lit; the targeted one is the disc below the horizon,
+    lit by the sun like the ground (`FixedWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
 
     @staticmethod
     def light_tint(star_color: Tuple[int, int, int]) -> Tuple[float, float, float]:
@@ -144,9 +144,9 @@ class LitWorlds:
         surface.blit(layer, (x0, y0), area=pygame.Rect(0, 0, box_w, box_h))
 
     @staticmethod
-    def draw_nearest(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        """The nearest body, lit by the star (used while unbound). The star is not drawn here: the OpenGL pass draws it (star_gl.py)."""
-        body = environment.nearest_body
+    def draw_targeted(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
+        """The targeted body, lit by the star (used while unbound). The star is not drawn here: the OpenGL pass draws it (star_gl.py)."""
+        body = environment.targeted_body
         if not body.is_world:
             return
         star = body.stellar_system.star  # Can be the body.

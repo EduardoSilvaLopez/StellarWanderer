@@ -29,7 +29,8 @@ class MessageDialog(Dialog):
     Look: a textured panel (common/resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
     (common/resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
     not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines when they
-    are long. One or more buttons, side by side when they fit, otherwise stacked."""
+    are long. The buttons are stacked, one above the other, each as wide as the text area: the first at the top. A scroll
+    bar (a thumb only, no box) sits in the right margin beside the text when the text does not fit."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -38,12 +39,13 @@ class MessageDialog(Dialog):
     BODY_SIZE = BODY_FONT_SIZE
     LINE_SPACING = 1.35
     PARAGRAPH_GAP = 12
-    BUTTON_MIN_WIDTH = 220
     BUTTON_HEIGHT = 40
     BUTTON_PADDING = 20  # each side of the label
     BUTTON_PADDING_Y = 4  # above and below the label's lines
-    BUTTON_TEXT_WIDTH = 300  # a button label wraps to lines no wider than this
     BUTTON_GAP = 14
+    SCROLLBAR_GAP = 10  # between the text area and the scroll bar
+    SCROLLBAR_WIDTH = 4
+    SCROLLBAR_MIN_THUMB = 24
 
     def __init__(self, message: Message) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
@@ -71,38 +73,27 @@ class MessageDialog(Dialog):
     # ---- layout ----
 
     def _button_lines(self, label: str) -> List[str]:
-        """The label, uppercase and wrapped to BUTTON_TEXT_WIDTH, as lines to draw."""
-        return self.wrap(label.upper(), body_font(self.BODY_SIZE), self.BUTTON_TEXT_WIDTH)
+        """The label, uppercase and wrapped to the button's width less its padding, as lines to draw."""
+        return self.wrap(label.upper(), body_font(self.BODY_SIZE), self._button_width - 2 * self.BUTTON_PADDING)
+
+    @property
+    def _button_width(self) -> int:
+        return self.WIDTH - 2 * self.MARGIN
 
     def _layout_buttons(self) -> List[pygame.Rect]:
-        """One rectangle per button, sized to its wrapped label. Side by side, centred, when they fit the width;
-        otherwise stacked with the same width, the last one at the bottom."""
-        available = self.WIDTH - 2 * self.MARGIN
+        """One rectangle per button, stacked and each as wide as the text area; the first at the top, the last at the
+        bottom. A button grows taller only when its label wraps."""
         font = body_font(self.BODY_SIZE)
         self._button_texts: List[List[str]] = [self._button_lines(label) for label in self.message.buttons]
-        sizes: List[Tuple[int, int]] = []
-        for lines in self._button_texts:
-            text_width = max(font.size(line)[0] for line in lines)
-            width = min(available, max(self.BUTTON_MIN_WIDTH, text_width + 2 * self.BUTTON_PADDING))
-            height = max(self.BUTTON_HEIGHT, font.get_linesize() * len(lines) + 2 * self.BUTTON_PADDING_Y)
-            sizes.append((width, height))
-        count = len(sizes)
-        bottom = self.HEIGHT - self.MARGIN + 6
+        heights = [
+            max(self.BUTTON_HEIGHT, font.get_linesize() * len(lines) + 2 * self.BUTTON_PADDING_Y)
+            for lines in self._button_texts
+        ]
         rects: List[pygame.Rect] = []
-
-        row_width = sum(width for width, _ in sizes) + self.BUTTON_GAP * (count - 1)
-        if row_width <= available:
-            x = (self.WIDTH - row_width) // 2
-            for width, height in sizes:
-                rects.append(pygame.Rect(x, bottom - height, width, height))
-                x += width + self.BUTTON_GAP
-        else:
-            stack_width = max(width for width, _ in sizes)
-            rects = [pygame.Rect(0, 0, stack_width, height) for _, height in sizes]
-            y = bottom
-            for rect in reversed(rects):
-                rect.midbottom = (self.WIDTH // 2, y)
-                y -= rect.height + self.BUTTON_GAP
+        y = self.HEIGHT - self.MARGIN + 6  # the bottom edge of the last button
+        for height in reversed(heights):
+            rects.insert(0, pygame.Rect(self.MARGIN, y - height, self._button_width, height))
+            y -= height + self.BUTTON_GAP
         return rects
 
     def _render_title(self) -> pygame.Surface:
@@ -198,7 +189,7 @@ class MessageDialog(Dialog):
             surface.blit(font.render(text, True, TEXT_COLOR), (self.text_rect.left, line_y))
         surface.set_clip(previous_clip)
 
-        self._draw_scroll_indicators(surface)
+        self._draw_scroll_bar(surface)
         self._draw_buttons(surface)
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
@@ -211,16 +202,17 @@ class MessageDialog(Dialog):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx + sx * bracket, cy), 3)
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
 
-    def _draw_scroll_indicators(self, surface: pygame.Surface) -> None:
+    def _draw_scroll_bar(self, surface: pygame.Surface) -> None:
+        """A thumb in the right margin, beside the text: as long as the visible share of the text, and at the place the
+        scroll has reached. Drawn only when the text does not fit. No box: it stays clear of the buttons below."""
         if self._max_scroll <= 0:
             return
-        x = self.text_rect.right + 12
-        if self.scroll > 0:
-            top = self.text_rect.top + 4
-            pygame.draw.polygon(surface, ACCENT, [(x, top), (x - 7, top + 10), (x + 7, top + 10)])
-        if self.scroll < self._max_scroll:
-            bottom = self.text_rect.bottom - 4
-            pygame.draw.polygon(surface, ACCENT, [(x, bottom), (x - 7, bottom - 10), (x + 7, bottom - 10)])
+        track_height = self.text_rect.height
+        thumb_height = max(self.SCROLLBAR_MIN_THUMB, track_height * self.text_rect.height // self.content_height)
+        thumb_travel = track_height - thumb_height
+        thumb_top = self.text_rect.top + thumb_travel * self.scroll // self._max_scroll
+        x = self.text_rect.right + self.SCROLLBAR_GAP
+        pygame.draw.rect(surface, ACCENT, (x, thumb_top, self.SCROLLBAR_WIDTH, thumb_height))
 
     def _draw_buttons(self, surface: pygame.Surface) -> None:
         font = body_font(self.BODY_SIZE)

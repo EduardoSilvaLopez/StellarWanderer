@@ -17,7 +17,7 @@ from .starlight import Starlight, HeatVignette, FrostVignette
 from .debug_fps import DebugFps
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
-from .nearest_world import NearestWorld
+from .fixed_world import FixedWorld
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
@@ -37,7 +37,7 @@ class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
     The sun is drawn in OpenGL, under the sky: the sky (DeepSpace, the fixed stars, the worlds farther than the sun, a hole
-    where the sun is, the worlds nearer than the sun, the nearest body) is an RGBA texture with per-pixel alpha, so the sun shows through
+    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha, so the sun shows through
     the hole, and the glare goes over the sky. See graphics/star_gl.py. The
     SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
@@ -77,9 +77,9 @@ class OpenGLGui:
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
         if light is not None:
-            NearestWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
+            FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
         else:
-            LitWorlds.draw_nearest(self.world_surface, width, height, environment, ship)
+            LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
         OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
 
         self.overlay_surface.fill((0, 0, 0, 0))
@@ -111,7 +111,7 @@ class OpenGLGui:
         if light is not None:
             Rocks.draw(
                 width, height, ship,
-                RockBatches.visible_km2s(environment.nearest_world, ship.position.x, ship.position.z),
+                RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z),
                 self._ore_fields(environment, ship),
                 self._ore_mines(environment, ship),
                 self._outposts(environment, ship),
@@ -125,7 +125,7 @@ class OpenGLGui:
 
     def _ore_fields(self, environment: GameEnvironment, ship: Ship) -> List[OreField]:
         ore_fields: List[OreField] = []
-        for km2 in environment.nearest_world.km2s:
+        for km2 in environment.fixed_world.km2s:
             if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
                 km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
                 ore_fields.extend(km2.ore_fields)
@@ -133,7 +133,7 @@ class OpenGLGui:
 
     def _ore_mines(self, environment: GameEnvironment, ship: Ship) -> List[OreMine]:
         mines: List[OreMine] = []
-        for km2 in environment.nearest_world.km2s:
+        for km2 in environment.fixed_world.km2s:
             if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
                 km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
                 for ore_field in km2.ore_fields:
@@ -141,11 +141,11 @@ class OpenGLGui:
         return mines
 
     def _outposts(self, environment: GameEnvironment, ship: Ship) -> List[Outpost]:
-        """Outposts of the nearest world (planets only) within draw distance of the ship.
+        """Outposts of the fixed world (planets only) within draw distance of the ship.
 
         Taken from the world's own outposts, not from loaded Km2s, so they do not appear and disappear with
         the Km2 loading around the ship."""
-        world = environment.nearest_world
+        world = environment.fixed_world
         if world.parent_planet is not None or not world.outposts:
             return []
         return [

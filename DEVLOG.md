@@ -177,22 +177,40 @@ RELEASE "The Three Powers" created, with installer.
   * Phase 5: Show the fixed stars in the sky
   * Extra: Bug search in all
 
-Extra time: 46h15' + 5:30- 11:30 + 14:00 - 16:30 + 17:30 - 19:15 + 19:45
-
-# BACKLOG
+Extra time: 58h30' + 
 * ASTEROIDS
   * Targeted body, not nearest body.
-  * 
+  * Small reogranisation of data subdirectory.
+  * Mines cannot be placed too far near from each other.
+  * "Target" control created to match "in no fixed zone" (no body is near enough to trigger coordinate change)
+  * Less ore in the initial super-moon.
+  * Rock colors a bit brighter.
+
+# BACKLOG
+  * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
+  * Place one in initial system, not too far away.
+  * Outpost gives coordinates as prize?
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Open: Ages of people still too similar?
+* OROGRAPHY
+  * Craters
+  * Terrain elevation / sinkage.
+  * Mountains.
+* JOVIAN PLANETS (with forbidden area)
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
-* https://github.com/obra/superpowers#how-it-works
-* JOVIAN PLANETS (with forbidden area)
 * AI PERSONALITY?
+* ATMOSPHERE
+  * Even suggestions of life?
+* CIVILISATION:
+  * Bigger outposts.
+  * Cities in unterraformed planets.
+  * Inhabited asteroids.
 * SPHERIC WORLD MAP FOR TERRESTRIAL PLANETS
-* REST
+* SMALL TASKS
   * Getting energy from the star when near enough.
+* ON QUOTA OR HALLUCIONATION PROBLEMS:
+  * https://github.com/obra/superpowers#how-it-works
 
 ### Learning Python:
 

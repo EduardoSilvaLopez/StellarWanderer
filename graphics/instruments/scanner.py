@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 
-# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, dark red, gray, blue).
-TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192))
+# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, dark red, gray, cyan, blue).
+TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192), (32, 32, 255))
 
 
 class Scanner:
@@ -86,7 +86,7 @@ class Scanner:
     def _temperature_color(temperature: float) -> Tuple[int, int, int]:
         """The colour for a rock temperature above 0: one of TEMPERATURE_COLORS, by quarters of Rock.TEMP_MAX."""
         from galaxies.rock import Rock
-        quarter = int(temperature / Rock.TEMP_MAX * len(TEMPERATURE_COLORS))
+        quarter = int(temperature / Rock.TEMP_MAX_MU * len(TEMPERATURE_COLORS))
         return TEMPERATURE_COLORS[min(len(TEMPERATURE_COLORS) - 1, max(0, quarter))]
 
     @staticmethod

@@ -17,7 +17,8 @@ from .message_dialog import MessageDialog
 INSTRUCTIONS: List[Tuple[str, List[str]]] = [
     ("Worlds", [
         "Fly close to a planet or moon to 'bind' to its surface. Fly away from it to 'unbind'.",
-        "When the appoximation bar title is green - the coordinates change. Use brake to align with the body's movement.",
+        "When the proximity meter's title is green (FIXED) - the coordinates change. Use brake to align with the body's movement.",
+        "Outside every fixed zone, the meter reads TARGET: Tab and Shift+Tab move the target through the bodies in order of distance.",
         "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look around.",
         "The scanner shows what is in the crosshair. Hold Space to activate it (whichever that means in context).",
     ]),

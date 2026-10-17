@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 import pygame
 
-from common.game_logging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_logs
+from common.game_logging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_almanack
 from galaxies.politics import political_entity
 import game_environment as gem
 from common.paths import resource_path
@@ -174,7 +174,7 @@ class Person:
         """Markdown entry for the people's almanack: name, portrait (if any) and characteristics."""
         image = ''
         if self.portrait:
-            image = f'<img src="{relative_path_from_logs(self.portrait)}" width="{ALMANACK_IMAGE_WIDTH}">\n\n'
+            image = f'<img src="{relative_path_from_almanack(self.portrait)}" width="{ALMANACK_IMAGE_WIDTH}">\n\n'
         return f"# {self.get_full_name()}\n\n{image}{self._describe()}\n"
 
     def serialize(self) -> dict:

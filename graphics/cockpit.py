@@ -10,6 +10,7 @@ from .instruments.clock import Clock
 from .instruments.crosshair import Crosshair
 from .instruments.political_info import PoliticalInfo
 from .object_labels import ObjectLabels
+from .target_marker import TargetMarker
 from .velocity_markers import VelocityMarkers
 
 if TYPE_CHECKING:
@@ -36,6 +37,7 @@ class Cockpit:
         Canopy.draw(surface, w, h)
         Crosshair.draw(surface, w, h)
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)
+        TargetMarker.draw(surface, w, h, gem.current_environment, player.ship)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
         PoliticalInfo.draw(surface, fonts, w, h, player)
         Console.draw(surface, fonts, w, h, player.ship, date_time)

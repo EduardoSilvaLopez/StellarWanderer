@@ -102,7 +102,7 @@ class WorldMap:
             date_time: Current in-game date/time, for local year/day progress
         """
         import game_environment as gem
-        world = gem.current_environment.nearest_world
+        world = gem.current_environment.fixed_world
         radius = world.radius
 
         # The header's height sets where the map starts; the header itself is drawn once the zoom is known.

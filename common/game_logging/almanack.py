@@ -1,4 +1,4 @@
-"""Writes the almanacks in the Logs folder (temp/Logs from source): the galaxy's (almanack.galaxy.md, at game start or load) and the people's
+"""Writes the almanacks in the data folder (data/ from source): the galaxy's (almanack.galaxy.md, at game start or load) and the people's
 (almanack.people.md, blank at game start or load, then one entry per person as each is created).
 
 The text is always built in the calling thread, from the objects as they are now (cheap, no I/O), so the
@@ -11,7 +11,7 @@ import os
 import queue
 import threading
 
-from .constants import LOG_DIR, ALMANACK_FILE_NAME, ALMANACK_PEOPLE_FILE_NAME
+from .constants import ALMANACK_FILE_NAME, ALMANACK_PEOPLE_FILE_NAME
 from common.paths import data_path
 
 if TYPE_CHECKING:
@@ -38,8 +38,8 @@ def _work() -> None:
     while True:
         file_name, text, append = _jobs.get()
         try:
-            os.makedirs(data_path(LOG_DIR), exist_ok=True)
-            with open(data_path(LOG_DIR, file_name), 'a' if append else 'w', encoding='utf-8') as file:
+            os.makedirs(data_path(), exist_ok=True)
+            with open(data_path(file_name), 'a' if append else 'w', encoding='utf-8') as file:
                 file.write(text)
         except Exception:
             pass
@@ -71,7 +71,7 @@ def append_person_almanack(person: Person) -> None:
         pass
 
 
-def relative_path_from_logs(path: str) -> str:
-    """`path` as seen from the Logs folder, with forward slashes, for the links in the almanacks."""
-    relative = os.path.relpath(os.path.abspath(path), os.path.abspath(data_path(LOG_DIR)))
+def relative_path_from_almanack(path: str) -> str:
+    """`path` as seen from the data folder (where the almanacks are), with forward slashes, for the links in them."""
+    relative = os.path.relpath(os.path.abspath(path), os.path.abspath(data_path()))
     return relative.replace(os.sep, '/')

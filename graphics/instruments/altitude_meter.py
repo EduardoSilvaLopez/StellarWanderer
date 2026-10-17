@@ -1,5 +1,5 @@
 """Altitude meter: the altitude above the surface of the world the ship is bound to, shown while bound.
-While unbound, the BindingMeter is shown in its place."""
+While unbound, the ProximityMeter is shown in its place."""
 
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
@@ -24,7 +24,7 @@ class AltitudeMeter:
 
         import game_environment as gem
         from spaceships.navigation import Navigation
-        world = gem.current_environment.nearest_world
+        world = gem.current_environment.fixed_world
         # Meter spans from surface (altitude=0) to unbinding altitude
         unbinding_altitude = world.radius * (Navigation.UNBIND_RADIUS_MULTIPLE - 1.0)
         altitude_fraction = ship.position.y / unbinding_altitude if unbinding_altitude > 0 else 0

@@ -39,7 +39,7 @@ def generate_default(self) -> None:
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
 - `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to
 - `graphics/`: OpenGL rendering and the instruments
-- `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the nearest body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
+- `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the fixed body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `common/`: shared code, used by every layer (it is not a strict layer: `savefile.py` and `dialogs/starting_dialog.py` know the game)
   - `dialogs/`: modal dialogs and their message texts
   - `game_logging/`: logging and the galaxy almanack
@@ -49,7 +49,7 @@ def generate_default(self) -> None:
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
 - `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the outpost texture generator
-- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `temp/` holds `pycache`, `Logs`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
+- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs, and the almanacks sit at the root of `data/`. `temp/` holds `pycache`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
 
 ## Rules the code does not show
 
@@ -65,7 +65,7 @@ def generate_default(self) -> None:
 
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - No external config files: settings are module-level constants (e.g., `common/game_logging/constants.py`)..
-- Saves and logs are written through `paths.data_path`: `data/Savefiles` and `temp/Logs` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`.
+- Saves, logs and almanacks are written through `paths.data_path`: `data/` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`.
 
 ## Working Policies (for Claude)
 

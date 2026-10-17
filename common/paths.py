@@ -1,4 +1,4 @@
-"""Where the game's files are: the writable data (saves and logs) and the read-only resources."""
+"""Where the game's files are: the writable data (saves, logs and almanacks) and the read-only resources."""
 
 import os
 import sys
@@ -9,17 +9,13 @@ LOGS_DIR = 'Logs'
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # the project folder, in a source run
 
-# In a source run the saves (the player's progress) are in data/ and the logs (disposable) in temp/, both below the
-# project folder, whatever the current directory is.
-_SOURCE_BASES = {SAVEFILES_DIR: 'data', LOGS_DIR: 'temp'}
-
 
 def data_path(*parts: str) -> str:
     '''Returns a path inside the writable data folder.
 
     A packaged build (PyInstaller sets sys.frozen) keeps its data in %LOCALAPPDATA%\\StellarWanderer,
-    because the install folder is read-only for normal users. A source run keeps the saves in data/ and the logs in
-    temp/, below the project folder.
+    because the install folder is read-only for normal users. A source run keeps it in data/, below the project
+    folder, whatever the current directory is.
 
     Args:
         parts: Folder and file names inside the data folder, e.g. ('Savefiles', 'my save.json')
@@ -29,7 +25,7 @@ def data_path(*parts: str) -> str:
     if getattr(sys, 'frozen', False):
         base = os.environ.get('LOCALAPPDATA') or os.path.expanduser('~')
         return os.path.join(base, APP_NAME, *parts)
-    return os.path.join(ROOT, _SOURCE_BASES.get(parts[0] if parts else '', 'data'), *parts)
+    return os.path.join(ROOT, 'data', *parts)
 
 
 def resource_path(*parts: str) -> str:

@@ -71,19 +71,23 @@ class Savefile:
             galaxy.fixed_star_at((system_data['x'], system_data['y'], system_data['z']))
             )
         from galaxies.orbit import Orbit
-        if player_data['orbit'] is None:  # the star was the nearest body
-            gem.current_environment.nearest_body = gem.current_environment.nearest_system.star
+        if player_data['orbit'] is None:  # the star was the last fixed body
+            body = gem.current_environment.nearest_system.star
         else:
             current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
             planet_idx: int = player_data['planet']
             moon_idx: int = player_data['moon']
             if moon_idx is None:
-                gem.current_environment.nearest_body = current_orbit.planets[planet_idx]
+                body = current_orbit.planets[planet_idx]
             else:
-                gem.current_environment.nearest_body = current_orbit.planets[planet_idx].moons[moon_idx]
+                body = current_orbit.planets[planet_idx].moons[moon_idx]
+        # The target is not saved: it starts as the body the ship was last fixed to. A bound ship is fixed to its world;
+        # an unbound one is fixed only if it is in a fixed zone, which the next frame works out (refresh_fixed_body).
+        gem.current_environment.targeted_body = gem.current_environment.last_fixed_body = body
+        gem.current_environment.fixed_body = body if player_data['ship']['is_bound'] else None
 
         position_data: dict = player_data['ship']['position']
-        world = gem.current_environment.nearest_world  # None for the star: no surroundings to load
+        world = gem.current_environment.fixed_world  # None for the star: no surroundings to load
         if world is not None:
             world.update_surroundings(position_data['y'], position_data['x'], position_data['z'], game_date_time)
 

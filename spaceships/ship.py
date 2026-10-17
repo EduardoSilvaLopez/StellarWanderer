@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 import math
 
 import logging
@@ -42,6 +42,8 @@ class Ship(Updatable):
     ANGULAR_BRAKE = 20.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
+    MINE_SPACING_MULTIPLE = 10  # a new mine must stand this many mine radii (OreMine.MINE_RADIUS) away from every loaded mine
+    MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
 
@@ -70,10 +72,10 @@ class Ship(Updatable):
         self.update(gem.current_environment.date_time)
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Ship:
-        """Place the ship, bound, in the first place found on the nearest world."""
+        """Place the ship, bound, in the first place found on the fixed world."""
         self.is_bound = True
-        environment.nearest_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
-        central_km2 = next(km2 for km2 in environment.nearest_world.km2s if km2.longitude == 0 and km2.latitude == 0)
+        environment.fixed_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
+        central_km2 = next(km2 for km2 in environment.fixed_world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = central_km2.longitude + 500
         self.position.y = Ship.HEIGHT
@@ -88,7 +90,7 @@ class Ship(Updatable):
         result.velocity = Velocity.deserialize(src['velocity'])
         result.attitude = Attitude.load(result, src['attitude'])
         if result.is_bound:
-            result.position.km2 = gem.current_environment.nearest_world.get_km2_at(result.position.x, result.position.z)
+            result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
         if 'last_update_at' in src:
             result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
         if 'maintenance' in src:
@@ -152,7 +154,9 @@ class Ship(Updatable):
         self.energy -= 1e5 * days
 
         if self.is_bound:
-            self.temperature = Ship.TEMP_DEFAULT
+            hours = days * 24 # Duh
+            temp_diff: float = (Ship.TEMP_DEFAULT - self.temperature) * (1 - 0.9**hours)
+            self.temperature += temp_diff # Stabilizing.
         else:
             dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
             if dist < gem.current_environment.nearest_system.star.heat_radius:
@@ -205,14 +209,40 @@ class Ship(Updatable):
 
         return self
 
+    def _mine_spot(self) -> Tuple[float, float]:
+        '''Where a mine placed now would stand: FRONT_DISTANCE metres ahead of the ship, on the ground, along its yaw.'''
+        radians = math.radians(self.attitude.yaw)
+        return (
+            self.position.x + Ship.MINE_FRONT_DISTANCE * math.sin(radians),
+            self.position.z + Ship.MINE_FRONT_DISTANCE * math.cos(radians),
+        )
+
+    def _mine_too_near(self) -> bool:
+        '''True if an ore mine already placed stands within MINE_SPACING_MULTIPLE mine radii of the spot where a new one
+        would go (see _mine_spot).
+
+        Only the loaded Km2s are searched. Every mine within that distance lies in the loaded area around the ship, so
+        none is missed, and this needs no search of the whole world.'''
+        spot_lon, spot_lat = self._mine_spot()
+        spacing = Ship.MINE_SPACING_MULTIPLE * OreMine.MINE_RADIUS
+        for km2 in gem.current_environment.fixed_world.km2s:
+            for ore_field in km2.ore_fields:
+                for mine in ore_field.mines:
+                    if math.hypot(mine.longitude - spot_lon, mine.latitude - spot_lat) < spacing:
+                        return True
+        return False
+
     def set_mine_pressed(self) -> None:
         '''React to the "place mine" button.'''
-        # Cancel is no mine.
+        # Check conditions.
         if self.cargo_hold.mines <= 0:
             self.notification.set("No mines available.")
             return
         if not self.is_bound:
             self.notification.set("Mines can only be placed on a world.")
+            return
+        if self._mine_too_near():
+            self.notification.set("Mines cannot be placed so near each other.")
             return
 
         # Check if rocks nearby.
@@ -222,7 +252,7 @@ class Ship(Updatable):
         from galaxies.km2 import Km2
         relevant_km2s: List[Km2] = list()
         import game_environment as gem
-        world = gem.current_environment.nearest_world
+        world = gem.current_environment.fixed_world
         for km2 in world.km2s:
             if ((km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude
                     and (1 + km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude):
@@ -254,10 +284,7 @@ class Ship(Updatable):
             return
 
         # Cancel if no ore field.
-        front_distance = 50
-        radians = math.radians(player_yaw)
-        front_lon = player_lon + front_distance * math.sin(radians)
-        front_lat = player_lat + front_distance * math.cos(radians)
+        front_lon, front_lat = self._mine_spot()
         targeted_field: OreField = None
         closest_distance = float('inf')
         for km2 in relevant_km2s:

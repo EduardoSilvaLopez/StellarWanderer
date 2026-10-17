@@ -16,7 +16,7 @@ from .cargo import Cargo
 from .resource_bars import ResourceBars
 from .notification import notification_bar
 from .altitude_meter import AltitudeMeter
-from .binding_meter import BindingMeter
+from .proximity_meter import ProximityMeter
 from .radar import Radar
 
 if TYPE_CHECKING:
@@ -27,8 +27,9 @@ class Console:
     """Draw instrument panel below the windshield with all component displays.
 
     The left cluster shows one of two meters, chosen by `Ship.is_bound`: the AltitudeMeter while bound (ALT), the
-    BindingMeter while unbound (NEAREST). The location readouts show yaw, pitch and roll as angle plus rate (Δ,
-    deg/s); see Player for their meaning."""
+    ProximityMeter while unbound (FIXED or TARGET). The position box (name and coordinates) is relative to the fixed body
+    while fixed, else to the star: its name is the system's alone when it is the star. Pitch and roll use the same body.
+    Yaw, pitch and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, date_time: datetime) -> None:
@@ -64,7 +65,7 @@ class Console:
         if ship.is_bound:
             AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
         else:
-            BindingMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
+            ProximityMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
         Console._draw_location_info(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
 
         bar_w = int(w * 0.028)
@@ -130,13 +131,16 @@ class Console:
         coord_x = cluster_left + bar_w + int(w * 0.03)
         world_y = cluster_top - 40
 
-        # World and system labels
+        # The box follows the fixed body while the ship is fixed, else the star: its positions are in the star's frame and
+        # its name is the system's. The target is not shown here (see ProximityMeter).
         import game_environment as gem
-        nearest_body = gem.current_environment.nearest_body
-        stellar_system = nearest_body.stellar_system
-        world_name = nearest_body.name
-        system_name = stellar_system.name
-        stellar_label = world_name + ", " + system_name
+        environment = gem.current_environment
+        reference = environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
+        stellar_system = reference.stellar_system
+        if reference.is_world:
+            stellar_label = reference.name + ", " + stellar_system.name
+        else:  # the star: only the system name, as the star has the same name
+            stellar_label = stellar_system.name
         world_text = world_font.render(stellar_label, True, ACCENT)
         surface.blit(world_text, (coord_x, world_y))
 
@@ -166,7 +170,7 @@ class Console:
             surface.blit(line_text, (coord_x, coord_y))
             coord_y += line_spacing
 
-        body = gem.current_environment.nearest_body
+        body = reference  # pitch and roll: relative to the same body as the position box
         date_time = gem.current_environment.date_time
         attitude_lines = (
             f'Yaw: {int(ship.attitude.yaw)}° Δ {int(ship.attitude.yaw_rate)}',

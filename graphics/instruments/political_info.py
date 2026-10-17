@@ -41,7 +41,7 @@ class PoliticalInfo:
         """Draw political entity info in the top-left hull area, under the canopy's top rail."""
         import game_environment as gem
 
-        stellar_system = gem.current_environment.nearest_body.stellar_system
+        stellar_system = gem.current_environment.targeted_body.stellar_system
         entity = stellar_system.political_entity
 
         if entity is None:

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from galaxies.ore_fields import OreField
 
 
-class NearestWorld:
+class FixedWorld:
     """Renders the planet surface and rocks visible from the cockpit."""
 
     ROCK_DEPTH_PERSPECTIVE = 0.5
@@ -32,18 +32,18 @@ class NearestWorld:
             environment: Game environment with current world
             ship: Ship object with position
         """
-        NearestWorld.draw_surface(surface, w, h, environment, ship, PLANET_GRAY)
+        FixedWorld.draw_surface(surface, w, h, environment, ship, PLANET_GRAY)
 
         # Find the Km2 to be drawn, poviding they exist.
         rocks = []
         ore_fields = []
-        for km2 in environment.nearest_world.km2s:
+        for km2 in environment.fixed_world.km2s:
             if (km2.longitude - km2.SIZE*2 <= ship.position.x < km2.longitude + km2.SIZE*2 and
                 km2.latitude - km2.SIZE*2 <= ship.position.z < km2.latitude + km2.SIZE*2):
                 rocks.extend(km2.rocks)
                 ore_fields.extend(km2.ore_fields)
-        NearestWorld.draw_ore_fields(surface, w, h, ship, ore_fields, environment)
-        NearestWorld.draw_rocks(surface, w, h, ship, rocks, environment)
+        FixedWorld.draw_ore_fields(surface, w, h, ship, ore_fields, environment)
+        FixedWorld.draw_rocks(surface, w, h, ship, rocks, environment)
 
     @staticmethod
     def draw_surface(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship,
@@ -57,14 +57,14 @@ class NearestWorld:
         is the angular radius and f the focal length.
         """
         view_h, centre_y, focal_length_px = view_geometry(h)
-        world_radius = environment.nearest_world.radius
-        distance_to_center = world_radius + ship.navigation.altitude_above_surface(environment.nearest_world)
+        world_radius = environment.fixed_world.radius
+        distance_to_center = world_radius + ship.navigation.altitude_above_surface(environment.fixed_world)
 
         sin_angular = min(world_radius / distance_to_center, 0.9999)
         cos_angular = math.sqrt(1.0 - sin_angular * sin_angular)
 
         down_right, down_up, down_forward = ship.attitude.camera_components(
-            ship.navigation.direction_down(environment.nearest_world, environment.date_time)
+            ship.navigation.direction_down(environment.fixed_world, environment.date_time)
         )
         nadir_x, nadir_y, nadir_z = down_right, -down_up, down_forward
 
@@ -165,10 +165,10 @@ class NearestWorld:
         sin_yaw = math.sin(yaw)
         cos_yaw = math.cos(yaw)
 
-        depth_factor = NearestWorld.ROCK_DEPTH_PERSPECTIVE
+        depth_factor = FixedWorld.ROCK_DEPTH_PERSPECTIVE
 
         def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
-            return NearestWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
+            return FixedWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
 
         # Gather rocks with their near-face depth, for far-to-near draw order.
         visible_rocks = []
@@ -181,7 +181,7 @@ class NearestWorld:
                 camera_coordinates(rock.longitude + half, rock.latitude + half)[1],
             ]
             z0 = min(near_depths)
-            if z0 <= NEAR_CLIP or z0 > environment.nearest_world.SURROUNDINGS_RADIUS:
+            if z0 <= NEAR_CLIP or z0 > environment.fixed_world.SURROUNDINGS_RADIUS:
                 continue
             visible_rocks.append((z0, rock, half))
 
@@ -203,7 +203,7 @@ class NearestWorld:
                 for iy, cy in ((0, cy0), (1, cy1)):
                     for iz, world_z in ((0, z0_world), (1, z1_world)):
                         corner_cx, corner_cz = camera_coordinates(world_x, world_z)
-                        corners[(ix, iy, iz)] = NearestWorld._project_bound(
+                        corners[(ix, iy, iz)] = FixedWorld._project_bound(
                             corner_cx, cy, corner_cz, w, horizon_y, focal_length_px,
                             horizontal_depth=center_depth, depth_factor=depth_factor
                         )
@@ -270,16 +270,16 @@ class NearestWorld:
         cos_yaw = math.cos(yaw)
 
         def project(cx: float, cy: float, cz: float) -> Tuple[float, float]:
-            return NearestWorld._project_bound(cx, cy, cz, w, horizon_y, focal_length_px)
+            return FixedWorld._project_bound(cx, cy, cz, w, horizon_y, focal_length_px)
 
         def camera_coordinates(world_x: float, world_z: float) -> Tuple[float, float]:
-            return NearestWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
+            return FixedWorld._camera_coordinates(world_x, world_z, player_x, player_z, sin_yaw, cos_yaw)
 
         # Gather ore fields with their center depth, for far-to-near draw order.
         visible_fields = []
         for ore_field in ore_fields:
             center_cx, center_cz = camera_coordinates(ore_field.longitude, ore_field.latitude)
-            if center_cz <= NEAR_CLIP or center_cz > environment.nearest_world.SURROUNDINGS_RADIUS:
+            if center_cz <= NEAR_CLIP or center_cz > environment.fixed_world.SURROUNDINGS_RADIUS:
                 continue
             visible_fields.append((center_cz, ore_field, center_cx, center_cz))
 

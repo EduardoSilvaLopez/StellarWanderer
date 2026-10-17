@@ -35,7 +35,7 @@ class Player:
         return self
 
     def serialize(self) -> dict:
-        body = gem.current_environment.nearest_body
+        body = gem.current_environment.last_fixed_body  # the body the ship is around, even when it is outside every fixed zone
         system = body.stellar_system
         if not body.is_world:  # the star: it has no orbit, planet or moon
             orbit_number = planet_index = moon_index = None

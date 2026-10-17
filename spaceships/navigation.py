@@ -19,16 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 class Navigation:
-    """Position and velocity updates and everything measured against the nearest body (`GameEnvironment.nearest_body`:
-    a world or the star).
+    """Position and velocity updates and everything measured against the fixed body (`GameEnvironment.fixed_body`:
+    a world or the star, or None outside every fixed zone).
 
-    Braking (S) decelerates linear velocity on all three axes. While unbound it is relative to the star, except
-    inside the braking zone (BRAKING_RADIUS_MULTIPLE radii from the nearest body's centre), where it is relative to
-    that body (the star is at rest, so near it the two are the same).
+    The fixed zone is the sphere of FIXED_ZONE_RADIUS_MULTIPLE radii around a body's centre. The fixed body is the
+    nearest body whose fixed zone holds the ship (see `GameEnvironment.refresh_fixed_body`). Being fixed is what makes
+    the ship's coordinates and braking relative to that body: while unbound, the position is always the star's frame,
+    and braking is relative to the fixed body only inside its fixed zone (the star is at rest, so near it the two are
+    the same). Outside every fixed zone, the body the instruments show is `GameEnvironment.targeted_body` instead.
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
-    BRAKING_RADIUS_MULTIPLE radii from the centre. Only a world can be bound to: the star is never bound to (the
+    FIXED_ZONE_RADIUS_MULTIPLE radii from the centre. Only a world can be bound to: the star is never bound to (the
     ship is not expected to get that near), however close the ship is to it.
 
     `_bind_to` and `_unbind_from` are deliberately asymmetric: `_bind_to` snaps the ship level (yaw only; pitch and
@@ -39,7 +41,7 @@ class Navigation:
 
     BIND_RADIUS_MULTIPLE = 1.1  # bind at or inside this distance from the world's centre, in radii
     UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
-    BRAKING_RADIUS_MULTIPLE = 10  # braking/markers use the body's velocity inside this distance, in radii
+    FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     COLLISION_BRAKE_FRACTION = 0.5  # share of BRAKE_ACC assumed available when judging a collision
 
     def __init__(self, ship: Ship) -> None:
@@ -79,7 +81,7 @@ class Navigation:
         """Vector from the ship to a stellar-frame point, in the active frame: surface east/up/north while bound."""
         if not self.ship.is_bound:
             return point - self.ship.position.as_vector()
-        world = gem.current_environment.nearest_world
+        world = gem.current_environment.fixed_world
         basis = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         ship_position = self._stellar_position_from_surface(world, world.calculate_stellar_position(current_datetime), basis)
         relative = point - ship_position
@@ -91,7 +93,7 @@ class Navigation:
         """The ship's position in the stellar frame, whether bound or not."""
         if not self.ship.is_bound:
             return self.ship.position.as_vector()
-        world = gem.current_environment.nearest_world
+        world = gem.current_environment.fixed_world
         basis = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         return self._stellar_position_from_surface(world, world.calculate_stellar_position(current_datetime), basis)
     # endregion
@@ -111,16 +113,16 @@ class Navigation:
 
         environment = gem.current_environment
         if not ship.is_bound:
-            environment.refresh_nearest_body(ship.position.as_vector())
-        body = environment.nearest_body
+            environment.refresh_fixed_body(ship.position.as_vector())
+        body = environment.fixed_body  # None outside every fixed zone: then there is nothing to bind to
         if ship.is_bound and ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
             self._unbind_from(body)
-        elif (not ship.is_bound and body.is_world  # the star is never bound to
+        elif (not ship.is_bound and body is not None and body.is_world  # the star is never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
 
         if ship.is_bound:
-            world = environment.nearest_world
+            world = environment.fixed_world
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
             if km2 is None or km2 != ship.position.km2:
                 world.update_surroundings(ship.position.y, ship.position.x, ship.position.z, environment.date_time)
@@ -163,7 +165,7 @@ class Navigation:
         if not ship.is_bound:
             return
 
-        half_turn = math.pi * gem.current_environment.nearest_world.radius  # half the equator
+        half_turn = math.pi * gem.current_environment.fixed_world.radius  # half the equator
         if ship.position.x < -half_turn:  # crossing the anti-meridian
             ship.position.x += half_turn * 2
         elif ship.position.x > half_turn:
@@ -274,14 +276,14 @@ class Navigation:
             return self.ship.position.y
         return self.distance_to_body_centre(body) - body.radius
 
-    def in_braking_zone(self, body: Body) -> bool:
-        return not self.ship.is_bound and self.distance_to_body_centre(body) < Navigation.BRAKING_RADIUS_MULTIPLE * body.radius
+    def in_fixed_zone(self, body: Body) -> bool:
+        return not self.ship.is_bound and self.distance_to_body_centre(body) < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius
 
     def velocity_reference_frame(self) -> Vector3:
-        """The velocity that braking (S) and the prograde/retrograde markers are measured against: the nearest
-        body's inside the braking zone, otherwise the star's (zero)."""
-        body = gem.current_environment.nearest_body
-        if not self.in_braking_zone(body):
+        """The velocity that braking (S) and the prograde/retrograde markers are measured against: the fixed body's
+        inside its fixed zone, otherwise the star's (zero)."""
+        body = gem.current_environment.fixed_body
+        if body is None or not self.in_fixed_zone(body):
             return Vector3(0.0, 0.0, 0.0)
         return body.calculate_stellar_velocity(gem.current_environment.date_time)
 

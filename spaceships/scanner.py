@@ -69,10 +69,7 @@ class Scanner:
 
         # Unbound, the beam is stored relative to the ship. Bound, it is in surface coordinates and starts above
         # the ship's position, where forward is horizontal and up is vertical.
-        if ship.is_bound:
-            origin = (ship.position.x, ship.position.y, ship.position.z)
-        else:
-            origin = (0.0, 0.0, 0.0)
+        origin = (ship.position.x, ship.position.y, ship.position.z) if ship.is_bound else (0.0, 0.0, 0.0)
 
         # Start just below and ahead of the camera (5 m ahead, so the camera's own geometry is not hit).
         self.start_x, self.start_y, self.start_z = (
@@ -95,7 +92,7 @@ class Scanner:
             return
 
         import game_environment as gem
-        hit = self._closest_hit(gem.current_environment.nearest_world)
+        hit = self._closest_hit(gem.current_environment.fixed_world)
         if hit is None:
             return
         self.target, t = hit

@@ -110,9 +110,9 @@ def start_game(action: str, value: object) -> float:
     player = player_module.current_player
     player.ship.notification.set(f"Welcome, {player.get_title()} Pilot.")
     if action == 'new':
-        nearest_world = gem.current_environment.nearest_world
-        planet = nearest_world.parent_planet.name
-        moon = nearest_world.name
+        fixed_world = gem.current_environment.fixed_world
+        planet = fixed_world.parent_planet.name
+        moon = fixed_world.name
         show_message(Message(
             title=f"Welcome, {player.get_title()} Pilot!",
             text=(
@@ -287,6 +287,9 @@ def main() -> None:
                     Savefile.load_last()
                     write_almanack_async(gem.current_environment.galaxy)
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
+                elif event.key == pygame.K_TAB:  # cycles the target (only outside every fixed zone); Shift+Tab goes back
+                    step = -1 if event.mod & pygame.KMOD_SHIFT else 1
+                    gem.current_environment.cycle_targeted_body(step, player_module.current_player.ship.position.as_vector())
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()

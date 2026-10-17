@@ -1,4 +1,4 @@
-"""Sunlight on the surface of the nearest world while bound: the brightness of a surface facing any way, from
+"""Sunlight on the surface of the fixed world while bound: the brightness of a surface facing any way, from
 the direction of the star. Computed on the CPU once per frame and applied to vertex colours, so no OpenGL
 lighting state is needed. The light is the cosine between the surface normal and the direction to the star,
 with WORLD_AMBIENT_LIGHT still visible on the unlit side, as for worlds in the sky (see LitWorlds).
@@ -34,7 +34,7 @@ class SurfaceLight:
     @staticmethod
     def of(ship: Ship, environment: GameEnvironment) -> SurfaceLight:
         """The sun as seen from `ship`, which must be bound (the surface frame is only defined then)."""
-        world = environment.nearest_world
+        world = environment.fixed_world
         sun = ship.navigation.direction_to_star(world, environment.date_time).normalized()
         star = world.parent_orbit.parent_stellar_system.star
         return SurfaceLight(sun, LitWorlds.light_tint(star.color))

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class ObjectLabels:
     """Render name and distance labels for visible objects (star and all worlds in the stellar system).
 
-    Outposts of planets within BRAKING_RADIUS_MULTIPLE radii of the ship get a label with name and distance, bound
+    Outposts of planets within FIXED_ZONE_RADIUS_MULTIPLE radii of the ship get a label with name and distance, bound
     and unbound. Their position is the sphere geometry (`Navigation.direction_to_point`) in both frames, so a label sits
     where the outpost really is. The sky dot for an outpost (OutpostMarkers) is drawn in the sky while unbound, and
     while bound on the surface in this overlay, so the 3D ground does not hide it. Outposts on the far side of their
@@ -34,7 +34,7 @@ class ObjectLabels:
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: FontCache, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        """Draw labels: outposts in braking distance (bound and unbound), and the star and all worlds
+        """Draw labels: outposts in the fixed zone (bound and unbound), and the star and all worlds
         while unbound.
 
         A moon's label is skipped when it would overlap its planet's label.
@@ -44,10 +44,10 @@ class ObjectLabels:
         _, horizon_y, focal_length_px = view_geometry(h)
         label_font = fonts.get(max(9, int(h * 0.017)))
 
-        # Outposts in braking distance: label with name and distance, also when they are behind their planet.
+        # Outposts in the fixed zone: label with name and distance, also when they are behind their planet.
         # The sphere geometry is used in both frames, so the label sits where the outpost really is.
         from .outpost_markers import OutpostMarkers
-        for outpost, point, visible in OutpostMarkers.in_braking_distance(environment, ship):
+        for outpost, point, visible in OutpostMarkers.in_fixed_zone(environment, ship):
             vector = ship.navigation.direction_to_point(point, environment.date_time)
             projected = project_to_camera(ship, vector, w, horizon_y, focal_length_px)
             if projected is None:
@@ -65,7 +65,7 @@ class ObjectLabels:
         if ship.is_bound:
             return
 
-        body = environment.nearest_body
+        body = environment.targeted_body
         system = body.stellar_system
 
         # Draw star label

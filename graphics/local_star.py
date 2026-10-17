@@ -85,9 +85,9 @@ def star_rgba(width: int, height: int, centre_x: float, centre_y: float, disc_px
 
 
 def view_of(environment: GameEnvironment, ship: Ship, width: int, height: int) -> Optional[StarView]:
-    """Where the nearest body's star is on the screen, or None when it is not in front of the ship."""
+    """Where the targeted body's star is on the screen, or None when it is not in front of the ship."""
     from graphics.instruments.common import view_geometry, project_to_camera
-    body = environment.nearest_body
+    body = environment.targeted_body
     star = body.stellar_system.star
     star_vector = ship.navigation.direction_to_star(body, environment.date_time)
     _, horizon_y, focal_length_px = view_geometry(height)
