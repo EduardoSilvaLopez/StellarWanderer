@@ -203,15 +203,7 @@ class Person:
         """Where this person is: their residence with its moon (if any), planet and star system. For now the residence is
         always an outpost, on a planet; a person with any other residence has no place yet."""
         from galaxies.outpost import Outpost
-        if not isinstance(self.residency, Outpost):
-            return ''
-        world = self.residency.planet
-        place: str = f"{self.residency.name}, "
-        if world.parent_planet:
-            place += f"moon {world.name}, planet {world.parent_planet.name}"
-        else:
-            place += f"planet {world.name}"
-        return f"{place}, {world.parent_orbit.parent_stellar_system.name}"
+        return self.residency.place() if isinstance(self.residency, Outpost) else ''
 
     def meet(self) -> Person:
         """The player talks to this person (a Conversation starts): from now on they are in `persons`, with the place

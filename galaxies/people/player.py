@@ -1,7 +1,10 @@
 from __future__ import annotations
 import logging
 
+from typing import List
+
 from common.dialogs.messages import Message, show_message
+from galaxies.missions import Mission
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from spaceships.ship import Ship
@@ -26,6 +29,7 @@ class Player:
         self.ship: Ship = Ship(self)
         self.credits: int = 0
         self.those_who_share: PersonalStatus = PersonalStatus()
+        self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
@@ -56,6 +60,7 @@ class Player:
             'moon': moon_index,
             'ship': self.ship.serialize(),
             'credits': self.credits,
+            'missions': [mission.serialize() for mission in self.missions],
             'political_status': {
                 'Those-Who-Share': self.those_who_share.serialize()
             }
@@ -68,6 +73,9 @@ class Player:
         if 'credits' in loaded_attributes:
             result.credits = loaded_attributes['credits']
 
+        result.missions = [Mission.deserialize(mission) for mission in loaded_attributes['missions']]
+        for mission in result.missions:
+            mission.watch_deadline()
         result.ship = Ship.load(result, loaded_attributes['ship'])
 
         for entity_name, values in loaded_attributes['political_status'].items():

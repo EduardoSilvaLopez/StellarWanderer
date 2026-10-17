@@ -41,6 +41,7 @@ def generate_default(self) -> None:
 **Module Map**:
 - `main.py`: entry point, game loop, window setup, starting and loading games
 - `game_environment.py`: Galaxy + current world (module-level `current_environment`)
+- `galaxies/missions.py`, `galaxies/mission_board.py`: what the outposts ask of the pilot (Numpad 5 with an outpost in the scanner, reputation 10 or more); the taken ones are in `Player.missions`
 - `knowledge.py`: the keys of the stellar bodies generated so far (module-level `current_knowledge`), saved at the root of the savefile
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
 - `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star

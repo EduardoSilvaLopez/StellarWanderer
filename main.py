@@ -37,6 +37,7 @@ from common.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, PeopleDialog, StartingDialog, confirm,
     next_pending_message, run_in_window, show_message
 )
+from galaxies.mission_board import MissionBoard
 from graphics.opengl_gui import OpenGLGui
 from graphics.instruments.cockpit_buttons import SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
@@ -283,6 +284,10 @@ def main() -> None:
                     player_module.current_player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:
                     player_module.current_player.decrease_time_scale()
+                elif event.key == pygame.K_KP5:  # the message board of the outpost in the scanner
+                    outpost = player_module.current_player.ship.scanner.targeted_outpost
+                    if outpost is not None and MissionBoard.is_available(player_module.current_player):
+                        outpost.open_mission_board()
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:

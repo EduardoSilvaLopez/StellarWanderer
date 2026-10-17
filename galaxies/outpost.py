@@ -3,7 +3,7 @@ import random
 import math
 import logging
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from common.updating import update_queue
 from common.updating import Updatable
@@ -13,6 +13,9 @@ import game_environment as gem
 import galaxies.constants
 from galaxies.world import World
 from galaxies.people.person import Person
+
+if TYPE_CHECKING:
+    from galaxies.missions import Mission
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +154,40 @@ class Outpost(Updatable):
 
     def _generate_name(self, my_random: random.Random) -> str:
         return self.planet.parent_orbit.parent_stellar_system.political_entity.generate_outpost_name(my_random)
+
+    def reference(self) -> str:
+        """A text that identifies this outpost in the whole galaxy: its system, orbit, planet and own key."""
+        orbit = self.planet.parent_orbit
+        return '|'.join((orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key(),
+                         self.planet.get_alterations_key(), self.get_alteration_key()))
+
+    def place(self) -> str:
+        """Where this outpost is, for the player: its name, its world (a planet, or a moon with its planet) and its
+        stellar system, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"."""
+        world = self.planet
+        place: str = f"{self.name}, "
+        if world.parent_planet:
+            place += f"moon {world.name}, planet {world.parent_planet.name}"
+        else:
+            place += f"planet {world.name}"
+        return f"{place}, {world.parent_orbit.parent_stellar_system.name}"
+
+    def generate_missions(self, now: datetime) -> List[Mission]:
+        """The missions this outpost offers when its board is opened at `now`: none is saved, and they do not depend on
+        what the player has taken, done or failed. How many, and of which kinds, depends on the time since `last_visited`
+        (None before the first visit) and `now`. The draws are made from a seed of the outpost and `now`."""
+        from galaxies.missions import DeliverOre
+        my_random = random.Random(f"missions {self.seed} {now.isoformat()}")
+        return [DeliverOre.generate(self, my_random)]  # placeholder: to be decided
+
+    def open_mission_board(self) -> Outpost:
+        """The player opens the message board (see mission_board.py): a visit, not a conversation."""
+        from galaxies.mission_board import MissionBoard
+        now = gem.current_environment.date_time
+        missions = self.generate_missions(now)  # first: it needs the previous visit
+        self._set_last_visited(now)
+        MissionBoard(self, missions).open()
+        return self
 
     def communicate(self) -> Outpost:
         import game_environment as gem

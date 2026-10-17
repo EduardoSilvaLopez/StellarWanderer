@@ -30,15 +30,15 @@ class ReportingInOutpost(Conversation):
         return player_module.current_player
 
     def start(self) -> None:
-        visit_time_delta: Optional[float] = None if not self.outpost.last_visited\
-            else (self.date_time - self.outpost.last_visited).total_seconds()
+        visit_time_delta: Optional[float] = None if not self.interlocutor.last_communication_at\
+            else (self.date_time - self.interlocutor.last_communication_at).total_seconds()
 
         if self.player.ship.cargo_hold.ore > 0:
             self._greet_and_thank()
         elif visit_time_delta is None or visit_time_delta > 60 * 60:
             self._greet_and_warn()
         elif visit_time_delta >= 0:
-            self._greet_why_back()
+            self._greet_tell_me()
         else:
             logger.error(f"visit_time_delta = {visit_time_delta}")
             self.close([])
@@ -309,11 +309,11 @@ class ReportingInOutpost(Conversation):
             on_result=lambda button_index: self._finish_operations(button_index, buttons)
             )
 
-    def _greet_why_back(self) -> None:
+    def _greet_tell_me(self) -> None:
         subjective_title = self.interlocutor.get_player_title(self.player)
 
         # Prepare the text:
-        text: str = f"\n\nDo you want something, {subjective_title}?"
+        text: str = f"\n\nIs there something else, {subjective_title}?"
 
         # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
         buttons = [
@@ -531,7 +531,7 @@ class ReportingInOutpost(Conversation):
             # Prepare the message:
             text: str = (
                 f"We have spoken about you and we think we can trust you to do something more than collect ore." \
-                f"\n\nAnytime you want, check the mission board, our ledger."
+                f"\n\nAnytime you want, check the mission board of our outposts [Numpad 5]."
                 f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
                 )
 
