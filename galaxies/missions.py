@@ -13,6 +13,7 @@ FAILED, the ship says so, and `fail` runs. The queue is emptied on every new gam
 the OPEN missions back. DeliverOre is the first kind: bring some ore to the outpost that asked for it."""
 
 from __future__ import annotations
+from abc import abstractmethod
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Dict, Optional, Type
 import random
@@ -86,23 +87,25 @@ class Mission(Updatable):
         player.ship.notification.set(f"Mission failed: {self.title()}.")
         self.fail(player)
 
+    @abstractmethod
     def title(self) -> str:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def description(self) -> str:
         """What the mission asks, as the outpost says it, for the offer's detail."""
-        raise NotImplementedError
 
+    @abstractmethod
     def can_complete(self, player: Player) -> bool:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def complete(self, player: Player) -> None:
         """Takes from the player what the mission asks."""
-        raise NotImplementedError
 
+    @abstractmethod
     def shortfall(self, player: Player) -> str:
         """What the player still lacks, for the message shown when they try to complete it without enough."""
-        raise NotImplementedError
 
     def reward_text(self) -> str:
         return "Reward"  # placeholder: the rewards are decided later
@@ -128,8 +131,9 @@ class Mission(Updatable):
         return _KINDS[source['kind']]._deserialize(source)
 
     @classmethod
+    @abstractmethod
     def _deserialize(cls, source: dict) -> Mission:
-        raise NotImplementedError
+        ...
 
     @staticmethod
     def _common(source: dict) -> dict:
@@ -148,10 +152,10 @@ class DeliverOre(Mission):
     """Bring `quantity` ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery."""
 
     KIND = 'deliver_ore'
-    QUANTITY_MIN = 10
-    QUANTITY_MAX = 30
-    DAYS_MIN = 3
-    DAYS_MAX = 14
+    QUANTITY_MIN = 100
+    QUANTITY_MAX = 500
+    DAYS_MIN = 5
+    DAYS_MAX = 15
 
     def __init__(self, quantity: int, **common: object) -> None:
         super().__init__(**common)

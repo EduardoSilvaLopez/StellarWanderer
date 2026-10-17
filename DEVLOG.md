@@ -187,9 +187,13 @@ RELEASE "The Three Powers" created, with installer.
 
 * MISSIONS
   * In-game almanacks (saving systems known even if unchanged)
-Extra time: 58h30' + 13:30 - 15:15 + 17:45 - 
   * Eliminate file almanacks.
   * When next level: offer in show_message to check new button (missions)
+
+I must implement generate_missions better, depending on time passed.
+
+Extra time: 58h30' + 13:30 - 15:15 + 17:45 - 21:30
+
   * 0x Speed
 
 # BACKLOG
