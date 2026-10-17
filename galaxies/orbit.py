@@ -4,22 +4,29 @@ import random
 from typing import TYPE_CHECKING, List, Optional
 
 import galaxies.constants
+from galaxies.orbit_layout import OrbitKind
 from galaxies.world import World
 if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
 
-'''An orbit can have 2 planets, even more later - but very seldom.'''
+'''An earthlike orbit can have 2 planets, even more later - but very seldom. Asteroid belt and jovian orbits have none
+for now: they only mark where they are (see orbit_layout.py).'''
 
 
 class Orbit:
+    """One orbit of a stellar system, numbered from the star (1.0 is the closest, then 2.0, 3.0... every kind together). Its `kind` and
+    `distance_from_star` come from the system's layout (`OrbitLayout`); only earthlike orbits have planets."""
 
     def __init__(self,
                  parent_stellar_system: StellarSystem,
                  number: float,
+                 kind: OrbitKind,
+                 distance_from_star: float,
                  saved_alterations: dict
                  ) -> None:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number
+        self.kind: OrbitKind = kind
         self.seed: float = (self.parent_stellar_system.seed + self.number + 1) % galaxies.constants.SEEDS_SCALING
         my_random: random.Random = random.Random(self.seed)
 
@@ -31,20 +38,17 @@ class Orbit:
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.distance_from_star: int = self._generate_distance_from_star(my_random)
+        self.distance_from_star: float = distance_from_star  # metres: the semi-major axis, or the middle of a belt
 
         self.planets: List[World] = []
-        world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1)  # >1 is extraordinary!
+        if kind is OrbitKind.EARTHLIKE:
+            world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1)  # >1 is extraordinary!
 
-        first_world = World(self, None, self.saved_alterations)
-        self.planets.append(first_world)
-        if world_count > 1:
-            second_world = World(self, None, self.saved_alterations)
-            self.planets.append(second_world)
-
-    def _generate_distance_from_star(self, my_random: random) -> float:
-        # Tuned to give ~1 AU for orbit number 3 and size of a G-type star.
-        return 24.0 * self.parent_stellar_system.star.radius * self.number**2
+            first_world = World(self, None, self.saved_alterations)
+            self.planets.append(first_world)
+            if world_count > 1:
+                second_world = World(self, None, self.saved_alterations)
+                self.planets.append(second_world)
 
     def set_altered(self) -> Orbit:
         self.is_altered = True
@@ -52,7 +56,7 @@ class Orbit:
         return self
 
     def get_alterations_key(self) -> str:
-        return str(self.number)
+        return str(int(self.number))  # "3", not "3.0": the key the savefiles hold
 
     def get_alterations(self) -> Optional[dict]:
         alterations = {}

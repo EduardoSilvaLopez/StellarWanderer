@@ -33,7 +33,8 @@ class World(Body):
     are drawn last in the constructor, so adding them changed no earlier value. Every world starts
     `initial_degrees_in_orbit` from the periapsis direction at EPOCH, as a mean anomaly (the true angle for a circular
     orbit). The spin axis stays on the reference z axis, so the inclination of a planet's orbit is its axial tilt
-    (seasons); a moon's inclination is relative to its planet's equator. `local_day_fraction` is the solar day at
+    (seasons); a moon's inclination is relative to its planet's equator. A planet's moons orbit inside the stable part of
+    its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. `local_day_fraction` is the solar day at
     longitude 0 (0 = noon); the game's date and time always start at EPOCH 00:00:00.
 
     A world's position and velocity are pure functions of the date, memoised for the date of the last call only (one
@@ -55,6 +56,27 @@ class World(Body):
     PLANET_MAX_INCLINATION_DEGREES = 30.0
     MOON_INCLINATION_SIGMA_DEGREES = 5.0
     MOON_MAX_INCLINATION_DEGREES = 20.0
+
+    # Moons: the closest is MOON_MIN_DISTANCE_RADII planet radii away (outside the Roche limit, 2.44 radii for worlds of
+    # one density, and clear of the planet's bind zone). The farthest is inside the planet's Hill sphere: the region
+    # around it, of radius a (m / 3M)^(1/3) (a: its distance to its star, m: its mass, M: the star's), where its pull wins
+    # over the star's. A prograde moon orbit stays stable out to about half of it (Domingos et al. 2006).
+    MOON_MIN_DISTANCE_RADII = 3.0
+    MOON_STABLE_HILL_FRACTION = 0.5
+    # A planet has moons only if their stable region reaches at least this far, planet radii: a band wider than the
+    # minimum distance, or its moons would crowd at one distance.
+    MOON_MIN_ROOM_RADII = 6.0
+
+    @staticmethod
+    def moon_limit_in_radii(distance_to_star: float, star_mass: float) -> float:
+        """The farthest a moon's orbit (semi-major axis) can be from a planet, in planet radii, when it is
+        `distance_to_star` metres from a star of `star_mass` kilograms: MOON_STABLE_HILL_FRACTION of its Hill sphere.
+        The sphere is taken at the planet's periapsis and the moon's apoapsis at the largest eccentricities
+        (MAX_ECCENTRICITY), as neither is known yet. Every world has EARTH_DENSITY, so a planet's mass grows with
+        its radius cubed, and the Hill sphere in planet radii does not depend on its size: the limit is linear in the distance."""
+        hill_in_radii = distance_to_star * (1.0 - World.MAX_ECCENTRICITY) \
+            * (4.0 * math.pi * World.EARTH_DENSITY / (9.0 * star_mass)) ** (1.0 / 3.0)
+        return World.MOON_STABLE_HILL_FRACTION * hill_in_radii / (1.0 + World.MAX_ECCENTRICITY)
 
     def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
         self._position_cache: Optional[Tuple[datetime, Vector3]] = None
@@ -102,6 +124,12 @@ class World(Body):
         self.orbital_period: float = math.tau * math.sqrt(
             self.distance_to_parent ** 3 / (World.GRAVITATIONAL_CONSTANT * (parent_mass + self.mass))
         )
+
+        # The farthest a moon's orbit can be from this planet: inside its Hill sphere (see moon_limit_in_radii).
+        self.moon_limit: float = 0.0
+        if not self.parent_planet:
+            star_mass: float = self.parent_orbit.parent_stellar_system.star.mass
+            self.moon_limit = World.moon_limit_in_radii(self.distance_to_parent, star_mass) * self.radius
 
         self.rotation_period: int = self._generate_rotation_period(my_random)
 
@@ -164,6 +192,10 @@ class World(Body):
             # Initial moon's clause.
             if not moons_count and self._is_initial_planet():
                 moons_count = 1
+            # A planet too close to its star has no room for a stable moon: it has none. (The layout of the initial
+            # system leaves room for the initial planet's moon.)
+            if not self._is_initial_planet() and self.moon_limit < World.MOON_MIN_ROOM_RADII * self.radius:
+                moons_count = 0
             for _ in range(moons_count):
                 self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
 
@@ -191,9 +223,21 @@ class World(Body):
         return result.capitalize()
 
     def _generate_orbital_distance_of_big_moon(self, my_random: random.Random) -> int:
+        """The moon's distance to its planet: a draw of a few hundred moon radii, never under MOON_MIN_DISTANCE_RADII planet
+        radii and never beyond the planet's moon_limit (its Hill sphere). A draw beyond the limit is placed inside the
+        stable region with the fractional part of the same draw, so no draw is added and every later value of the
+        moon stays what it was, and moons do not pile up at the limit."""
+        lowest = World.MOON_MIN_DISTANCE_RADII * self.parent_planet.radius
+        highest = self.parent_planet.moon_limit
         result = 0.0
-        while result < 3 * self.parent_planet.radius:
-            result = int(my_random.gauss(3, 1) * 250.0 * self.radius)
+        draw = 0.0
+        while result < lowest:
+            draw = my_random.gauss(3, 1)
+            result = int(draw * 250.0 * self.radius)
+        if result > highest:
+            # (If the stable region is narrower than the minimum, only the initial planet gets here: it gets the minimum.)
+            share = draw - math.floor(draw)
+            result = int(lowest + max(0.0, highest - lowest) * (0.3 + 0.7 * share))
         return result
 
     def _generate_radius_of_earthlike(self, my_random: random.Random) -> int:
@@ -257,7 +301,7 @@ class World(Body):
                 f"* Distance from the planet: {format_compact_distance(self.distance_to_parent)}\n"
                 f"* Month: {(self.orbital_period / (24 * 60 * 60)):.2f} Earth days\n"
                 ) if self.parent_planet else (
-                f"* Orbit number {self.parent_orbit.number}\n"
+                f"* Orbit number {int(self.parent_orbit.number)}\n"
                 f"  * Distance from the star: {self.parent_orbit.distance_from_star/AU:.2f} AU\n"
                 f"  * Year: {(self.orbital_period / (365.2425 * 24 * 60 * 60)):.2f} Earth years\n"
                 )
@@ -289,6 +333,8 @@ class World(Body):
         logger.info(f" - Orbit(Index): {int(self.parent_orbit.number)} ({self.index})")
         logger.info(f" - Name: {self.name}, Seed: {self.seed}")
         logger.info(f" - Distance to parent: {'{:,}'.format(int(self.distance_to_parent))}")
+        if not self.parent_planet:
+            logger.info(f" - Farthest stable moon orbit (Hill sphere): {'{:,}'.format(int(self.moon_limit))}")
         logger.info(f" - Radius: {'{:,}'.format(int(self.radius))}")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self

@@ -1,16 +1,21 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
+import logging
+import math
 import random
 import galaxies.constants
+from common.units import format_compact_distance
 from galaxies.body import Body
 from galaxies.star import Star
 from galaxies.world import World
 from galaxies.orbit import Orbit
+from galaxies.orbit_layout import OrbitLayout
 from galaxies.politics import political_entity
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
 
+logger = logging.getLogger(__name__)
 
 class StellarSystem:
 
@@ -34,14 +39,39 @@ class StellarSystem:
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        orbits_count = min(int(my_random.gauss(4.5, 1)), 7)
-        # the first-ever system must have three orbits.
-        if self.star.position == galaxies.constants.INITIAL_STAR_POSITION:  # The initial stellar system.
-            orbits_count = max(3, orbits_count)
-        self.orbits: List[Orbit] = []
-        for orbit_number in range(1, orbits_count+1):
-            new_orbit = Orbit(self, orbit_number, self.saved_alterations)
-            self.orbits.append(new_orbit)
+        self.orbits: List[Orbit] = self._generate_orbits(my_random)
+
+    def _generate_orbits(self, my_random: random.Random) -> List[Orbit]:
+        """The orbits of the system, nearest first and numbered 1.0, 2.0...: earthlike planets, asteroid belts and jovian
+        planets, at distances that follow the star's luminosity (see orbit_layout.py); none for a star of type O. The
+        initial system always has an earthlike planet in orbit `OrbitLayout.INITIAL_ORBIT_NUMBER`. The layout is logged."""
+        is_initial_system = self.star.position == galaxies.constants.INITIAL_STAR_POSITION
+        layout = OrbitLayout.generate(self.star, my_random, is_initial_system)
+        orbits = [
+            Orbit(self, plan.number, plan.kind, plan.distance, self.saved_alterations)
+            for plan in layout.plans
+        ]
+        self._log_orbits(layout, orbits)
+        return orbits
+
+    def _log_orbits(self, layout: OrbitLayout, orbits: List[Orbit]) -> None:
+        scales = layout.scales
+        logger.info(
+            f"Orbits of {self.name}: {len(orbits)} orbits. Star {self.star.type.name}: luminosity "
+            f"{scales.luminosity:.3g} W, mass {scales.mass:.3g} kg. Inner edge {format_compact_distance(scales.inner_edge)}, "
+            f"snow line {format_compact_distance(scales.snow_line)}."
+        )
+        if layout.attempts > 1:
+            logger.info(f" - Initial system: {layout.attempts} layouts drawn for the initial planet"
+                        + (" (none did: the fixed layout was used)" if layout.needed_fallback else ""))
+        for orbit in orbits:
+            period = math.tau * math.sqrt(
+                orbit.distance_from_star ** 3 / (World.GRAVITATIONAL_CONSTANT * self.star.mass)
+            )
+            logger.info(
+                f" - Orbit {orbit.number}: {orbit.kind.value}, {format_compact_distance(orbit.distance_from_star)}, "
+                f"period {period:.3g} s"
+            )
 
     @staticmethod
     def seed_of(galaxy_seed: float, x: float, y: float, z: float) -> float:
@@ -55,6 +85,11 @@ class StellarSystem:
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )
         text += self.star.almanack()
+        AU: float = 1.496e11  # m. The almanack is for players: AU, like the planets' entries.
+        text += "### Orbits\n" + ''.join(
+            f"* Orbit {int(orbit.number)}: {orbit.kind.value}, {orbit.distance_from_star / AU:.2f} AU\n"
+            for orbit in self.orbits
+        )
         text += ''.join(planet.almanack() for orbit in self.orbits for planet in orbit.planets)
         return text
 
@@ -68,7 +103,7 @@ class StellarSystem:
         return " ".join(str(c) for c in self.star.cell)
 
     def get_alterations(self) -> Optional[dict]:
-        alterations = dict()
+        alterations = {}
         if self.is_altered:
             for orbit in self.orbits:
                 if orbit.is_altered:
@@ -93,5 +128,5 @@ class StellarSystem:
         for orbit in self.orbits:
             for planet in orbit.planets:
                 result.append(planet)
-                result = result + [m for m in planet.moons]
+                result = result + list(planet.moons)
         return result

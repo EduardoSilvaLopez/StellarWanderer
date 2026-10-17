@@ -177,7 +177,6 @@ RELEASE "The Three Powers" created, with installer.
   * Phase 5: Show the fixed stars in the sky
   * Extra: Bug search in all
 
-Extra time: 58h30' + 
 * ASTEROIDS
   * Targeted body, not nearest body.
   * Small reogranisation of data subdirectory.
@@ -185,6 +184,8 @@ Extra time: 58h30' +
   * "Target" control created to match "in no fixed zone" (no body is near enough to trigger coordinate change)
   * Less ore in the initial super-moon.
   * Rock colors a bit brighter.
+
+Extra time: 58h30' + 13:30 -
 
 # BACKLOG
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).

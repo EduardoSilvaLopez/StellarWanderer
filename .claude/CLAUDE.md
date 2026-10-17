@@ -17,6 +17,11 @@ How each feature works is documented in the docstring of the module that owns it
 - **Scope**: Applies to new code and any function being edited.
 - **Pattern**: Use `from __future__ import annotations` to support forward references (already in `player.py`).
 
+**Units**: SI only, in code, constants, logs and technical texts: metres, kilograms, seconds, watts, kelvin. No astronomical or Sun-based units (AU, solar masses or luminosities, parsecs, "Earth" years or days) and no figure expressed as a multiple of the Sun's or the Earth's: write the real value in SI, or derive it from the physics (a distance from a temperature and a luminosity, for example). The only exception in code is the light-year, for galactic coordinates. Print distances in logs with `common.units.format_compact_distance`.
+
+- **Almanacks are the exception, for good**: they are gamer-friendly documents, so they keep AU, Earth days and years and the like. Never convert them to SI, and write new almanack lines in the same friendly units.
+- **Scope**: Applies to new code and any code being edited. Old uses outside the almanacks remain until they are touched.
+
 **Module names**: Use Python-style snake_case for module files (`stellar_system.py`, not `StellarSystem.py`). Every module file is snake_case, and so is every package directory (`galaxies`, `graphics`, `common/dialogs`, `common/game_logging`), as PEP 8 asks; keep it that way. Git on Windows does not record case-only renames (`core.ignorecase` is on), so a renamed module or directory can stay tracked under its old case, which breaks imports on case-sensitive systems: rename with `git mv a.py tmp.py` then `git mv tmp.py b.py` (the same for a directory), and check that `git ls-files` shows the new case.
 
 Example:
@@ -37,7 +42,7 @@ def generate_default(self) -> None:
 - `main.py`: entry point, game loop, window setup, starting and loading games
 - `game_environment.py`: Galaxy + current world (module-level `current_environment`)
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
-- `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to
+- `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star
 - `graphics/`: OpenGL rendering and the instruments
 - `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the fixed body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `common/`: shared code, used by every layer (it is not a strict layer: `savefile.py` and `dialogs/starting_dialog.py` know the game)
