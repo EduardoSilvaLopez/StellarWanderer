@@ -177,7 +177,7 @@ RELEASE "The Three Powers" created, with installer.
   * Phase 5: Show the fixed stars in the sky
   * Extra: Bug search in all
 
-* ASTEROIDS
+* ASTEROIDS (I)
   * Targeted body, not nearest body.
   * Small reogranisation of data subdirectory.
   * Mines cannot be placed too far near from each other.
@@ -187,7 +187,11 @@ RELEASE "The Three Powers" created, with installer.
 
 Extra time: 58h30' + 13:30 - 15:15
 
+* MISSIONS
+  * 
+
 # BACKLOG
+* ASTEROIDS (II)
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
