@@ -1,7 +1,7 @@
 """Deliver ore: bring some ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery.
 
 An offer is drawn from its seed alone: the same outpost and day always give the same offer, and its seed (kept in a save)
-gives back the days and the quantity."""
+gives back the days, the quantity and whether, and when, somebody else takes the offer."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -21,19 +21,26 @@ class DeliverOre(Mission):
 
     KIND = 'deliver_ore'
     CHANCES_PER_DAY = 0.99
-    QUANTITY_MIN_1e2 = 1
-    QUANTITY_MAX_1e2 = 6
+    QUANTITY_MIN_1E2 = 1
+    QUANTITY_MAX_1E2 = 10
     DAYS_MIN = 5
     DAYS_MAX = 15
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
     def __init__(self, quantity: Optional[int] = None, **common: Any) -> None:
         super().__init__(**common)
         # Drawn in this order every time, from the seed. A loaded mission passes its own deadline and quantity, which win.
         days = self.my_random.randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)
-        amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1e2, DeliverOre.QUANTITY_MAX_1e2) * 100
+        amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1E2, DeliverOre.QUANTITY_MAX_1E2) * 100
+        # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a moment
+        # in that day. The same draws every time, whatever the outcome.
+        rolls = [self.my_random.random() for _ in range(days)]
+        moment = self.my_random.random()
         if self.deadline is None:
             self.deadline = self.created_at + timedelta(days=days)
         self.quantity: int = amount if quantity is None else quantity
+        taken_day = next((index for index, roll in enumerate(rolls) if roll < DeliverOre.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+        self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
     @staticmethod
     def offered_on(day: datetime, outpost: Outpost) -> Optional[DeliverOre]:

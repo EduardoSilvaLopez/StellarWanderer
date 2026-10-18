@@ -39,18 +39,19 @@ class Ship(Updatable):
     RIGHT_LEFT_ACC = 10  # meters per second squared
     FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
     ANGULAR_ACC = 10.0  # degrees per second squared
-    ANGULAR_BRAKE = 20.0  # degrees per second squared
+    ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
 
-    ENERGY_MAX = 1e12  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     TEMP_MIN = -50
     TEMP_DEFAULT = 25
     TEMP_MAX = 50
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
+
+    INITIAL_ENERGY_MAX = 1e12  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
@@ -60,7 +61,8 @@ class Ship(Updatable):
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
         self.maintenance: float = 1.0
-        self.energy: float = Ship.ENERGY_MAX
+        self.energy_max: float = Ship.INITIAL_ENERGY_MAX
+        self.energy: float = self.energy_max
         self.temperature: float = Ship.TEMP_DEFAULT
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
@@ -94,6 +96,7 @@ class Ship(Updatable):
             result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
         if 'maintenance' in src:
             result.maintenance = src['maintenance']
+        result.energy_max = src['energy_max']
         if 'energy' in src:
             result.energy = src['energy']
         if 'temperature' in src:
@@ -109,6 +112,7 @@ class Ship(Updatable):
             'attitude': self.attitude.serialize(),
             'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
             'maintenance': self.maintenance,
+            'energy_max': self.energy_max,
             'energy': self.energy,
             'temperature': self.temperature,
             'cargo_hold': self.cargo_hold.serialize()
@@ -170,7 +174,7 @@ class Ship(Updatable):
         # Maintenance thresholds:
         if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:
             self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
-        elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
+        elif self.energy <= 0.01 * Ship.INITIAL_ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif old_temperature <= 35 < self.temperature:
             self.notification.set("WARNING: It's getting hot in here. You wanna take your clothes off.")
@@ -180,7 +184,7 @@ class Ship(Updatable):
             self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
         elif self.temperature <= -35 < old_temperature:
             self.notification.set("CRTICAL: Freezing. Leave this place or take measures *now*.")
-        elif self.energy <= 0.01 * Ship.ENERGY_MAX < old_energy:
+        elif self.energy <= 0.01 * Ship.INITIAL_ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
             self.notification.set('WARNING: Ship needs air refill. Remain near an outpost.')

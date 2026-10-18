@@ -67,6 +67,13 @@ class Mission(Updatable):
         self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
         self.status: str = status
+        # Set by the derived class at creation, like the deadline: when somebody else takes the offer, None if nobody does.
+        # It only matters while the mission is an offer on a board; it is not saved.
+        self.taken_by_others_at: Optional[datetime] = None
+
+    def is_taken_by_others(self, now: datetime) -> bool:
+        """Somebody else has taken this offer by `now`, so it is no longer on the board."""
+        return self.taken_by_others_at is not None and now >= self.taken_by_others_at
 
     def accept(self, now: datetime) -> None:
         """The player takes the offer: the clock starts."""

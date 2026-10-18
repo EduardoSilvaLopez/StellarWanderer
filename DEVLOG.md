@@ -192,15 +192,17 @@ RELEASE "The Three Powers" created, with installer.
   * 0x Speed
   * Implement generate_missions better, depending on time passed.
 
+### 2026-10-18 (7/10)
 
-
-### 2026-10-15 (6/10) 64h00' + 2:15- 4:30 + 6:00 - 9:15 + 9:30 - 9:45
-
-* Sounds
-* Temperature by rock melting looks too low.
-* Angular breaking seems too slow.
 * Offers can disappear bcs somebody took them, regardless of deadline.
+* Temperature by rock melting looks too low. Resolved?
+* Angular breaking seems too slow. Resolved?
+* Made the start somehow harder, only 2 mines, cost more, get only enough not to bring rep < 0, ore gives less reputation.
+
+Extra time: 67h30' + 17:15-
+
 * Future missions? bring package to place, visit place and scan something.
+* Sounds
 
 # BACKLOG
 * ASTEROIDS (II)

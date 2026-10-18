@@ -43,8 +43,9 @@ def temperature_stress(ship: Ship, temperature: float) -> float:
     return max(0.0, min(1.0, stress))
 
 
-def _credits_shown() -> bool:
-    """Credits are hidden in Those-Who-Share space. The row keeps its place, so the other rows do not move."""
+def credits_shown() -> bool:
+    """Credits are hidden in Those-Who-Share space, where they are illegal (the cargo list then shows them, in red, as
+    contraband). The row keeps its place, so the other rows do not move."""
     import game_environment as gem
     from galaxies.politics import political_entity
     return gem.current_environment.nearest_system.political_entity != political_entity.THOSE_WHO_SHARE
@@ -95,9 +96,9 @@ class ResourceBars:
         bar_left = rect.left + pad + label_width + pad
         bar_right = rect.right - pad
 
-        credits_shown = _credits_shown()
+        legal = credits_shown()
         for index, name in enumerate(ROW_LABELS):
-            if name == 'Credits' and not credits_shown:
+            if name == 'Credits' and not legal:
                 continue  # the row is empty, but its place stays
             centre_y = rect.top + pad + row_pitch * index + bar_height // 2
             label = label_font.render(name, True, ACCENT)
@@ -111,6 +112,6 @@ class ResourceBars:
                 # outposts only restore it to 0.8: that is intended
                 _draw_bar(surface, track, max(0.0, min(1.0, ship.maintenance)), warning=ship.MAINTENANCE_WARNING)
             elif name == 'Energy':
-                _draw_bar(surface, track, ship.energy / ship.ENERGY_MAX)
+                _draw_bar(surface, track, ship.energy / ship.INITIAL_ENERGY_MAX)
             else:
                 _draw_temperature(surface, track, ship, ship.temperature)

@@ -147,11 +147,13 @@ class Person:
         """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty
         for the gender and race, which are shown as a plain line."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
+        last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
+        ltm_str = last_time_met.strftime('%Y-%m-%d') if last_time_met else "Don't remember."
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
             ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({age} y.o.)"),
-            ('Last time met', f"{next(reversed(self.interactions.keys())).strftime('%Y-%m-%d')}"),
+            ('Last time met', f"{ltm_str}"),
         ]
 
         from galaxies.outpost import Outpost

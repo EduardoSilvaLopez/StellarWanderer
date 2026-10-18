@@ -20,7 +20,7 @@ class Rock(Updatable):
     TEMP_RISE_RATE = 500.0  # Temp. raise for a 1 square cube rock in 1 second.
     BASE_COOLING_PERIOD = 60 * 60  # Once per hour.
     COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX_MU = 7.3 # Gives around 2000
+    TEMP_MAX_MU = 8 # Gives around 2000
     TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
 

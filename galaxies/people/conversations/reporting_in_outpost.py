@@ -467,33 +467,32 @@ class ReportingInOutpost(Conversation):
 
         # Reputation loss = need of stuff.
         rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 24
-        rep_loss_energy = -(Ship.ENERGY_MAX - ship.energy) * 5e-13  # W/o laser or acc, negligible...
-        rep_loss_air = -(28 - ship.cargo_hold.air) * 0.0006
-        rep_loss_water = -(28 - ship.cargo_hold.water) * 0.0003
-        rep_loss_food = -(28 - ship.cargo_hold.food) * 0.0006
+        rep_loss_energy = -(ship.energy_max - ship.energy) * 5e-13  # W/o laser or acc, negligible...
+        rep_loss_air = -(ship.cargo.air_max - ship.cargo_hold.air) * 0.0006
+        rep_loss_water = -(ship.cargo.water_max - ship.cargo_hold.water) * 0.0003
+        rep_loss_food = -(ship.cargo_hold.food_max - ship.cargo_hold.food) * 0.0006
 
         ship.maintenance = 0.8 if ship.maintenance < 0.8 else ship.maintenance
-        ship.energy = Ship.ENERGY_MAX
-        cargo_hold.air = 28
-        cargo_hold.water = 28
-        cargo_hold.food = 28
-
-        # Reputation loss due to mines:
-        rep_loss_mines = -0.20 * (5 - cargo_hold.mines)
-        cargo_hold.mines = 5
+        ship.energy = ship.energy_max
+        cargo_hold.air = ship.cargo_hold.air_max
+        cargo_hold.water = ship.cargo_hold.water_max
+        cargo_hold.food = ship.cargo_hold.food_max
 
         # Reputation gain: ore
-        rep_gain_ore = 0.01 * cargo_hold.ore
+        rep_gain_ore = 0.005 * cargo_hold.ore
         cargo_hold.ore = 0
 
         rep_loss = rep_loss_maintenance \
             + rep_loss_energy \
             + rep_loss_air \
             + rep_loss_water \
-            + rep_loss_food \
-            + rep_loss_mines
-
+            + rep_loss_food
         rep_change = rep_loss + rep_gain_ore
+
+        # Reputation loss due to mines: if too much, give less mines.
+        mines_to_give = min(5 - cargo_hold.mines, int(status.reputation))
+        rep_loss_mines = -mines_to_give
+        rep_change = rep_loss + rep_gain_ore + rep_loss_mines
 
         logger.debug(
             "Reputation changes:"

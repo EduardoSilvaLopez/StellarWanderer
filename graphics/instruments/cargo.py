@@ -5,6 +5,7 @@ from typing import Any, TYPE_CHECKING
 import pygame
 from ..constants import ACCENT, BINDING_MARK_RED
 from .common import draw_beveled_panel, bezel_depth, draw_panel_title
+from .resource_bars import credits_shown, format_credits
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -17,7 +18,8 @@ def format_quantity(value: float) -> str:
 
 
 class Cargo:
-    """Draw the CARGO list: one line per hold element, name and quantity."""
+    """Draw the CARGO list: one line per hold element, name and quantity. In Those-Who-Share space, where credits are
+    illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the resource bars)."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
@@ -31,8 +33,14 @@ class Cargo:
         pad = max(6, rect.width // 16)
         line_spacing = line_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
+        if not credits_shown():
+            line = line_font.render(f'CREDITS: {format_credits(ship.owner.credits)}', True, BINDING_MARK_RED)
+            surface.blit(line, (rect.left + pad, line_y))
+            line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
         for element, quantity in ship.cargo_hold.serialize().items():
+            if element.endswith('_max'):
+                continue  # the hold's limits are saved with it, but they are not cargo
             # Red at or below the warning level, as the ship's notice says.
             warning = element in warning_days and quantity <= warning_days[element]
             colour = BINDING_MARK_RED if warning else ACCENT
