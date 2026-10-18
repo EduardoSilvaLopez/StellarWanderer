@@ -11,11 +11,10 @@ from common.vector3 import Vector3
 
 import game_environment as gem
 import galaxies.constants
+if TYPE_CHECKING:
+    from galaxies.missions.mission_board import MissionBoard
 from galaxies.world import World
 from galaxies.people.person import Person
-
-if TYPE_CHECKING:
-    from galaxies.missions import Mission
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +61,8 @@ class Outpost(Updatable):
         self.free_days: float = 0.33
         self.com_officer: Optional[Person] = None
         self.last_visited: Optional[datetime] = None
+        from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs missions
+        self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this outpost is in memory
 
         self.is_altered = False
         self.saved_alterations: Optional[dict] = None
@@ -153,15 +154,14 @@ class Outpost(Updatable):
         """Where the outpost is, in the stellar frame, moving with its planet."""
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
-    def reference(self) -> str:
-        """A text that identifies this outpost in the whole galaxy: its system, orbit, planet and own key."""
+    def full_keys(self) -> str:
+        """Concatenation of key to locate this place as object."""
         orbit = self.planet.parent_orbit
         return '|'.join((orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key(),
                          self.planet.get_alterations_key(), self.get_alteration_key()))
 
-    def place(self) -> str:
-        """Where this outpost is, for the player: its name, its world (a planet, or a moon with its planet) and its
-        stellar system, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"."""
+    def address(self) -> str:
+        """User-friendly address of the outpost."""
         world = self.planet
         place: str = f"{self.name}, "
         if world.parent_planet:
@@ -170,22 +170,12 @@ class Outpost(Updatable):
             place += f"planet {world.name}"
         return f"{place}, {world.parent_orbit.parent_stellar_system.name}"
 
-    def generate_missions(self, now: datetime) -> List[Mission]:
-        """The missions this outpost offers when its board is opened at `now`: none is saved, and they do not depend on
-        what the player has taken, done or failed. How many, and of which kinds, depends on the time since `last_visited`
-        (None before the first visit) and `now`. The draws are made from a seed of the outpost and `now`."""
-        from galaxies.missions import DeliverOre
-        my_random = random.Random(f"missions {self.seed} {now.isoformat()}")
-        return [DeliverOre.generate(self, my_random)]  # placeholder: to be decided
-
-    def open_mission_board(self) -> Outpost:
-        """The player opens the message board (see mission_board.py): a visit, not a conversation."""
-        from galaxies.mission_board import MissionBoard
+    def open_mission_board(self) -> MissionBoard:
+        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to show."""
         now = gem.current_environment.date_time
-        missions = self.generate_missions(now)  # first: it needs the previous visit
+        self.mission_board.update_missions(now)  # first: it may need the previous visit
         self._set_last_visited(now)
-        MissionBoard(self, missions).open()
-        return self
+        return self.mission_board
 
     def communicate(self) -> Outpost:
         import game_environment as gem

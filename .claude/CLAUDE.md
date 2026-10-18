@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-**Stellar Wanderer** is a proof-of-concept space exploration game with realistic scale. Procedurally generated worlds, time compression (1x to 1,000,000x), and persistence via alteration tracking (only player changes saved, world regenerated from seed on load).
+**Stellar Wanderer** is a proof-of-concept space exploration game with realistic scale. Procedurally generated worlds, time compression (pause, then 1x to 1,000,000x), and persistence via alteration tracking (only player changes saved, world regenerated from seed on load).
 
 See `DEVLOG.md` for architecture deep-dive and design rationale.
 
@@ -41,7 +41,7 @@ def generate_default(self) -> None:
 **Module Map**:
 - `main.py`: entry point, game loop, window setup, starting and loading games
 - `game_environment.py`: Galaxy + current world (module-level `current_environment`)
-- `galaxies/missions.py`, `galaxies/mission_board.py`: what the outposts ask of the pilot (Numpad 5 with an outpost in the scanner, reputation 10 or more); the taken ones are in `Player.missions`
+- `galaxies/missions/`: what the outposts ask of the pilot. `mission.py` is the base, one module per kind (`deliver_ore.py`), `mission_board.py` the board (Numpad 5 with an outpost in the scanner, reputation 10 or more), shown by `common/dialogs/mission_board_dialog.py`. The taken ones are in `Player.missions`
 - `knowledge.py`: the keys of the stellar bodies generated so far (module-level `current_knowledge`), saved at the root of the savefile
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
 - `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star
@@ -77,6 +77,7 @@ def generate_default(self) -> None:
 
 - **Do not change code unless asked.** Analysis-only requests are answered in text; wait for an explicit go-ahead before editing.
 - **Ignore `DEVLOG.md`.** Do not read, analyse, quote or use it in any way, even when it is open in the IDE or the project summary points to it.
+- **Pause**: while `Player.is_paused` (the time scale is `TIME_SCALE_PAUSED`), the game is frozen: `main.allowed_while_paused` lets through only the window, Esc and Numpad +, and the veil (`graphics/pause_overlay.py`) covers the screen. Nothing else may act on time or on the player while paused.
 - **Keep labels and comments accurate.** When behaviour changes, update the docstring or comment that describes it in the same change.
 
 ## Testing Without a Window (for Claude)

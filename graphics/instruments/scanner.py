@@ -8,6 +8,7 @@ import pygame
 from ..constants import ACCENT
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
+from common.paths import resource_path
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
 
 if TYPE_CHECKING:
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
 
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
+
+# The message board's sign, by size in pixels (None for a size whose image could not be loaded).
+_board_signs: dict = {}
 
 # Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, dark red, gray, cyan, blue).
 TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192), (32, 32, 255))
@@ -34,6 +38,9 @@ class Scanner:
         crosshair (whether or not the beam is actually on), scaled to
         fill the square but kept at the same relative orientation and color
         the player sees ahead. Rocks take priority if somehow both are set.
+
+        A scanned outpost is titled SCANNER, with the message board's sign drawn to the right of the title when the pilot
+        may use the board (see MissionBoard.is_available).
 
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
@@ -67,9 +74,16 @@ class Scanner:
             title = label_font.render(f'Content: {int(shown_mine.content)} Kg Ore', True, ACCENT)
         else:
             title = label_font.render('SCANNER', True, ACCENT)
-        surface.blit(title, title.get_rect(midtop=(rect.centerx, title_top)))
+        title_rect = title.get_rect(midtop=(rect.centerx, title_top))
+        surface.blit(title, title_rect)
         if outpost is not None:
             Scanner._draw_scanned_outpost(surface, rect, outpost)
+            from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs this module's package
+            sign = Scanner._board_sign(label_font.get_linesize()) if MissionBoard.is_available(ship.owner) else None
+            if sign is not None:
+                # A little above the text's centre: the line box is taller below the letters than above them.
+                line = label_font.get_linesize()
+                surface.blit(sign, sign.get_rect(midleft=(title_rect.right + line // 4, title_rect.centery - line // 4)))
         elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, ship, rock)
             if rock.temperature > 0.0:
@@ -81,6 +95,20 @@ class Scanner:
             Scanner._draw_scanned_mine(surface, rect, mine)
             field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
             surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
+
+    @staticmethod
+    def _board_sign(size: int) -> Optional[pygame.Surface]:
+        """The message board's sign, in the accent colour, size x size. None when the image cannot be loaded."""
+        if size not in _board_signs:
+            try:
+                sign = pygame.image.load(resource_path('icons', 'mission_board.png')).convert_alpha()
+            except (FileNotFoundError, pygame.error):
+                _board_signs[size] = None
+                return None
+            scaled = pygame.transform.smoothscale(sign, (size, size))
+            scaled.fill((*ACCENT, 255), special_flags=pygame.BLEND_RGBA_MULT)  # the file is white
+            _board_signs[size] = scaled
+        return _board_signs[size]
 
     @staticmethod
     def _temperature_color(temperature: float) -> Tuple[int, int, int]:

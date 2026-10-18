@@ -35,12 +35,13 @@ import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, StartingDialog, confirm,
-    next_pending_message, run_in_window, show_message
+    MissionBoardDialog, next_pending_message, run_in_window, show_message
 )
-from galaxies.mission_board import MissionBoard
+from galaxies.missions.mission_board import MissionBoard
 from graphics.opengl_gui import OpenGLGui
 from graphics.instruments.cockpit_buttons import SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
+from graphics.pause_overlay import pause_layer
 from common.updating import update_queue
 
 logger = logging.getLogger(__name__)
@@ -205,6 +206,13 @@ def open_start_menu(
     return True, screen, elapsed
 
 
+def allowed_while_paused(event: pygame.event.Event) -> bool:
+    """While the game is paused it is frozen: only the window, Esc (the menu) and Numpad + (resume the time) act."""
+    if event.type in (pygame.QUIT, pygame.VIDEORESIZE):
+        return True
+    return event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_KP_PLUS)
+
+
 def run_modal_dialog(
         dialog: Dialog, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
         ) -> Tuple[DialogResult, pygame.Surface]:
@@ -227,7 +235,7 @@ def run_modal_dialog(
             if result is not None:
                 break
         gui.draw(screen, fonts, gem.current_environment, player,
-                 dialog_surface=dialog.compose_overlay(pygame.display.get_window_size()))
+                 top_layer=dialog.compose_overlay(pygame.display.get_window_size()))
         pygame.display.flip()
         clock.tick(FPS)
     clock.tick()  # restart the frame timer, so the time spent in the dialog is not part of the next dt
@@ -248,7 +256,9 @@ def main() -> None:
         pygame.quit()
         return
 
+    logger.info("================================================================================")
     logger.info("Game started.")
+    logger.info("================================================================================")
     # Now create the main OpenGL display
     screen = pygame.display.set_mode(
         WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
@@ -274,6 +284,8 @@ def main() -> None:
             continue
 
         for event in pygame.event.get():
+            if player_module.current_player.is_paused and not allowed_while_paused(event):
+                continue
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
@@ -286,7 +298,8 @@ def main() -> None:
                 elif event.key == pygame.K_KP5:  # the message board of the outpost in the scanner
                     outpost = player_module.current_player.ship.scanner.targeted_outpost
                     if outpost is not None and MissionBoard.is_available(player_module.current_player):
-                        outpost.open_mission_board()
+                        result, screen = run_modal_dialog(MissionBoardDialog(outpost.open_mission_board()), screen, gui, fonts, clock)
+                        running = result[0] != 'exit'
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:
@@ -311,7 +324,8 @@ def main() -> None:
 
         # The world map zooms while the mouse is over it, and drags with the left button (polled once per frame).
         focused = pygame.mouse.get_focused()
-        left_pressed = focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
+        left_pressed = (focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
+                        and not player_module.current_player.is_paused)
         WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
         dt = clock.tick(FPS) / 1000.0
@@ -324,7 +338,7 @@ def main() -> None:
 
         keys = pygame.key.get_pressed()
 
-        if player.time_scale == 1:  # Yaw, pitch, scale disabled for > 1.
+        if player.time_scale == 1:  # Yaw, pitch, roll only at x1: disabled when faster and when paused.
             # Yaw: Numpad 4 (left) and 6 (right)
             ship.attitude.update_yaw(
                 delta_game_seconds,
@@ -365,23 +379,23 @@ def main() -> None:
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )
-        ship.scanner.update_target()
-        if keys[pygame.K_SPACE]:
-            ship.scanner.activate(delta_game_seconds)
-        elif ship.laser.firing:
-            ship.scanner.deactivate()
+        if player.is_paused:
+            ship.scanner.deactivate()  # frozen: nothing is aimed or fired
+        else:
+            ship.scanner.update_target()
+            if keys[pygame.K_SPACE]:
+                ship.scanner.activate(delta_game_seconds)
+            elif ship.laser.firing:
+                ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
 
-        gui.draw(screen, fonts, gem.current_environment, player_module.current_player)
+        veil = pause_layer(fonts, *pygame.display.get_window_size()) if player.is_paused else None
+        gui.draw(screen, fonts, gem.current_environment, player_module.current_player, top_layer=veil)
         pygame.display.flip()
 
     pygame.quit()
 
 
 if __name__ == '__main__':
-    logger.debug('----------------------------------------------------------------------------------------------------')
-    logger.debug('Starting application.')
-    logger.debug('----------------------------------------------------------------------------------------------------')
     main()
-    logger.debug('Ending application.')

@@ -198,7 +198,7 @@ class Person:
         with its planet): a person with any other residence has no place yet."""
         if self.first_met_at is None:
             from galaxies.outpost import Outpost
-            self.first_met_at = self.residency.place() if isinstance(self.residency, Outpost) else ''
+            self.first_met_at = self.residency.address() if isinstance(self.residency, Outpost) else ''
             gem.current_environment.persons[self.seed] = self.serialize()
         return self
 

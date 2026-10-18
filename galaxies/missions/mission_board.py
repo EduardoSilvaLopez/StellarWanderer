@@ -1,0 +1,89 @@
+"""The mission board of an outpost, opened with Numpad 5 while the scanner has the outpost, and only for a pilot whose
+reputation is MIN_REPUTATION or more. It is shown by MissionBoardDialog (common/dialogs/mission_board_dialog.py).
+
+Opening it counts as a visit to the outpost (`Outpost.last_visited`), not as speaking with the com officer
+(`Person.last_communication_at`): the ship is not restocked or repaired here, that takes talking to the com officer.
+
+The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the outpost is in
+memory, and are not saved (a save or load starts with the offers the outpost makes then). `update_missions` decides which
+offers there are when the board is opened. Each offer can be taken, and each mission the player has taken can be delivered.
+An offer's deadline is fixed when the offer is made, so taking it late does not give more time."""
+
+from __future__ import annotations
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, List
+
+import galaxies.people.player as player_module
+from galaxies.missions import Mission, OPEN, DeliverOre
+import game_environment as gem
+
+if TYPE_CHECKING:
+    from galaxies.outpost import Outpost
+    from galaxies.people.player import Player
+
+MIN_REPUTATION = 10.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
+DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
+
+
+class MissionBoard:
+
+    def __init__(self, outpost: Outpost) -> None:
+        self.outpost: Outpost = outpost
+        self.offers: List[Mission] = []
+        self.title: str = f'Outpost "{outpost.name}", message board'
+
+    def update_missions(self, now: datetime) -> None:
+        days_since_last_visited: int \
+            = int((now - self.outpost.last_visited).total_seconds() // (24*60*60)) \
+            if self.outpost.last_visited else 28 # Gives good chances.
+
+        self.offers = [offer for offer in self.offers if offer.deadline > now]
+
+        # Insert new offers, by type, day by day since the last visit (each day asks each type). An offer already on the
+        # board, or whose deadline has passed, is not made again.
+        known: set = {offer.seed for offer in self.offers}
+        day = (now - timedelta(days=days_since_last_visited)).replace(hour=0, minute=0, second=0, microsecond=0)
+        while day < now:
+            offer = DeliverOre.offered_on(day, self.outpost)  # New types come here.
+            if offer is not None and offer.deadline > now and offer.seed not in known:
+                self.offers.append(offer)
+                known.add(offer.seed)
+            day += timedelta(days=1)
+
+    @staticmethod
+    def is_available(player: Player) -> bool:
+        return player.those_who_share.reputation >= MIN_REPUTATION
+
+    @property
+    def player(self) -> Player:
+        """The current player, looked up at each use: a new game or a load replaces the Player object."""
+        return player_module.current_player
+
+    def mine(self) -> List[Mission]:
+        """The missions the player has taken from this outpost and not yet delivered or lost."""
+        address = self.outpost.full_keys()
+        return [m for m in self.player.missions if m.issuer == address and m.status == OPEN]
+
+    def accept(self, offer: Mission) -> None:
+        """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has passed
+        (it is removed from the board at the next update)."""
+        if offer not in self.offers:
+            return
+        now = gem.current_environment.date_time
+        if offer.deadline <= now:
+            self.player.ship.notification.set(f"Too late: {offer.title()}.")
+            return
+        self.offers.remove(offer)
+        offer.accept(now)
+        self.player.missions.append(offer)
+        self.player.ship.notification.set(f"Mission taken: {offer.title()}.")
+
+    def deliver(self, mission: Mission) -> None:
+        """The player brings what a mission they have taken asks for. Not enough: they are told what is missing."""
+        if mission not in self.mine():
+            return
+        if not mission.can_complete(self.player):
+            self.player.ship.notification.set(mission.shortfall(self.player))
+            return
+        mission.finish(self.player)
+        self.player.ship.notification.set(f"Mission completed: {mission.title()}.")

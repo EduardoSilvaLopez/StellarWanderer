@@ -53,10 +53,10 @@ class OpenGLGui:
         self._uploaded_textures: set = set()
 
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
-             dialog_surface: Optional[pygame.Surface] = None) -> None:
+             top_layer: Optional[pygame.Surface] = None) -> None:
         """Render one complete frame into the active OpenGL window.
 
-        dialog_surface, if given, is a window-sized RGBA layer (see Dialog.compose_overlay) drawn
+        top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay, or the pause veil) drawn
         above everything else."""
         # The real window size, not screen.get_size(): for an OpenGL window pygame can keep returning
         # a surface of the size first requested, which then differs from the window's client area
@@ -120,8 +120,8 @@ class OpenGLGui:
         Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
-        if dialog_surface is not None:
-            self._draw_texture(dialog_surface, self.dialog_texture, blend=True)
+        if top_layer is not None:
+            self._draw_texture(top_layer, self.dialog_texture, blend=True)
 
     def _ore_fields(self, environment: GameEnvironment, ship: Ship) -> List[OreField]:
         ore_fields: List[OreField] = []

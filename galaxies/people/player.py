@@ -19,7 +19,9 @@ class Player:
     The ship holds where it is and how it moves (position, velocity, attitude); see Ship.
     """
 
-    # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x.
+    # Time compression, in ship-seconds per real second. Keypad +/- steps by 10x. Below TIME_SCALE_MIN is the pause:
+    # nothing advances, the ship neither moves nor turns, and the sun stops.
+    TIME_SCALE_PAUSED = 0
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
@@ -84,12 +86,19 @@ class Player:
 
         return result
 
+    @property
+    def is_paused(self) -> bool:
+        """The game is frozen: nothing advances and only Esc and Numpad + act (see main.allowed_while_paused)."""
+        return self.time_scale == self.TIME_SCALE_PAUSED
+
     def increase_time_scale(self) -> Player:
-        self.time_scale = min(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MAX)
+        """Faster: from the pause, back to TIME_SCALE_MIN (0 times 10 is still 0)."""
+        self.time_scale = min(max(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
         return self
 
     def decrease_time_scale(self) -> Player:
-        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
+        """Slower: from TIME_SCALE_MIN into the pause."""
+        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_PAUSED)
         return self
 
     def get_title(self) -> str:

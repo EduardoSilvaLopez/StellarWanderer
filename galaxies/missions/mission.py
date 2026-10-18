@@ -1,30 +1,28 @@
-"""Missions: what an outpost asks of the pilot (shown by mission_board.py).
+"""The base of every mission: what an outpost asks of the pilot (shown by mission_board.py).
 
-An outpost makes its offers when the pilot opens its board (`Outpost.generate_missions`); they are not saved. The ones the
-pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE or FAILED): that list is
+An outpost makes its offers on its board (`MissionBoard.update_missions`), which are kept while the outpost is in memory and
+not saved. The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE or FAILED): that list is
 the only place missions are saved.
 
-Each kind of mission is a subclass with its own objective, registered with `@_register`. A mission knows whether the
-player can complete it (`can_complete`) and what that takes from them (`complete`). The reward (`reward_text`, `give_reward`)
-and the effects of failing (`fail`) are decided later, per kind.
+Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission knows
+whether the player can complete it (`can_complete`) and what that takes from them (`complete`). The reward (`reward_text`,
+`give_reward`) and the effects of failing (`fail`) are decided later, per kind.
 
 An OPEN mission is in the `update_queue` for its deadline (it is an Updatable): when the deadline passes it becomes
 FAILED, the ship says so, and `fail` runs. The queue is emptied on every new game and load, so `Player.deserialize` puts
-the OPEN missions back. DeliverOre is the first kind: bring some ore to the outpost that asked for it."""
+the OPEN missions back."""
 
 from __future__ import annotations
 from abc import abstractmethod
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Dict, Optional, Type
+from datetime import datetime
+import hashlib
 import random
+from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from common.updating import Updatable, update_queue
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
     from galaxies.people.player import Player
-
-DATE_FORMAT = '%Y-%m-%d %H:%M'
 
 OPEN = 'open'  # taken, not yet delivered and not yet late
 DONE = 'done'
@@ -33,7 +31,14 @@ FAILED = 'failed'
 _KINDS: Dict[str, Type[Mission]] = {}
 
 
-def _register(kind: Type[Mission]) -> Type[Mission]:
+def seed_of(text: str) -> int:
+    """A seed for a text. The same text gives the same seed in every run (unlike hash()), so a mission's seed can be kept
+    in a save and the rest of the mission rebuilt from it."""
+    return int.from_bytes(hashlib.sha256(text.encode('utf-8')).digest()[:8], 'big')
+
+
+def register(kind: Type[Mission]) -> Type[Mission]:
+    """Makes a kind of mission known by its KIND, for Mission.deserialize."""
     _KINDS[kind.KIND] = kind
     return kind
 
@@ -44,18 +49,24 @@ class Mission(Updatable):
 
     KIND: str = ''
 
-    def __init__(self, issuer: str, issuer_name: str, duration: timedelta, accepted_at: Optional[datetime] = None,
+    def __init__(self,
+                 seed: int,
+                 issuer: str,
+                 issuer_name: str,
+                 created_at: datetime,
+                 deadline: Optional[datetime] = None,
+                 accepted_at: Optional[datetime] = None,
                  status: str = OPEN) -> None:
-        self.issuer: str = issuer  # Outpost.reference() of the outpost that asked for it
-        self.issuer_name: str = issuer_name  # where that is, for the player: Outpost.place()
-        self.duration: timedelta = duration
+        self.seed: int = seed  # identifies the offer: the rest of it is drawn from it (see generate)
+        self.my_random: random.Random = random.Random(self.seed)
+        self.created_at: datetime = created_at  # the day the offer was made
+        self.issuer: str = issuer  # Outpost.full_keys() of the outpost that asked for it
+        self.issuer_name: str = issuer_name  # where that is, for the player: Outpost.address()
+
+        # Set by derived class on real creation, set manually if loaded.
+        self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
         self.status: str = status
-
-    @property
-    def deadline(self) -> Optional[datetime]:
-        """The date and time it is too late, None while the mission has not been taken."""
-        return None if self.accepted_at is None else self.accepted_at + self.duration
 
     def accept(self, now: datetime) -> None:
         """The player takes the offer: the clock starts."""
@@ -107,8 +118,9 @@ class Mission(Updatable):
     def shortfall(self, player: Player) -> str:
         """What the player still lacks, for the message shown when they try to complete it without enough."""
 
+    @abstractmethod
     def reward_text(self) -> str:
-        return "Reward"  # placeholder: the rewards are decided later
+        return "Thank you."
 
     def give_reward(self, player: Player) -> None:
         """Gives the reward. Nothing yet."""
@@ -119,9 +131,11 @@ class Mission(Updatable):
     def serialize(self) -> dict:
         return {
             'kind': self.KIND,
+            'seed': self.seed,
             'issuer': self.issuer,
             'issuer_name': self.issuer_name,
-            'duration_seconds': self.duration.total_seconds(),
+            'created_at': self.created_at.isoformat(),
+            'deadline': self.deadline.isoformat(),
             'accepted_at': None if self.accepted_at is None else self.accepted_at.isoformat(),
             'status': self.status,
         }
@@ -139,54 +153,11 @@ class Mission(Updatable):
     def _common(source: dict) -> dict:
         """The arguments every mission's constructor takes, from its serialized form."""
         return {
+            'seed': source['seed'],
             'issuer': source['issuer'],
             'issuer_name': source['issuer_name'],
-            'duration': timedelta(seconds=source['duration_seconds']),
+            'created_at': datetime.fromisoformat(source['created_at']),
+            'deadline': datetime.fromisoformat(source['deadline']),
             'accepted_at': None if source['accepted_at'] is None else datetime.fromisoformat(source['accepted_at']),
             'status': source['status'],
         }
-
-
-@_register
-class DeliverOre(Mission):
-    """Bring `quantity` ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery."""
-
-    KIND = 'deliver_ore'
-    QUANTITY_MIN = 100
-    QUANTITY_MAX = 500
-    DAYS_MIN = 5
-    DAYS_MAX = 15
-
-    def __init__(self, quantity: int, **common: object) -> None:
-        super().__init__(**common)
-        self.quantity: int = quantity
-
-    @staticmethod
-    def generate(outpost: Outpost, my_random: random.Random) -> DeliverOre:
-        return DeliverOre(
-            my_random.randint(DeliverOre.QUANTITY_MIN, DeliverOre.QUANTITY_MAX),
-            issuer=outpost.reference(), issuer_name=outpost.place(),
-            duration=timedelta(days=my_random.randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)),
-        )
-
-    def title(self) -> str:
-        return f"Deliver {self.quantity} ore"
-
-    def description(self) -> str:
-        return f"We need {self.quantity} ore here, at {self.issuer_name}. You would have {self.duration.days} days."
-
-    def can_complete(self, player: Player) -> bool:
-        return player.ship.cargo_hold.ore >= self.quantity
-
-    def complete(self, player: Player) -> None:
-        player.ship.cargo_hold.ore -= self.quantity
-
-    def shortfall(self, player: Player) -> str:
-        return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
-
-    def serialize(self) -> dict:
-        return {**super().serialize(), 'quantity': self.quantity}
-
-    @classmethod
-    def _deserialize(cls, source: dict) -> DeliverOre:
-        return DeliverOre(source['quantity'], **Mission._common(source))

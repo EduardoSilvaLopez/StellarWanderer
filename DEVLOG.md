@@ -189,12 +189,16 @@ RELEASE "The Three Powers" created, with installer.
   * In-game almanacks (saving systems known even if unchanged)
   * Eliminate file almanacks.
   * When next level: offer in show_message to check new button (missions)
+  * 0x Speed
+
+### 2026-10-15 (6/10) 64h00' + 2:15-
 
 I must implement generate_missions better, depending on time passed.
 
-Extra time: 58h30' + 13:30 - 15:15 + 17:45 - 21:30
+TODO: Offers show their deadline, in red if <2 days, and you click on them to take them, not down.
+Also, offers  can disappear bcs somebody took them, regardless of deadline.
+Future missions: bring package to place, visit place and scan something.
 
-  * 0x Speed
 
 # BACKLOG
 * ASTEROIDS (II)

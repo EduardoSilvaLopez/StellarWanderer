@@ -94,6 +94,8 @@ class Star(Body):
             if my_random.random() < 0.4:
                 name += my_random.choice(consonants)
 
+        name.replace("q", "qu")
+
         if my_random.random() < 0.5:
             name += "eia"
 

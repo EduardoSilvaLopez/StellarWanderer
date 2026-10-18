@@ -23,7 +23,7 @@ INSTRUCTIONS: List[Tuple[str, List[str]]] = [
         "The scanner shows what is in the crosshair. Hold Space to activate it (whichever that means in context).",
     ]),
     ("Flying", [  # drawn above the text: see _flying_figure
-        "Numpad + / -: faster / slower passing of game time (be careful!).",
+        "Numpad + / -: faster / slower passing of game time (be careful!). Slower than normal pauses the game.",
     ]),
     ("Mining", [
         "Heat a rock to melt it, crearing an ore field.",
