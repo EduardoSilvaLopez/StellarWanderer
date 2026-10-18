@@ -10,7 +10,7 @@ from .constants import SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
 from .deep_space import DeepSpace
 from .distant_stars import DistantStars
-from .local_star import view_of, erase
+from .local_star import view_of, erase, sun_visibility
 from .star_gl import StarGl
 from .star_surface import visor_strength
 from .starlight import Starlight, HeatVignette, FrostVignette
@@ -78,7 +78,7 @@ class OpenGLGui:
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
         if light is not None:
             FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
-        else:
+        elif ship.is_bound:
             LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
         OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
 
@@ -106,8 +106,9 @@ class OpenGLGui:
             StarGl.draw_star(width, height, view, seconds, player.time_scale)
         self._draw_texture(self.world_surface, self.world_texture, blend=True)
         if view is not None:
-            StarGl.draw_glare(width, height, view, view.star)
-            StarGl.draw_visor(width, height, visor_strength(view.disc_px))
+            visibility = sun_visibility(environment, ship, view)
+            StarGl.draw_glare(width, height, view, view.star, visibility)
+            StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
         if light is not None:
             Rocks.draw(
                 width, height, ship,

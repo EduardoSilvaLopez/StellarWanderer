@@ -70,6 +70,10 @@ class Outpost(Updatable):
             my_alterations = saved_alterations.get(self.get_alteration_key())
             if my_alterations:
                 self.saved_alterations = copy.deepcopy(my_alterations)
+                # Read here, not in prepare: a save made before the ship goes near the outpost must keep it, and prepare
+                # runs again each time ground near the outpost is made, which would put the old value back.
+                if 'last_visited' in self.saved_alterations:
+                    self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
                 self.set_altered()
         self._log_generation()
 
@@ -96,9 +100,6 @@ class Outpost(Updatable):
 
     def prepare(self) -> Outpost:
         ''' Prepare for visit.'''
-        if self.saved_alterations and 'last_visited' in self.saved_alterations:
-            self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
-
         if not self.staff:
             self.staff = [self.staff_member(index) for index in range(self.STAFF_SIZE)]
         shift = gem.current_environment.date_time.hour // 8
@@ -109,7 +110,8 @@ class Outpost(Updatable):
         self.next_update_at: datetime = gem.current_environment.date_time
         self.next_update_at = self.next_update_at.replace(hour=8 * shift, minute=0, second=0, microsecond=0)
         self.next_update_at += timedelta(hours=8)
-        update_queue.add(self)
+        if self not in update_queue:  # prepare runs each time ground near the outpost is made: one entry only
+            update_queue.add(self)
 
         return self
 
@@ -134,7 +136,9 @@ class Outpost(Updatable):
         alterations: dict = {}
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime('%Y-%m-%d %H:%M:%S.%f')
-            alterations['com_officer_seed'] = self.com_officer.seed
+            # No com officer yet when the ship has not been near since the load: the saved one is kept.
+            alterations['com_officer_seed'] = self.com_officer.seed if self.com_officer is not None \
+                else self.saved_alterations.get('com_officer_seed')
         if not alterations:
             return None
         return alterations

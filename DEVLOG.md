@@ -190,15 +190,17 @@ RELEASE "The Three Powers" created, with installer.
   * Eliminate file almanacks.
   * When next level: offer in show_message to check new button (missions)
   * 0x Speed
+  * Implement generate_missions better, depending on time passed.
 
-### 2026-10-15 (6/10) 64h00' + 2:15-
 
-I must implement generate_missions better, depending on time passed.
 
-TODO: Offers show their deadline, in red if <2 days, and you click on them to take them, not down.
-Also, offers  can disappear bcs somebody took them, regardless of deadline.
-Future missions: bring package to place, visit place and scan something.
+### 2026-10-15 (6/10) 64h00' + 2:15- 4:30 + 6:00 - 9:15 + 9:30 - 9:45
 
+* Sounds
+* Temperature by rock melting looks too low.
+* Angular breaking seems too slow.
+* Offers can disappear bcs somebody took them, regardless of deadline.
+* Future missions? bring package to place, visit place and scan something.
 
 # BACKLOG
 * ASTEROIDS (II)

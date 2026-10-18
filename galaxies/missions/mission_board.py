@@ -11,7 +11,7 @@ An offer's deadline is fixed when the offer is made, so taking it late does not 
 
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 import galaxies.people.player as player_module
 from galaxies.missions import Mission, OPEN, DeliverOre
@@ -33,16 +33,15 @@ class MissionBoard:
         self.title: str = f'Outpost "{outpost.name}", message board'
 
     def update_missions(self, now: datetime) -> None:
-        days_since_last_visited: int \
-            = int((now - self.outpost.last_visited).total_seconds() // (24*60*60)) \
-            if self.outpost.last_visited else 28 # Gives good chances.
-
         self.offers = [offer for offer in self.offers if offer.deadline > now]
 
-        # Insert new offers, by type, day by day since the last visit (each day asks each type). An offer already on the
-        # board, or whose deadline has passed, is not made again.
-        known: set = {offer.seed for offer in self.offers}
-        day = (now - timedelta(days=days_since_last_visited)).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Insert new offers, by type, day by day from the day of the last visit to today (each day asks each type). A first
+        # visit looks back 28 days: it gives good chances. The day of the last visit is included, since a visit may have been
+        # a talk and not the board; an offer already on the board, one the player has taken (or done or failed), or one whose
+        # deadline has passed, is not made again.
+        known: set = {offer.seed for offer in self.offers} | {mission.seed for mission in self.player.missions}
+        first_day = self.outpost.last_visited if self.outpost.last_visited else now - timedelta(days=28)
+        day = first_day.replace(hour=0, minute=0, second=0, microsecond=0)
         while day < now:
             offer = DeliverOre.offered_on(day, self.outpost)  # New types come here.
             if offer is not None and offer.deadline > now and offer.seed not in known:
@@ -78,12 +77,13 @@ class MissionBoard:
         self.player.missions.append(offer)
         self.player.ship.notification.set(f"Mission taken: {offer.title()}.")
 
-    def deliver(self, mission: Mission) -> None:
-        """The player brings what a mission they have taken asks for. Not enough: they are told what is missing."""
+    def deliver(self, mission: Mission) -> Optional[str]:
+        """The player brings what a mission they have taken asks for. Returns the reward text, to show, when it is done.
+        Not enough: they are told what is missing, and nothing is returned."""
         if mission not in self.mine():
-            return
+            return None
         if not mission.can_complete(self.player):
             self.player.ship.notification.set(mission.shortfall(self.player))
-            return
+            return None
         mission.finish(self.player)
-        self.player.ship.notification.set(f"Mission completed: {mission.title()}.")
+        return mission.reward_text()

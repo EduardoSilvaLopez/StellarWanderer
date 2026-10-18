@@ -19,7 +19,8 @@ class OutpostMarkers:
 
     @staticmethod
     def in_fixed_zone(environment: GameEnvironment, ship: Ship) -> List[tuple]:
-        """(outpost, stellar position, visible) for every outpost of a planet within the fixed zone.
+        """(outpost, stellar position, visible) for every outpost of a planet within the fixed zone. Bound to a world, only
+        that world's outposts are listed (a moon has none): the outposts of the planet it orbits are not.
 
         `visible` is False when the outpost is on the far side of its planet (its surface normal points
         away from the ship). Such outposts still get a label, but no dot."""
@@ -27,8 +28,11 @@ class OutpostMarkers:
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
         result = []
+        bound_world = environment.fixed_world if ship.is_bound else None
         for planet in environment.nearest_system.get_all_worlds():
             if planet.parent_planet is not None or not planet.outposts:
+                continue
+            if ship.is_bound and planet is not bound_world:
                 continue
             centre = planet.calculate_stellar_position(date_time)
             # Stellar distance, also while bound (Navigation.distance_to_body_centre assumes unbound).

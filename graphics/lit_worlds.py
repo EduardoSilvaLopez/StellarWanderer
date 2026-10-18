@@ -22,8 +22,8 @@ class LitWorlds:
     treated as parallel). Cost depends on the size of the disc on screen, not on the world.
 
     Every world drawn in the sky (planets and moons) is lit this way. Worlds too small to see are drawn as a small
-    lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, including the targeted one
-    (`draw_targeted`). While bound, every world except the targeted one is lit; the targeted one is the disc below the horizon,
+    lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, the targeted one too, in
+    distance order (`OtherWorlds.draw`). While bound, every world except the targeted one is lit; the targeted one is the disc below the horizon,
     lit by the sun like the ground (`FixedWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
 
     @staticmethod

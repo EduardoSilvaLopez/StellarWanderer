@@ -40,6 +40,6 @@ class Cockpit:
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)
         TargetMarker.draw(surface, w, h, gem.current_environment, player.ship)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
-        CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h, player))
+        CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h, player), player)
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)

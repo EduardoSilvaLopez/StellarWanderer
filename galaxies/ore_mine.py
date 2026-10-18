@@ -22,6 +22,7 @@ class OreMine(Updatable):
     # the scanner's beam hits it with these, so the two always agree.
     MINE_RADIUS: float = 4.0  # metres
     MINE_HEIGHT: float = 8.0  # metres
+    MINE_MIN_DISTANCE = 20 * MINE_RADIUS  # between mines.
 
     def __init__(
             self,

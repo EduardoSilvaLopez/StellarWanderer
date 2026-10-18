@@ -35,11 +35,12 @@ import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, StartingDialog, confirm,
-    MissionBoardDialog, next_pending_message, run_in_window, show_message
+    MissionBoardDialog, PendingMissionsDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.missions.mission_board import MissionBoard
 from graphics.opengl_gui import OpenGLGui
-from graphics.instruments.cockpit_buttons import SYSTEMS, CockpitButtons
+from graphics.instruments.cockpit_buttons import MISSIONS, SYSTEMS, CockpitButtons
+from galaxies.missions import OPEN
 from graphics.instruments.world_map import WorldMap
 from graphics.pause_overlay import pause_layer
 from common.updating import update_queue
@@ -313,7 +314,11 @@ def main() -> None:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and CockpitButtons.hit(event.pos) is not None:
-                dialog = KnownSystemsDialog() if CockpitButtons.hit(event.pos) == SYSTEMS else KnownPeopleDialog()
+                pressed = CockpitButtons.hit(event.pos)
+                if pressed == MISSIONS:
+                    dialog = PendingMissionsDialog([m for m in player_module.current_player.missions if m.status == OPEN])
+                else:
+                    dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
                 result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
                 running = result[0] != 'exit'
             elif event.type == pygame.MOUSEWHEEL:

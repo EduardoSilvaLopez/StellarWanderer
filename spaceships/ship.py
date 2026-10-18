@@ -42,7 +42,6 @@ class Ship(Updatable):
     ANGULAR_BRAKE = 20.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
-    MINE_SPACING_MULTIPLE = 10  # a new mine must stand this many mine radii (OreMine.MINE_RADIUS) away from every loaded mine
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
@@ -224,7 +223,7 @@ class Ship(Updatable):
         Only the loaded Km2s are searched. Every mine within that distance lies in the loaded area around the ship, so
         none is missed, and this needs no search of the whole world.'''
         spot_lon, spot_lat = self._mine_spot()
-        spacing = Ship.MINE_SPACING_MULTIPLE * OreMine.MINE_RADIUS
+        spacing = OreMine.MINE_MIN_DISTANCE * OreMine.MINE_RADIUS
         for km2 in gem.current_environment.fixed_world.km2s:
             for ore_field in km2.ore_fields:
                 for mine in ore_field.mines:

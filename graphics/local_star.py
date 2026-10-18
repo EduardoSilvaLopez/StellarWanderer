@@ -99,6 +99,41 @@ def view_of(environment: GameEnvironment, ship: Ship, width: int, height: int) -
     return StarView(star, projected[0], projected[1], disc_px, corona_px)
 
 
+def sun_visibility(environment: GameEnvironment, ship: Ship, view: StarView) -> float:
+    """How much of the sun shows, from 0 (a world is fully in front of it) to 1 (nothing is). The glare and the visor
+    follow it: they are drawn over the whole view, so they would shine through the world that hides the sun.
+
+    A world hides the sun when it is nearer than the star and the sun lies inside the world's disc. Bound, the world
+    under the ship is the ground: the sun is hidden below its horizon, the disc being `asin(R / (R + altitude))` around
+    straight down. The sun goes from shown to hidden over its own apparent size, as it crosses the world's edge."""
+    body = environment.targeted_body
+    date_time = environment.date_time
+    star_vector = ship.navigation.direction_to_star(body, date_time)
+    star_distance = star_vector.length()
+    sun_radius = math.atan(view.star.radius / star_distance)
+
+    discs = []  # (angular radius of a world's disc, direction to its centre)
+    if ship.is_bound:
+        ground = environment.fixed_world
+        altitude = ship.navigation.altitude_above_surface(ground)
+        discs.append((math.asin(ground.radius / (ground.radius + altitude)), ship.navigation.direction_down(ground, date_time)))
+    for world in environment.nearest_system.get_all_worlds():
+        if ship.is_bound and world is environment.fixed_world:
+            continue
+        to_world = ship.navigation.direction_to_body(world, date_time)
+        distance = to_world.length()
+        if distance < star_distance:
+            discs.append((math.asin(min(1.0, world.radius / distance)), to_world))
+
+    visibility = 1.0
+    for angular_radius, direction in discs:
+        cosine = star_vector.dot(direction) / (star_distance * direction.length())
+        separation = math.acos(max(-1.0, min(1.0, cosine)))  # sun's centre to the disc's centre
+        shown = (separation - angular_radius + sun_radius) / (2.0 * sun_radius)  # 0 inside the edge by a sun radius
+        visibility = min(visibility, max(0.0, min(1.0, shown)))
+    return visibility
+
+
 def erase(surface: pygame.Surface, view: StarView, width: int, height: int) -> None:
     """Make the sky transparent where the star is (its disc and corona), so the star drawn under the sky shows there.
     `surface` must have per-pixel alpha."""

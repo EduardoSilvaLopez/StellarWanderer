@@ -1,8 +1,12 @@
-"""The mission board of an outpost, as a window (see galaxies/missions/mission_board.py for the rules).
+"""The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules).
 
-Each mission is a row: its title, its deadline, what it asks and its reward, and on the right its own button: Accept for an
-offer, Deliver for a mission the player has taken. The rows are listed under two headings, "Your missions" and "Available".
-Esc leaves; there is no other button. The rows scroll with the wheel and the arrow keys."""
+The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail: the
+description, and the button that acts on it, if there is one. Esc goes back from the detail to the list, and from the list
+closes the window. The lines scroll with the wheel and the arrow keys.
+
+MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there), with
+their deadlines. PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
+left, and nothing to act on."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -27,76 +31,112 @@ MARGIN = 38
 TITLE_SIZE = 26
 BODY_SIZE = 16
 HEADING_SIZE = 18
+DETAIL_TITLE_SIZE = 22
 ROW_PAD = 12
 ROW_GAP = 12
-BUTTON_WIDTH = 130
+BUTTON_WIDTH = 150
 BUTTON_HEIGHT = 36
 SCROLL_STEP = 40
 PAGE_KEYS = {pygame.K_PAGEUP: -1, pygame.K_PAGEDOWN: 1}
 
-# One line of the list: (surface, gap above it, the button's rect inside the surface or None, what the button does).
+# One line of the content: (surface, gap above it, its clickable rect inside the surface or None, what a click does).
 Item = Tuple[pygame.Surface, int, Optional[pygame.Rect], Optional[Callable[[], None]]]
+# A heading of the list, its missions, and what to say when there are none: (heading, missions, empty text).
+Section = Tuple[str, List['Mission'], str]
 
 
-class MissionBoardDialog(Dialog):
-    """Result: ('close', None) on Esc; ('exit', None) when the window closes."""
+class MissionListDialog(Dialog):
+    """The list and the detail of missions. A subclass gives the sections, the line about time, and the action, if any."""
 
-    def __init__(self, board: MissionBoard) -> None:
+    def __init__(self, title: str) -> None:
         super().__init__(WIDTH, HEIGHT)
-        self.board: MissionBoard = board
+        self.open_mission: Optional[Mission] = None  # the mission whose detail is shown; None for the list
+        self.notice: Optional[Tuple[str, str]] = None  # (mission title, text) shown in place of the list, after a delivery
         self.scroll: int = 0
         self.content_height: int = 0
-        self._buttons: List[Tuple[pygame.Rect, Callable[[], None]]] = []  # where the buttons were last drawn
+        self._clickable: List[Tuple[pygame.Rect, Callable[[], None]]] = []  # where the clickable lines were last drawn
         self._texture: Optional[pygame.Surface] = None
         self._texture_loaded: bool = False
 
         size = TITLE_SIZE
-        self._title = title_font(size).render(board.title, True, ACCENT)
+        self._title = title_font(size).render(title, True, ACCENT)
         while self._title.get_width() > WIDTH - 2 * MARGIN and size > 12:
             size -= 1
-            self._title = title_font(size).render(board.title, True, ACCENT)
+            self._title = title_font(size).render(title, True, ACCENT)
         self._divider_y = MARGIN - 4 + self._title.get_height() + 12
         hint_top = HEIGHT - MARGIN
         self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, hint_top - 12 - (self._divider_y + 16))
 
+    # ---- what a subclass gives ----
+
+    def _sections(self) -> List[Section]:
+        raise NotImplementedError
+
+    def _deadline_line(self, mission: Mission) -> str:
+        from galaxies.missions.mission_board import DATE_FORMAT  # local: the board's module imports the player, which imports this package
+        return f"Deadline: {mission.deadline.strftime(DATE_FORMAT)}"
+
+    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
+        """The button of the detail, its label and what it does, or None for no button."""
+        return None
+
+    def _hint(self) -> str:
+        raise NotImplementedError
+
     # ---- content ----
 
     def _items(self, width: int) -> List[Item]:
-        """Every line of the list, top to bottom, for a text area `width` wide."""
+        """Every line of the content, top to bottom, for a text area `width` wide."""
+        if self.notice is not None:
+            return self._notice_items(self.notice, width)
+        if self.open_mission is not None:
+            return self._detail_items(self.open_mission, width)
+        return self._list_items(width)
+
+    def _notice_items(self, notice: Tuple[str, str], width: int) -> List[Item]:
+        """What the outpost says when a mission is done: the mission, and the reward text."""
+        body = body_font(BODY_SIZE)
+        title, text = notice
+        items: List[Item] = [
+            (title_font(DETAIL_TITLE_SIZE).render('Mission completed', True, ACCENT), 0, None, None),
+            (body.render(title, True, LABEL_COLOR), 6, None, None),
+        ]
+        return items + [(body.render(line, True, TEXT_COLOR), 14 if index == 0 else 4, None, None)
+                        for index, line in enumerate(MessageDialog.wrap(text, body, width))]
+
+    def _list_items(self, width: int) -> List[Item]:
         heading = title_font(HEADING_SIZE)
         items: List[Item] = []
-        mine = self.board.mine()
-        items.append((heading.render('Your missions', True, ACCENT), 0, None, None))
-        if mine:
-            for mission in mine:
-                items.append(self._row(mission, 'Deliver', lambda m=mission: self._do(self.board.deliver, m), width))
-        else:
-            items.append((self._note('None.', width), 4, None, None))
-        items.append((heading.render('Available', True, ACCENT), 22, None, None))
-        if self.board.offers:
-            for offer in list(self.board.offers):
-                items.append(self._row(offer, 'Accept', lambda o=offer: self._do(self.board.accept, o), width))
-        else:
-            items.append((self._note('Nothing new.', width), 4, None, None))
+        for index, (title, missions, empty) in enumerate(self._sections()):
+            items.append((heading.render(title, True, ACCENT), 0 if index == 0 else 22, None, None))
+            if missions:
+                items += [self._row(mission, width) for mission in missions]
+            else:
+                items.append((body_font(BODY_SIZE).render(empty, True, DIM_COLOR), 4, None, None))
         return items
 
-    @staticmethod
-    def _note(text: str, width: int) -> pygame.Surface:
-        return body_font(BODY_SIZE).render(text, True, DIM_COLOR)
-
-    @staticmethod
-    def _row(mission: Mission, label: str, action: Callable[[], None], width: int) -> Item:
-        """One mission: its text on the left, its button on the right, the row's background behind them."""
-        from galaxies.missions.mission_board import DATE_FORMAT  # local: the board's module imports the player, which imports this package
+    def _detail_items(self, mission: Mission, width: int) -> List[Item]:
+        """The description of a mission, and the button that acts on it, if any. Acting goes back to the list."""
         body = body_font(BODY_SIZE)
-        text_width = width - 2 * ROW_PAD - BUTTON_WIDTH - ROW_GAP
-        lines: List[pygame.Surface] = [title_font(HEADING_SIZE).render(mission.title(), True, ACCENT),
-                                       body.render(f"Deadline: {mission.deadline.strftime(DATE_FORMAT)}", True, LABEL_COLOR)]
-        lines += [body.render(line, True, TEXT_COLOR) for line in MessageDialog.wrap(mission.description(), body, text_width)]
-        lines += [body.render(line, True, DIM_COLOR) for line in MessageDialog.wrap(mission.reward_text(), body, text_width)]
+        items: List[Item] = [
+            (title_font(DETAIL_TITLE_SIZE).render(mission.title(), True, ACCENT), 0, None, None),
+            (body.render(self._deadline_line(mission), True, LABEL_COLOR), 6, None, None),
+        ]
+        items += [(body.render(line, True, TEXT_COLOR), 4, None, None)
+                  for line in MessageDialog.wrap(mission.description(), body, width)]
+        action = self._action(mission)
+        if action is not None:
+            label, do = action
+            items.append((self._button(label), 28, pygame.Rect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT), do))
+        return items
 
-        text_height = sum(line.get_height() + 4 for line in lines)
-        height = max(text_height + ROW_PAD, BUTTON_HEIGHT + 2 * ROW_PAD) + ROW_PAD
+    def _row(self, mission: Mission, width: int) -> Item:
+        """One mission in the list: its title and a line about time, in a box. A click opens its detail."""
+        lines: List[pygame.Surface] = [
+            title_font(HEADING_SIZE).render(mission.title(), True, ACCENT),
+            body_font(BODY_SIZE).render(self._deadline_line(mission), True, LABEL_COLOR),
+        ]
+        height = sum(line.get_height() + 4 for line in lines) + 2 * ROW_PAD
         row = pygame.Surface((width, height), pygame.SRCALPHA)
         pygame.draw.rect(row, ROW_FILL, row.get_rect())
         pygame.draw.rect(row, ACCENT_DIM, row.get_rect(), 1)
@@ -104,19 +144,37 @@ class MissionBoardDialog(Dialog):
         for line in lines:
             row.blit(line, (ROW_PAD, y))
             y += line.get_height() + 4
+        return row, ROW_GAP, row.get_rect(), lambda: self._show(mission)
 
-        button = pygame.Rect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT)
-        button.midright = (width - ROW_PAD, height // 2)
-        pygame.draw.rect(row, BUTTON_FILL, button)
-        pygame.draw.rect(row, ACCENT, button, 2)
+    @staticmethod
+    def _button(label: str) -> pygame.Surface:
+        button = pygame.Surface((BUTTON_WIDTH, BUTTON_HEIGHT), pygame.SRCALPHA)
+        pygame.draw.rect(button, BUTTON_FILL, button.get_rect())
+        pygame.draw.rect(button, ACCENT, button.get_rect(), 2)
         caption = body_font(18).render(label, True, ACCENT)
-        row.blit(caption, caption.get_rect(center=button.center))
-        return row, ROW_GAP, button, action
+        button.blit(caption, caption.get_rect(center=button.get_rect().center))
+        return button
 
-    def _do(self, action: Callable[[Mission], None], mission: Mission) -> None:
-        """The board changes; the buttons are the old ones until the next draw, so they are dropped now (no double press)."""
-        action(mission)
-        self._buttons = []
+    # ---- changing the view ----
+
+    def _show(self, mission: Mission) -> None:
+        self.open_mission = mission
+        self.scroll = 0
+        self._clickable = []
+
+    def _show_list(self) -> None:
+        self.open_mission = None
+        self.notice = None
+        self.scroll = 0
+        self._clickable = []
+
+    def _act(self, action: Callable[[Mission], Optional[str]], mission: Mission) -> None:
+        """The board changes, so the list is shown again (the mission is no longer where it was). An action that answers
+        with a text (a delivery's reward) shows it first: Esc then goes back to the list."""
+        reply = action(mission)
+        self._show_list()
+        if reply is not None:
+            self.notice = (mission.title(), reply)
 
     # ---- drawing ----
 
@@ -145,23 +203,24 @@ class MissionBoardDialog(Dialog):
         surface.blit(self._title, (MARGIN, MARGIN - 4))
         pygame.draw.line(surface, ACCENT, (MARGIN, self._divider_y), (WIDTH - MARGIN, self._divider_y), 2)
 
-        self._buttons = []
+        self._clickable = []
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)
         y = 0
-        for block, gap, button, action in self._items(self.text_rect.width):
+        for block, gap, rect, action in self._items(self.text_rect.width):
             y += gap
             top = self.text_rect.top + y - self.scroll
             if top + block.get_height() >= self.text_rect.top and top <= self.text_rect.bottom:
                 surface.blit(block, (self.text_rect.left, top))
-            if button is not None and action is not None:
-                self._buttons.append((button.move(self.text_rect.left, top), action))
+            if rect is not None and action is not None:
+                self._clickable.append((rect.move(self.text_rect.left, top), action))
             y += block.get_height()
         self.content_height = y
         surface.set_clip(previous_clip)
 
         self._draw_scroll_bar(surface)
-        hint = body_font(BODY_SIZE).render('Esc: leave the board', True, DIM_COLOR)
+        hint_text = 'Esc: back to the list' if self.open_mission is not None or self.notice is not None else self._hint()
+        hint = body_font(BODY_SIZE).render(hint_text, True, DIM_COLOR)
         surface.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - MARGIN // 2)))
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
@@ -194,8 +253,10 @@ class MissionBoardDialog(Dialog):
             return ('exit', None)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                return ('close', None)
-            if event.key == pygame.K_UP:
+                if self.open_mission is None and self.notice is None:
+                    return ('close', None)
+                self._show_list()
+            elif event.key == pygame.K_UP:
                 self._scroll_by(-SCROLL_STEP)
             elif event.key == pygame.K_DOWN:
                 self._scroll_by(SCROLL_STEP)
@@ -204,8 +265,51 @@ class MissionBoardDialog(Dialog):
         elif event.type == pygame.MOUSEWHEEL:
             self._scroll_by(-event.y * SCROLL_STEP)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.text_rect.collidepoint(event.pos):
-            for rect, action in self._buttons:
+            for rect, action in self._clickable:
                 if rect.collidepoint(event.pos):
                     action()
                     break
         return None
+
+
+class MissionBoardDialog(MissionListDialog):
+    """The board of an outpost: the player's missions to deliver here, and the offers to take."""
+
+    def __init__(self, board: MissionBoard) -> None:
+        super().__init__(board.title)
+        self.board: MissionBoard = board
+
+    def _sections(self) -> List[Section]:
+        return [('Your missions', self.board.mine(), 'None.'),
+                ('Available', list(self.board.offers), 'Nothing new.')]
+
+    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
+        if mission in self.board.mine():
+            return 'Deliver', lambda: self._act(self.board.deliver, mission)
+        return 'Accept', lambda: self._act(self.board.accept, mission)
+
+    def _hint(self) -> str:
+        return 'Esc: leave the board'
+
+
+class PendingMissionsDialog(MissionListDialog):
+    """The missions the player has taken and not yet done, with the time left. Nothing to act on here: delivery is at the
+    outpost's board."""
+
+    def __init__(self, missions: List[Mission]) -> None:
+        super().__init__('Pending missions')
+        self.missions: List[Mission] = missions
+
+    def _sections(self) -> List[Section]:
+        return [('Pending missions', self.missions, 'None.')]
+
+    def _deadline_line(self, mission: Mission) -> str:
+        import game_environment as gem  # local: the game's environment, not needed by the rest of this module
+        left = mission.deadline - gem.current_environment.date_time
+        if left.total_seconds() <= 0:
+            return 'Time left: expired'
+        hours, remainder = divmod(int(left.total_seconds()), 3600)
+        return f"Time left: {left.days} days {hours - 24 * left.days:02d} h {remainder // 60:02d} min"
+
+    def _hint(self) -> str:
+        return 'Esc: close'

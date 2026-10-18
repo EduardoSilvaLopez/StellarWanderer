@@ -153,13 +153,14 @@ class StarGl:
         return GLARE_SIZE_OF_CORONA * view.corona_px
 
     @staticmethod
-    def draw_glare(width: int, height: int, view: StarView, star: Star) -> None:
+    def draw_glare(width: int, height: int, view: StarView, star: Star, visibility: float) -> None:
         """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Its size
         follows the sun's apparent size (glare_half_px). Added to what is drawn (additive), so it brightens the sky and
-        the worlds, and is under the cockpit."""
+        the worlds, and is under the cockpit. `visibility` (see sun_visibility) scales it: a world that hides the sun
+        leaves no glare."""
         distance = math.hypot(view.x - width / 2, view.y - height / 2)
         reach = GLARE_RADIUS_SHARE * height
-        strength = GLARE_MAX * max(0.0, 1.0 - distance / reach) ** 2
+        strength = visibility * GLARE_MAX * max(0.0, 1.0 - distance / reach) ** 2
         if strength <= 0.0:
             return
         half = StarGl.glare_half_px(view)

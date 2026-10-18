@@ -23,15 +23,15 @@ class OtherWorlds:
 
         Called twice per frame around the sun (its hole in the sky, see OpenGLGui.draw): first with behind_star=True (worlds
         farther than the star, which the star then covers), then with behind_star=False
-        (worlds nearer than the star). The targeted body, when it is a world, is drawn afterwards, so it naturally
-        hides the worlds behind it (while bound, as an opaque disc below the horizon).
+        (worlds nearer than the star). Unbound, the targeted body is one of them, drawn in distance order like the others;
+        bound, it is the opaque disc below the horizon (LitWorlds.draw_targeted), so it is left out here.
         """
         to_star = ship.navigation.direction_to_star(environment.targeted_body, environment.date_time)
         star_distance = to_star.length()
 
         worlds: List[Tuple[float, World, Vector3]] = []
         for world in environment.nearest_system.get_all_worlds():
-            if world is environment.targeted_body:
+            if world is environment.targeted_body and ship.is_bound:
                 continue
             to_world = ship.navigation.direction_to_body(world, environment.date_time)
             distance = to_world.length()
