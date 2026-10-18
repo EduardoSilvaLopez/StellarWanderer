@@ -2,7 +2,6 @@ import datetime
 import logging
 import math
 from typing import Optional
-from common.game_logging import reset_people_almanack
 from galaxies.body import Body
 from galaxies.constants import INITIAL_STAR_POSITION
 from galaxies.galaxy import Galaxy
@@ -17,7 +16,6 @@ class GameEnvironment:
     EPOCH = datetime.datetime(700, 1, 1)
 
     def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict], people_alterations: Optional[dict]) -> None:
-        reset_people_almanack()  # a new environment is a new game or a load: the people will be written as they are created
         self.date_time = date_time
         if galaxy_alterations:
             galaxy_alterations['date_time'] = date_time

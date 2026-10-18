@@ -19,8 +19,8 @@ How each feature works is documented in the docstring of the module that owns it
 
 **Units**: SI only, in code, constants, logs and technical texts: metres, kilograms, seconds, watts, kelvin. No astronomical or Sun-based units (AU, solar masses or luminosities, parsecs, "Earth" years or days) and no figure expressed as a multiple of the Sun's or the Earth's: write the real value in SI, or derive it from the physics (a distance from a temperature and a luminosity, for example). The only exception in code is the light-year, for galactic coordinates. Print distances in logs with `common.units.format_compact_distance`.
 
-- **Almanacks are the exception, for good**: they are gamer-friendly documents, so they keep AU, Earth days and years and the like. Never convert them to SI, and write new almanack lines in the same friendly units.
-- **Scope**: Applies to new code and any code being edited. Old uses outside the almanacks remain until they are touched.
+- **The almanack texts are the exception, for good**: the markdown text of `StellarSystem.markdown()` (with the `markdown()` of its `Star`, `World` and planets), shown in the knowledge dialog, is gamer-friendly, so it keeps AU, Earth days and years and the like. Never convert it to SI, and write new lines of it in the same friendly units.
+- **Scope**: Applies to new code and any code being edited. Old uses outside those texts remain until they are touched.
 
 **Module names**: Use Python-style snake_case for module files (`stellar_system.py`, not `StellarSystem.py`). Every module file is snake_case, and so is every package directory (`galaxies`, `graphics`, `common/dialogs`, `common/game_logging`), as PEP 8 asks; keep it that way. Git on Windows does not record case-only renames (`core.ignorecase` is on), so a renamed module or directory can stay tracked under its old case, which breaks imports on case-sensitive systems: rename with `git mv a.py tmp.py` then `git mv tmp.py b.py` (the same for a directory), and check that `git ls-files` shows the new case.
 
@@ -49,14 +49,14 @@ def generate_default(self) -> None:
 - `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the fixed body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `common/`: shared code, used by every layer (it is not a strict layer: `savefile.py` and `dialogs/starting_dialog.py` know the game)
   - `dialogs/`: modal dialogs and their message texts; `knowledge_dialogs.py` shows the known systems and the people met (opened by the two buttons of `graphics/instruments/cockpit_buttons.py`)
-  - `game_logging/`: logging and the galaxy almanack
+  - `game_logging/`: logging
   - `savefile.py`: save and load (Savefile)
   - `updating.py`: time-based updates (UpdateQueue, Updatable)
   - `paths.py`: the writable data folder (saves, logs) and `resource_path`
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
 - `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the outpost texture generator
-- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs, and the almanacks sit at the root of `data/`. `temp/` holds `pycache`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
+- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs. `temp/` holds `pycache`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
 
 ## Rules the code does not show
 
@@ -66,13 +66,12 @@ def generate_default(self) -> None:
 - **World orbit is derived, not stored.** A world's stellar position and velocity are pure functions of game time (`calculate_stellar_position(t)`, `calculate_stellar_velocity(t)`). The only caching allowed is the one inside them: each world remembers the result for the date of its last call, so a frame evaluates each world once. Do not store them anywhere else, and always pass `gem.current_environment.date_time`. The world is not put in `UpdateQueue`; use the queue only for work that mutates state at intervals. Do not add per-call logging to these functions; they run every frame while unbound.
 - **Opening a dialog pauses game time.** While a modal loop runs (`main.run_modal_dialog`), nothing that advances game time is called, and the frame timer is restarted afterwards.
 - **Message texts live in the code**, next to the logic that shows them: build a `Message` (title, text, buttons) with f-strings and pass it to `show_message`, with an `on_result` callback that reads the pressed button's index.
-- **Almanacks** (`temp/Logs/almanack.*.md`, written by `common/game_logging/almanack.py`): `main` writes the galaxy's on each new game and each load, overwriting the previous file. Its structure is in `Galaxy.almanack()`: each object writes its own part and calls its children. The people's is blanked by `GameEnvironment.__init__` (so on every new game, load and F6, before any person exists) and each `Person` appends its own entry (`Person.almanack()`) when it is created. All almanack writes go through one ordered background writer; building the text is the caller's job, and every exception is ignored.
 
 ## Key Notes
 
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - No external config files: settings are module-level constants (e.g., `common/game_logging/constants.py`)..
-- Saves, logs and almanacks are written through `paths.data_path`: `data/` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`.
+- Saves and logs are written through `paths.data_path`: `data/` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`.
 
 ## Working Policies (for Claude)
 

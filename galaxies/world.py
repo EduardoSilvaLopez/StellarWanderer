@@ -303,8 +303,8 @@ class World(Body):
     def stellar_system(self) -> StellarSystem:
         return self.parent_orbit.parent_stellar_system
 
-    def almanack(self) -> str:
-        '''Markdown almanack of this world.'''
+    def markdown(self) -> str:
+        '''Markdown of this world.'''
         AU: int = 1.496e11
         heading: str = '####' if self.parent_planet else '###'
         kind: str = 'Moon' if self.parent_planet else 'Planet'
@@ -330,7 +330,7 @@ class World(Body):
             f"* Outposts: {outposts}\n"
             f"\n"
             )
-        text += ''.join(moon.almanack() for moon in self.moons)
+        text += ''.join(moon.markdown() for moon in self.moons)
         return text
 
     def _log_creation(self) -> World:

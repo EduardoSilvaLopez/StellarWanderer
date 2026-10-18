@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from enum import Enum
-from functools import lru_cache
+from functools import cache
 import logging
 import os
 import random
@@ -10,13 +10,11 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 import pygame
 
-from common.game_logging import ALMANACK_IMAGE_WIDTH, append_person_almanack, relative_path_from_almanack
 from galaxies.politics import political_entity
 import game_environment as gem
 from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
     from galaxies.people.player import Player
 
 PEOPLE_DIR = resource_path('people')
@@ -24,7 +22,7 @@ PEOPLE_DIR = resource_path('people')
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _read_names(file_name: str) -> Tuple[str, ...]:
     """The non-empty lines of common/resources/people/<file_name>, read once. A missing file gives no names."""
     try:
@@ -94,10 +92,12 @@ class Person:
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
         # (see meet). None until then; a person is in `persons` only from that moment on.
         self.first_met_at: Optional[str] = None
+        self.comment: str = ''  # what the player wrote about this person (see set_comment)
         if self.seed in gem.current_environment.persons:
             # Apply alterations.
             my_alterations = gem.current_environment.persons[self.seed]
             self.first_met_at = my_alterations['first_met_at']
+            self.comment = my_alterations.get('comment', '')
             if 'last_communication_at' in my_alterations and my_alterations.get('last_communication_at'):
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
             if 'sympathy' in my_alterations:
@@ -107,9 +107,7 @@ class Person:
                 for dt_str, lines in my_alterations['interactions'].items():
                     dt = datetime.fromisoformat(dt_str)
                     self.interactions[dt] = lines
-
-        self.log_update()
-        append_person_almanack(self)
+            self.log_update()
 
     def _load_portrait(self, my_random: random.Random) -> Optional[str]:
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
@@ -146,18 +144,14 @@ class Person:
         return icon_path
 
     def description_fields(self) -> list[tuple[str, str]]:
-        """The person's characteristics as (label, value): what the log, the almanack and the people dialog show. The
-        label is empty for the gender and race, which are shown as a plain line."""
+        """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty
+        for the gender and race, which are shown as a plain line."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
             ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({age} y.o.)"),
-            ('Reputation', f"{self.reputation:.2f}%"),
-            ('Empathy', f"{self.empathy100:.2f}%"),
-            ('Sociability', f"{self.sociability100:.2f}%"),
-            ('Loyalty', f"{self.loyalty100:.2f}%"),
-            ('Sympathy for the player', f"{self.sympathy100:.2f}%"),
+            ('Last time met', f"{next(reversed(self.interactions.keys())).strftime('%Y-%m-%d')}"),
         ]
 
         from galaxies.outpost import Outpost
@@ -169,20 +163,11 @@ class Person:
             ))
         return result
 
-    def _describe(self) -> str:
-        """The person's characteristics, one ' - ' line each: what the log and the almanack show."""
-        return ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
-
     def log_update(self) -> Person:
-        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{self._describe()}")
+        """Logs the person's characteristics, one ' - ' line each."""
+        description = ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
+        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{description}")
         return self
-
-    def almanack(self) -> str:
-        """Markdown entry for the people's almanack: name, portrait (if any) and characteristics."""
-        image = ''
-        if self.portrait:
-            image = f'<img src="{relative_path_from_almanack(self.portrait)}" width="{ALMANACK_IMAGE_WIDTH}">\n\n'
-        return f"# {self.get_full_name()}\n\n{image}{self._describe()}\n"
 
     def serialize(self) -> dict:
         interactions_dict: dict = {
@@ -190,26 +175,30 @@ class Person:
         }
 
         result: dict = {'seed': self.seed, 'first_met_at': self.first_met_at}
+        if self.comment:
+            result['comment'] = self.comment
         if self.last_communication_at:
             result['last_communication_at'] = str(self.last_communication_at)
         if self.sympathy_altered:
             result['sympathy'] = self.sympathy100
-        if len(interactions_dict):
+        if interactions_dict:
             result['interactions'] = interactions_dict
 
         return result
 
-    def _place(self) -> str:
-        """Where this person is: their residence with its moon (if any), planet and star system. For now the residence is
-        always an outpost, on a planet; a person with any other residence has no place yet."""
-        from galaxies.outpost import Outpost
-        return self.residency.place() if isinstance(self.residency, Outpost) else ''
+    def set_comment(self, text: str) -> Person:
+        """The player's comment on this person, saved with the person (in `persons`) at once."""
+        self.comment = text
+        gem.current_environment.persons[self.seed] = self.serialize()
+        return self
 
     def meet(self) -> Person:
         """The player talks to this person (a Conversation starts): from now on they are in `persons`, with the place
-        they were first met at, which is written once."""
+        they were first met at, which is written once. For now the residence is always an outpost (on a planet, or a moon
+        with its planet): a person with any other residence has no place yet."""
         if self.first_met_at is None:
-            self.first_met_at = self._place()
+            from galaxies.outpost import Outpost
+            self.first_met_at = self.residency.place() if isinstance(self.residency, Outpost) else ''
             gem.current_environment.persons[self.seed] = self.serialize()
         return self
 
@@ -233,7 +222,3 @@ class Person:
         self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
         self.sympathy100 = max(0, min(100, self.sympathy100))
         self.sympathy_altered = True
-
-    def communicate_from(self, outpost: Outpost) -> Person:
-        from .conversation import Conversation
-        Conversation.generate(self)

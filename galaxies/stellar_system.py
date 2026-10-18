@@ -80,19 +80,19 @@ class StellarSystem:
         '''The seed of the stellar system at galactic coordinates (x, y, z), in ly. Its star's seed is one more.'''
         return (galaxy_seed + x*1e1 + y + z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
 
-    def almanack(self) -> str:
-        '''Markdown almanack'''
+    def markdown(self) -> str:
+        '''Markdown of the system.'''
         text: str = (
             f"## {self.name} ({self.political_entity.name})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )
-        text += self.star.almanack()
-        AU: float = 1.496e11  # m. The almanack is for players: AU, like the planets' entries.
+        text += self.star.markdown()
+        AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
         text += "### Orbits\n" + ''.join(
             f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"
             for orbit in self.orbits
         )
-        text += ''.join(planet.almanack() for orbit in self.orbits for planet in orbit.planets)
+        text += ''.join(planet.markdown() for orbit in self.orbits for planet in orbit.planets)
         return text
 
     def set_altered(self) -> StellarSystem:

@@ -48,16 +48,6 @@ class Galaxy():
                         star_alterations.pop(system.get_alterations_key(), None)
         return star_alterations
 
-    def almanack(self) -> str:
-        '''Markdown almanack: A guide of the universe as generated'''
-        text: str = (
-            f"# ALMANACK - The galaxy {self.seed}.\n"
-            f"A guide of the universe as generated.\n"
-            f"\n"
-            )
-        text += ''.join(system.almanack() for system in self.stellar_systems)
-        return text
-
     def fixed_star_at(self, position: tuple[float, float, float]) -> Star:
         """The fixed star in the cell that contains the galactic position (in ly). Only the region has fixed stars."""
         star: Optional[Star] = self.fixed_stars.get(cell_of(position))

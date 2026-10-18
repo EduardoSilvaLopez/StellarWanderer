@@ -243,8 +243,8 @@ class Star(Body):
 
         return int(self.radius * factor * (0.9 + 0.2 * my_random.random()))
 
-    def almanack(self) -> str:
-        '''Markdown almanack of the star: its astronomical data. The luminosity and gravity are estimated from the
+    def markdown(self) -> str:
+        '''Markdown of the star: its astronomical data. The luminosity and gravity are estimated from the
         radius, mass and temperature.'''
         GRAVITATIONAL_CONSTANT: float = 6.674e-11  # m^3 kg^-1 s^-2
         gravity: float = GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2

@@ -4,9 +4,9 @@ from .dialog import Dialog, DialogResult, run_in_window
 from .message_dialog import MessageDialog
 from .messages import Message, confirm, show_message, next_pending_message, has_pending_messages
 from .starting_dialog import StartingDialog
-from .knowledge_dialogs import KnownSystemsDialog, PeopleDialog
+from .knowledge_dialogs import KnownSystemsDialog, KnownPeopleDialog
 
 __all__ = [
-    "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog", "PeopleDialog",
+    "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog", "KnownPeopleDialog",
     "Message", "confirm", "show_message", "next_pending_message", "has_pending_messages",
 ]

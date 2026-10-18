@@ -27,14 +27,14 @@ if not getattr(sys, 'frozen', False):
 
 import pygame
 import logging
-from common.game_logging import configure_logging, write_almanack_async
+from common.game_logging import configure_logging
 from graphics.font_cache import FontCache
 import game_environment as gem
 import knowledge
 import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
-    Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, PeopleDialog, StartingDialog, confirm,
+    Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, StartingDialog, confirm,
     next_pending_message, run_in_window, show_message
 )
 from galaxies.mission_board import MissionBoard
@@ -110,7 +110,6 @@ def start_game(action: str, value: object) -> float:
 
         logger.debug("New game created.")
         elapsed = 0.0
-    write_almanack_async(gem.current_environment.galaxy)
     player = player_module.current_player
     player.ship.notification.set(f"Welcome, {player.get_title()} Pilot.")
     if action == 'new':
@@ -293,7 +292,6 @@ def main() -> None:
                 elif event.key == pygame.K_F6:
                     update_queue.clear()
                     Savefile.load_last()
-                    write_almanack_async(gem.current_environment.galaxy)
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
                 elif event.key == pygame.K_TAB:  # cycles the target (only outside every fixed zone); Shift+Tab goes back
                     step = -1 if event.mod & pygame.KMOD_SHIFT else 1
@@ -302,7 +300,7 @@ def main() -> None:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.set_mine_pressed()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and CockpitButtons.hit(event.pos) is not None:
-                dialog = KnownSystemsDialog() if CockpitButtons.hit(event.pos) == SYSTEMS else PeopleDialog()
+                dialog = KnownSystemsDialog() if CockpitButtons.hit(event.pos) == SYSTEMS else KnownPeopleDialog()
                 result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
                 running = result[0] != 'exit'
             elif event.type == pygame.MOUSEWHEEL:

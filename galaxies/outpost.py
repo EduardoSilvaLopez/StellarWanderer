@@ -48,7 +48,8 @@ class Outpost(Updatable):
         self.seed: float = (planet.seed + self.index + 1) % galaxies.constants.SEEDS_SCALING
         self.my_random: random.Random = random.Random(self.seed)
 
-        self.name: str = self._generate_name(self.my_random)
+        entity = self.planet.parent_orbit.parent_stellar_system.political_entity
+        self.name: str = entity.generate_outpost_name(self.my_random)
         self.longitude: int = \
             0 if self.index == 0 else \
             self.my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
@@ -152,9 +153,6 @@ class Outpost(Updatable):
         """Where the outpost is, in the stellar frame, moving with its planet."""
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
-    def _generate_name(self, my_random: random.Random) -> str:
-        return self.planet.parent_orbit.parent_stellar_system.political_entity.generate_outpost_name(my_random)
-
     def reference(self) -> str:
         """A text that identifies this outpost in the whole galaxy: its system, orbit, planet and own key."""
         orbit = self.planet.parent_orbit
@@ -191,6 +189,7 @@ class Outpost(Updatable):
 
     def communicate(self) -> Outpost:
         import game_environment as gem
-        self.com_officer.communicate_from(self)
+        from galaxies.people.conversation import Conversation
+        Conversation.generate(self.com_officer)
         self._set_last_visited(gem.current_environment.date_time)
         return self

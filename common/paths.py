@@ -1,4 +1,4 @@
-"""Where the game's files are: the writable data (saves, logs and almanacks) and the read-only resources."""
+"""Where the game's files are: the writable data (saves and logs) and the read-only resources."""
 
 import os
 import sys
