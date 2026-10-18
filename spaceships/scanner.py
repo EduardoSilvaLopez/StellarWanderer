@@ -21,8 +21,9 @@ class Scanner:
     The scanner decides what is targeted; the laser (spaceships/laser.py) only fires at it. While bound, the beam
     (drawn by graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
     slope from the emitter (`_emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
-    MAX_LENGTH metres ahead, so it hits the ground at full range. Rocks closer than the slope's height at their
-    distance pass over the beam. `targeted_rock` and `targeted_mine` are what the scanner panel
+    MAX_LENGTH metres ahead (horizontally), so it hits the ground at full range when the ship is low. Rocks closer
+    than the slope's height at their distance pass over the beam. A hit counts only within MAX_LENGTH metres of the
+    camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach. `targeted_rock` and `targeted_mine` are what the scanner panel
     (graphics/instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
     collects from.
     """
@@ -95,12 +96,19 @@ class Scanner:
         hit = self._closest_hit(gem.current_environment.fixed_world)
         if hit is None:
             return
-        self.target, t = hit
+        target, t = hit
 
         # The beam ends where it hits: start + t * (end - start). It slopes, so the height moves too.
-        self.end_x = self.start_x + t * (self.end_x - self.start_x)
-        self.end_y = self.start_y + t * (self.end_y - self.start_y)
-        self.end_z = self.start_z + t * (self.end_z - self.start_z)
+        hit_x = self.start_x + t * (self.end_x - self.start_x)
+        hit_y = self.start_y + t * (self.end_y - self.start_y)
+        hit_z = self.start_z + t * (self.end_z - self.start_z)
+
+        # The beam is long when the ship is high (it runs down to the ground MAX_LENGTH metres ahead, horizontally), but a
+        # hit counts only within MAX_LENGTH of the camera: nothing is targeted, or heated, farther than that.
+        if math.dist(origin, (hit_x, hit_y, hit_z)) > self.MAX_LENGTH:
+            return
+        self.target = target
+        self.end_x, self.end_y, self.end_z = hit_x, hit_y, hit_z
 
     def activate(self, time_passed: int) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise

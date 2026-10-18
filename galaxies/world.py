@@ -163,7 +163,7 @@ class World(Body):
         from galaxies.outpost import Outpost
         self.outposts: dict = {}
         if not self.parent_planet:
-            outposts_count = int(abs(my_random.gauss(1.0, 1.5)))
+            outposts_count = int(abs(my_random.gauss(1.5, 0.5)))
             if self._is_initial_planet() and outposts_count <= 0:
                 outposts_count = 1
 
@@ -220,7 +220,7 @@ class World(Body):
         vocals = "aeiouaeio"  # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
         name = ""
-        for _ in range(1, my_random.randint(3, 6)):
+        for _ in range(1, my_random.randint(2, 5)):
             if my_random.random() < 0.5:
                 name += my_random.choice(consonants)
             name += my_random.choice(vocals)
@@ -326,7 +326,7 @@ class World(Body):
             f"{orbit_shape}"
             f"* Radius: {int(self.radius/1000)} Km\n"
             f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
-            f"* % Ore prevalence: {100*self.ore_prevalence:.2f}%\n"
+            f"* 1e-4 Ore prevalence: {1e4*self.ore_prevalence:.2f}\n"
             f"* Outposts: {outposts}\n"
             f"\n"
             )

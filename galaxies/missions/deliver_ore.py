@@ -20,7 +20,7 @@ class DeliverOre(Mission):
     """Bring `quantity` ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery."""
 
     KIND = 'deliver_ore'
-    CHANCES_PER_DAY = 0.99
+    CHANCES_PER_DAY = 0.5
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
     DAYS_MIN = 5
@@ -29,50 +29,45 @@ class DeliverOre(Mission):
 
     def __init__(self, quantity: Optional[int] = None, **common: Any) -> None:
         super().__init__(**common)
-        # Drawn in this order every time, from the seed. A loaded mission passes its own deadline and quantity, which win.
+        # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline), the quantity.
         days = self.my_random.randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)
         amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1E2, DeliverOre.QUANTITY_MAX_1E2) * 100
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a moment
         # in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
-        if self.deadline is None:
-            self.deadline = self.created_at + timedelta(days=days)
         self.quantity: int = amount if quantity is None else quantity
         taken_day = next((index for index, roll in enumerate(rolls) if roll < DeliverOre.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
-    @staticmethod
-    def offered_on(day: datetime, outpost: Outpost) -> Optional[DeliverOre]:
-        """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost and the
-        day only, so it is the same however the board was visited."""
-        chance = random.Random(seed_of(f"{outpost.full_keys()} {DeliverOre.KIND} offer {day.date().isoformat()}"))
-        if chance.random() >= DeliverOre.CHANCES_PER_DAY:
-            return None
-        return DeliverOre.generate(day, outpost)
+    @classmethod
+    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverOre]:
+        return cls.generate(day, outpost)
 
     @staticmethod
     def generate(created_at: datetime, outpost: Outpost) -> DeliverOre:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = seed_of(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
+        days = random.Random(seed).randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)  # the first draw of the seed, as in __init__
         return DeliverOre(
             seed=seed,
             issuer=outpost.full_keys(),
-            issuer_name=outpost.address(),
             created_at=created_at,
+            deadline=created_at + timedelta(days=days),
+            destination=outpost.full_keys(),
         )
 
     def title(self) -> str:
         return f"Deliver {self.quantity} PGM ore" # Later REE and others, see Copilot chat.
 
     def description(self) -> str:
-        return f"A factory needs {self.quantity} Kg of PGM ore. It is to be delivered here, at {self.issuer_name}. Please bring them in time, Pilot."
+        return f"A factory needs {self.quantity} Kg of PGM ore. It is to be delivered here, at {self.issuer_outpost.address()}. Please bring them in time, Pilot."
 
     def can_complete(self, player: Player) -> bool:
         return player.ship.cargo_hold.ore >= self.quantity
 
     def complete(self, player: Player) -> None:
-        player.those_who_share.reputation += 0.012 * self.quantity
+        player.those_who_share.reputation += 0.006 * self.quantity
         player.ship.cargo_hold.ore -= self.quantity
 
     def shortfall(self, player: Player) -> str:

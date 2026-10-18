@@ -198,11 +198,16 @@ RELEASE "The Three Powers" created, with installer.
 * Temperature by rock melting looks too low. Resolved?
 * Angular breaking seems too slow. Resolved?
 * Made the start somehow harder, only 2 mines, cost more, get only enough not to bring rep < 0, ore gives less reputation.
+* Some sounds implemented (document in "ideas")
+* DeliverPackage mission.
 
 Extra time: 67h30' + 17:15-
 
-* Future missions? bring package to place, visit place and scan something.
-* Sounds
+* Visit place and scan mission.
+* Altitude brake is somehow slow... maybe bcs other components big but this should not be so.
+* Scroll bars cannot be dragged. Can this be implemented?
+* Extra: Download more faces of the main races.
+* Rest of sounds
 
 # BACKLOG
 * ASTEROIDS (II)
@@ -210,6 +215,7 @@ Extra time: 67h30' + 17:15-
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
+  * Extra: Latinos.
   * Open: Ages of people still too similar?
 
 In-Game almanack... must be saved, part of the save file.
@@ -218,7 +224,9 @@ In-Game almanack... must be saved, part of the save file.
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
+  * Extra: Arabs.
 * JOVIAN PLANETS (with forbidden area)
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
 * AI PERSONALITY?

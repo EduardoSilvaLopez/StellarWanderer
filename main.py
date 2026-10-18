@@ -31,6 +31,7 @@ from common.game_logging import configure_logging
 from graphics.font_cache import FontCache
 import game_environment as gem
 import knowledge
+from common import audio
 import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
@@ -225,6 +226,7 @@ def run_modal_dialog(
     player = player_module.current_player
     if player.ship.laser.firing:
         player.ship.laser.cease_fire()
+    audio.play(dialog.OPEN_SOUND)
 
     result = None
     while result is None:
@@ -240,6 +242,7 @@ def run_modal_dialog(
         pygame.display.flip()
         clock.tick(FPS)
     clock.tick()  # restart the frame timer, so the time spent in the dialog is not part of the next dt
+    audio.play(dialog.CLOSE_SOUND)
     return result, screen
 
 

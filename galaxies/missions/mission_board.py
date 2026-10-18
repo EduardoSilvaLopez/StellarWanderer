@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 
 import galaxies.people.player as player_module
-from galaxies.missions import Mission, OPEN, DeliverOre
+from common import audio
+from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage
 import game_environment as gem
 
 if TYPE_CHECKING:
@@ -43,10 +44,22 @@ class MissionBoard:
         first_day = self.outpost.last_visited if self.outpost.last_visited else now - timedelta(days=28)
         day = first_day.replace(hour=0, minute=0, second=0, microsecond=0)
         while day < now:
-            offer = DeliverOre.offered_on(day, self.outpost)  # New types come here.
-            if offer is not None and offer.deadline > now and not offer.is_taken_by_others(now) and offer.seed not in known:
-                self.offers.append(offer)
-                known.add(offer.seed)
+            offers: List[Mission] = []
+
+            new_offer = DeliverOre.offered_on(day, self.outpost)
+            if new_offer is not None:
+                offers.append(new_offer)
+
+            new_offer = DeliverPackage.offered_on(day, self.outpost)
+            if new_offer is not None:
+                offers.append(new_offer)
+
+            # New types come here.
+
+            for offer in offers:
+                if offer.deadline > now and not offer.is_taken_by_others(now) and offer.seed not in known:
+                    self.offers.append(offer)
+                    known.add(offer.seed)
             day += timedelta(days=1)
 
     @staticmethod
@@ -59,9 +72,9 @@ class MissionBoard:
         return player_module.current_player
 
     def mine(self) -> List[Mission]:
-        """The missions the player has taken from this outpost and not yet delivered or lost."""
-        address = self.outpost.full_keys()
-        return [m for m in self.player.missions if m.issuer == address and m.status == OPEN]
+        """The missions which can be completed here."""
+        dest_keys = self.outpost.full_keys()
+        return [m for m in self.player.missions if m.destination == dest_keys and m.status == OPEN]
 
     def accept(self, offer: Mission) -> None:
         """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has passed
@@ -76,6 +89,7 @@ class MissionBoard:
         offer.accept(now)
         self.player.missions.append(offer)
         self.player.ship.notification.set(f"Mission taken: {offer.title()}.")
+        audio.play('mission_taken')
 
     def deliver(self, mission: Mission) -> Optional[str]:
         """The player brings what a mission they have taken asks for. Returns the reward text, to show, when it is done.
@@ -86,4 +100,5 @@ class MissionBoard:
             self.player.ship.notification.set(mission.shortfall(self.player))
             return None
         mission.finish(self.player)
+        audio.play('mission_delivered')
         return mission.reward_text()

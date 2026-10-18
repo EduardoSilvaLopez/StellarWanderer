@@ -33,7 +33,7 @@ class Cargo:
         pad = max(6, rect.width // 16)
         line_spacing = line_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
-        if not credits_shown():
+        if not credits_shown() and ship.owner.credits > 0:  # no credits, nothing to show as contraband
             line = line_font.render(f'CREDITS: {format_credits(ship.owner.credits)}', True, BINDING_MARK_RED)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pygame
 
+from common import audio
 from common.paths import resource_path
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
@@ -255,6 +256,7 @@ class MissionListDialog(Dialog):
             if event.key == pygame.K_ESCAPE:
                 if self.open_mission is None and self.notice is None:
                     return ('close', None)
+                audio.play('ui_close')
                 self._show_list()
             elif event.key == pygame.K_UP:
                 self._scroll_by(-SCROLL_STEP)
@@ -267,6 +269,7 @@ class MissionListDialog(Dialog):
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.text_rect.collidepoint(event.pos):
             for rect, action in self._clickable:
                 if rect.collidepoint(event.pos):
+                    audio.play('ui_click')
                     action()
                     break
         return None
@@ -274,6 +277,8 @@ class MissionListDialog(Dialog):
 
 class MissionBoardDialog(MissionListDialog):
     """The board of an outpost: the player's missions to deliver here, and the offers to take."""
+
+    OPEN_SOUND = 'board_open'
 
     def __init__(self, board: MissionBoard) -> None:
         super().__init__(board.title)

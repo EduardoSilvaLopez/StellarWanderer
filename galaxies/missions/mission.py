@@ -17,11 +17,13 @@ from abc import abstractmethod
 from datetime import datetime
 import hashlib
 import random
-from typing import TYPE_CHECKING, Dict, Optional, Type
+from typing import TYPE_CHECKING, Dict, Optional, Type, TypeVar
 
+from common import audio
 from common.updating import Updatable, update_queue
 
 if TYPE_CHECKING:
+    from galaxies.outpost import Outpost
     from galaxies.people.player import Player
 
 OPEN = 'open'  # taken, not yet delivered and not yet late
@@ -29,6 +31,7 @@ DONE = 'done'
 FAILED = 'failed'
 
 _KINDS: Dict[str, Type[Mission]] = {}
+Kind = TypeVar('Kind', bound='Mission')  # lets `register` hand back the very class it is given, not just a Mission
 
 
 def seed_of(text: str) -> int:
@@ -37,8 +40,9 @@ def seed_of(text: str) -> int:
     return int.from_bytes(hashlib.sha256(text.encode('utf-8')).digest()[:8], 'big')
 
 
-def register(kind: Type[Mission]) -> Type[Mission]:
-    """Makes a kind of mission known by its KIND, for Mission.deserialize."""
+def register[Kind: 'Mission'](kind: Type[Kind]) -> Type[Kind]:
+    """Makes a kind of mission known by its KIND, for Mission.deserialize. It returns the class unchanged, and says so in its
+    type: a class decorated with it keeps its own members for the editor (`DeliverOre.generate`, references, rename)."""
     _KINDS[kind.KIND] = kind
     return kind
 
@@ -48,28 +52,55 @@ class Mission(Updatable):
     Subclasses add the objective."""
 
     KIND: str = ''
+    CHANCES_PER_DAY: float = 0.0  # the chance a kind makes an offer on a given day; a kind that makes none keeps 0
 
     def __init__(self,
                  seed: int,
                  issuer: str,
-                 issuer_name: str,
                  created_at: datetime,
-                 deadline: Optional[datetime] = None,
+                 deadline: datetime,
+                 destination: str,
                  accepted_at: Optional[datetime] = None,
-                 status: str = OPEN) -> None:
+                 status: str = OPEN,
+                 ) -> None:
         self.seed: int = seed  # identifies the offer: the rest of it is drawn from it (see generate)
         self.my_random: random.Random = random.Random(self.seed)
         self.created_at: datetime = created_at  # the day the offer was made
         self.issuer: str = issuer  # Outpost.full_keys() of the outpost that asked for it
-        self.issuer_name: str = issuer_name  # where that is, for the player: Outpost.address()
+        self.destination: str = destination  # Outpost.full_keys() of the outpost it is for
 
-        # Set by derived class on real creation, set manually if loaded.
         self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
         self.status: str = status
         # Set by the derived class at creation, like the deadline: when somebody else takes the offer, None if nobody does.
         # It only matters while the mission is an offer on a board; it is not saved.
         self.taken_by_others_at: Optional[datetime] = None
+
+    @classmethod
+    def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
+        """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost and the
+        day only, so it is the same however the board was visited."""
+        chance = random.Random(seed_of(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
+        if chance.random() >= cls.CHANCES_PER_DAY:
+            return None
+        return cls.offer(day, outpost, chance)
+
+    @classmethod
+    @abstractmethod
+    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[Mission]:
+        """The offer itself, once the day's chance has come up: its kind decides what it asks, with `chance` if it needs more."""
+
+    @property
+    def issuer_outpost(self) -> Outpost:
+        """The outpost that asked for it, found from its keys."""
+        import game_environment as gem
+        return gem.current_environment.galaxy.outpost_of(self.issuer)
+
+    @property
+    def destination_outpost(self) -> Outpost:
+        """The outpost it is for, found from its keys."""
+        import game_environment as gem
+        return gem.current_environment.galaxy.outpost_of(self.destination)
 
     def is_taken_by_others(self, now: datetime) -> bool:
         """Somebody else has taken this offer by `now`, so it is no longer on the board."""
@@ -103,6 +134,7 @@ class Mission(Updatable):
         player = player_module.current_player
         self.status = FAILED
         player.ship.notification.set(f"Mission failed: {self.title()}.")
+        audio.play('mission_failed')
         self.fail(player)
 
     @abstractmethod
@@ -127,7 +159,7 @@ class Mission(Updatable):
 
     @abstractmethod
     def reward_text(self) -> str:
-        return "Thank you."
+        pass
 
     def give_reward(self, player: Player) -> None:
         """Gives the reward. Nothing yet."""
@@ -140,7 +172,7 @@ class Mission(Updatable):
             'kind': self.KIND,
             'seed': self.seed,
             'issuer': self.issuer,
-            'issuer_name': self.issuer_name,
+            'destination': self.destination,
             'created_at': self.created_at.isoformat(),
             'deadline': self.deadline.isoformat(),
             'accepted_at': None if self.accepted_at is None else self.accepted_at.isoformat(),
@@ -162,7 +194,7 @@ class Mission(Updatable):
         return {
             'seed': source['seed'],
             'issuer': source['issuer'],
-            'issuer_name': source['issuer_name'],
+            'destination': source['destination'],
             'created_at': datetime.fromisoformat(source['created_at']),
             'deadline': datetime.fromisoformat(source['deadline']),
             'accepted_at': None if source['accepted_at'] is None else datetime.fromisoformat(source['accepted_at']),

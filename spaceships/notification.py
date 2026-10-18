@@ -24,7 +24,7 @@ class Notification(Updatable):
         self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
 
         from galaxies.people.player import current_player
-        current_player.time_scale = current_player.TIME_SCALE_MIN
+        current_player.time_scale = min(current_player.TIME_SCALE_MIN, current_player.time_scale)
 
         if self not in update_queue:
             update_queue.add(self)

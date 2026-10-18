@@ -42,7 +42,7 @@ class Navigation:
     BIND_RADIUS_MULTIPLE = 1.1  # bind at or inside this distance from the world's centre, in radii
     UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
-    COLLISION_BRAKE_FRACTION = 0.5  # share of BRAKE_ACC assumed available when judging a collision
+    COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -323,4 +323,12 @@ class Navigation:
         entry_distance = -along - math.sqrt(discriminant)
         stopping_distance = speed ** 2 / (2.0 * self.ship.BRAKE_ACC * Navigation.COLLISION_BRAKE_FRACTION)
         return entry_distance <= stopping_distance
+
+    def altitude_warning(self) -> bool:
+        """True while bound and falling so fast that the ground comes before a stop, braking with only
+        COLLISION_BRAKE_FRACTION of BRAKE_ACC (the same judgement as collision_warning, on the vertical)."""
+        if not self.ship.is_bound or self.ship.velocity.y >= 0.0:
+            return False
+        stopping_distance = self.ship.velocity.y ** 2 / (2.0 * self.ship.BRAKE_ACC * Navigation.COLLISION_BRAKE_FRACTION)
+        return self.ship.position.y <= stopping_distance
     # endregion

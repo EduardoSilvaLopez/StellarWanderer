@@ -5,7 +5,9 @@ from typing import Dict, Tuple, TYPE_CHECKING
 import math
 import pygame
 from common.vector3 import Vector3
-from .constants import ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
+from .constants import (
+    ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP,
+)
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -37,6 +39,9 @@ class ObjectLabels:
     would hang in the empty sky above the planet's edge, a few degrees below the view axis, when the real horizon is
     far lower (at 400 km of altitude on a 6,000 km world it is 20 degrees down). So an outpost beyond the horizon is
     labelled on the horizon line, in its flat direction.
+
+    A label is drawn only when its anchor is inside the windshield panes (see `_in_windshield`): an object seen above or
+    beside the glass gets no label, so no label lies on the canopy frame.
     """
 
     LABEL_OFFSET_X = 4  # pixels from object center to the left edge of the label
@@ -64,7 +69,7 @@ class ObjectLabels:
                 vector = ship.navigation.direction_to_point(point, environment.date_time)
                 distance = vector.length()
             projected = project_to_camera(ship, vector, w, horizon_y, focal_length_px)
-            if projected is None:
+            if projected is None or not ObjectLabels._in_windshield(projected, w, h):
                 continue
             # Bound, the dot sits on the surface, in the overlay so the ground drawn in 3D does not hide it.
             # Only outposts in front of the planet get one; labels stay for all of them.
@@ -85,7 +90,7 @@ class ObjectLabels:
         # Draw star label
         star_vector = ship.navigation.direction_to_star(body, environment.date_time)
         projected = project_to_camera(ship, star_vector, w, horizon_y, focal_length_px)
-        if projected is not None:
+        if projected is not None and ObjectLabels._in_windshield(projected, w, h):
             screen_x, screen_y = projected
             label_surf, rect = ObjectLabels._render_label(
                 label_font, system.star.name, format_compact_distance(star_vector.length()),
@@ -99,7 +104,7 @@ class ObjectLabels:
         for world_obj in system.get_all_worlds():
             world_vector = world_obj.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
             projected = project_to_camera(ship, world_vector, w, horizon_y, focal_length_px)
-            if projected is None:
+            if projected is None or not ObjectLabels._in_windshield(projected, w, h):
                 continue
             screen_x, screen_y = projected
             label_surf, rect = ObjectLabels._render_label(
@@ -132,6 +137,19 @@ class ObjectLabels:
         reach = radius * math.sin(arc)  # along the ground, in the plane tangent under the ship
         drop = radius + altitude - radius * math.cos(arc)  # below that plane
         return Vector3(east / ground * reach, -drop, north / ground * reach), distance
+
+    @staticmethod
+    def _in_windshield(point: Tuple[float, float], w: int, h: int) -> bool:
+        """True if the screen point is in the windshield panes: below the top rail and between the two A-pillars, which
+        angle inward from the top of the canopy to its bottom (see Canopy.draw)."""
+        x, y = point
+        top = h * CANOPY_TOP
+        bottom = h * CONSOLE_TOP
+        if not top <= y <= bottom:
+            return False
+        t = (y - top) / (bottom - top)
+        left_pillar = w * (CANOPY_TOP_INSET + (CANOPY_BOTTOM_INSET - CANOPY_TOP_INSET) * t)
+        return left_pillar <= x <= w - left_pillar
 
     @staticmethod
     def _render_label(font: FallbackFont, name: str, distance: str, center_x: int, center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:

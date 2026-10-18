@@ -4,7 +4,7 @@ While unbound, the ProximityMeter is shown in its place."""
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, ACCENT_DIM
+from ..constants import ACCENT, ACCENT_DIM, SPEED_WARNING_RED
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
@@ -38,5 +38,6 @@ class AltitudeMeter:
         )
 
         label_font = fonts.get(max(9, int(h * 0.017)))
-        alt_label = label_font.render('ALT', True, ACCENT_DIM)
+        warning = ship.navigation.altitude_warning()
+        alt_label = label_font.render('ALT', True, SPEED_WARNING_RED if warning else ACCENT_DIM)
         surface.blit(alt_label, alt_label.get_rect(midtop=(cluster_left + bar_w // 2, cluster_top - 30)))

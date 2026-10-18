@@ -1,15 +1,18 @@
 import copy
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from galaxies import fixed_stars
 from galaxies.constants import INITIAL_STAR_POSITION
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
+if TYPE_CHECKING:
+    from galaxies.outpost import Outpost
+
 '''The whole galaxy. We won't have more than one.'''
 
 
-class Galaxy():
+class Galaxy:
 
     def __init__(self, user_given_seed: float, saved_alterations: dict) -> None:
         self.seed: float = user_given_seed
@@ -31,7 +34,7 @@ class Galaxy():
 
     def get_alterations(self) -> dict:
         ''' Galaxy alterations, exceptionally, are an empty map if none.'''
-        star_alterations = dict()
+        star_alterations = {}
         if self.is_altered:
             # Stellar systems only exist once visited, so start from the alterations loaded from the
             # savefile (systems not in memory must survive the next save), then overlay the live systems.
@@ -74,6 +77,16 @@ class Galaxy():
             return existing
         star: Optional[Star] = self.fixed_stars.get(tuple(int(c) for c in key.split()))
         return self.add_stellar_system(star) if star is not None else None
+
+    def outpost_of(self, full_keys: str) -> Outpost:
+        """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then the outpost's own key."""
+        system_key, orbit_key, planet_key, outpost_key = full_keys.split('|')
+        system = self.system_of_key(system_key)
+        if system is None:
+            raise KeyError(f"No stellar system {system_key} in this galaxy.")
+        orbit = system.get_orbit(float(orbit_key))
+        planet = next(p for p in orbit.planets if p.get_alterations_key() == planet_key)
+        return planet.outposts[outpost_key]
 
     def add_stellar_system(self, star: Star) -> StellarSystem:
         """The stellar system of a star. The star is given, not generated; a system is only ever added once per cell."""

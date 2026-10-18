@@ -7,7 +7,6 @@ from common.dialogs.messages import show_message
 from galaxies.politics import political_entity
 from galaxies.politics.political_entity import PoliticalEntity
 from galaxies.outpost import Outpost
-from spaceships.ship import Ship
 from .. import player as player_module
 from ..player import Player
 from ..person import Person
@@ -287,7 +286,7 @@ class ReportingInOutpost(Conversation):
         # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
         buttons = [
                 {
-                'text': 'Thank you for sharing.',
+                'text': 'Thank you for sharing',
                 'sympathy': 0.02 if self.interlocutor.loyalty100 > 10 else 0,
                 }
                 , {
@@ -468,8 +467,8 @@ class ReportingInOutpost(Conversation):
         # Reputation loss = need of stuff.
         rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 24
         rep_loss_energy = -(ship.energy_max - ship.energy) * 5e-13  # W/o laser or acc, negligible...
-        rep_loss_air = -(ship.cargo.air_max - ship.cargo_hold.air) * 0.0006
-        rep_loss_water = -(ship.cargo.water_max - ship.cargo_hold.water) * 0.0003
+        rep_loss_air = -(ship.cargo_hold.air_max - ship.cargo_hold.air) * 0.0006
+        rep_loss_water = -(ship.cargo_hold.water_max - ship.cargo_hold.water) * 0.0003
         rep_loss_food = -(ship.cargo_hold.food_max - ship.cargo_hold.food) * 0.0006
 
         ship.maintenance = 0.8 if ship.maintenance < 0.8 else ship.maintenance

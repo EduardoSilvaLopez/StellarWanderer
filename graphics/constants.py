@@ -6,7 +6,6 @@ FONT_FILE = 'Oxanium.ttf'
 
 # Color palette
 SPACE_COLOR = (8, 10, 24)
-PLANET_GRAY = (32, 32, 32)
 HULL_COLOR = (38, 42, 55)
 HULL_DARK = (23, 26, 36)
 HULL_EDGE_COLOR = (70, 78, 98)
@@ -30,7 +29,6 @@ RADAR_STAR_DOT_RADIUS = 3
 RADAR_WORLD_DOT_RADIUS = 3
 RADAR_MOON_DOT_RADIUS = 2
 READOUT_BG = (9, 17, 21)
-ROCK_EDGE_COLOR = (60, 60, 60)
 LASER_COLOR = (255, 255, 0)
 
 # Ore mine geometry and texture

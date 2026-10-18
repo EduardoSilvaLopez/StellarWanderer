@@ -9,6 +9,7 @@ import os
 import pygame
 from datetime import datetime
 
+from common import audio
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .instructions_dialog import InstructionsDialog
@@ -291,6 +292,7 @@ class StartingDialog(Dialog):
         """A click selects the save and puts its name in the name box, ready to be saved again or edited. A second click
         on the same save, within DOUBLE_CLICK_MS, loads it."""
         now = pygame.time.get_ticks()
+        audio.play('ui_click')
         if self._last_click == index and now - self._last_click_at <= DOUBLE_CLICK_MS:
             return ('load', self.savefiles[index]['path'])
         self._last_click = index
@@ -335,15 +337,18 @@ class StartingDialog(Dialog):
                 self.seed_input_active = True
                 self.name_input_active = False
             elif self.new_game_rect.collidepoint(event.pos):
+                audio.play('ui_click')
                 return self._new_game_result()
             elif self.game_running and self.name_rect.collidepoint(event.pos):
                 self.name_input_active = True
                 self.seed_input_active = False
             elif self.game_running and self.save_rect.collidepoint(event.pos):
+                audio.play('ui_click')
                 return self._save_result()
             elif self.exit_rect.collidepoint(event.pos):
                 return ('exit', None)
             elif self.instructions_rect.collidepoint(event.pos):
+                audio.play('ui_click')
                 self.instructions = InstructionsDialog()
             else:
                 self.seed_input_active = False
