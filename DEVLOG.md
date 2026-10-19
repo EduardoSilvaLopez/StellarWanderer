@@ -91,15 +91,14 @@ RELEASE "The Three Powers" created, with installer.
 
   * Extra: Improved realism of the astronomical layout of stellar systems.
   * Extra: Use INITIAL_ORE_MAX, limit how much ore can be brought in.
-  
-Extra time: 72h45' + 7:45 - 10:00
-
   * Extra: New game - force yellow initial star.
-  * Extra: If ore is ore max, pale yellow in cargo hold.
-  * Esc: close - eliminate, but also, right-mouse brings you back from one dialog to another.
-  * Extra: Reorganise instruments to give more space to the bar.
   * reward_text depends on player
-  * Extra: heat radius depend now on Ships temp reduction, which must also be saved.
+  * Esc: close - eliminate, but also, right-mouse brings you back from one dialog to another.
+
+Extra time: 72h45' + 7:45 - 10:00 + 12:15
+
+  * Extra: If ore is ore max, pale yellow in cargo hold. => No! Weight check over air, mines, food, water AND ore. Cargo object.
+  * Extra: Reorganise instruments to give more space to the bar.
   * Scan object mission (finish testing)
   * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
   * Rest of sounds
@@ -113,6 +112,7 @@ Extra time: 72h45' + 7:45 - 10:00
   * Extra: Download more faces of the main races.
   * Extra: Latinos.
 * OROGRAPHY
+  * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.

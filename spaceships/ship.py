@@ -101,6 +101,8 @@ class Ship(Updatable):
         result.energy_max = src['energy_max']
         if 'energy' in src:
             result.energy = src['energy']
+        if 'temp_shield_reduction' in src:
+            result.temperature = src['temp_shield_reduction']
         if 'temperature' in src:
             result.temperature = src['temperature']
         result.cargo_hold = CargoHold.load(result, src['cargo_hold'])
@@ -116,6 +118,7 @@ class Ship(Updatable):
             'maintenance': self.maintenance,
             'energy_max': self.energy_max,
             'energy': self.energy,
+            'temp_shield_reduction': self.temp_shield_reduction,
             'temperature': self.temperature,
             'cargo_hold': self.cargo_hold.serialize()
         }
@@ -164,10 +167,10 @@ class Ship(Updatable):
             self.temperature += temp_diff # Stabilizing.
         else:
             dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
-            if dist < gem.current_environment.nearest_system.star.heat_radius:
-                heat_radius = gem.current_environment.nearest_system.star.heat_radius
-                death_radius = gem.current_environment.nearest_system.star.death_radius
-                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - death_radius)/(heat_radius - death_radius)
+            if dist < gem.current_environment.nearest_system.star.default_heat_radius:
+                default_heat_radius = gem.current_environment.nearest_system.star.default_heat_radius
+                default_death_radius = gem.current_environment.nearest_system.star.default_death_radius
+                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - default_death_radius)/(default_heat_radius - default_death_radius)
 
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days

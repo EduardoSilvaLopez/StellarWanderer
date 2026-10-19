@@ -1,8 +1,8 @@
 """The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules).
 
 The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail: the
-description, and the button that acts on it, if there is one. Esc goes back from the detail to the list, and from the list
-closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar can be dragged (see ScrollBar).
+description, and the button that acts on it, if there is one. Esc (or a right-click) goes back from the detail to the list,
+and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar can be dragged (see ScrollBar).
 
 MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there), with
 their deadlines. PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
@@ -14,7 +14,7 @@ import pygame
 
 from common import audio
 from common.paths import resource_path
-from .dialog import Dialog, DialogResult
+from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR, MessageDialog
 from .scroll_bar import ScrollBar
@@ -66,8 +66,8 @@ class MissionListDialog(Dialog):
             size -= 1
             self._title = title_font(size).render(title, True, ACCENT)
         self._divider_y = MARGIN - 4 + self._title.get_height() + 12
-        hint_top = HEIGHT - MARGIN
-        self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, hint_top - 12 - (self._divider_y + 16))
+        text_bottom = HEIGHT - MARGIN
+        self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12 - (self._divider_y + 16))
         self.scroll_bar = ScrollBar(
             pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height), ACCENT
         )
@@ -84,9 +84,6 @@ class MissionListDialog(Dialog):
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
         """The button of the detail, its label and what it does, or None for no button."""
         return None
-
-    def _hint(self) -> str:
-        raise NotImplementedError
 
     # ---- content ----
 
@@ -175,7 +172,7 @@ class MissionListDialog(Dialog):
 
     def _act(self, action: Callable[[Mission], Optional[str]], mission: Mission) -> None:
         """The board changes, so the list is shown again (the mission is no longer where it was). An action that answers
-        with a text (a delivery's reward) shows it first: Esc then goes back to the list."""
+        with a text (a delivery's reward) shows it first: Esc (or a right-click) then goes back to the list."""
         reply = action(mission)
         self._show_list()
         if reply is not None:
@@ -224,9 +221,6 @@ class MissionListDialog(Dialog):
         surface.set_clip(previous_clip)
 
         self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
-        hint_text = 'Esc: back to the list' if self.open_mission is not None or self.notice is not None else self._hint()
-        hint = body_font(BODY_SIZE).render(hint_text, True, DIM_COLOR)
-        surface.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - MARGIN // 2)))
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
         outer = pygame.Rect(0, 0, WIDTH, HEIGHT)
@@ -252,13 +246,13 @@ class MissionListDialog(Dialog):
         if moved is not None:
             self.scroll = moved
             return None
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                if self.open_mission is None and self.notice is None:
-                    return ('close', None)
-                audio.play('ui_close')
-                self._show_list()
-            elif event.key == pygame.K_UP:
+        if is_cancel(event):
+            if self.open_mission is None and self.notice is None:
+                return ('close', None)
+            audio.play('ui_close')
+            self._show_list()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
                 self._scroll_by(-SCROLL_STEP)
             elif event.key == pygame.K_DOWN:
                 self._scroll_by(SCROLL_STEP)
@@ -293,9 +287,6 @@ class MissionBoardDialog(MissionListDialog):
             return 'Deliver', lambda: self._act(self.board.deliver, mission)
         return 'Accept', lambda: self._act(self.board.accept, mission)
 
-    def _hint(self) -> str:
-        return 'Esc: leave the board'
-
 
 class PendingMissionsDialog(MissionListDialog):
     """The missions the player has taken and not yet done, with the time left. Nothing to act on here: delivery is at the
@@ -315,6 +306,3 @@ class PendingMissionsDialog(MissionListDialog):
             return 'Time left: expired'
         hours, remainder = divmod(int(left.total_seconds()), 3600)
         return f"Time left: {left.days} days {hours - 24 * left.days:02d} h {remainder // 60:02d} min"
-
-    def _hint(self) -> str:
-        return 'Esc: close'

@@ -11,7 +11,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 import math
 import pygame
 
-from .dialog import Dialog, DialogResult
+from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import body_font, title_font
 from .message_dialog import MessageDialog
 from .scroll_bar import ScrollBar
@@ -275,10 +275,12 @@ class InstructionsDialog(Dialog):
             return None
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.back_rect.collidepoint(event.pos):
             return ('back', None)
+        if is_cancel(event):
+            return ('back', None)
         if event.type == pygame.MOUSEWHEEL:
             self._scroll_by(-event.y * SCROLL_STEP)
         elif event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER):
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 return ('back', None)
             if event.key == pygame.K_UP:
                 self._scroll_by(-SCROLL_STEP)

@@ -10,8 +10,17 @@ BACKDROP_COLOR = (0, 0, 0, 150)
 PANEL_BORDER_COLOR = (100, 150, 255)
 
 
+def is_cancel(event: pygame.event.Event) -> bool:
+    """True for the events that cancel a dialog, as Esc does: Esc itself, and a right-click."""
+    if event.type == pygame.KEYDOWN:
+        return event.key == pygame.K_ESCAPE
+    return event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
+
+
 class Dialog:
     """A modal dialog with a fixed logical size.
+
+    Esc and a right-click both cancel a dialog (see is_cancel), and make the same result, with the same sounds.
 
     A dialog never runs its own loop. The host feeds it events through handle_event
     (mouse positions already in dialog coordinates, see localize_event) and shows what

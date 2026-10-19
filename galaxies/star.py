@@ -87,21 +87,24 @@ class Star(Body):
 
     is_world = False
 
-    def __init__(self, seed: float, position: tuple[float, float, float]) -> None:
+    def __init__(self, seed: float, position: tuple[float, float, float], star_type: Optional[Star.Type] = None) -> None:
+        """`star_type` forces the type (the seed's type is still drawn, so the other values do not change)."""
         self.seed: float = seed
         self.position: tuple[float, float, float] = position  # galactic coordinates, in ly
         self._system: Optional[StellarSystem] = None
         my_random: random.Random = random.Random(self.seed)
         self.name: str = Star._generate_name(my_random)
         self.type: Star.Type = Star._generate_star_type(my_random)
+        if star_type is not None:
+            self.type = star_type
         self.mass: float = self._generate_mass(my_random)
         self.radius: int = self._generate_radius()
         self.luminosity: float = self._generate_luminosity()  # W
         self.temperature: float = self._generate_temperature()
         self.color: tuple = self._generate_color()  # after the temperature, which it depends on
         self.rotation_period: float = self._generate_rotation_period(my_random)
-        self.heat_radius: int = self._generate_heat_effect_distance(my_random)
-        self.death_radius: int = self._generate_heat_death_distance(my_random)
+        self.default_heat_radius: int = self._generate_heat_effect_distance(my_random)
+        self.default_death_radius: int = self._generate_heat_death_distance(my_random)
 
     @staticmethod
     def _generate_name(my_random: random.Random) -> str:

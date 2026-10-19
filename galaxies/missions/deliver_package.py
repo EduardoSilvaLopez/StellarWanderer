@@ -86,7 +86,7 @@ class DeliverPackage(Mission):
     def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
-        return f"Thank you, this {package} was really expected."
+        return f"Thank you {player.get_title()}, this {package} was really expected."
 
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverPackage:

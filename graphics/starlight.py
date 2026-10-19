@@ -1,7 +1,7 @@
 """Starlight and heat on the cockpit, drawn on the overlay after the cockpit.
 
 Starlight: the opaque cockpit pixels (hull, struts, console) get the star's colour added, by
-STARLIGHT_TINT_MAX * min(1, (death_radius / distance) ** 2): full at the star's death radius and nearer, about a hundredth
+STARLIGHT_TINT_MAX * min(1, (default_death_radius / distance) ** 2): full at the star's death radius and nearer, about a hundredth
 of it at the heat radius (about ten times the death radius), nothing to see far away. Only the colour is added, so the glass panes (transparent) stay so.
 
 Heat: a red vignette on the edges of the whole view, its opacity the hot side of the temperature's stress (see
@@ -35,7 +35,7 @@ class Starlight:
         """The share of the star's colour added to the cockpit (0 to STARLIGHT_TINT_MAX)."""
         star = environment.nearest_system.star
         distance = ship.navigation.stellar_position(environment.date_time).length()  # the star is at the origin
-        return STARLIGHT_TINT_MAX * min(1.0, (star.death_radius / max(distance, 1.0)) ** 2)
+        return STARLIGHT_TINT_MAX * min(1.0, (star.default_death_radius / max(distance, 1.0)) ** 2)
 
     @staticmethod
     def tint_cockpit(overlay: pygame.Surface, environment: GameEnvironment, ship: Ship) -> None:

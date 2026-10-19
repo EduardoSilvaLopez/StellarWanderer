@@ -3,7 +3,7 @@
 Game code builds a Message (title, text, buttons), with its text formatted by ordinary f-strings at the call site,
 and calls show_message(message, on_result=...). It never opens a modal loop itself: the main loop opens pending
 messages at the start of the next frame (next_pending_message) and then calls on_result with the pressed button's
-index, or None when the player dismissed the message with Esc.
+index, or None when the player dismissed the message with Esc or a right-click.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ def _paragraphs(text: str) -> List[str]:
 
 
 # Called with the index of the pressed button (in the order of the message's buttons), or None when the
-# message was dismissed with Esc.
+# message was dismissed with Esc or a right-click.
 ResultCallback = Callable[[Optional[int]], None]
 
 
@@ -59,7 +59,7 @@ def show_message(message: Message, on_result: Optional[ResultCallback] = None) -
     """Queue `message` to be shown at the start of the next frame.
 
     Because the message opens later, the answer cannot be returned: pass `on_result`, which is called with the
-    index of the pressed button, or None if the player dismissed the message with Esc."""
+    index of the pressed button, or None if the player dismissed the message with Esc or a right-click."""
     _pending.append(PendingMessage(message, on_result))
 
 

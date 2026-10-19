@@ -176,7 +176,7 @@ class ScanObject(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def reward_text(self, player: Player) -> str:
-        return f"Thank you, knowledge about this {self.adjective} object will help the Community."
+        return f"Thank you {player.get_title()}, knowledge about this {self.adjective} object will help the Community."
 
     def serialize(self) -> dict:
         return {**super().serialize(), 'object_type': self.object_type, 'rock_site': self.rock_site,

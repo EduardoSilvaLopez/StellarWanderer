@@ -86,7 +86,7 @@ class _ListDialog(MessageDialog):
 
 
 class KnownSystemsDialog(_ListDialog):
-    """The stellar systems the pilot knows. Result: ('close', 0), ('close', None) on Esc, ('exit', None) if the window closes."""
+    """The stellar systems the pilot knows. Result: ('close', 0), ('close', None) on Esc or a right-click, ('exit', None) if the window closes."""
 
     def __init__(self) -> None:
         super().__init__('Known stellar systems')
@@ -137,7 +137,7 @@ class KnownSystemsDialog(_ListDialog):
 
 class KnownPeopleDialog(_ListDialog):
     """The people the pilot has talked to, each with a comment box. A click in a box focuses it: the keys then write into it
-    (Enter starts a new line) until another box or the outside is clicked. Esc, or the Close button, closes the dialog; the
+    (Enter starts a new line) until another box or the outside is clicked. Esc, a right-click, or the Close button, closes the dialog; the
     comments are already saved as they are typed. Same results as KnownSystemsDialog. The box that has the focus stays focused
     when the list is scrolled away (wheel, keys or scroll bar), and typing scrolls it back into view."""
 

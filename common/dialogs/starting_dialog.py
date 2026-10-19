@@ -54,7 +54,8 @@ class StartingDialog(Dialog):
     The Instructions button shows the instructions screen (see InstructionsDialog) in its place until Back.
     ('save', '') means the default name: the text box is empty, and its grey text shows that name.
 
-    Esc opens it from the game and does not quit; the Exit game button (or closing the window) does.
+    Esc opens it from the game and does not quit; the Exit game button (or closing the window) does. A right-click outside
+    the saves does what Esc does; a right-click on a save asks to delete it.
     The save row is only offered while a game is running.
     """
 
@@ -312,6 +313,15 @@ class StartingDialog(Dialog):
             self.seed_input = "1"
             return None
 
+    def _cancel(self) -> Optional[DialogResult]:
+        """What Esc, or a right-click off the saves, does: resumes the game when one is running; otherwise it only
+        leaves the name and seed boxes."""
+        if self.game_running:
+            return ('resume', None)
+        self.seed_input_active = False
+        self.name_input_active = False
+        return None
+
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         """Handle one event (mouse positions in dialog coordinates)."""
         if self.instructions is not None:
@@ -370,16 +380,15 @@ class StartingDialog(Dialog):
             index = self._savefile_at(event.pos)
             if index is not None:
                 self._ask_delete(index)
+            else:
+                return self._cancel()
 
         elif event.type == pygame.MOUSEWHEEL:
             self._scroll_to(self.scroll_offset - 1 if event.y > 0 else self.scroll_offset + 1)
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                if self.game_running:
-                    return ('resume', None)
-                self.seed_input_active = False
-                self.name_input_active = False
+                return self._cancel()
             elif self.seed_input_active:
                 if event.key == pygame.K_BACKSPACE:
                     self.seed_input = self.seed_input[:-1]

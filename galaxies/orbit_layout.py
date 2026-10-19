@@ -82,7 +82,7 @@ class SystemScales:
             luminosity=star.luminosity,
             mass=star.mass,
             inner_edge=max(OrbitLayout.distance_at(star.luminosity, OrbitLayout.INNER_EDGE_TEMPERATURE),
-                           OrbitLayout.INNER_EDGE_DEATH_RADII * star.death_radius),
+                           OrbitLayout.INNER_EDGE_DEATH_RADII * star.default_death_radius),
             snow_line=OrbitLayout.distance_at(star.luminosity, OrbitLayout.SNOW_LINE_TEMPERATURE),
             cold_belt_min=OrbitLayout.distance_at(star.luminosity, OrbitLayout.COLD_BELT_TEMPERATURES[1]),
             cold_belt_max=OrbitLayout.distance_at(star.luminosity, OrbitLayout.COLD_BELT_TEMPERATURES[0]),
@@ -292,7 +292,7 @@ class OrbitLayout:
             return False
         distance, kind = entries[index]
         return (kind is OrbitKind.EARTHLIKE
-                and distance >= star.death_radius
+                and distance >= star.default_death_radius
                 and World.moon_limit_in_radii(distance, star.mass) >= World.MOON_MIN_ROOM_RADII)
 
     @staticmethod
@@ -300,5 +300,5 @@ class OrbitLayout:
         """Four earthlike planets, the third where the game can start (see _can_start): for a star whose zones left
         no layout."""
         room = World.MOON_MIN_ROOM_RADII / World.moon_limit_in_radii(1.0, star.mass)
-        third = max(star.death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
+        third = max(star.default_death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
         return [(third * ratio, OrbitKind.EARTHLIKE) for ratio in OrbitLayout.FALLBACK_RATIOS]

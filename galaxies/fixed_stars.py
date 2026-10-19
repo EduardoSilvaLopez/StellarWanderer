@@ -89,9 +89,9 @@ def stellar_position(position: tuple[float, float, float]) -> tuple[float, float
 
 
 def generate_region(galaxy_seed: float) -> list[Star]:
-    """The fixed stars of the region around the initial star, the initial star included. Logs aggregate results."""
+    """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs aggregate results."""
     initial_star_seed: float = (StellarSystem.seed_of(galaxy_seed, *INITIAL_STAR_POSITION) + 1) % SEEDS_SCALING
-    initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION)
+    initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION, Star.Type.G)
     stars: list[Star] = [initial_star]
     used_cells: set[tuple[int, int, int]] = {cell_of(INITIAL_STAR_POSITION)}
 

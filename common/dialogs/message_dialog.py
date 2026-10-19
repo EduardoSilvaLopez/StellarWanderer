@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 import pygame
 
-from .dialog import Dialog, DialogResult
+from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
 from .messages import Message
 from .scroll_bar import ScrollBar
@@ -23,7 +23,7 @@ class MessageDialog(Dialog):
     """Title, wrapped and scrollable text, and one or more buttons, from the Message it is given.
 
     Results: ('close', index) when a button is pressed, index being its position in the message's
-    buttons (0 is the first); ('close', None) on Esc; ('exit', None) when the window is closed.
+    buttons (0 is the first); ('close', None) on Esc or a right-click; ('exit', None) when the window is closed.
     Enter or Space press the focused button (the first at the start); Tab, Left and Right move the focus,
     and the mouse moves it too.
 
@@ -242,9 +242,10 @@ class MessageDialog(Dialog):
             self.scroll = moved
             return None
 
+        if is_cancel(event):
+            return ('close', None)
+
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                return ('close', None)
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 return ('close', self.focus)
             line = int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)
