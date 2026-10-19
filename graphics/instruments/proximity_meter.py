@@ -22,7 +22,7 @@ class ProximityMeter:
     The "Approaching" readout is the signed rate of change of the distance to the targeted body
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
-    `-3 Km/s`). In the fixed zone the "Distance" and "Approaching:" labels and the Approaching readout turn red when
+    `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the "Distance" and "Approaching:" labels and the Approaching readout turn red when
     `Navigation.collision_warning` holds: keeping its direction
     relative to the body, the ship reaches the surface even braking with only `Navigation.COLLISION_BRAKE_FRACTION` of
     `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
@@ -39,7 +39,7 @@ class ProximityMeter:
         label_top = cluster_top - 46
         bar_top = label_top + label_font.get_height() + 6
         group_bottom = cluster_top + cluster_height + 22
-        bar_height = group_bottom - bar_top - row_height * 5 - 2  # five rows below the bar: distance, approach, and the name while fixed
+        bar_height = group_bottom - bar_top - row_height * 7 - 2  # seven rows below the bar: distance, approach, drift, and the name while fixed
 
         bar_rect = pygame.Rect(cluster_left, bar_top, bar_w, bar_height)
 
@@ -92,6 +92,14 @@ class ProximityMeter:
             format_compact_speed(ship.navigation.approach_speed(body)), True, SPEED_WARNING_RED if collision_warning else ACCENT
         )
         surface.blit(speed_text, speed_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
+
+        row_y += row_height
+        drift_label = label_font.render('Drift:', True, ACCENT_DIM)
+        surface.blit(drift_label, drift_label.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
+
+        row_y += row_height
+        drift_text = label_font.render(f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', True, ACCENT)
+        surface.blit(drift_text, drift_text.get_rect(midtop=(cluster_left + bar_w // 2, row_y)))
 
         # While fixed, the bar is there, so the name goes below the readouts. Outside, it is drawn under TARGET (above).
         if in_fixed_zone:

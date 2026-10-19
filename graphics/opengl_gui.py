@@ -18,6 +18,7 @@ from .debug_fps import DebugFps
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
 from .fixed_world import FixedWorld
+from .orbit_path import OrbitPath
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
@@ -74,6 +75,7 @@ class OpenGLGui:
         if view is not None:
             erase(self.world_surface, view, width, height)  # the sun shows through the sky here
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False)
+        OrbitPath.draw(self.world_surface, width, height, environment, ship)
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
         if light is not None:

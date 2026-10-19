@@ -25,6 +25,7 @@ BINDING_NEAR_GREEN = (80, 230, 120)
 SPEED_WARNING_RED = BINDING_MARK_RED  # "Speed" readout when a collision with the fixed body is unavoidable
 PROGRADE_COLOR = AMBER
 TARGET_MARKER_COLOR = (236, 236, 236)  # the X on the canopy where the target is, or on its border
+ORBIT_PATH_COLOR = (46, 120, 120)  # the orbit of the targeted body, drawn in the sky
 RETROGRADE_COLOR = BINDING_MARK_RED
 RADAR_BAR_OVER = (240, 240, 240)
 RADAR_BAR_UNDER = (120, 120, 120)

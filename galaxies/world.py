@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import math
+import numpy as np
 import random
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -534,6 +535,21 @@ class World(Body):
 
         self._velocity_cache = (current_datetime, result)
         return result
+
+    # Eccentric anomalies, in radians, either side of the world's own: where orbit_points adds points to follow the curve closely.
+    ORBIT_NEAR_ANOMALIES = (1e-4, 2.5e-4, 6e-4, 1.5e-3, 4e-3, 1e-2, 2.5e-2, 6e-2)
+
+    def orbit_points(self, current_datetime: datetime, steps: int) -> np.ndarray:
+        """The orbit as an (n, 3) array of points in order round the ellipse, relative to what it orbits (the star, or the planet
+        of a moon), in the frame of calculate_stellar_position: `steps` evenly spread, plus some close to the world's own place
+        at the date, which is one of them, so that a line through them passes exactly through the world."""
+        own = self._eccentric_anomaly(self._mean_anomaly_rad(current_datetime))
+        near = np.array([0.0, *World.ORBIT_NEAR_ANOMALIES, *(-a for a in World.ORBIT_NEAR_ANOMALIES)]) + own
+        anomalies = np.sort(np.mod(np.concatenate([math.tau * np.arange(steps) / steps, near]), math.tau))
+        a, e = self.distance_to_parent, self.eccentricity
+        x = a * (np.cos(anomalies) - e)
+        y = a * math.sqrt(1.0 - e * e) * np.sin(anomalies)
+        return x[:, None] * np.array(self._periapsis_axis) + y[:, None] * np.array(self._quarter_axis)
 
     def _eccentric_anomaly(self, mean_anomaly: float) -> float:
         """Solves Kepler's equation, E - e sin E = M, for E by Newton's method."""

@@ -340,6 +340,13 @@ class Navigation:
             return 0.0
         return -relative_position.dot(relative_velocity) / distance
 
+    def drift_speed(self, body: Body) -> float:
+        """Speed relative to the body across the line to its centre, in m/s: what is left of the relative speed once the
+        approach is taken out. Meaningful while unbound."""
+        _, relative_velocity = self._relative_to_body(body)
+        approach = self.approach_speed(body)
+        return math.sqrt(max(0.0, relative_velocity.dot(relative_velocity) - approach * approach))
+
     def collision_warning(self, body: Body) -> bool:
         """True if the ship, on its straight line relative to the body, would reach the surface even braking
         with only COLLISION_BRAKE_FRACTION of BRAKE_ACC. Sideways dodging is not considered."""

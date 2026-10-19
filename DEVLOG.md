@@ -90,6 +90,7 @@ Extra time: 72h45' + 7:45 -
   * Extra: More realistic world colors.
   * Altitude brake made independent per axis.
   * Extra: Galaxy
+  * Show the orbit of targeted (or fixed).
 
   * reward_text depends on player
   * Scan object mission.
