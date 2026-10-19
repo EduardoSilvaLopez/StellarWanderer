@@ -7,6 +7,7 @@ import pygame
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
 from .messages import Message
+from .scroll_bar import ScrollBar
 from common.paths import resource_path
 
 TEXTURE_PATH = resource_path('textures', 'dialog_background.png')
@@ -30,7 +31,8 @@ class MessageDialog(Dialog):
     (common/resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
     not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines when they
     are long. The buttons are stacked, one above the other, each as wide as the text area: the first at the top. A scroll
-    bar (a thumb only, no box) sits in the right margin beside the text when the text does not fit."""
+    bar (a thumb only, no box) sits in the right margin beside the text when the text does not fit; the mouse drags it,
+    and a click above or below it pages (see ScrollBar)."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -44,7 +46,7 @@ class MessageDialog(Dialog):
     BUTTON_PADDING_Y = 4  # above and below the label's lines
     BUTTON_GAP = 14
     SCROLLBAR_GAP = 10  # between the text area and the scroll bar
-    SCROLLBAR_WIDTH = 4
+    SCROLLBAR_WIDTH = ScrollBar.MIN_WIDTH
     SCROLLBAR_MIN_THUMB = 24
 
     def __init__(self, message: Message) -> None:
@@ -66,6 +68,10 @@ class MessageDialog(Dialog):
         self.content_height: int = 0
         self._layout_text()
         self.scroll: int = 0  # pixels scrolled down
+        self.scroll_bar = ScrollBar(
+            pygame.Rect(self.text_rect.right + self.SCROLLBAR_GAP, self.text_rect.top, self.SCROLLBAR_WIDTH, self.text_rect.height),
+            ACCENT, min_thumb=self.SCROLLBAR_MIN_THUMB,
+        )
 
         self._texture: Optional[pygame.Surface] = None
         self._texture_loaded: bool = False
@@ -184,7 +190,7 @@ class MessageDialog(Dialog):
         self._draw_content(surface)
         surface.set_clip(previous_clip)
 
-        self._draw_scroll_bar(surface)
+        self.scroll_bar.draw(surface, self.scroll, self._max_scroll, self.text_rect.height)
         self._draw_buttons(surface)
 
     def _draw_content(self, surface: pygame.Surface) -> None:
@@ -206,18 +212,6 @@ class MessageDialog(Dialog):
                                  (5, self.HEIGHT - 6, 1, -1), (self.WIDTH - 6, self.HEIGHT - 6, -1, -1)):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx + sx * bracket, cy), 3)
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
-
-    def _draw_scroll_bar(self, surface: pygame.Surface) -> None:
-        """A thumb in the right margin, beside the text: as long as the visible share of the text, and at the place the
-        scroll has reached. Drawn only when the text does not fit. No box: it stays clear of the buttons below."""
-        if self._max_scroll <= 0:
-            return
-        track_height = self.text_rect.height
-        thumb_height = max(self.SCROLLBAR_MIN_THUMB, track_height * self.text_rect.height // self.content_height)
-        thumb_travel = track_height - thumb_height
-        thumb_top = self.text_rect.top + thumb_travel * self.scroll // self._max_scroll
-        x = self.text_rect.right + self.SCROLLBAR_GAP
-        pygame.draw.rect(surface, ACCENT, (x, thumb_top, self.SCROLLBAR_WIDTH, thumb_height))
 
     def _draw_buttons(self, surface: pygame.Surface) -> None:
         font = body_font(self.BODY_SIZE)
@@ -242,6 +236,11 @@ class MessageDialog(Dialog):
         """Handle one event (mouse positions in dialog coordinates)."""
         if event.type == pygame.QUIT:
             return ('exit', None)
+
+        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll, self.text_rect.height)
+        if moved is not None:
+            self.scroll = moved
+            return None
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:

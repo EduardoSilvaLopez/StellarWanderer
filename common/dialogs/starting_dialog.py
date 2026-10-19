@@ -15,6 +15,7 @@ from .dialog_fonts import body_font, title_font
 from .instructions_dialog import InstructionsDialog
 from .message_dialog import MessageDialog
 from .messages import Message
+from .scroll_bar import ScrollBar
 
 logger = logging.getLogger(__name__)
 from common.paths import data_path, SAVEFILES_DIR
@@ -108,6 +109,11 @@ class StartingDialog(Dialog):
         self.name_rect = pygame.Rect(150, self.NAME_ROW_Y, self.save_rect.left - 10 - 150, 28)
         self.list_rect = pygame.Rect(self.MARGIN, self.LIST_TOP, self.WIDTH - 2 * self.MARGIN,
                                      self.HEIGHT - self.LIST_TOP - self.EXIT_ROW_HEIGHT)
+        # The list scrolls by rows: the bar's unit is a row, its content the saves, its view `_max_visible` of them.
+        self.scroll_bar = ScrollBar(
+            pygame.Rect(self.list_rect.right - 20, self.list_rect.top + 5, 10, self.list_rect.height - 10),  # inside the list, clear of the entries
+            (100, 150, 200), (60, 60, 80), min_thumb=20,
+        )
         self.exit_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.EXIT_ROW_HEIGHT + 12, 200, 32)
 
         self._load_savefiles()
@@ -244,15 +250,8 @@ class StartingDialog(Dialog):
                 text = self.font_savefile.render(self.savefiles[i]['display_name'], True, (200, 200, 200))
                 surface.blit(text, (rect.x + 10, rect.y + 8))
 
-            # Scrollbar if needed
-            if len(self.savefiles) > self._max_visible:
-                scrollbar_height = self.list_rect.height - 10
-                scroll_fraction = self.scroll_offset / len(self.savefiles)
-                thumb_height = max(20, scrollbar_height * (self._max_visible / len(self.savefiles)))
-                thumb_y = self.list_rect.top + 5 + scroll_fraction * (scrollbar_height - thumb_height)
-                scrollbar_x = self.list_rect.right - 20  # inside the list, clear of the entries
-                pygame.draw.rect(surface, (60, 60, 80), (scrollbar_x, self.list_rect.top + 5, 10, scrollbar_height))
-                pygame.draw.rect(surface, (100, 150, 200), (scrollbar_x, thumb_y, 10, thumb_height))
+            # Scrollbar, if the list does not fit
+            self.scroll_bar.draw(surface, self.scroll_offset, max(0, len(self.savefiles) - self._max_visible), self._max_visible)
         else:
             no_saves = self.font_normal.render("No save files found", True, (150, 150, 150))
             surface.blit(no_saves, (self.width // 2 - no_saves.get_width() // 2, self.list_rect.top + 60))
@@ -331,6 +330,13 @@ class StartingDialog(Dialog):
             return None
         if event.type == pygame.QUIT:
             return ('exit', None)
+
+        moved = self.scroll_bar.handle_event(
+            event, self.scroll_offset, max(0, len(self.savefiles) - self._max_visible), self._max_visible
+        )
+        if moved is not None:
+            self._scroll_to(moved)
+            return None
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.input_rect.collidepoint(event.pos):

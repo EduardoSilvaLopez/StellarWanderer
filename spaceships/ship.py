@@ -41,7 +41,7 @@ class Ship(Updatable):
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
-    BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking
+    BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking, of each of the three axes (see Navigation._brake)
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
@@ -49,9 +49,10 @@ class Ship(Updatable):
     TEMP_MIN = -50
     TEMP_DEFAULT = 25
     TEMP_MAX = 50
+    INITIAL_TEMP_SHIELD_REDUCTION = 1 # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
-    INITIAL_ENERGY_MAX = 1e12  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    INITIAL_ENERGY_MAX = 5e11  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
@@ -63,6 +64,7 @@ class Ship(Updatable):
         self.maintenance: float = 1.0
         self.energy_max: float = Ship.INITIAL_ENERGY_MAX
         self.energy: float = self.energy_max
+        self.temp_shield_reduction: float = Ship.INITIAL_TEMP_SHIELD_REDUCTION
         self.temperature: float = Ship.TEMP_DEFAULT
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)

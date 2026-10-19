@@ -25,6 +25,7 @@ from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.player import Player
+    from galaxies.rock import Rock
 
 OPEN = 'open'  # taken, not yet delivered and not yet late
 DONE = 'done'
@@ -111,6 +112,9 @@ class Mission(Updatable):
         self.accepted_at = now
         self.status = OPEN
         update_queue.add(self)
+
+    def on_rock_scanned(self, rock: Rock) -> None:
+        """A rock was scanned. Nothing by default."""
 
     def watch_deadline(self) -> None:
         """Puts an OPEN mission back in the update queue, after a load."""

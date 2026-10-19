@@ -393,8 +393,10 @@ def main() -> None:
             ship.scanner.update_target()
             if keys[pygame.K_SPACE]:
                 ship.scanner.activate(delta_game_seconds)
-            elif ship.laser.firing:
-                ship.scanner.deactivate()
+            else:
+                ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
+                if ship.laser.firing:
+                    ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
 

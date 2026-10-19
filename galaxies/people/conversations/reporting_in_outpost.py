@@ -254,13 +254,19 @@ class ReportingInOutpost(Conversation):
 
         warning = None
         if self.interlocutor.sympathy100 > 80:
-            warning = f"No luck this time, hey, {subjective_title}?"
+            warning = f"No ore for us, hey, {subjective_title}?"
         elif is_conspiratory:
             warning = "You bring no ore... look, I won't judge if you... but if you are not careful, they will take away you ship. Welcome to Those-Who-Share, you know what I mean?"
+        elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 20:
+            warning = "No ore. Hum."
+        elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 80 and self.interlocutor.sociability100 < 40:
+            warning = "No ore... ok."
+        elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 80:
+            warning = f"No ore for us. Don't worry, we know you, {subjective_title}."
         elif self.player.those_who_share.reputation > 50:
-            warning = f"No ore this time. Don't worry, we know you, {subjective_title}."
+            warning = "No ore for us, hey, big Pilot?"
         elif self.player.those_who_share.reputation > 10:
-            warning = "No ore this time. Pity"
+            warning = "No ore this time. Pity."
         else:
             warning = f"You bring no ore, {subjective_title}. Please remember that you license will be revoked if you do not use what you are shared to help."
 
@@ -512,6 +518,7 @@ class ReportingInOutpost(Conversation):
             self.interaction_lines.append("Came with no ore.")
 
         status.reputation += rep_change
+        logger.debug(f"New reputation: {status.reputation}")
 
         entity: PoliticalEntity = gem.current_environment.nearest_system.political_entity
         old_title = entity.title_for(old_reputation)

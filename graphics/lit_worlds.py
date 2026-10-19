@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pygame
 from .constants import (
-    WORLD_ALBEDO, WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET,
+    WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET,
 )
 from common.vector3 import Vector3
 
@@ -27,10 +27,11 @@ class LitWorlds:
     lit by the sun like the ground (`FixedWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
 
     @staticmethod
-    def light_tint(star_color: Tuple[int, int, int]) -> Tuple[float, float, float]:
-        """Albedo times the star's colour (mixed towards white), as a 0..255 multiplier per channel."""
+    def light_tint(star_color: Tuple[int, int, int], surface_colour: Tuple[int, int, int]) -> Tuple[float, float, float]:
+        """The world's surface colour (`World.surface_colour`) times the star's colour (mixed towards white), as a
+        0..255 multiplier per channel."""
         return tuple(
-            WORLD_ALBEDO[i] * ((1.0 - WORLD_LIGHT_TINT_MIX) + WORLD_LIGHT_TINT_MIX * star_color[i] / 255.0)
+            surface_colour[i] * ((1.0 - WORLD_LIGHT_TINT_MIX) + WORLD_LIGHT_TINT_MIX * star_color[i] / 255.0)
             for i in range(3)
         )
 
@@ -70,9 +71,9 @@ class LitWorlds:
     @staticmethod
     def draw_world(
             surface: pygame.Surface, w: int, h: int, to_world: Vector3, to_star: Vector3, radius: float,
-            star_color: Tuple[int, int, int], ship: Ship
+            star_color: Tuple[int, int, int], surface_colour: Tuple[int, int, int], ship: Ship
             ) -> None:
-        """Draw one world as seen from the ship, lit by the star.
+        """Draw one world as seen from the ship, lit by the star, with its surface colour.
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
         the active frame (as returned by Navigation.direction_to_body / direction_to_star)."""
@@ -128,7 +129,7 @@ class LitWorlds:
         if not coverage.any():
             return
 
-        tint = np.array(LitWorlds.light_tint(star_color), dtype=np.float32)
+        tint = np.array(LitWorlds.light_tint(star_color, surface_colour), dtype=np.float32)
         intensity = WORLD_AMBIENT_LIGHT + (1.0 - WORLD_AMBIENT_LIGHT) * shade
         rgb = np.clip(intensity[..., None] * tint, 0, 255).astype(np.uint8)
 
@@ -146,10 +147,11 @@ class LitWorlds:
     @staticmethod
     def draw_targeted(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """The targeted body, lit by the star (used while unbound). The star is not drawn here: the OpenGL pass draws it (star_gl.py)."""
+        from galaxies.world import World
         body = environment.targeted_body
-        if not body.is_world:
+        if not isinstance(body, World):  # the star
             return
-        star = body.stellar_system.star  # Can be the body.
+        star = body.stellar_system.star
         to_world = ship.navigation.direction_to_body(body, environment.date_time)
         to_star = ship.navigation.direction_to_star(body, environment.date_time)
-        LitWorlds.draw_world(surface, w, h, to_world, to_star, body.radius, star.color, ship)
+        LitWorlds.draw_world(surface, w, h, to_world, to_star, body.radius, star.color, body.surface_colour, ship)

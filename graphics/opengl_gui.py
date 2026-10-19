@@ -8,7 +8,7 @@ from OpenGL import GL
 
 from .constants import SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
-from .deep_space import DeepSpace
+from .milky_way import MilkyWay
 from .distant_stars import DistantStars
 from .local_star import view_of, erase, sun_visibility
 from .star_gl import StarGl
@@ -36,9 +36,10 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    The sun is drawn in OpenGL, under the sky: the sky (DeepSpace, the fixed stars, the worlds farther than the sun, a hole
-    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha, so the sun shows through
-    the hole, and the glare goes over the sky. See graphics/star_gl.py. The
+    The sun is drawn in OpenGL, under the sky: the sky (the fixed stars, the worlds farther than the sun, a hole
+    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha, transparent
+    where nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the sun, straight on
+    the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See graphics/star_gl.py. The
     SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
     Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
     BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,
@@ -66,8 +67,7 @@ class OpenGLGui:
         DebugFps.tick()
 
         ship = player.ship
-        self.world_surface.fill(SPACE_COLOR)
-        DeepSpace.draw(self.world_surface, width, height)
+        self.world_surface.fill((0, 0, 0, 0))  # transparent: what is behind the sky (the Milky Way) shows through
         DistantStars.draw(self.world_surface, width, height, environment, ship)
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
         view = view_of(environment, ship, width, height)
@@ -98,9 +98,10 @@ class OpenGLGui:
         DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
 
         GL.glViewport(0, 0, width, height)
-        GL.glClearColor(8 / 255, 10 / 255, 24 / 255, 1.0)
+        GL.glClearColor(SPACE_COLOR[0] / 255, SPACE_COLOR[1] / 255, SPACE_COLOR[2] / 255, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
+        MilkyWay.draw(width, height, ship, environment.date_time)
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
             StarGl.draw_star(width, height, view, seconds, player.time_scale)

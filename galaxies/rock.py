@@ -5,6 +5,7 @@ from random import Random
 
 from datetime import datetime, timedelta
 import math
+import random
 from typing import TYPE_CHECKING, Optional
 
 from common.updating import Updatable
@@ -23,6 +24,7 @@ class Rock(Updatable):
     TEMP_MAX_MU = 8 # Gives around 2000
     TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
+    ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')  # the adjectives a rock can have (see generate_adjective)
 
     def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
         import random
@@ -43,6 +45,7 @@ class Rock(Updatable):
         self.max_temperature: float = my_random.lognormvariate(Rock.TEMP_MAX_MU, Rock.TEMP_MAX_SIGMA)
         self.temperature: float = 0.0
         self._adjust_color()
+        self.adjective: str = self.generate_adjective(my_random)
 
         self.last_updated_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
@@ -50,13 +53,19 @@ class Rock(Updatable):
         if saved_parent_alterations is not None:
             rock_alterations = saved_parent_alterations.get(alterations_key)
             if rock_alterations is not None:
-                self._set_last_updated(datetime.strptime(rock_alterations['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f'))
+                if 'last_updated_at' in rock_alterations:
+                    last_updated_at = datetime.strptime(rock_alterations['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    self._set_last_updated(last_updated_at)
                 if 'temperature' in rock_alterations:
                     self.temperature = rock_alterations['temperature']
                     self._adjust_color()
+                if 'adjective' in rock_alterations:
+                    self.adjective = rock_alterations['adjective']
+                    self._adjust_color()
 
-                self.next_update_at = self.last_updated_at + timedelta(seconds=1)
-                update_queue.add(self)
+                if self.last_updated_at is not None:  # an adjective alone is saved without a time: nothing to update
+                    self.next_update_at = self.last_updated_at + timedelta(seconds=1)
+                    update_queue.add(self)
                 logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature {self.temperature}°. Queue size: {len(update_queue._queue)}")
 
     def _set_last_updated(self, new_date_time: datetime) -> Rock:
@@ -69,17 +78,23 @@ class Rock(Updatable):
         return str(self.longitude) + ' ' + str(self.latitude)
 
     def get_alterations(self) -> dict:
-        '''The change, expressed as dictionary.'''
-        if self.temperature == 0.0:
-            return None
-
-        result: dict = {"temperature": self.temperature}
+        result: dict = {}
+        if self.temperature > 0.0:
+            result['temperature'] = self.temperature
+        if self.adjective:
+            result['adjective'] = self.adjective
         if self.last_updated_at:
             result['last_updated_at'] = self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
-        return result
+        return result if result != {} else None
 
     def get_next_update(self) -> datetime:
         return self.next_update_at
+
+    def set_adjective(self, new_adjective: str) -> Rock:
+        self.adjective = new_adjective
+        if not self.parent_km2.is_altered:
+            self.parent_km2.set_altered()
+        return self
 
     def update(self, game_date_time: datetime) -> None:
         ''' Called by UpdateQueue after removing the object form it (it can re-insert, but FIFO)'''
@@ -189,3 +204,10 @@ class Rock(Updatable):
             import game_environment as gem
             self.start_updating(gem.current_environment.date_time)  # First time we just get ready anyway.
         return self
+
+    def generate_adjective(self, my_random: random.Random) -> str:
+        if my_random.random() < 0.00001:
+            adjective = my_random.choice(Rock.ADJECTIVES)
+            self.adjective = adjective
+            return adjective
+        return ''

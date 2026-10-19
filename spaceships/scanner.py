@@ -33,6 +33,7 @@ class Scanner:
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
         self.target: Optional[Target] = None
+        self._announced_rock: Optional[Rock] = None  # the rock with an adjective whose scan was announced since SPACE went down
         self.start_x = 0.0
         self.start_y = 0.0
         self.start_z = 0.0
@@ -111,9 +112,10 @@ class Scanner:
         self.end_x, self.end_y, self.end_z = hit_x, hit_y, hit_z
 
     def activate(self, time_passed: int) -> Scanner:
-        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off); otherwise
-        switch the beam on, heating the targeted rock if there is one. Uses the target found by this frame's
-        update_target, so it does not search again."""
+        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a rock with an adjective,
+        the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch the
+        beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so it does
+        not search again."""
 
         if self.targeted_mine is not None:
             self.ship.laser.cease_fire()
@@ -128,7 +130,28 @@ class Scanner:
             outpost.communicate()
             return self
 
-        self.ship.laser.fire(self.targeted_rock, time_passed)
+        rock = self.targeted_rock
+        if rock is not None and rock.adjective:
+            # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten. Announced once per press.
+            self.ship.laser.cease_fire()
+            if self._announced_rock is not rock:
+                self._announced_rock = rock
+                from common.dialogs.messages import Message, show_message
+                show_message(Message(
+                    title='ROCK SCANNED',
+                    text=f"This {rock.adjective} rock has been scanned, and the results stored in the ship computer, "
+                         "forbidding it from being damaged.",
+                ))
+                for mission in self.ship.owner.missions:
+                    mission.on_rock_scanned(rock)
+            return self
+
+        self.ship.laser.fire(rock, time_passed)
+        return self
+
+    def release(self) -> Scanner:
+        """SPACE is up: the next press of it announces a scanned rock again."""
+        self._announced_rock = None
         return self
 
     def deactivate(self) -> Scanner:

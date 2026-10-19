@@ -10,9 +10,9 @@ class CargoHold:
     # Days left at which air, water and food show their warning: red in the cargo list, and the ship's notice.
     WARNING_DAYS = {'air': 5.0, 'water': 2.0, 'food': 2.0}
 
-    INITIAL_AIR_MAX = 25.0
-    INITIAL_WATER_MAX = 25.0
-    INITIAL_FOOD_MAX = 25.0
+    INITIAL_AIR_MAX = 20.0
+    INITIAL_WATER_MAX = 20.0
+    INITIAL_FOOD_MAX = 20.0
     INITIAL_ORE_MAX = 5000
     INITIAL_MINES_MAX = 5
     INITIAL_MINES = 2

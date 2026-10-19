@@ -1,5 +1,3 @@
-"""Deliver package: bring some package to another outpost."""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -17,10 +15,10 @@ if TYPE_CHECKING:
 
 @register
 class DeliverPackage(Mission):
-    """Bring a package to an outpost."""
+    """Deliver package: bring some package to another outpost."""
 
     KIND = 'deliver_package'
-    CHANCES_PER_DAY = 0.99
+    CHANCES_PER_DAY = 0.7
     DAYS_MIN = 5
     DAYS_MAX = 10
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
@@ -77,7 +75,9 @@ class DeliverPackage(Mission):
         speed_factor: float = (self.deadline - gem.current_environment.date_time).total_seconds() \
             / (self.deadline - self.created_at).total_seconds()
 
-        player.those_who_share.reputation += 10.0 * speed_factor
+        reputation_change: float = 10.0 * speed_factor
+        player.those_who_share.reputation += reputation_change
+        logger.info(f"MISSION COMPLETE: Package delivered at %{speed_factor} of time ahead of deadline. Reputation +{reputation_change} = {player.those_who_share.reputation}")
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
     def shortfall(self, player: Player) -> str:
@@ -86,7 +86,7 @@ class DeliverPackage(Mission):
     def reward_text(self) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
-        return f"Thank you, citizen, this {package} was really expected."
+        return f"Thank you, this {package} was really expected."
 
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverPackage:

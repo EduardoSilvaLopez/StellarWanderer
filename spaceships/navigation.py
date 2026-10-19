@@ -27,6 +27,7 @@ class Navigation:
     the ship's coordinates and braking relative to that body: while unbound, the position is always the star's frame,
     and braking is relative to the fixed body only inside its fixed zone (the star is at rest, so near it the two are
     the same). Outside every fixed zone, the body the instruments show is `GameEnvironment.targeted_body` instead.
+    Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -89,6 +90,23 @@ class Navigation:
         east_hat, up_hat, north_hat = basis
         return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
 
+    def sky_rotation(self, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
+        """Where the stellar frame's x, y and z axes point in the active frame: what turns a direction to something so far away
+        that the ship's position does not matter (the sky behind everything) into the active frame. Unbound it is the same
+        frame, and the axes are their own; bound, they go through the surface basis, as in `direction_to_point`, so the sky
+        turns with the world's spin."""
+        if not self.ship.is_bound:
+            return Vector3(1.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0), Vector3(0.0, 0.0, 1.0)
+        world = gem.current_environment.fixed_world
+        east_hat, up_hat, north_hat = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
+        # The surface basis has Y opposite to the orbital motion (see direction_to_point).
+        flipped_x, flipped_y, flipped_z = Vector3(1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0), Vector3(0.0, 0.0, 1.0)
+        return (
+            Vector3(flipped_x.dot(east_hat), flipped_x.dot(up_hat), flipped_x.dot(north_hat)),
+            Vector3(flipped_y.dot(east_hat), flipped_y.dot(up_hat), flipped_y.dot(north_hat)),
+            Vector3(flipped_z.dot(east_hat), flipped_z.dot(up_hat), flipped_z.dot(north_hat)),
+        )
+
     def stellar_position(self, current_datetime: datetime) -> Vector3:
         """The ship's position in the stellar frame, whether bound or not."""
         if not self.ship.is_bound:
@@ -134,13 +152,7 @@ class Navigation:
         ship = self.ship
         attitude = ship.attitude
         if braking:
-            reference = self.velocity_reference_frame()
-            relative = ship.velocity.as_vector() - reference
-            speed = relative.length()
-            if speed > 0:
-                decel = min(ship.BRAKE_ACC * delta_time, speed)
-                ship.velocity.set_vector(reference + relative * ((speed - decel) / speed))
-                self.ship.energy -= 5e4 * decel
+            self._brake(delta_time)
         elif ship.is_bound:
             world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input, math.radians(attitude.yaw))
             accel = Vector3(
@@ -158,6 +170,31 @@ class Navigation:
             )
             ship.velocity.add_vector(accel * delta_time)
             self.ship.energy -= 5e4 * sum(accel) * delta_time
+
+    def _brake(self, delta_time: float) -> None:
+        """Brakes against the velocity of the reference frame (`velocity_reference_frame`) with three independent engines,
+        one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right and forward
+        are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component, whatever the others do:
+        a small component stops as fast as a large one, and the ship is at rest relative to the frame when the slowest
+        engine is done. Each engine's change of speed costs 5e4 energy per m/s."""
+        ship = self.ship
+        reference = self.velocity_reference_frame()
+        relative = ship.velocity.as_vector() - reference
+        if ship.is_bound:
+            yaw = math.radians(ship.attitude.yaw)
+            right_x, right_z = rotate_2d(1.0, 0.0, yaw)
+            forward_x, forward_z = rotate_2d(0.0, 1.0, yaw)
+            axes = (Vector3(right_x, 0.0, right_z), Vector3(0.0, 1.0, 0.0), Vector3(forward_x, 0.0, forward_z))
+        else:
+            axes = (ship.attitude.right, ship.attitude.up, ship.attitude.forward)
+
+        braked = relative
+        for axis in axes:
+            component = relative.dot(axis)
+            decel = min(ship.BRAKE_ACC * delta_time, abs(component))
+            braked = braked - axis * math.copysign(decel, component)
+            ship.energy -= 5e4 * decel
+        ship.velocity.set_vector(reference + braked)
 
     def _update_position(self, delta_time: float) -> None:
         ship = self.ship

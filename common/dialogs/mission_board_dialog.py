@@ -2,7 +2,7 @@
 
 The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail: the
 description, and the button that acts on it, if there is one. Esc goes back from the detail to the list, and from the list
-closes the window. The lines scroll with the wheel and the arrow keys.
+closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar can be dragged (see ScrollBar).
 
 MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there), with
 their deadlines. PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
@@ -17,6 +17,7 @@ from common.paths import resource_path
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR, MessageDialog
+from .scroll_bar import ScrollBar
 
 if TYPE_CHECKING:
     from galaxies.missions import Mission
@@ -67,6 +68,9 @@ class MissionListDialog(Dialog):
         self._divider_y = MARGIN - 4 + self._title.get_height() + 12
         hint_top = HEIGHT - MARGIN
         self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, hint_top - 12 - (self._divider_y + 16))
+        self.scroll_bar = ScrollBar(
+            pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height), ACCENT
+        )
 
     # ---- what a subclass gives ----
 
@@ -219,7 +223,7 @@ class MissionListDialog(Dialog):
         self.content_height = y
         surface.set_clip(previous_clip)
 
-        self._draw_scroll_bar(surface)
+        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
         hint_text = 'Esc: back to the list' if self.open_mission is not None or self.notice is not None else self._hint()
         hint = body_font(BODY_SIZE).render(hint_text, True, DIM_COLOR)
         surface.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - MARGIN // 2)))
@@ -233,14 +237,6 @@ class MissionListDialog(Dialog):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx + sx * bracket, cy), 3)
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
 
-    def _draw_scroll_bar(self, surface: pygame.Surface) -> None:
-        if self._max_scroll() <= 0:
-            return
-        track = self.text_rect.height
-        thumb = max(24, track * self.text_rect.height // max(1, self.content_height))
-        top = self.text_rect.top + (track - thumb) * self.scroll // self._max_scroll()
-        pygame.draw.rect(surface, ACCENT, (self.text_rect.right + 10, top, 4, thumb))
-
     # ---- events ----
 
     def _max_scroll(self) -> int:
@@ -252,6 +248,10 @@ class MissionListDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
+        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self.text_rect.height)
+        if moved is not None:
+            self.scroll = moved
+            return None
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 if self.open_mission is None and self.notice is None:

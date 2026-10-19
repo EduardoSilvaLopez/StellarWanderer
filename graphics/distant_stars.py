@@ -23,7 +23,7 @@ class DistantStars:
     A star is only drawn when it is bright enough to see with the naked eye (apparent magnitude at most
     NAKED_EYE_LIMIT_MAGNITUDE), so the dim red dwarfs mostly stay out of the sky, as they do in the real one.
 
-    Drawn bound or unbound, using the same directions as the other sky objects. Drawn right after the deep space, so
+    Drawn bound or unbound, using the same directions as the other sky objects. Drawn first in the sky layer, so
     the sun's hole in the sky hides a star behind the sun, and the ground hides the stars below the horizon.
     """
 

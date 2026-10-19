@@ -5,7 +5,12 @@
 FONT_FILE = 'Oxanium.ttf'
 
 # Color palette
-SPACE_COLOR = (8, 10, 24)
+SPACE_COLOR = (0, 0, 0)  # pitch black: in vacuum there is no sky glow. What light the sky has is the Milky Way and the stars
+# The Milky Way, Andromeda and the Magellanic Clouds (graphics/milky_way.py). The panorama (tools/generate_milky_way.py) keeps
+# the real ratios between the brightness of its regions, but the real sky is far too faint for a screen (the brightest
+# Milky Way is about 1e-3 cd/m2, under one 8-bit step), so it is shown at this share of its stored brightness: 0.2 puts the
+# bulge near code 50 and the band near 20 on black. 0 hides it, 1 is the stored brightness. Ratios stay the same.
+MILKY_WAY_EXPOSURE = 0.2
 HULL_COLOR = (38, 42, 55)
 HULL_DARK = (23, 26, 36)
 HULL_EDGE_COLOR = (70, 78, 98)
@@ -97,8 +102,7 @@ HEAT_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from 
 FROST_VIGNETTE_COLOUR = (150, 205, 255)  # the cold side's vignette, pale blue
 FROST_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its minimum
 FROST_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from the centre to a corner
-WORLD_ALBEDO = (128, 126, 124)  # base colour of every world (planets and moons) when lit by its star
-WORLD_AMBIENT_LIGHT = 0.05  # share of that colour still visible on the unlit side
+WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_colour) still visible on the unlit side
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
 SURFACE_STARLIGHT = 0.20

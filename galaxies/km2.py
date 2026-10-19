@@ -30,9 +30,9 @@ class Km2:
         self.is_altered: bool = False
         alterations_key: str = self.get_alterations_key()
         own_alterations: Optional[dict] = None
-        if saved_alterations is not None:
-            if saved_alterations.get('Km2s') is not None:
-                if saved_alterations.get('Km2s').get(alterations_key) is not None:
+        if saved_alterations is not None \
+            and saved_alterations.get('Km2s') is not None\
+            and saved_alterations.get('Km2s').get(alterations_key) is not None:
                     own_alterations = saved_alterations.get('Km2s').get(alterations_key)
         if own_alterations is not None:
             self.set_altered()
@@ -55,8 +55,8 @@ class Km2:
         outpost_center = ((self.outpost.longitude, self.outpost.latitude)
                           if self.outpost else None)
         for _ in range(int(rocks_count)):
-            rock_lon = self.longitude + my_random.randint(0, 1000)
-            rock_lat = self.latitude + my_random.randint(0, 1000)
+            rock_lon = self.longitude + my_random.randint(0, 999)
+            rock_lat = self.latitude + my_random.randint(0, 999)
             from galaxies.outpost import Outpost
             if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat - outpost_center[1]) < Outpost.CLEARED_RADIUS:
                 continue  # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
@@ -90,10 +90,10 @@ class Km2:
         return str(self.longitude) + " " + str(self.latitude)
 
     def get_alterations(self) -> dict:
-        alterations = dict()
+        alterations = {}
 
         # Rocks - only altered
-        rocks = dict()
+        rocks = {}
         for rock in self.rocks:
             rock_alterations = rock.get_alterations()
             if rock_alterations is None:

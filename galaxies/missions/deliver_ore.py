@@ -1,26 +1,26 @@
-"""Deliver ore: bring some ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery.
-
-An offer is drawn from its seed alone: the same outpost and day always give the same offer, and its seed (kept in a save)
-gives back the days, the quantity and whether, and when, somebody else takes the offer."""
-
 from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Optional
 import random
 
+import logging
 from .mission import Mission, register, seed_of
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.player import Player
 
+logger = logging.getLogger(__name__)
 
 @register
 class DeliverOre(Mission):
-    """Bring `quantity` ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery."""
+    """Deliver ore: bring some ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery.
+
+    An offer is drawn from its seed alone: the same outpost and day always give the same offer, and its seed (kept in a save)
+    gives back the days, the quantity and whether, and when, somebody else takes the offer."""
 
     KIND = 'deliver_ore'
-    CHANCES_PER_DAY = 0.5
+    CHANCES_PER_DAY = 0.3
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
     DAYS_MIN = 5
@@ -67,8 +67,11 @@ class DeliverOre(Mission):
         return player.ship.cargo_hold.ore >= self.quantity
 
     def complete(self, player: Player) -> None:
-        player.those_who_share.reputation += 0.006 * self.quantity
         player.ship.cargo_hold.ore -= self.quantity
+
+        reputation_change: float = 0.006 * self.quantity
+        player.those_who_share.reputation += reputation_change
+        logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = {player.those_who_share.reputation}")
 
     def shortfall(self, player: Player) -> str:
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
@@ -76,7 +79,7 @@ class DeliverOre(Mission):
     def reward_text(self) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         mineral = rnd.choice(['platinum', 'palladium', 'rhodium', 'iridium', 'osmium', 'ruthenium'])
-        return f"Thank you, citizen, this {mineral}-rich ore will help the Community."
+        return f"Thank you, this {mineral}-rich ore will help the Community."
 
     def serialize(self) -> dict:
         return {**super().serialize(), 'quantity': self.quantity}

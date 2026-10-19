@@ -25,7 +25,7 @@ Colour = Tuple[int, int, int]
 class SurfaceLight:
     """The sun seen from the ground: `sun` is the unit vector from the ship's surface towards the star,
     in the surface frame (x east, y up, z north), the same axes the 3D view uses for every object;
-    `tint` is the albedo times the star's colour, 0..255 per channel."""
+    `tint` is the world's surface colour times the star's colour, 0..255 per channel."""
 
     def __init__(self, sun: Vector3, tint: Tuple[float, float, float]) -> None:
         self.sun: Vector3 = sun
@@ -37,7 +37,7 @@ class SurfaceLight:
         world = environment.fixed_world
         sun = ship.navigation.direction_to_star(world, environment.date_time).normalized()
         star = world.parent_orbit.parent_stellar_system.star
-        return SurfaceLight(sun, LitWorlds.light_tint(star.color))
+        return SurfaceLight(sun, LitWorlds.light_tint(star.color, world.surface_colour))
 
     def brightness(self, normal_x: float, normal_y: float, normal_z: float) -> float:
         """Share of full light (0..1) for a surface with the unit normal (x east, y up, z north): the starlight

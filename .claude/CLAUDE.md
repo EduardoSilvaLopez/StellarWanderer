@@ -44,7 +44,7 @@ def generate_default(self) -> None:
 - `galaxies/missions/`: what the outposts ask of the pilot. `mission.py` is the base, one module per kind (`deliver_ore.py`), `mission_board.py` the board (Numpad 5 with an outpost in the scanner, reputation 10 or more), shown by `common/dialogs/mission_board_dialog.py`. The taken ones are in `Player.missions`
 - `knowledge.py`: the keys of the stellar bodies generated so far (module-level `current_knowledge`), saved at the root of the savefile
 - `galaxies/people/player.py`: Player: the pilot (time scale, political status) and the ship they fly (module-level `current_player`)
-- `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star
+- `galaxies/`: procedural world structure (Galaxy, StellarSystem, Orbit, World, Outpost, Km2, Rock). `body.py` (Body) is what navigation needs from a world or the star; `star.py` (Star) is the system's star as a body: at rest at the origin of the stellar frame, no surface, never bound to; `orbit_layout.py` (OrbitLayout) decides how many orbits a system has, of which kind (earthlike planet, asteroid belt, jovian planet) and how far from the star; `world_surface.py` gives a world its equilibrium temperature, surface type and colour (the colour is what `graphics/lit_worlds.py` lights)
 - `graphics/`: OpenGL rendering and the instruments
 - `spaceships/`: Ship, which holds where it is and how it moves: `kinematics.py` (Position, Velocity), `attitude.py` (Attitude), `navigation.py` (Navigation, everything relative to the fixed body: a world or the star); also `scanner.py` (aiming and targeting), `laser.py` (firing and heating)
 - `common/`: shared code, used by every layer (it is not a strict layer: `savefile.py` and `dialogs/starting_dialog.py` know the game)
@@ -56,7 +56,7 @@ def generate_default(self) -> None:
   - `paths.py`: the writable data folder (saves, logs) and `resource_path`
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
-- `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the outpost texture generator
+- `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the generators of the outpost texture, the sounds and the Milky Way panorama (`generate_milky_way.py`, drawn by `graphics/milky_way.py`; the ideas not done yet about it are in `temp/ideas/milky_way.md`)
 - `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs. `temp/` holds `pycache`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
 
 ## Rules the code does not show

@@ -40,4 +40,4 @@ class OtherWorlds:
 
         star = environment.targeted_body.stellar_system.star
         for _, world, to_world in sorted(worlds, key=lambda item: item[0], reverse=True):
-            LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, ship)
+            LitWorlds.draw_world(surface, w, h, to_world, to_star, world.radius, star.color, world.surface_colour, ship)

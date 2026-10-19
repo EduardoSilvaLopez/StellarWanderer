@@ -13,6 +13,7 @@ import knowledge
 from galaxies.body import Body
 from galaxies.km2 import Km2
 from galaxies.rock import Rock
+from galaxies.world_surface import SurfaceType, equilibrium_temperature, generate_surface
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
@@ -31,12 +32,16 @@ class World(Body):
     (`mass`, from the radius and EARTH_DENSITY), a planet around its star (`StellarSystem.mass`, estimated from the
     star's radius). Each orbit is an ellipse whose semi-major axis is `distance_to_parent`, with an `eccentricity`, an
     `inclination` to the reference plane, a longitude of the ascending node and an argument of periapsis. These four
-    are drawn last in the constructor, so adding them changed no earlier value. Every world starts
+    are drawn after the other values in the constructor, so adding them changed no earlier value. Every world starts
     `initial_degrees_in_orbit` from the periapsis direction at EPOCH, as a mean anomaly (the true angle for a circular
     orbit). The spin axis stays on the reference z axis, so the inclination of a planet's orbit is its axial tilt
     (seasons); a moon's inclination is relative to its planet's equator. A planet's moons orbit inside the stable part of
     its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. `local_day_fraction` is the solar day at
     longitude 0 (0 = noon); the game's date and time always start at EPOCH 00:00:00.
+
+    Surface: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and `surface_colour`
+    from it and the seed (see world_surface.py); they are drawn last, after the orbit's values. The colour is what the
+    graphics light (LitWorlds, SurfaceLight); the type and the temperature are in the knowledge base (`markdown`).
 
     A world's position and velocity are pure functions of the date, memoised for the date of the last call only (one
     entry each), so everything drawn or computed in a frame shares one evaluation per world.
@@ -200,7 +205,16 @@ class World(Body):
             for _ in range(moons_count):
                 self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
 
-        self._generate_orbit_orientation(my_random)  # last: no value drawn above depends on it
+        self._generate_orbit_orientation(my_random)  # no value drawn above depends on it
+
+        # Drawn after the orbit, so adding them changed no earlier value. A moon is as far from the star as its planet.
+        planet = self.parent_planet if self.parent_planet else self
+        self.equilibrium_temperature: float = equilibrium_temperature(
+            self.parent_orbit.parent_stellar_system.star, planet.distance_to_parent
+        )
+        self.surface_type: SurfaceType
+        self.surface_colour: Tuple[int, int, int]
+        self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
 
         self.km2s: List[Km2] = []
         self._learn()
@@ -326,6 +340,8 @@ class World(Body):
             f"{orbit_shape}"
             f"* Radius: {int(self.radius/1000)} Km\n"
             f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
+            f"* Surface: {self.surface_type.label}\n"
+            f"* Average temperature: {self.equilibrium_temperature - 273.15:.0f} °C\n"
             f"* 1e-4 Ore prevalence: {1e4*self.ore_prevalence:.2f}\n"
             f"* Outposts: {outposts}\n"
             f"\n"
@@ -345,6 +361,7 @@ class World(Body):
         if not self.parent_planet:
             logger.info(f" - Farthest stable moon orbit (Hill sphere): {f'{int(self.moon_limit):,}'}")
         logger.info(f" - Radius: {f'{int(self.radius):,}'}")
+        logger.info(f" - Surface: {self.surface_type.label} {self.surface_colour}, {self.equilibrium_temperature:.0f} K")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
 

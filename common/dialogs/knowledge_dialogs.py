@@ -138,7 +138,8 @@ class KnownSystemsDialog(_ListDialog):
 class KnownPeopleDialog(_ListDialog):
     """The people the pilot has talked to, each with a comment box. A click in a box focuses it: the keys then write into it
     (Enter starts a new line) until another box or the outside is clicked. Esc, or the Close button, closes the dialog; the
-    comments are already saved as they are typed. Same results as KnownSystemsDialog."""
+    comments are already saved as they are typed. Same results as KnownSystemsDialog. The box that has the focus stays focused
+    when the list is scrolled away (wheel, keys or scroll bar), and typing scrolls it back into view."""
 
     def __init__(self) -> None:
         self._people: dict = {}  # seed -> Person, for each card that could be found again
@@ -264,6 +265,17 @@ class KnownPeopleDialog(_ListDialog):
     def _change_comment(self, text: str) -> None:
         self._people[self._focus].set_comment(text)
         self._layout_text()
+        self._reveal_focused_box()
+
+    def _reveal_focused_box(self) -> None:
+        """Scrolls just enough to show the focused comment box, where the typing goes: one scrolled away with the wheel or
+        the scroll bar comes back when the player types. A box taller than the view shows its top."""
+        for seed, index, box in self._boxes:
+            if seed == self._focus:
+                top = self._blocks[index][1] + box.top
+                bottom = self._blocks[index][1] + box.bottom
+                scroll = min(max(self.scroll, bottom - self.text_rect.height), top)
+                self.scroll = max(0, min(self._max_scroll, scroll))
 
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if self._focus is not None and event.type == pygame.TEXTINPUT:
@@ -277,7 +289,9 @@ class KnownPeopleDialog(_ListDialog):
                 self._change_comment(comment + '\n')
             return None
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self._set_focus(self._box_at(event.pos))
+            on_scroll_bar = self._max_scroll > 0 and self.scroll_bar.track.collidepoint(event.pos)
+            if not on_scroll_bar:  # a press on the scroll bar keeps the focus: typing brings the box back into view
+                self._set_focus(self._box_at(event.pos))
         result = super().handle_event(event)
         if result is not None:
             self._set_focus(None)  # the text input stops with the dialog

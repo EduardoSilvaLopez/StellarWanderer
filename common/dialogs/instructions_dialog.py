@@ -1,4 +1,5 @@
-"""The instructions screen: the controls and how the game works, read-only and scrollable.
+"""The instructions screen: the controls and how the game works, read-only and scrollable (wheel, keys, or dragging the scroll
+bar, see ScrollBar).
 
 The text is INSTRUCTIONS below: a list of sections, each a heading and its paragraphs. Each paragraph is wrapped to the
 box. A section can also have a drawing, listed in FIGURES by its heading (the Flying section is drawn, not written).
@@ -13,6 +14,7 @@ import pygame
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import MessageDialog
+from .scroll_bar import ScrollBar
 
 INSTRUCTIONS: List[Tuple[str, List[str]]] = [
     ("Worlds", [
@@ -208,6 +210,10 @@ class InstructionsDialog(Dialog):
                                     self.HEIGHT - box_top - self.BACK_HEIGHT)
         self.back_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.BACK_HEIGHT + 12, 200, 32)
         self.scroll: int = 0  # pixels the text is moved up
+        self.scroll_bar = ScrollBar(
+            pygame.Rect(self.box_rect.right - 16, self.box_rect.top + 6, ScrollBar.MIN_WIDTH, self.box_rect.height - 12),
+            (100, 150, 200), (60, 60, 80), min_thumb=20,
+        )
         self._lines: List[Tuple[str, pygame.Surface]] = []  # (kind, rendered line)
         self._text_height: int = 0
         self._build_lines()
@@ -253,12 +259,7 @@ class InstructionsDialog(Dialog):
             y += line.get_height() + 4
         surface.set_clip(previous_clip)
 
-        if self._max_scroll() > 0:
-            track = pygame.Rect(self.box_rect.right - 16, self.box_rect.top + 6, 8, self.box_rect.height - 12)
-            pygame.draw.rect(surface, (60, 60, 80), track)
-            thumb_height = max(20, track.height * self.box_rect.height // max(1, self._text_height))
-            thumb_top = track.top + (track.height - thumb_height) * self.scroll // self._max_scroll()
-            pygame.draw.rect(surface, (100, 150, 200), (track.left, thumb_top, track.width, thumb_height))
+        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.box_rect.height - 16)
 
         pygame.draw.rect(surface, (110, 50, 50), self.back_rect)
         pygame.draw.rect(surface, (190, 110, 110), self.back_rect, 2)
@@ -268,6 +269,10 @@ class InstructionsDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
+        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self.box_rect.height - 16)
+        if moved is not None:
+            self.scroll = moved
+            return None
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.back_rect.collidepoint(event.pos):
             return ('back', None)
         if event.type == pygame.MOUSEWHEEL:
