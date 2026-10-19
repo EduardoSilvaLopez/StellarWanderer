@@ -21,9 +21,9 @@ def panel_box_top(font: pygame.font.Font, title_top: int) -> int:
     return title_top + font.get_linesize() + PANEL_TITLE_GAP
 
 
-def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int) -> None:
-    """A panel's title, centred on centre_x with its top at `top`."""
-    label = font.render(text, True, ACCENT)
+def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int, colour: Tuple[int, int, int] = ACCENT) -> None:
+    """A panel's title, centred on centre_x with its top at `top`, in ACCENT unless another colour is given."""
+    label = font.render(text, True, colour)
     surface.blit(label, label.get_rect(midtop=(centre_x, top)))
 
 

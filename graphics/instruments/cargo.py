@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, BINDING_MARK_RED
+from ..constants import ACCENT, AMBER, BINDING_MARK_RED
 from .common import draw_beveled_panel, bezel_depth, draw_panel_title
 from .resource_bars import credits_shown, format_credits
 
@@ -19,14 +19,17 @@ def format_quantity(value: float) -> str:
 
 class Cargo:
     """Draw the CARGO list: one line per hold element, name and quantity. In Those-Who-Share space, where credits are
-    illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the resource bars)."""
+    illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the resource bars).
+    The title turns amber when less than 1 Kg of the hold's capacity is free."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
         """Draw the cargo hold contents, in `rect`, under a title whose top is `title_top`."""
         label_font = fonts.get(max(9, int(h * 0.017)))
         cargo_summary = f'CARGO ({int(ship.cargo_hold.used_capacity())}/{ship.cargo_hold.capacity} Kg)'
-        draw_panel_title(surface, label_font, cargo_summary, rect.centerx, title_top)
+        # Amber when less than 1 Kg of room is left: the hold is full.
+        full = ship.cargo_hold.free_capacity() < 1.0
+        draw_panel_title(surface, label_font, cargo_summary, rect.centerx, title_top, AMBER if full else ACCENT)
 
         draw_beveled_panel(surface, rect, depth=bezel_depth(h))
 

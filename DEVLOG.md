@@ -98,8 +98,9 @@ RELEASE "The Three Powers" created, with installer.
 Extra time: 72h45' + 7:45 - 10:00 + 12:15
 
   * Extra: Reorganise instruments to give more space to the bar.
-
+  * Extra: Rocks sink more.
   * Extra: Special color with free_capacity() is zero.
+  
   * Scan object mission (finish testing)
   * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
   * Rest of sounds
