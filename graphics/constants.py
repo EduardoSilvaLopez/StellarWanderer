@@ -107,7 +107,7 @@ FROST_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from
 WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_colour) still visible on the unlit side
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
-SURFACE_STARLIGHT = 0.20
+SURFACE_STARLIGHT = 0.30
 WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
 WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
 OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky

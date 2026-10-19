@@ -54,6 +54,7 @@ class Km2:
         molten_rocks: Optional[dict] = own_alterations.get('molten_rocks') if own_alterations is not None else None
         outpost_center = ((self.outpost.longitude, self.outpost.latitude)
                           if self.outpost else None)
+        rich_ore_count: int = 0
         for _ in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 999)
             rock_lat = self.latitude + my_random.randint(0, 999)
@@ -72,13 +73,15 @@ class Km2:
                 all_rocks_alterations
                 )
             self.rocks.append(new_rock)
+            if new_rock.is_ore_rich():
+                rich_ore_count += 1
 
         ore_fields: Optional[dict] = own_alterations.get('ore_fields') if own_alterations is not None else None
         if ore_fields:
             self.ore_fields = [OreField.generate_loaded(self, f) for f in ore_fields]
 
-        if self.is_altered:
-            logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+        #if self.is_altered:
+        logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
     def set_altered(self) -> Km2:
         self.is_altered = True

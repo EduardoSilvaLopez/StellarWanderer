@@ -97,8 +97,9 @@ RELEASE "The Three Powers" created, with installer.
 
 Extra time: 72h45' + 7:45 - 10:00 + 12:15
 
-  * Extra: If ore is ore max, pale yellow in cargo hold. => No! Weight check over air, mines, food, water AND ore. Cargo object.
   * Extra: Reorganise instruments to give more space to the bar.
+
+  * Extra: Special color with free_capacity() is zero.
   * Scan object mission (finish testing)
   * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
   * Rest of sounds

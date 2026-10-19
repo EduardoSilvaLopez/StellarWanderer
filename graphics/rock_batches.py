@@ -10,7 +10,8 @@ Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatche
 
 A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rock count changes, which happens when a
 rock melts. Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on
-the dark side. A rock whose lowest point would float above the ground is lowered onto it.
+the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top would be
+hidden is raised to show (VISIBLE_TOP_SHARE).
 """
 
 from __future__ import annotations
@@ -37,6 +38,9 @@ if TYPE_CHECKING:
 SUN_TOLERANCE_DEGREES = 0.1
 _SUN_TOLERANCE_COS = math.cos(math.radians(SUN_TOLERANCE_DEGREES))
 
+# A rock's top is kept at least this share of its size above the ground, so it is always visible.
+VISIBLE_TOP_SHARE = 0.1
+
 # Faces facing down are a little darker (dust and shadow in the hollows), up to this share, on top of the sun.
 DOWNWARD_DARKENING = 0.18
 
@@ -62,6 +66,10 @@ class RockBatch:
         # partly buried stays buried). The scanner's box is not lowered with it, which is close enough for aiming.
         lowest = centre[:, 0, 1] + points[..., 1].min(axis=1) if count else np.zeros(0)
         centre[:, 0, 1] -= np.maximum(0.0, lowest)
+        # A rock always shows: if its top is below VISIBLE_TOP_SHARE of its size, it is raised until it does (only
+        # flattened shapes get there, see Rock.CENTRE_MIN).
+        top = centre[:, 0, 1] + points[..., 1].max(axis=1) if count else np.zeros(0)
+        centre[:, 0, 1] += np.maximum(0.0, VISIBLE_TOP_SHARE * size - top)
         self.positions: np.ndarray = np.ascontiguousarray((centre + points).reshape(-1, 3), dtype=np.float32)
         self.face_normals: np.ndarray = rotate(normals, tilt, orientation)
         down = DOWNWARD_DARKENING * (1.0 - (self.face_normals[..., 1] + 1.0) / 2.0)

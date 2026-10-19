@@ -25,6 +25,8 @@ class Rock(Updatable):
     TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')  # the adjectives a rock can have (see generate_adjective)
+    SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.
+    CENTRE_MIN = -0.15  # Share of its size the centre may sink at most, so the top of the rock stays visible.
 
     def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
         import random
@@ -33,8 +35,9 @@ class Rock(Updatable):
         self.size: float = abs(my_random.lognormvariate(math.log(10), 0.8))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested
-        # around this point, so it can sit partly under the ground).
-        self.altitude: float = max(0.3 - abs(my_random.gauss(0, 0.25)), -0.5) * self.size
+        # around this point, so it can sit partly under the ground). Bigger rocks sink further, down to CENTRE_MIN.
+        centre_share = 0.3 - abs(my_random.gauss(0, 0.25)) - Rock.SINK_PER_METRE * self.size
+        self.altitude: float = max(centre_share, Rock.CENTRE_MIN) * self.size
         self.latitude: int = latitude
         self.orientation: float = my_random.random() * 180 - 90
         self.tilt: float = my_random.random() * 45
