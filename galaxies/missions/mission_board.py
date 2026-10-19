@@ -101,4 +101,4 @@ class MissionBoard:
             return None
         mission.finish(self.player)
         audio.play('mission_delivered')
-        return mission.reward_text()
+        return mission.reward_text(self.player)

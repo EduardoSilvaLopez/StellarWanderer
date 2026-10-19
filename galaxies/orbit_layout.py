@@ -35,7 +35,7 @@ Orbits farther than `MAX_ORBIT` are dropped (a stellar disc, and its system, are
 than `MIN_SPACING` are resolved by dropping the belt.
 
 The initial system is generated until its orbit `INITIAL_ORBIT_NUMBER` is an earthlike planet that can start the
-game: outside the star's heat radius (the ship would heat up), and with room for a stable moon
+game: outside the star's death radius (the ship would reach its maximum temperature), and with room for a stable moon
 (`World.moon_limit_in_radii`, `World.MOON_MIN_ROOM_RADII`). It always has one: see `OrbitLayout.generate`.
 """
 
@@ -286,13 +286,13 @@ class OrbitLayout:
     @staticmethod
     def _can_start(entries: List[Entry], star: Star) -> bool:
         """True if the orbit INITIAL_ORBIT_NUMBER is an earthlike planet where the game can start: outside the star's
-        heat radius, and with room for a stable moon (World.MOON_MIN_ROOM_RADII, see World.moon_limit_in_radii)."""
+        death radius, and with room for a stable moon (World.MOON_MIN_ROOM_RADII, see World.moon_limit_in_radii)."""
         index = OrbitLayout.INITIAL_ORBIT_NUMBER - 1
         if len(entries) <= index:
             return False
         distance, kind = entries[index]
         return (kind is OrbitKind.EARTHLIKE
-                and distance >= star.heat_radius
+                and distance >= star.death_radius
                 and World.moon_limit_in_radii(distance, star.mass) >= World.MOON_MIN_ROOM_RADII)
 
     @staticmethod
@@ -300,5 +300,5 @@ class OrbitLayout:
         """Four earthlike planets, the third where the game can start (see _can_start): for a star whose zones left
         no layout."""
         room = World.MOON_MIN_ROOM_RADII / World.moon_limit_in_radii(1.0, star.mass)
-        third = max(star.heat_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
+        third = max(star.death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
         return [(third * ratio, OrbitKind.EARTHLIKE) for ratio in OrbitLayout.FALLBACK_RATIOS]

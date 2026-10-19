@@ -83,7 +83,7 @@ class DeliverPackage(Mission):
     def shortfall(self, player: Player) -> str:
         return f"Bring the package to {self.destination_outpost.name}."
 
-    def reward_text(self) -> str:
+    def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
         return f"Thank you, this {package} was really expected."

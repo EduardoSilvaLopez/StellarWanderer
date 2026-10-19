@@ -37,8 +37,10 @@ class World(Body):
     `initial_degrees_in_orbit` from the periapsis direction at EPOCH, as a mean anomaly (the true angle for a circular
     orbit). The spin axis stays on the reference z axis, so the inclination of a planet's orbit is its axial tilt
     (seasons); a moon's inclination is relative to its planet's equator. A planet's moons orbit inside the stable part of
-    its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. `local_day_fraction` is the solar day at
-    longitude 0 (0 = noon); the game's date and time always start at EPOCH 00:00:00.
+    its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. A world whose
+    spin the tides have tied to its orbit (`is_tidally_locked`: every moon, and the close planets) either turns once per orbit
+    and keeps the same side to its parent, or, if `is_resonant`, turns three times for two orbits. `local_day_fraction` is the solar day at longitude 0 (0 = noon); the game's date and time
+    always start at EPOCH 00:00:00.
 
     Surface: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and `surface_colour`
     from it and the seed (see world_surface.py); they are drawn last, after the orbit's values. The colour is what the
@@ -73,6 +75,19 @@ class World(Body):
     # A planet has moons only if their stable region reaches at least this far, planet radii: a band wider than the
     # minimum distance, or its moons would crowd at one distance.
     MOON_MIN_ROOM_RADII = 6.0
+
+    # Tidal locking: the parent's tides slow a world's spin until it is tied to its orbit. The time is the standard
+    # estimate (Gladman et al. 1996) for a world of EARTH_DENSITY, from its drawn spin, with these constants. A world is
+    # tied if that time is within TIDAL_LOCK_TIME_LIMIT (a few billion years). It is tied to a 1:1 lock (one turn per
+    # orbit, the same side to its parent), or, for a planet of an eccentric orbit, sometimes to a 3:2 resonance (three
+    # turns for two orbits, as Mercury): the tides capture it there (Goldreich and Peale 1966).
+    MOMENT_OF_INERTIA_FACTOR = 0.33  # moment of inertia = this times m R^2
+    TIDAL_QUALITY_FACTOR = 100.0
+    TIDAL_LOVE_NUMBER = 0.3
+    TIDAL_LOCK_TIME_LIMIT = 1.5e17  # s: a few billion years
+    RESONANCE_MIN_ECCENTRICITY = 0.1  # a planet less eccentric than this stays in the 1:1 lock
+    RESONANCE_CHANCE = 0.5  # of a planet at least this eccentric being caught in the 3:2 resonance rather than the lock
+    RESONANCE_TURNS_PER_ORBIT = 1.5  # the 3:2 resonance: three turns for two orbits
 
     @staticmethod
     def moon_limit_in_radii(distance_to_star: float, star_mass: float) -> float:
@@ -138,7 +153,10 @@ class World(Body):
             star_mass: float = self.parent_orbit.parent_stellar_system.star.mass
             self.moon_limit = World.moon_limit_in_radii(self.distance_to_parent, star_mass) * self.radius
 
-        self.rotation_period: int = self._generate_rotation_period(my_random)
+        self.rotation_period: float = self._generate_rotation_period(my_random)
+        self.is_tidally_locked: bool = self._is_tidally_locked(parent_mass)
+        if self.is_tidally_locked:
+            self.rotation_period = self.orbital_period  # the 1:1 lock, unless the resonance is drawn below
 
         self.rocks_prevalence: float = my_random.random()
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
@@ -217,6 +235,11 @@ class World(Body):
         self.surface_colour: Tuple[int, int, int]
         self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
 
+        # Drawn last, so no value above changed: a tied planet may be in the 3:2 resonance instead of the 1:1 lock.
+        self.is_resonant: bool = self._is_resonant(my_random)
+        if self.is_resonant:
+            self.rotation_period = self.orbital_period / World.RESONANCE_TURNS_PER_ORBIT
+
         self.km2s: List[Km2] = []
         self._learn()
         self._log_creation()
@@ -278,13 +301,34 @@ class World(Body):
             result = 2 ** my_random.gauss(1.0, 1.0) * self.parent_planet.radius / 100.0
         return int(result)
 
-    def _generate_rotation_period(self, my_random: random.Random) -> int:
+    def _generate_rotation_period(self, my_random: random.Random) -> float:
+        """The spin before tidal locking (see _is_tidally_locked): about a day, or a month for a moon."""
         result: float = 0.0
         if self.parent_planet:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24 * 28), 0.2 / (60 * 60 * 24 * 28))
         else:
             result = 1 / my_random.gauss(1.0 / (60 * 60 * 24), 0.2 / (60 * 60 * 24))
         return int(result)
+
+    def _is_tidally_locked(self, parent_mass: float) -> bool:
+        """True if the parent's tides would have slowed the spin (the drawn rotation_period) to the orbit's within
+        TIDAL_LOCK_TIME_LIMIT. The time grows with the sixth power of the distance, so close planets and every moon are
+        locked, and far ones are not."""
+        initial_spin: float = math.tau / self.rotation_period
+        density_term: float = 4.0 / 3.0 * math.pi * World.EARTH_DENSITY  # m / R^3, the same for every world
+        lock_time: float = (
+            World.MOMENT_OF_INERTIA_FACTOR * initial_spin * self.distance_to_parent ** 6 * density_term
+            * World.TIDAL_QUALITY_FACTOR
+            / (3.0 * World.GRAVITATIONAL_CONSTANT * parent_mass ** 2 * World.TIDAL_LOVE_NUMBER)
+        )
+        return lock_time < World.TIDAL_LOCK_TIME_LIMIT
+
+    def _is_resonant(self, my_random: random.Random) -> bool:
+        """True if a tied planet is caught in the 3:2 resonance rather than the 1:1 lock: only a planet (not a moon) of an
+        eccentric enough orbit (RESONANCE_MIN_ECCENTRICITY), and then with RESONANCE_CHANCE. Drawn only in those cases."""
+        if not self.is_tidally_locked or self.parent_planet or self.eccentricity < World.RESONANCE_MIN_ECCENTRICITY:
+            return False
+        return my_random.random() < World.RESONANCE_CHANCE
 
     def _generate_orbit_orientation(self, my_random: random.Random) -> None:
         """Eccentricity, inclination, node longitude and periapsis argument of the orbit around the parent."""
@@ -335,12 +379,18 @@ class World(Body):
                 f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
                 )
         outposts:str = ', '.join(f"'{o.name}'" for o in self.outposts.values()) if self.outposts else "None"
+        if self.is_resonant:
+            day: str = "* Day: three turns for every two orbits (3:2 resonance)\n"
+        elif self.is_tidally_locked:
+            day = "* Day: tidally locked, one turn per orbit\n"
+        else:
+            day = f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
         text: str = (
             f"{heading} {kind} {self.name}\n"
             f"{parent_info}"
             f"{orbit_shape}"
             f"* Radius: {int(self.radius/1000)} Km\n"
-            f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
+            f"{day}"
             f"* Surface: {self.surface_type.label}\n"
             f"* Average temperature: {self.equilibrium_temperature - 273.15:.0f} °C\n"
             f"* 1e-4 Ore prevalence: {1e4*self.ore_prevalence:.2f}\n"
@@ -362,6 +412,8 @@ class World(Body):
         if not self.parent_planet:
             logger.info(f" - Farthest stable moon orbit (Hill sphere): {f'{int(self.moon_limit):,}'}")
         logger.info(f" - Radius: {f'{int(self.radius):,}'}")
+        spin_state: str = "3:2 resonance" if self.is_resonant else ("1:1 tidal lock" if self.is_tidally_locked else "free")
+        logger.info(f" - Spin: {spin_state}, rotation period {self.rotation_period:.3g} s")
         logger.info(f" - Surface: {self.surface_type.label} {self.surface_colour}, {self.equilibrium_temperature:.0f} K")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
@@ -680,7 +732,17 @@ class World(Body):
         return math.radians(self.initial_degrees_in_orbit) + math.tau * self.local_year_fraction(current_datetime)
 
     def _spin_angle_rad(self, current_datetime: datetime) -> float:
+        if self.is_tidally_locked and not self.is_resonant:
+            return self._locked_spin_angle_rad(current_datetime)
         return math.tau * self._spin_fraction(current_datetime)
+
+    def _locked_spin_angle_rad(self, current_datetime: datetime) -> float:
+        """The spin angle of a locked world: the direction of its place from its parent (its star, or its planet for a
+        moon), so that the same side always faces the parent. The spin is then the orbit's, not a separate turn."""
+        offset: Vector3 = self.calculate_stellar_position(current_datetime)
+        if self.parent_planet:
+            offset = offset - self.parent_planet.calculate_stellar_position(current_datetime)
+        return math.atan2(offset.y, offset.x)
 
     @staticmethod
     def _elapsed_seconds(current_datetime: datetime) -> float:

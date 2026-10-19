@@ -76,10 +76,10 @@ class DeliverOre(Mission):
     def shortfall(self, player: Player) -> str:
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
-    def reward_text(self) -> str:
+    def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         mineral = rnd.choice(['platinum', 'palladium', 'rhodium', 'iridium', 'osmium', 'ruthenium'])
-        return f"Thank you, this {mineral}-rich ore will help the Community."
+        return f"Thank you {player.get_title()}, this {mineral}-rich ore will help the Community."
 
     def serialize(self) -> dict:
         return {**super().serialize(), 'quantity': self.quantity}

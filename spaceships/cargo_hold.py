@@ -28,7 +28,8 @@ class CargoHold:
         self.food: float = self.food_max
         self.mines_max: int = self.INITIAL_MINES_MAX
         self.mines: int = self.INITIAL_MINES
-        self.ore = 0.0
+        self.ore_max: int = self.INITIAL_ORE_MAX
+        self.ore: int = 0
 
     @staticmethod
     def load(ship: Ship, src: dict) -> CargoHold:

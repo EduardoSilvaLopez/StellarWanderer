@@ -49,10 +49,21 @@ class Star(Body):
 
     Everything about the star is generated from its seed alone; the galactic position (in ly) is only stored. The star
     belongs to a stellar system once `attach_to` is called, which is what `stellar_system` returns.
+
+    Its type sets the range of its mass. The mass sets the radius and the luminosity, by the main-sequence fits of
+    `_generate_radius` and `_generate_luminosity`, and the luminosity and the radius set the temperature (Stefan-Boltzmann),
+    so the four always agree. The heat distances are where the light has the fluxes HEAT_FLUX and DEATH_FLUX.
     """
 
     BOLOMETRIC_ZERO_POINT = 3.0128e28  # W: the luminosity of magnitude 0 (IAU 2015 nominal zero point)
     STEFAN_BOLTZMANN = 5.670e-8  # W m^-2 K^-4
+
+    # The fits are normalised to a reference star (SI values).
+    REFERENCE_MASS = 1.989e30  # kg
+    REFERENCE_RADIUS = 6.957e8  # m
+    REFERENCE_LUMINOSITY = 3.828e26  # W
+    HEAT_FLUX = 6.3e3  # W m^-2: where the ship starts to heat up (the light at a heat radius)
+    DEATH_FLUX = 6.3e5  # W m^-2: where the ship reaches its maximum temperature (the light at a death radius)
 
     class Type(Enum):
         M = "Red dwarf (M)"
@@ -63,6 +74,17 @@ class Star(Body):
         B = "Blue (B)"
         O = "Blue giant (O)"  # noqa: E741
 
+    # The mass range of each type (kg), drawn uniformly. They follow the spectral classes' masses.
+    MASS_RANGES = {
+        Type.M: (2.0e29, 1.0e30),
+        Type.K: (1.0e30, 1.6e30),
+        Type.G: (1.6e30, 2.07e30),
+        Type.F: (2.07e30, 2.79e30),
+        Type.A: (2.79e30, 4.18e30),
+        Type.B: (4.18e30, 3.18e31),
+        Type.O: (3.18e31, 1.8e32),
+    }
+
     is_world = False
 
     def __init__(self, seed: float, position: tuple[float, float, float]) -> None:
@@ -72,11 +94,11 @@ class Star(Body):
         my_random: random.Random = random.Random(self.seed)
         self.name: str = Star._generate_name(my_random)
         self.type: Star.Type = Star._generate_star_type(my_random)
-        self.radius: int = self._generate_radius(my_random)
-        self.mass: int = self._generate_mass(my_random)
-        self.temperature: float = self._generate_temperature(my_random)
+        self.mass: float = self._generate_mass(my_random)
+        self.radius: int = self._generate_radius()
+        self.luminosity: float = self._generate_luminosity()  # W
+        self.temperature: float = self._generate_temperature()
         self.color: tuple = self._generate_color()  # after the temperature, which it depends on
-        self.luminosity: float = 4 * math.pi * self.radius ** 2 * Star.STEFAN_BOLTZMANN * self.temperature ** 4  # W
         self.rotation_period: float = self._generate_rotation_period(my_random)
         self.heat_radius: int = self._generate_heat_effect_distance(my_random)
         self.death_radius: int = self._generate_heat_death_distance(my_random)
@@ -124,61 +146,36 @@ class Star(Body):
         """The blackbody colour at the star's temperature, made more vivid by STAR_COLOUR_VIVIDNESS."""
         return _vivid(blackbody_rgb(self.temperature), STAR_COLOUR_VIVIDNESS)
 
-    def _generate_radius(self, my_random: random.Random) -> int:
-        if self.type == Star.Type.M:
-            radius = int(200000000 * (0.4 + 1.2 * my_random.random()))
-        elif self.type == Star.Type.K:
-            radius = int(550000000 * (0.9 + 0.2 * my_random.random()))
-        elif self.type == Star.Type.G:
-            radius = int(700000000 * (0.95 + 0.1 * my_random.random()))
-        elif self.type == Star.Type.F:
-            radius = int(880000000 * (0.9 + 0.2 * my_random.random()))
-        elif self.type == Star.Type.A:
-            radius = int(1300000000 * (0.75 + 0.5 * my_random.random()))
-        elif self.type == Star.Type.B:
-            radius = int(3500000000 * (0.85 + 0.3 * my_random.random()))
-        elif self.type == Star.Type.O:
-            radius = int(10500000000 * (0.3 + 0.6 * my_random.random()))
-        return radius
+    def _generate_mass(self, my_random: random.Random) -> float:
+        """The mass (kg), drawn within the range of the star's type."""
+        low, high = Star.MASS_RANGES[self.type]
+        return my_random.uniform(low, high)
 
-    def _generate_mass(self, my_random: random.Random) -> int:
+    def _generate_radius(self) -> int:
+        """The radius (m) of a main-sequence star of its mass: R = M^0.88 below the reference mass, M^0.8 above it."""
+        ratio: float = self.mass / Star.REFERENCE_MASS
+        exponent: float = 0.88 if ratio < 1.0 else 0.8
+        return int(Star.REFERENCE_RADIUS * ratio ** exponent)
 
-        # Typical masses per type (very approximate)
-        typical_mass = {
-            Star.Type.M: 5.967e29,  # kg
-            Star.Type.K: 1.3923e30,
-            Star.Type.G: 1.989e30,
-            Star.Type.F: 2.5857e30,
-            Star.Type.A: 3.978e30,
-            Star.Type.B: 9.945e30,
-            Star.Type.O: 3.978e31
-        }.get(self.type, 1.0)
+    def _generate_luminosity(self) -> float:
+        """The luminosity (W) of a main-sequence star of its mass: L = 0.23 M^2.3 for the faintest, M^4 up to 16 reference
+        masses, and M^2.5 beyond (the mass-luminosity fits)."""
+        ratio: float = self.mass / Star.REFERENCE_MASS
+        if ratio < 0.43:
+            factor: float = 0.23 * ratio ** 2.3
+        elif ratio <= 16.0:
+            factor = ratio ** 4
+        else:
+            factor = 16.0 ** 4 * (ratio / 16.0) ** 2.5
+        return factor * Star.REFERENCE_LUMINOSITY
 
-        return int(typical_mass * (0.98 + 0.04 * my_random.random()))
+    def _generate_temperature(self) -> float:
+        """The effective temperature (K), from the luminosity and the radius (Stefan-Boltzmann law)."""
+        return (self.luminosity / (4 * math.pi * self.radius ** 2 * Star.STEFAN_BOLTZMANN)) ** 0.25
 
-    def _generate_temperature(self, my_random: random.Random) -> float:
-        """
-        Estimate a realistic stellar effective temperature (Kelvin)
-        using spectral type + mass + radius + random variation.
-        """
-        # Canonical average temperatures by spectral type
-        base_temp = {
-            Star.Type.M: 3500,
-            Star.Type.K: 4800,
-            Star.Type.G: 5800,
-            Star.Type.F: 7000,
-            Star.Type.A: 8500,
-            Star.Type.B: 12000,
-            Star.Type.O: 30000
-        }.get(self.type, 6000)  # fallback to G-like
-
-        # Combine corrections (mild influence)
-        result = base_temp * (0.85 + 0.15 * self.mass / 1.989e30) * (0.9 + 0.1 * self.radius / 6.957e8)
-
-        # Add random scatter (±8%)
-        result *= my_random.uniform(0.92, 1.08)
-
-        return result
+    def distance_at_flux(self, flux: float) -> float:
+        """The distance (m) from the star at which its light is `flux` W/m^2."""
+        return math.sqrt(self.luminosity / (4 * math.pi * flux))
 
     def _generate_rotation_period(self, my_random: random.Random) -> float:
         """
@@ -208,42 +205,12 @@ class Star(Body):
         return period_seconds
 
     def _generate_heat_effect_distance(self, my_random: random.Random) -> int:
-        factor: int = 100
-        if self.type == Star.Type.M:
-            factor = 48
-        elif self.type == Star.Type.K:
-            factor = 76
-        elif self.type == Star.Type.G:
-            factor = 100
-        elif self.type == Star.Type.F:
-            factor = 140
-        elif self.type == Star.Type.A:
-            factor = 300
-        elif self.type == Star.Type.B:
-            factor = 700
-        elif self.type == Star.Type.O:
-            factor = 7500
-
-        return int(self.radius * factor * (0.9 + 0.2 * my_random.random()))
+        """The distance at which the ship starts to heat up: where the light is HEAT_FLUX, with a little spread."""
+        return int(self.distance_at_flux(Star.HEAT_FLUX) * (0.9 + 0.2 * my_random.random()))
 
     def _generate_heat_death_distance(self, my_random: random.Random) -> int:
-        factor: int = 10
-        if self.type == Star.Type.M:
-            factor = 4.6
-        elif self.type == Star.Type.K:
-            factor = 7.5
-        elif self.type == Star.Type.G:
-            factor = 10
-        elif self.type == Star.Type.F:
-            factor = 14
-        elif self.type == Star.Type.A:
-            factor = 30
-        elif self.type == Star.Type.B:
-            factor = 70
-        elif self.type == Star.Type.O:
-            factor = 750
-
-        return int(self.radius * factor * (0.9 + 0.2 * my_random.random()))
+        """The distance of the ship's maximum temperature: where the light is DEATH_FLUX, with a little spread."""
+        return int(self.distance_at_flux(Star.DEATH_FLUX) * (0.9 + 0.2 * my_random.random()))
 
     def markdown(self) -> str:
         '''Markdown of the star: its astronomical data. The luminosity and gravity are estimated from the

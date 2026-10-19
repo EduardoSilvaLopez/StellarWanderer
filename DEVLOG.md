@@ -80,11 +80,6 @@ RELEASE "The Three Powers" created, with installer.
   * Made the start somehow harder, only 2 mines, cost more, get only enough not to bring rep < 0, ore gives less reputation.
   * Some sounds implemented (document in "ideas")
   * DeliverPackage mission.
-
-### 2026-10-19 (8/10)
-
-Extra time: 72h45' + 7:45 -
-
   * Extra: Scroll bars can be dragged.
   * Log reputation changes better. Missions.
   * Extra: More realistic world colors.
@@ -92,12 +87,21 @@ Extra time: 72h45' + 7:45 -
   * Extra: Galaxy
   * Show the orbit of targeted (or fixed).
 
-  * reward_text depends on player
-  * Scan object mission.
+### 2026-10-19 (8/10)
 
-  * Use INITIAL_ORE_MAX, limit how much ore can be brought in.
+  * Extra: Improved realism of the astronomical layout of stellar systems.
+  * Extra: Use INITIAL_ORE_MAX, limit how much ore can be brought in.
+  
+Extra time: 72h45' + 7:45 - 10:00
+
+  * Extra: New game - force yellow initial star.
+  * Extra: If ore is ore max, pale yellow in cargo hold.
+  * Esc: close - eliminate, but also, right-mouse brings you back from one dialog to another.
+  * Extra: Reorganise instruments to give more space to the bar.
+  * reward_text depends on player
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved.
-  * Extra: Download more faces of the main races.
+  * Scan object mission (finish testing)
+  * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
   * Rest of sounds
 
 # BACKLOG
@@ -106,6 +110,7 @@ Extra time: 72h45' + 7:45 -
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
+  * Extra: Download more faces of the main races.
   * Extra: Latinos.
 * OROGRAPHY
   * Craters

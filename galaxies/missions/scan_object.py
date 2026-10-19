@@ -175,7 +175,7 @@ class ScanObject(Mission):
     def shortfall(self, player: Player) -> str:
         return f"You have not scanned the {self.object_type} yet."
 
-    def reward_text(self) -> str:
+    def reward_text(self, player: Player) -> str:
         return f"Thank you, knowledge about this {self.adjective} object will help the Community."
 
     def serialize(self) -> dict:

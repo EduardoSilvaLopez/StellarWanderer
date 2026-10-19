@@ -162,7 +162,7 @@ class Mission(Updatable):
         """What the player still lacks, for the message shown when they try to complete it without enough."""
 
     @abstractmethod
-    def reward_text(self) -> str:
+    def reward_text(self, player: Player) -> str:
         pass
 
     def give_reward(self, player: Player) -> None:

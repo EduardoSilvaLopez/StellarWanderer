@@ -1,8 +1,8 @@
 """Starlight and heat on the cockpit, drawn on the overlay after the cockpit.
 
 Starlight: the opaque cockpit pixels (hull, struts, console) get the star's colour added, by
-STARLIGHT_TINT_MAX * min(1, (death_radius / distance) ** 2): full at the star's death radius and nearer, about a fifth
-of it at the heat radius, nothing to see far away. Only the colour is added, so the glass panes (transparent) stay so.
+STARLIGHT_TINT_MAX * min(1, (death_radius / distance) ** 2): full at the star's death radius and nearer, about a hundredth
+of it at the heat radius (about ten times the death radius), nothing to see far away. Only the colour is added, so the glass panes (transparent) stay so.
 
 Heat: a red vignette on the edges of the whole view, its opacity the hot side of the temperature's stress (see
 `resource_bars.temperature_stress`): none at the ideal temperature or colder, full at Ship.TEMP_MAX.
