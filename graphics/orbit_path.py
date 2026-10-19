@@ -18,12 +18,13 @@ class OrbitPath:
 
     STEPS = 180
     MARGIN = 1.05  # the clip is this much wider than the view, so lines reach its border
+    shown = True  # toggled with O (main.py): hidden, the line is not drawn
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         from galaxies.world import World
         body = environment.targeted_body
-        if ship.is_bound or not isinstance(body, World):  # the star has no orbit
+        if not OrbitPath.shown or ship.is_bound or not isinstance(body, World):  # the star has no orbit
             return
         from .instruments.common import view_geometry
         _, horizon_y, focal = view_geometry(h)

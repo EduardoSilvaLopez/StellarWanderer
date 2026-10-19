@@ -496,9 +496,11 @@ class ReportingInOutpost(Conversation):
 
         # Reputation loss due to mines: if too much, give less mines. And top 50% of cargo for them anyway.
         mines_can_be_loaded = int(0.5 * cargo_hold.free_capacity() // cargo_hold.MINE_WEIGHT)
-        mines_to_give = min(5 - cargo_hold.mines, int(status.reputation), mines_can_be_loaded)
+        mines_to_give = min(5 - cargo_hold.mines, int(status.reputation + rep_change), mines_can_be_loaded)
+        logger.debug(f"Player had {cargo_hold.mines} mines already, his remaining reputation is {status.reputation + rep_change}, {mines_can_be_loaded} mines can be loaded. Giving him {mines_to_give}.")
+        ship.cargo_hold.mines += mines_to_give
         rep_loss_mines = -mines_to_give
-        rep_change = rep_loss + rep_gain_ore + rep_loss_mines
+        rep_change += rep_loss_mines
 
         logger.debug(
             "Reputation changes:"
@@ -526,6 +528,9 @@ class ReportingInOutpost(Conversation):
         new_title = entity.title_for(status.reputation)
         if old_title != new_title:
             self._welcome_to_new_title(old_title, new_title)
+        elif ship.cargo_hold.capacity <= ship.cargo_hold.INITIAL_CARGO_CAPACITY and status.reputation >= 0:
+            # semi-new-title, *very* improbable to happen at the same time.
+            self._we_tweaked_your_ship()
         else:
             self.close(self.interaction_lines)
         return self
@@ -562,3 +567,31 @@ class ReportingInOutpost(Conversation):
             return
 
         self.close(self.interaction_lines)
+
+    def _we_tweaked_your_ship(self) -> None:
+        """The player arrived to an outpost for the first time, fine enough to remain 'Citizen'."""
+        text: str = (
+            f"You have proven you can do the job. We gave your ship now more cargo capacity."
+            f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
+            )
+
+        self.player.ship.cargo_hold.capacity *= 1.5
+
+        # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
+        buttons = [
+                {
+                'text': 'Long live',
+                'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
+                'sympathy': 0.1 if self.interlocutor.loyalty100 > 10 else -1,
+                }
+                , {
+                'text': 'Thank you for sharing',
+                'sympathy': 0 if self.interlocutor.loyalty100 > 5 else 1,  # Took the hint
+                }
+            ]
+
+        def answered(button_index: Optional[int]) -> None:
+            self._apply_button(buttons, button_index)
+            self.close(self.interaction_lines)
+
+        show_message(self.prepare_message(self.title, text, buttons), on_result=answered)

@@ -11,7 +11,8 @@ Controls:
     S          brake (linear and rotational)
     SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine)
     M          place mine
-    Esc        open the starting dialog (new game, load, exit game); Esc again resumes.
+    O          show or hide the orbit of the targeted body
+    Esc       open the starting dialog (new game, load, exit game); Esc again resumes.
                Game time is paused while a dialog is open.
 """
 
@@ -40,6 +41,7 @@ from common.dialogs import (
 )
 from galaxies.missions.mission_board import MissionBoard
 from graphics.opengl_gui import OpenGLGui
+from graphics.orbit_path import OrbitPath
 from graphics.instruments.cockpit_buttons import MISSIONS, SYSTEMS, CockpitButtons
 from galaxies.missions import OPEN
 from graphics.instruments.world_map import WorldMap
@@ -304,6 +306,8 @@ def main() -> None:
                     if outpost is not None and MissionBoard.is_available(player_module.current_player):
                         result, screen = run_modal_dialog(MissionBoardDialog(outpost.open_mission_board()), screen, gui, fonts, clock)
                         running = result[0] != 'exit'
+                elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
+                    OrbitPath.shown = not OrbitPath.shown
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:

@@ -46,13 +46,14 @@ class Ship(Updatable):
 
     UPDATE_PERIOD = 60 * 60
 
+    INITIAL_PRECARIOUSNESS = 1 # The maximum. Better ships will decrease this.
     TEMP_MIN = -50
     TEMP_DEFAULT = 25
     TEMP_MAX = 50
     INITIAL_TEMP_SHIELD_REDUCTION = 1 # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
-    INITIAL_ENERGY_MAX = 1e11  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    INITIAL_ENERGY_MAX = 200e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
@@ -61,6 +62,7 @@ class Ship(Updatable):
         self.velocity: Velocity = Velocity()
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
+        self.precariousness: float = Ship.INITIAL_PRECARIOUSNESS
         self.maintenance: float = 1.0
         self.energy_max: float = Ship.INITIAL_ENERGY_MAX
         self.energy: float = self.energy_max
@@ -96,6 +98,8 @@ class Ship(Updatable):
             result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
         if 'last_update_at' in src:
             result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
+        if 'precariousness' in src:
+            result.precariousness = src['precariousness']
         if 'maintenance' in src:
             result.maintenance = src['maintenance']
         result.energy_max = src['energy_max']
@@ -115,6 +119,7 @@ class Ship(Updatable):
             'velocity': self.velocity.serialize(),
             'attitude': self.attitude.serialize(),
             'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'precariousness': self.precariousness,
             'maintenance': self.maintenance,
             'energy_max': self.energy_max,
             'energy': self.energy,
@@ -158,7 +163,7 @@ class Ship(Updatable):
         old_air: float = self.cargo_hold.air
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
-        self.maintenance -= 0.005 * days
+        self.maintenance -= 0.01 * self.precariousness * days
         self.energy -= 1e5 * days
 
         if self.is_bound:
