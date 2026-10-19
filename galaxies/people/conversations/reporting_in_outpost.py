@@ -494,8 +494,9 @@ class ReportingInOutpost(Conversation):
             + rep_loss_food
         rep_change = rep_loss + rep_gain_ore
 
-        # Reputation loss due to mines: if too much, give less mines.
-        mines_to_give = min(5 - cargo_hold.mines, int(status.reputation))
+        # Reputation loss due to mines: if too much, give less mines. And top 50% of cargo for them anyway.
+        mines_can_be_loaded = int(0.5 * cargo_hold.free_capacity() // cargo_hold.MINE_WEIGHT)
+        mines_to_give = min(5 - cargo_hold.mines, int(status.reputation), mines_can_be_loaded)
         rep_loss_mines = -mines_to_give
         rep_change = rep_loss + rep_gain_ore + rep_loss_mines
 

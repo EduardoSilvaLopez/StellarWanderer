@@ -7,6 +7,7 @@ from datetime import datetime
 from .instruments.canopy import Canopy
 from .instruments.console import Console
 from .instruments.clock import Clock
+from .instruments.location_info import LocationInfo
 from .instruments.crosshair import Crosshair
 from .instruments.cockpit_buttons import CockpitButtons
 from .instruments.political_info import PoliticalInfo
@@ -42,4 +43,5 @@ class Cockpit:
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
         CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h, player), player)
         Console.draw(surface, fonts, w, h, player.ship, date_time)
+        LocationInfo.draw_name(surface, fonts, w, h)
         Clock.draw(surface, fonts, date_time, time_scale, w, h)

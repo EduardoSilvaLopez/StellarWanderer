@@ -1,10 +1,10 @@
-"""Location information: the name of the reference body and system, then the position, attitude and speed readouts.
-Shown beside the left cluster of the console (ALT or proximity meter), in the same column."""
+"""Location information: the name of the reference body and system (drawn large, centred in the top bar), and the
+position, attitude and speed readouts (drawn in whatever column the console gives them)."""
 
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..constants import CONSOLE_TOP, ACCENT
+from ..constants import CANOPY_TOP, ACCENT
 from common.units import format_compact_distance
 
 if TYPE_CHECKING:
@@ -12,37 +12,34 @@ if TYPE_CHECKING:
 
 
 class LocationInfo:
-    """Draw the reference body's name, the position of the ship (bound: altitude, longitude, latitude; unbound: x, y, z,
-    each with its rate Δ), the attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of the velocity
-    vector over all three axes, shown without a sign."""
+    """The name of the reference body, and the readouts of the ship.
+
+    The name is the reference body and its system: the fixed body while the ship is fixed, else the star. Its name is the
+    system's alone when it is the star. It is drawn large and centred in the top bar, above the windshield. The readouts
+    are the position of the ship (bound: altitude, longitude, latitude; unbound: x, y, z, each with its rate Δ), the
+    attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of the velocity vector over all three
+    axes, shown without a sign. The target is not shown here (see ProximityMeter)."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
-        """Draw the location information above and beside the left cluster of the console."""
-        top = int(h * CONSOLE_TOP)
-        height = h - top
-
-        label_font = fonts.get(max(9, int(h * 0.017)))
-        world_font = fonts.get(max(12, int(h * 0.024)))
-
-        bar_w = int(w * 0.028)
-        coord_x = cluster_left + bar_w + int(w * 0.03)
-        world_y = cluster_top - 40
-
-        # The box follows the fixed body while the ship is fixed, else the star: its positions are in the star's frame and
-        # its name is the system's. The target is not shown here (see ProximityMeter).
+    def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> None:
+        """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's height."""
         import game_environment as gem
         environment = gem.current_environment
         reference = environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
         stellar_system = reference.stellar_system
         stellar_label = reference.name + ", " + stellar_system.name \
             if reference.is_world else stellar_system.name
-        world_text = world_font.render(stellar_label, True, ACCENT)
-        surface.blit(world_text, (coord_x, world_y))
 
-        # Position readouts
-        coord_y = world_y + world_text.get_height() + int(height * 0.08)
-        line_spacing = int(height * 0.06)
+        bar_height = int(h * CANOPY_TOP)
+        name_text = fonts.render_to_fit(stellar_label, ACCENT, int(w * 0.6), int(bar_height * 0.63))
+        # Centre the visible glyphs, not the font's box, which has space above the capitals and below the descenders.
+        ink = name_text.get_bounding_rect()
+        surface.blit(name_text, (w // 2 - ink.centerx, bar_height // 2 - ink.centery))
+
+    @staticmethod
+    def draw_readouts(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int, line_spacing: int) -> None:
+        """Draw the position and attitude readouts, one per line from (left, top), `line_spacing` pixels apart."""
+        label_font = fonts.get(max(9, int(h * 0.017)))
 
         if ship.is_bound:
             axis_lines = [
@@ -57,24 +54,23 @@ class LocationInfo:
                 ('z', ship.position.z, ship.velocity.z),
             ]
 
+        import game_environment as gem
+        environment = gem.current_environment
+        reference = environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
+        date_time = environment.date_time
+        body = reference  # pitch and roll: relative to the same body as the position box
+        speed = ship.velocity.as_vector().length()
+        texts = []
         for label, position, velocity in axis_lines:
             if ship.is_bound:
-                text = f'{label}: {int(position)} Δ {int(velocity)}'
+                texts.append(f'{label}: {int(position)} Δ {int(velocity)}')
             else:
-                text = f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}'
-            line_text = label_font.render(text, True, ACCENT)
-            surface.blit(line_text, (coord_x, coord_y))
-            coord_y += line_spacing
-
-        body = reference  # pitch and roll: relative to the same body as the position box
-        date_time = gem.current_environment.date_time
-        speed = ship.velocity.as_vector().length()
-        attitude_lines = (
+                texts.append(f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}')
+        texts += [
             f'Yaw: {int(ship.attitude.yaw)}° Δ {int(ship.attitude.yaw_rate)}',
             f'Pitch: {int(ship.navigation.pitch_angle(body, date_time))}° Δ {int(ship.attitude.pitch_rate)}',
             f'Roll: {int(ship.navigation.roll_angle(body, date_time))}° Δ {int(ship.attitude.roll_rate)}',
             f'Speed: {format_compact_distance(speed)}/s',
-        )
-        for text in attitude_lines:
-            surface.blit(label_font.render(text, True, ACCENT), (coord_x, coord_y))
-            coord_y += line_spacing
+        ]
+        for index, text in enumerate(texts):
+            surface.blit(label_font.render(text, True, ACCENT), (left, top + index * line_spacing))

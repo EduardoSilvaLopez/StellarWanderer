@@ -19,6 +19,7 @@ CONSOLE = (29, 32, 43)
 CONSOLE_EDGE_COLOR = (74, 82, 102)
 ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
+ACCENT_LABEL = tuple((a + b) // 2 for a, b in zip(ACCENT, ACCENT_DIM))  # readout labels: halfway between, legible on READOUT_BG
 AMBER = (240, 176, 92)
 BINDING_MARK_RED = (235, 64, 64)
 BINDING_NEAR_GREEN = (80, 230, 120)

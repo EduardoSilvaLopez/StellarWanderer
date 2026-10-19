@@ -25,7 +25,8 @@ class Cargo:
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
         """Draw the cargo hold contents, in `rect`, under a title whose top is `title_top`."""
         label_font = fonts.get(max(9, int(h * 0.017)))
-        draw_panel_title(surface, label_font, 'CARGO', rect.centerx, title_top)
+        cargo_summary = f'CARGO ({int(ship.cargo_hold.used_capacity())}/{ship.cargo_hold.capacity} Kg)'
+        draw_panel_title(surface, label_font, cargo_summary, rect.centerx, title_top)
 
         draw_beveled_panel(surface, rect, depth=bezel_depth(h))
 
@@ -39,6 +40,8 @@ class Cargo:
             line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
         for element, quantity in ship.cargo_hold.serialize().items():
+            if element == "capacity":
+                continue # the capacity is shown above
             if element.endswith('_max'):
                 continue  # the hold's limits are saved with it, but they are not cargo
             # Red at or below the warning level, as the ship's notice says.

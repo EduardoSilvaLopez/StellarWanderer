@@ -52,7 +52,7 @@ class Ship(Updatable):
     INITIAL_TEMP_SHIELD_REDUCTION = 1 # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
-    INITIAL_ENERGY_MAX = 5e11  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    INITIAL_ENERGY_MAX = 1e11  # Wh, that is, 1TWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
@@ -258,7 +258,7 @@ class Ship(Updatable):
         player_lat: float = self.position.z
         player_yaw: float = self.attitude.yaw
         from galaxies.km2 import Km2
-        relevant_km2s: List[Km2] = list()
+        relevant_km2s: List[Km2] = []
         import game_environment as gem
         world = gem.current_environment.fixed_world
         for km2 in world.km2s:

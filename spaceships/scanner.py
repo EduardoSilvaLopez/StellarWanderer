@@ -121,7 +121,7 @@ class Scanner:
             self.ship.laser.cease_fire()
             mine: OreMine = self.targeted_mine
             if mine.content > 0:
-                ore_transfer = min(self.ship.cargo_hold.ore_max -  self.ship.cargo_hold.ore, mine.content)
+                ore_transfer = min(self.ship.cargo_hold.capacity -  self.ship.cargo_hold.free_capacity(), mine.content)
                 self.ship.cargo_hold.ore += ore_transfer
                 mine.content -= ore_transfer
             return self

@@ -27,9 +27,11 @@ class Console:
     """Draw instrument panel below the windshield with all component displays.
 
     The left cluster shows one of two meters, chosen by `Ship.is_bound`: the AltitudeMeter while bound (ALT), the
-    ProximityMeter while unbound (FIXED or TARGET). The position box (name and coordinates) is relative to the fixed body
-    while fixed, else to the star: its name is the system's alone when it is the star. Pitch and roll use the same body.
-    Yaw, pitch and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
+    ProximityMeter while unbound (FIXED or TARGET), whose bar and indicators are columns the height of the map's screen.
+    The readouts (coordinates, attitude, speed) are beside the meter: bound beside the altitude bar, unbound between the
+    proximity bar and the map. The name of the reference body is drawn in the top bar by Cockpit (LocationInfo.draw_name).
+    Pitch and roll use the same body as the position box, which is the fixed body while fixed, else the star. Yaw, pitch
+    and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, date_time: datetime) -> None:
@@ -56,19 +58,13 @@ class Console:
         shift = bars_w // 2
         map_shift = int(w * 0.047)
 
-        # Left cluster: altitude bar and position coordinates
+        # Left cluster: altitude bar (bound) or proximity columns (unbound), and the readouts
         cluster_left = int(w * 0.02)
         cluster_top = top + int(height * 0.24)
         cluster_height = int(height * 0.46)
-
-        # Draw altitude bar and location info
-        if ship.is_bound:
-            AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
-        else:
-            ProximityMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
-        LocationInfo.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
-
         bar_w = int(w * 0.028)
+        line_spacing = int(height * 0.06)
+
         compass_left_bound = cluster_left + bar_w + int(w * 0.15) - shift // 2
         mfd = pygame.Rect(0, 0, int(layout_w * 0.24), int(height * 0.56))
         mfd.centerx = layout_w // 2 + mfd.width // 3 - map_shift
@@ -80,6 +76,20 @@ class Console:
         old_depth = max(2, mfd.width // 24)
         screen = mfd.inflate(old_depth * 2, old_depth * 2).inflate(-depth * 2, -depth * 2)
         draw_beveled_panel(surface, screen, depth=depth)
+
+        # Left cluster, as tall as the map's screen. Bound: the altitude bar, with the readouts beside it. Unbound: the
+        # target's indicators, then the proximity bar, then the readouts between the bar and the map.
+        if ship.is_bound:
+            AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
+            LocationInfo.draw_readouts(surface, fonts, h, ship, cluster_left + bar_w + int(w * 0.03), cluster_top - 10, line_spacing)
+        else:
+            indicators_w = int(w * 0.115)
+            indicators_rect = pygame.Rect(cluster_left, screen.top, indicators_w, screen.height)
+            bar_rect = pygame.Rect(cluster_left + indicators_w + int(w * 0.01), screen.top, bar_w, screen.height)
+            ProximityMeter.draw_bar(surface, h, ship, bar_rect)
+            ProximityMeter.draw_indicators(surface, fonts, h, ship, indicators_rect)
+            readouts_left = bar_rect.right + int(w * 0.015)
+            LocationInfo.draw_readouts(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
 
         if ship.is_bound:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)
