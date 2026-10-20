@@ -5,8 +5,8 @@ not saved. The ones the pilot takes go to `Player.missions` and stay there for g
 the only place missions are saved.
 
 Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission knows
-whether the player can complete it (`can_complete`) and what that takes from them (`complete`). The reward (`reward_text`,
-`give_reward`) and the effects of failing (`fail`) are decided later, per kind.
+whether the player can complete it (`can_complete`), what that takes from them (`complete`) and what it gives them
+(`give_reward`, `reward_text`). The effects of failing (`fail`) are decided later, per kind.
 
 An OPEN mission is in the `update_queue` for its deadline (it is an Updatable): when the deadline passes it becomes
 FAILED, the ship says so, and `fail` runs. The queue is emptied on every new game and load, so `Player.deserialize` puts
@@ -54,6 +54,7 @@ class Mission(Updatable):
 
     KIND: str = ''
     CHANCES_PER_DAY: float = 0.0  # the chance a kind makes an offer on a given day; a kind that makes none keeps 0
+    DAYS_MAX: int = 0  # the most days an offer of the kind lasts (its deadline): how far back the board looks for its offers
 
     def __init__(self,
                  seed: int,
@@ -116,6 +117,10 @@ class Mission(Updatable):
     def on_rock_scanned(self, rock: Rock) -> None:
         """A rock was scanned. Nothing by default."""
 
+    def progress(self) -> str:
+        """Where a taken mission stands, as a line for the player's log. Empty when there is nothing to say."""
+        return ''
+
     def watch_deadline(self) -> None:
         """Puts an OPEN mission back in the update queue, after a load."""
         if self.status == OPEN:
@@ -166,7 +171,7 @@ class Mission(Updatable):
         pass
 
     def give_reward(self, player: Player) -> None:
-        """Gives the reward. Nothing yet."""
+        """Gives the reward, after `complete` and once the mission is DONE. Nothing by default."""
 
     def fail(self, player: Player) -> None:
         """The effects of failing, per kind. Nothing yet."""

@@ -14,6 +14,7 @@ from .notification import Notification
 from .kinematics import Position, Velocity
 from .attitude import Attitude
 from .navigation import Navigation
+from common import audio
 from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
     from galaxies.people.player import Player
@@ -193,7 +194,7 @@ class Ship(Updatable):
         elif self.temperature <= -10 < old_temperature:
             self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
         elif self.temperature <= -35 < old_temperature:
-            self.notification.set("CRTICAL: Freezing. Leave this place or take measures *now*.")
+            self.notification.set("CRITICAL: Freezing. Leave this place or take measures *now*.")
         elif self.energy <= 0.01 * Ship.INITIAL_ENERGY_MAX < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
@@ -249,13 +250,13 @@ class Ship(Updatable):
         '''React to the "place mine" button.'''
         # Check conditions.
         if self.cargo_hold.mines <= 0:
-            self.notification.set("No mines available.")
+            self.notification.set("No mines available.", 'mine_refused')
             return
         if not self.is_bound:
-            self.notification.set("Mines can only be placed on a world.")
+            self.notification.set("Mines can only be placed on a world.", 'mine_refused')
             return
         if self._mine_too_near():
-            self.notification.set("Mines cannot be placed so near each other.")
+            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused')
             return
 
         # Check if rocks nearby.
@@ -293,7 +294,7 @@ class Ship(Updatable):
             if hitting_a_rock:
                 break
         if hitting_a_rock:
-            self.notification.set("There are rocks there, we cannot place a mine.")
+            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused')
             return
 
         # Cancel if no ore field.
@@ -307,9 +308,10 @@ class Ship(Updatable):
                     targeted_field = field
                     closest_distance = distance_to_field
         if targeted_field is None:
-            self.notification.set("No ore field here.")
+            self.notification.set("No ore field here.", 'mine_refused')
             return
 
         new_mine = OreMine(targeted_field, front_lon, front_lat, player_yaw)
         targeted_field.mines.append(new_mine)
         self.cargo_hold.mines -= 1
+        audio.play('mine_placed')

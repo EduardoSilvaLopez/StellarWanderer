@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class OreMine(Updatable):
     EXTRACTION_PERIOD: int = 3600
+    MAX_CAPACITY: int = 20000
     # Geometry of a mine: a vertical cylinder standing on the ground. Graphics draws it with these and
     # the scanner's beam hits it with these, so the two always agree.
     MINE_RADIUS: float = 4.0  # metres
@@ -91,10 +92,16 @@ class OreMine(Updatable):
 
         time_passed = game_date_time - self.last_updated_at
         periods_passed = time_passed.total_seconds() // OreMine.EXTRACTION_PERIOD
-        # May be under 1, save the rest for the next.
-        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
 
-        ore_extracted = self.parent_field.extract(periods_passed)  # Later: mine quality.
+        # May be under 1, save the rest for the next.
+        if periods_passed < 1.0:
+            self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
+            update_queue.add(self)
+            return
+
+        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+        ore_extracted = self.parent_field.extract(periods_passed, OreMine.MAX_CAPACITY - self.content)
+
         self.content += ore_extracted
         if self.parent_field.remaining_ore <= 0:
             logger.info("Mine won't be updated anymore, field depleted.")

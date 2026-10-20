@@ -16,7 +16,7 @@ MINE_MARK_COLOR = (255, 255, 0)
 # Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, centred on the ship.
 # The scales are fixed values in metres per pixel (1, 2, 5, 10, ...) down to MIN_SCALE, so a step means the same
 # on every world; the coarsest level is the whole world. A zoomed map can be dragged with the left button, and
-# recentres on the ship when the zoom changes or the button is released.
+# recentres on the ship when the zoom changes.
 MIN_SCALE = 1.0
 FIRST_ZOOM_RATIO = 1.5  # the first zoomed scale is at least this much finer than the whole-world map
 
@@ -37,8 +37,9 @@ class WorldMap:
     metres per pixel (1, 2, 5, 10, ... down to MIN_SCALE, 1 m/px), after the whole-world map, which is level 0
     (`_scale_levels`); one step means the same on every world. A zoomed map uses the same scale on both axes and the
     flat offsets from the ship (as the 3D view does), wraps longitude around the world, and draws the world's boundary
-    where it falls. A left-button drag over the zoomed map moves the content with the pointer, like a hand; releasing
-    the button, and any zoom change, recentre it on the ship. When the mouse leaves, the map goes back to the whole
+    where it falls. A left-button drag over the zoomed map moves the content with the pointer, like a hand; the offset
+    is kept when the button is released, and any zoom change (including the return to the whole world) recentres it
+    on the ship. When the mouse leaves, the map goes back to the whole
     world and the name returns (unless a drag is in progress). `main` polls the mouse once per frame (`set_mouse`)
     and routes MOUSEWHEEL to `zoom` while bound."""
 
@@ -47,7 +48,7 @@ class WorldMap:
     zoom_index: int = 0  # 0 = the whole world; each step is a finer scale
     dragging: bool = False  # a left-button drag that started over the zoomed map is in progress
     drag_position: Optional[Tuple[int, int]] = None  # the pointer at the previous frame of the drag
-    pan: Tuple[float, float] = (0.0, 0.0)  # screen pixels the content has moved since the drag started
+    pan: Tuple[float, float] = (0.0, 0.0)  # screen pixels the content is moved from the ship-centred view
     area: Optional[pygame.Rect] = None  # the map's area, as last drawn
     _was_pressed: bool = False
 
@@ -61,13 +62,11 @@ class WorldMap:
         if not pressed:
             WorldMap.dragging = False
             WorldMap.drag_position = None
-            WorldMap.pan = (0.0, 0.0)
             return
         if not was_pressed:
             over_zoomed_map = WorldMap.area is not None and WorldMap.area.collidepoint(position) and WorldMap.zoom_index > 0
             WorldMap.dragging = over_zoomed_map
             WorldMap.drag_position = position if WorldMap.dragging else None
-            WorldMap.pan = (0.0, 0.0)
         elif WorldMap.dragging and WorldMap.drag_position is not None:
             pan_x, pan_y = WorldMap.pan
             WorldMap.pan = (pan_x + position[0] - WorldMap.drag_position[0],

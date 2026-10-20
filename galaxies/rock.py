@@ -21,7 +21,7 @@ class Rock(Updatable):
     TEMP_RISE_RATE = 500.0  # Temp. raise for a 1 square cube rock in 1 second.
     BASE_COOLING_PERIOD = 60 * 60  # Once per hour.
     COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX_MU = 7.5 # Gives around 2000
+    TEMP_MAX_MU = 7.57 # Gives around 2000
     TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')  # the adjectives a rock can have (see generate_adjective)
@@ -178,8 +178,8 @@ class Rock(Updatable):
     def _calculate_initial_color(self, my_random: Random) -> tuple:
         # Ore-rich are yellow-ish
         if self.is_ore_rich():
-            base_r = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
-            base_g = 128 + int(64 * self.get_purity()) + my_random.randint(0, 8)
+            base_r = 112 + int(88 * self.get_purity()) + my_random.randint(0, 8)
+            base_g = 112 + int(88 * self.get_purity()) + my_random.randint(0, 8)
             base_b = 32 + my_random.randint(0, 8)
         else:
             base_r = 104 + my_random.randint(0, 32)

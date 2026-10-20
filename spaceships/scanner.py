@@ -3,6 +3,10 @@ from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Uni
 
 import math
 
+import logging
+
+from common import audio
+
 if TYPE_CHECKING:
     from spaceships.ship import Ship
     from galaxies.world import World
@@ -10,6 +14,8 @@ if TYPE_CHECKING:
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
+
+logger = logging.getLogger(__name__)
 
 # Everything the beam can hit.
 Target = Union['Rock', 'OreMine', 'Outpost']
@@ -118,12 +124,21 @@ class Scanner:
         not search again."""
 
         if self.targeted_mine is not None:
-            self.ship.laser.cease_fire()
             mine: OreMine = self.targeted_mine
             if mine.content > 0:
-                ore_transfer = min(self.ship.cargo_hold.capacity -  self.ship.cargo_hold.free_capacity(), mine.content)
+                self.ship.laser.cease_fire()
+                ore_transfer = int(min(self.ship.cargo_hold.free_capacity(), mine.content))
+                logger.debug(
+                    "Transfer Ore to Ship:"
+                    f"\nCargo capacity: {self.ship.cargo_hold.capacity}"
+                    f"\nFree capacity: {self.ship.cargo_hold.free_capacity()}"
+                    f"\nMine content: {mine.content}"
+                    f"\nOre transfer: {ore_transfer}"
+                    )
                 self.ship.cargo_hold.ore += ore_transfer
                 mine.content -= ore_transfer
+                if ore_transfer > 0:
+                    audio.play('ore_collected')
             return self
 
         if self.targeted_outpost is not None:

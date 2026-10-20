@@ -124,6 +124,8 @@ class MissionListDialog(Dialog):
             (title_font(DETAIL_TITLE_SIZE).render(mission.title(), True, ACCENT), 0, None, None),
             (body.render(self._deadline_line(mission), True, LABEL_COLOR), 6, None, None),
         ]
+        if mission.progress():
+            items.append((body.render(mission.progress(), True, ACCENT), 4, None, None))
         items += [(body.render(line, True, TEXT_COLOR), 4, None, None)
                   for line in MessageDialog.wrap(mission.description(), body, width)]
         action = self._action(mission)
@@ -133,11 +135,13 @@ class MissionListDialog(Dialog):
         return items
 
     def _row(self, mission: Mission, width: int) -> Item:
-        """One mission in the list: its title and a line about time, in a box. A click opens its detail."""
+        """One mission in the list: its title, a line about time and, if it has one, its progress, in a box. A click opens its detail."""
         lines: List[pygame.Surface] = [
             title_font(HEADING_SIZE).render(mission.title(), True, ACCENT),
             body_font(BODY_SIZE).render(self._deadline_line(mission), True, LABEL_COLOR),
         ]
+        if mission.progress():
+            lines.append(body_font(BODY_SIZE).render(mission.progress(), True, TEXT_COLOR))
         height = sum(line.get_height() + 4 for line in lines) + 2 * ROW_PAD
         row = pygame.Surface((width, height), pygame.SRCALPHA)
         pygame.draw.rect(row, ROW_FILL, row.get_rect())

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
+from common import audio
 from galaxies.rock import Rock
 
 if TYPE_CHECKING:
@@ -16,6 +17,7 @@ class Laser:
     def fire(self, targeted_rock: Optional[Rock], time_passed: int) -> None:
         self.hitting_rock = targeted_rock
         self.firing = True
+        audio.set_loop('laser', True)
         if self.hitting_rock:
             self.hitting_rock.increase_temperature(time_passed)
             # 222Wh for 1 degree 1 ton. Laser can 500 degrees so ~10KWh per second.
@@ -25,4 +27,5 @@ class Laser:
         if not self.firing:
             return
         self.firing = False
+        audio.set_loop('laser', False)
         self.hitting_rock = None

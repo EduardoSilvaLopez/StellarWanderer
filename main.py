@@ -100,6 +100,7 @@ def start_game(action: str, value: object) -> float:
 
     Returns the elapsed ship seconds since EPOCH of the game that starts."""
     update_queue.clear()
+    audio.stop_loops()
     if action == 'load':
         Savefile.load_from_file(value)
         elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
@@ -228,6 +229,7 @@ def run_modal_dialog(
     player = player_module.current_player
     if player.ship.laser.firing:
         player.ship.laser.cease_fire()
+    audio.stop_loops()
     audio.play(dialog.OPEN_SOUND)
 
     result = None
@@ -312,6 +314,7 @@ def main() -> None:
                     Savefile.save()
                 elif event.key == pygame.K_F6:
                     update_queue.clear()
+                    audio.stop_loops()
                     Savefile.load_last()
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
                 elif event.key == pygame.K_TAB:  # cycles the target (only outside every fixed zone); Shift+Tab goes back
@@ -391,6 +394,15 @@ def main() -> None:
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )
+        thrusting = not player.is_paused and (
+            keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
+            or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
+            or (keys[pygame.K_s] and ship.navigation.has_motion_to_brake()))
+        audio.set_loop('thrust', thrusting)  # the hull's hum: a thrust key held, or the brake while there is motion to brake
+        rotating = player.time_scale == 1 and (
+            keys[pygame.K_KP_4] or keys[pygame.K_KP_6] or keys[pygame.K_e] or keys[pygame.K_q]
+            or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
+        audio.set_loop('attitude', rotating)  # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
         if player.is_paused:
             ship.scanner.deactivate()  # frozen: nothing is aimed or fired
         else:

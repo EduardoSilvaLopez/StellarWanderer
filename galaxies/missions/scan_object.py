@@ -30,13 +30,17 @@ logger = logging.getLogger(__name__)
 class ScanObject(Mission):
     """Scan an object somewhere, then come back."""
     KIND = 'scan_object'
-    CHANCES_PER_DAY = 0.99
+    CHANCES_PER_DAY = 0.50
     DAYS_MIN = 10
     DAYS_MAX = 30
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.05  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
-    def __init__(self, object_type: str = '', rock_site: Optional[dict] = None, adjective: str = '', was_scanned: bool = False,
-                 **common: Any) -> None:
+    def __init__(
+            self, object_type: str = '',
+            rock_site: Optional[dict] = None,
+            adjective: str = '',
+            was_scanned: bool = False,
+            **common: Any) -> None:
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
@@ -119,6 +123,13 @@ class ScanObject(Mission):
         if rock.parent_km2.parent_world is self._world() and [rock.longitude, rock.latitude] == self.rock_site['rock']:
             self.was_scanned = True
 
+    def progress(self) -> str:
+        if self.accepted_at is None:
+            return ''
+        if self.was_scanned:
+            return f"The {self.adjective} {self.object_type} is scanned: bring the results to {self.issuer_outpost.name}."
+        return f"The {self.adjective} {self.object_type} is not scanned yet."
+
     def accept(self, now: datetime) -> None:
         """The pilot takes the offer: its rock gets the adjective, so the rock is the one the mission asks for."""
         super().accept(now)
@@ -168,7 +179,10 @@ class ScanObject(Mission):
         return self.was_scanned
 
     def complete(self, player: Player) -> None:
-        reputation_change: float = 2.0  # Maybe later depends on distance? Do we have the rock, can we check if same planet at least?
+        """Nothing is taken from the player: the scan is what was asked."""
+
+    def give_reward(self, player: Player) -> None:
+        reputation_change: float = 0.5 # Later... depends on distance? When asteroids.
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = {player.those_who_share.reputation}")
 

@@ -44,7 +44,8 @@ class Outpost(Updatable):
     def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
-        self.seed: float = (planet.seed + self.index + 1) % galaxies.constants.SEEDS_SCALING
+        # Planets' seeds are consecutive: 1000 apart, each planet has room for up to 1000 outposts with no seed in common.
+        self.seed: float = (planet.seed * 1000 + self.index + 1) % galaxies.constants.SEEDS_SCALING
         self.my_random: random.Random = random.Random(self.seed)
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
@@ -83,18 +84,22 @@ class Outpost(Updatable):
         logger.info(f"- Seed {self.seed}")
         return self
 
+    def staff_seed(self, index: int) -> float:
+        """The seed of the staff member `index`. Outposts are 1000 apart, so each has room for up to 1000 staff and no two
+        outposts share a person."""
+        return self.seed * 1000 + index
+
     def staff_member(self, index: int) -> Person:
-        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute. His or her seed is the
-        outpost's plus the index."""
+        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute."""
         last = index == self.STAFF_SIZE - 1
-        return Person(self.seed + index, self, 4 if last else 5,
+        return Person(self.staff_seed(index), self, 4 if last else 5,
                       self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
 
     def person_with_seed(self, seed: float) -> Optional[Person]:
         """The staff member of this outpost with that seed, or None if the seed is not one of its staff. Created again
         when the staff has not been prepared (nobody has visited the outpost in this session)."""
         for index in range(self.STAFF_SIZE):
-            if self.seed + index == seed:
+            if self.staff_seed(index) == seed:
                 return self.staff[index] if self.staff else self.staff_member(index)
         return None
 
@@ -177,7 +182,7 @@ class Outpost(Updatable):
     def open_mission_board(self) -> MissionBoard:
         """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to show."""
         now = gem.current_environment.date_time
-        self.mission_board.update_missions(now)  # first: it may need the previous visit
+        self.mission_board.update_missions(now)
         self._set_last_visited(now)
         return self.mission_board
 

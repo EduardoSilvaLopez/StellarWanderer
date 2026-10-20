@@ -543,8 +543,11 @@ class ReportingInOutpost(Conversation):
             text: str = (
                 f"We have spoken about you and we think we can trust you to do something more than collect ore." \
                 f"\n\nAnytime you want, check the mission board of our outposts [Numpad 5]."
-                f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
+                f"\n\nAnyway, ore is always welcome... we increased your cargo hold as well."
+                f"{"\n\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
                 )
+
+            self.player.ship.cargo_hold.capacity = max(5000, self.player.ship.cargo_hold.capacity)
 
             # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
             buttons = [

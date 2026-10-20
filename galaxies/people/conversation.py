@@ -40,25 +40,28 @@ class Conversation(ABC):
             result = Message(
                 title=title,
                 text=text,
-                buttons=[button_dicts[0]['text']]
+                buttons=[button_dicts[0]['text']],
+                open_sound='radio_open'
             )
         elif len(button_dicts) == 2:
             result = Message(
                 title=title,
                 text=text,
-                buttons=[button_dicts[0]['text'], button_dicts[1]['text']]
+                buttons=[button_dicts[0]['text'], button_dicts[1]['text']],
+                open_sound='radio_open'
             )
         else:
             result = Message(
                 title=title,
                 text=text,
-                buttons=[button_dicts[0]['text'], button_dicts[1]['text'], button_dicts[2]['text']]
+                buttons=[button_dicts[0]['text'], button_dicts[1]['text'], button_dicts[2]['text']],
+                open_sound='radio_open'
             )
         return result
 
     def close(self, interaction_lines: List[str]) -> None:
         self.interlocutor.last_communication_at = self.date_time
         self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = interaction_lines
-        gem.current_environment.persons[self.interlocutor.seed] = self.interlocutor.serialize()
+        self.interlocutor.ensure()
         self.interlocutor.log_update()
         logger.debug("Finished.")

@@ -97,23 +97,31 @@ RELEASE "The Three Powers" created, with installer.
   * Extra: Reorganise instruments to give more space to the bar.
   * Extra: Rocks sink more.
   * Extra: Special color with free_capacity() is zero.
-
-Extra time: 72h45' + 7:45 - 10:00 + 12:15 - 17:30
-
-  * Performance problems.
-  * The limit of ore collected from the mine did not work... why? It was not by far.
   * Extend the difference between low and high purity in ore high rocks.
-  * Melt a *BIT* later... 0.05 ?
-  
-  * Scan object mission (finish testing)
+  * Melt rock a *BIT* later... 7.55
   * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
+  
+### 2026-10-20 (9/10) Extra time: 81h45' + 8:00 - 8:15 + 9:15 -
+
+  * Cargo of - no decimals.
+  * Scan object mission (finish testing): "scanned" status or similar in the mission log.
+  * The limit of ore collected from the mine did not work... why? It was not by far.
+
+  * Low performance on high altitude / speed.
   * Rest of sounds
+
+  * Performance problems... after some gameplay only?
+  * Extra: Strange rocks look a bit different? Subtle texture?
+  * Extra: rethink all seeds, make your proposals.
+  * Dragged zoom map remains dragged.
 
 # BACKLOG
 * ASTEROIDS (II)
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
+  * Extra: Can the Ai or another sevice create the photos?
+  * Extra: Cooler laser.
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Extra: Download more faces of the main races.
   * Extra: Latinos.
@@ -127,6 +135,7 @@ Extra time: 72h45' + 7:45 - 10:00 + 12:15 - 17:30
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
+* REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?
 * ATMOSPHERE
   * Even suggestions of life?

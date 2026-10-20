@@ -20,11 +20,13 @@ class Message:
     title: the heading.
     text: the body. A blank line starts a new paragraph; each paragraph is wrapped by the dialog.
     buttons: the labels, in order. The callback is told which one was pressed by its position (first = 0).
+    open_sound: the sound (common/audio.py) played when the message opens, for one with a sound of its own.
     """
 
     title: str
     text: str
     buttons: List[str] = field(default_factory=lambda: [DEFAULT_BUTTON])
+    open_sound: str = 'ui_open'
 
     @property
     def paragraphs(self) -> List[str]:

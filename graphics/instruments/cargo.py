@@ -26,7 +26,7 @@ class Cargo:
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
         """Draw the cargo hold contents, in `rect`, under a title whose top is `title_top`."""
         label_font = fonts.get(max(9, int(h * 0.017)))
-        cargo_summary = f'CARGO ({int(ship.cargo_hold.used_capacity())}/{ship.cargo_hold.capacity} Kg)'
+        cargo_summary = f'CARGO ({int(ship.cargo_hold.used_capacity())}/{int(ship.cargo_hold.capacity)} Kg)'
         # Amber when less than 1 Kg of room is left: the hold is full.
         full = ship.cargo_hold.free_capacity() < 1.0
         draw_panel_title(surface, label_font, cargo_summary, rect.centerx, title_top, AMBER if full else ACCENT)

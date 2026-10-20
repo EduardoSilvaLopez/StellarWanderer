@@ -11,19 +11,23 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
+    from galaxies.people.person import Person
     from galaxies.people.player import Player
 
 @register
 class DeliverPackage(Mission):
-    """Deliver package: bring some package to another outpost."""
+    """Deliver package: bring some package from a person of this outpost to a person of another one."""
 
     KIND = 'deliver_package'
-    CHANCES_PER_DAY = 0.7
+    CHANCES_PER_DAY = 0.10
     DAYS_MIN = 5
     DAYS_MAX = 10
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
-    def __init__(self, **common: Any) -> None:
+    def __init__(
+            self, sender_seed: Optional[float] = None,
+            recipient_seed: Optional[float] = None,
+            **common: Any) -> None:
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline).
@@ -34,6 +38,31 @@ class DeliverPackage(Mission):
         moment = self.my_random.random()
         taken_day = next((index for index, roll in enumerate(rolls) if roll < DeliverPackage.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
+
+        # The sender and the recipient are any of the staff of each outpost (the seeds of their persons). A new offer draws
+        # them from its seed; a loaded mission is given its own.
+        staff_size = self.issuer_outpost.STAFF_SIZE
+        self.sender_seed: float = self.issuer_outpost.staff_seed(self.my_random.randrange(staff_size)) \
+            if sender_seed is None else sender_seed
+        self.recipient_seed: float = self.destination_outpost.staff_seed(self.my_random.randrange(staff_size)) \
+            if recipient_seed is None else recipient_seed
+
+    @property
+    def sender(self) -> Person:
+        """The person of the issuing outpost who sends the package."""
+        return self._staff_member(self.issuer_outpost, self.sender_seed)
+
+    @property
+    def recipient(self) -> Person:
+        """The person of the destination outpost who is to receive it."""
+        return self._staff_member(self.destination_outpost, self.recipient_seed)
+
+    @staticmethod
+    def _staff_member(outpost: Outpost, seed: float) -> Person:
+        person = outpost.person_with_seed(seed)
+        if person is None:
+            raise KeyError(f"The outpost {outpost.name} has no staff member with the seed {seed}.")
+        return person
 
     @classmethod
     def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverPackage]:
@@ -61,12 +90,24 @@ class DeliverPackage(Mission):
         return f"Deliver a package to {self.destination_outpost.name}"
 
     def description(self) -> str:
-        return f"We need you to deliver an urgent package to {self.destination_outpost.address()}."
+        return (
+            f"{self.sender.get_full_name()} needs somebody to deliver an urgent package to"
+            f"{self.recipient.get_full_name()} in {self.destination_outpost.address()}."
+            )
+
+    def accept(self, now: datetime) -> None:
+        """Taken: the sender and the recipient are kept in `persons`, though the player has not met them."""
+        super().accept(now)
+        self.sender.ensure()
+        self.recipient.ensure()
 
     def can_complete(self, player: Player) -> bool:
         return True
 
     def complete(self, player: Player) -> None:
+        """Nothing is taken from the player: the package is the mission."""
+
+    def give_reward(self, player: Player) -> None:
         import game_environment as gem
         if self.deadline == self.created_at:
             logger.error(f"self.deadline ({self.deadline}) == self.created_at ({self.created_at})")
@@ -75,10 +116,30 @@ class DeliverPackage(Mission):
         speed_factor: float = (self.deadline - gem.current_environment.date_time).total_seconds() \
             / (self.deadline - self.created_at).total_seconds()
 
-        reputation_change: float = 10.0 * speed_factor
+        reputation_change: float = 2.0 * speed_factor
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: Package delivered at %{speed_factor} of time ahead of deadline. Reputation +{reputation_change} = {player.those_who_share.reputation}")
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
+
+        # The main people involved are very happy.
+        self.sender.adjust_sympathy(15)
+        self.recipient.adjust_sympathy(15)
+
+        # But also so the whole outpost.
+        from galaxies.outpost import Outpost
+        if isinstance(self.sender.residency, Outpost):
+            # Everybody there cheers up.
+            if len(self.sender.residency.staff) <= 0:
+                self.sender.residency.prepare()
+            for s in self.sender.residency.staff:
+                s.adjust_sympathy(15)
+        if isinstance(self.recipient.residency, Outpost):
+            if len(self.recipient.residency.staff) <= 0:
+                self.recipient.residency.prepare()
+            # Everybody there cheers up.
+            for s in self.recipient.residency.staff:
+                s.adjust_sympathy(15)
+
 
     def shortfall(self, player: Player) -> str:
         return f"Bring the package to {self.destination_outpost.name}."
@@ -88,6 +149,9 @@ class DeliverPackage(Mission):
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
         return f"Thank you {player.get_title()}, this {package} was really expected."
 
+    def serialize(self) -> dict:
+        return {**super().serialize(), 'sender_seed': self.sender_seed, 'recipient_seed': self.recipient_seed}
+
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverPackage:
-        return DeliverPackage(**Mission._common(source))
+        return DeliverPackage(source['sender_seed'], source['recipient_seed'], **Mission._common(source))

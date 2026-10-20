@@ -77,7 +77,6 @@ class Person:
         self.loyalty100: float = my_random.random() * 100
         self._adjust_loyalty(self.reputation - 5)
         self.sympathy100: float = 50.0
-        self.sympathy_altered: bool = False
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
         self.dob = gem.current_environment.date_time + timedelta(seconds=-seconds_after_birth)
@@ -90,7 +89,7 @@ class Person:
 
         self.interactions: dict = {}
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
-        # (see meet). None until then; a person is in `persons` only from that moment on.
+        # (see meet). None until then, also for a person already in `persons` (see ensure).
         self.first_met_at: Optional[str] = None
         self.comment: str = ''  # what the player wrote about this person (see set_comment)
         if self.seed in gem.current_environment.persons:
@@ -102,7 +101,6 @@ class Person:
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
             if 'sympathy' in my_alterations:
                 self.sympathy100 = my_alterations['sympathy']
-                self.sympathy_altered = True
             if 'interactions' in my_alterations:
                 for dt_str, lines in my_alterations['interactions'].items():
                     dt = datetime.fromisoformat(dt_str)
@@ -148,7 +146,7 @@ class Person:
         for the gender and race, which are shown as a plain line."""
         age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
         last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
-        ltm_str = last_time_met.strftime('%Y-%m-%d') if last_time_met else "Don't remember."
+        ltm_str = last_time_met.strftime('%Y-%m-%d') if last_time_met else "Not met yet" if self.first_met_at is None else "Don't remember."
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
@@ -181,8 +179,7 @@ class Person:
             result['comment'] = self.comment
         if self.last_communication_at:
             result['last_communication_at'] = str(self.last_communication_at)
-        if self.sympathy_altered:
-            result['sympathy'] = self.sympathy100
+        result['sympathy'] = self.sympathy100
         if interactions_dict:
             result['interactions'] = interactions_dict
 
@@ -191,6 +188,11 @@ class Person:
     def set_comment(self, text: str) -> Person:
         """The player's comment on this person, saved with the person (in `persons`) at once."""
         self.comment = text
+        return self.ensure()
+
+    def ensure(self) -> Person:
+        """Writes this person into `persons` as they are now: makes the record, or updates it. Call it after anything about
+        the person changes. A person the player has not met is kept too, with `first_met_at` None (`meet` fills it in)."""
         gem.current_environment.persons[self.seed] = self.serialize()
         return self
 
@@ -201,7 +203,7 @@ class Person:
         if self.first_met_at is None:
             from galaxies.outpost import Outpost
             self.first_met_at = self.residency.address() if isinstance(self.residency, Outpost) else ''
-            gem.current_environment.persons[self.seed] = self.serialize()
+            self.ensure()
         return self
 
     def get_player_title(self, player: Player) -> str:
@@ -221,6 +223,7 @@ class Person:
         self.loyalty100 = max(0, min(100, self.loyalty100))
 
     def adjust_sympathy(self, change: float) -> Person:
+        """Changes the sympathy and saves it (see ensure)."""
         self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
         self.sympathy100 = max(0, min(100, self.sympathy100))
-        self.sympathy_altered = True
+        return self.ensure()

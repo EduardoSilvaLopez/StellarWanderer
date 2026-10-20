@@ -52,6 +52,7 @@ class MessageDialog(Dialog):
     def __init__(self, message: Message) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
         self.message: Message = message
+        self.OPEN_SOUND = message.open_sound
 
         self.button_rects: List[pygame.Rect] = self._layout_buttons()
         self.hover: Optional[int] = None  # the button under the mouse

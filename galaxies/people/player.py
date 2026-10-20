@@ -3,6 +3,7 @@ import logging
 
 from typing import List
 
+from common import audio
 from common.dialogs.messages import Message, show_message
 from galaxies.missions import Mission
 from galaxies.politics import political_entity
@@ -93,12 +94,18 @@ class Player:
 
     def increase_time_scale(self) -> Player:
         """Faster: from the pause, back to TIME_SCALE_MIN (0 times 10 is still 0)."""
+        old_time_scale = self.time_scale
         self.time_scale = min(max(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
+        if self.time_scale != old_time_scale:
+            audio.play('time_up')
         return self
 
     def decrease_time_scale(self) -> Player:
         """Slower: from TIME_SCALE_MIN into the pause."""
+        old_time_scale = self.time_scale
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_PAUSED)
+        if self.time_scale != old_time_scale:
+            audio.play('time_down')
         return self
 
     def get_title(self) -> str:
@@ -124,7 +131,8 @@ class Player:
             Message(
                 title='GAME OVER',
                 text=f"\n{reason}\n\n{statistics}",
-                buttons=["Damn!"]
+                buttons=["Damn!"],
+                open_sound='game_over'
                 )
             , None  # pending
             )

@@ -44,6 +44,7 @@ class Navigation:
     UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
+    BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -139,10 +140,13 @@ class Navigation:
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
 
+        from galaxies.world import World
+        from galaxies.km2 import Km2
         if ship.is_bound:
             world = environment.fixed_world
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
-            if km2 is None or km2 != ship.position.km2:
+            if not ship.position.y > World.SURROUNDINGS_RADIUS * Km2.SIZE\
+                and (km2 is None or km2 != ship.position.km2):
                 world.update_surroundings(ship.position.y, ship.position.x, ship.position.z, environment.date_time)
                 km2 = world.get_km2_at(ship.position.x, ship.position.z)
             ship.position.km2 = km2
@@ -170,6 +174,13 @@ class Navigation:
             )
             ship.velocity.add_vector(accel * delta_time)
             self.ship.energy -= 5e4 * sum(accel) * delta_time
+
+    def has_motion_to_brake(self) -> bool:
+        """True while the brake has something to do: speed relative to the frame it brakes against, or a rotation."""
+        relative = self.ship.velocity.as_vector() - self.velocity_reference_frame()
+        attitude = self.ship.attitude
+        rates = (attitude.yaw_rate, attitude.pitch_rate, attitude.roll_rate)
+        return relative.length() > Navigation.BRAKED or any(abs(rate) > Navigation.BRAKED for rate in rates)
 
     def _brake(self, delta_time: float) -> None:
         """Brakes against the velocity of the reference frame (`velocity_reference_frame`) with three independent engines,
@@ -255,7 +266,7 @@ class Navigation:
             "Ship (local)": surface_vel,
         })
 
-        ship.notification.set(f"Arriving to {world.name}, {ship.owner.get_title()} Pilot.")
+        ship.notification.set(f"Arriving to {world.name}, {ship.owner.get_title()} Pilot.", 'bind')
         ship.is_bound = True
         return self
 
@@ -282,7 +293,7 @@ class Navigation:
         ship.position.set_vector(ship_pos)
         ship.velocity.set_vector(ship_vel)
 
-        ship.notification.set(f"Leaving {world.name}, {ship.owner.get_title()} Pilot.")
+        ship.notification.set(f"Leaving {world.name}, {ship.owner.get_title()} Pilot.", 'unbind')
         ship.is_bound = False
         return self
 

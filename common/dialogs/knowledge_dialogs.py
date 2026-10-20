@@ -3,7 +3,7 @@ to (KnownPeopleDialog). Both have the look of the message dialogs, a scrollable 
 
 The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`: its
 markdown headings and bullets are drawn as headings and 'label: value' lines. The people are those in
-`GameEnvironment.persons` (the ones the player has talked to): each is a card, with the portrait beside the fields of
+`GameEnvironment.persons` (the ones the player has talked to, and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
 `Person.description_fields()`, and a comment box that the player can write in (saved with the person, see
 Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
 
@@ -180,12 +180,12 @@ class KnownPeopleDialog(_ListDialog):
         font = body_font(FIELD_SIZE)
         return [line for paragraph in text.split('\n') for line in (MessageDialog.wrap(paragraph, font, width) or [''])]
 
-    def _card(self, person, seed: float, first_met_at: str, width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
+    def _card(self, person, seed: float, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
         """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when the
         person could be found again). Returns the card and the box's rectangle inside it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
         name = person.get_full_name() if person is not None else 'Unknown person'
-        fields = person.description_fields() if person is not None else [('ID', f"{seed}."), ('First met at', first_met_at)]
+        fields = person.description_fields() if person is not None else [('ID', f"{seed}."), ('First met at', "Not met yet" if first_met_at is None else first_met_at)]
 
         name_surface = title_font(20).render(name, True, ACCENT)
         lines: List[pygame.Surface] = []

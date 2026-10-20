@@ -20,7 +20,7 @@ class DeliverOre(Mission):
     gives back the days, the quantity and whether, and when, somebody else takes the offer."""
 
     KIND = 'deliver_ore'
-    CHANCES_PER_DAY = 0.3
+    CHANCES_PER_DAY = 0.25
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
     DAYS_MIN = 5
@@ -69,6 +69,7 @@ class DeliverOre(Mission):
     def complete(self, player: Player) -> None:
         player.ship.cargo_hold.ore -= self.quantity
 
+    def give_reward(self, player: Player) -> None:
         reputation_change: float = 0.006 * self.quantity
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = {player.those_who_share.reputation}")
