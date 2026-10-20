@@ -166,7 +166,11 @@ class Person:
     def log_update(self) -> Person:
         """Logs the person's characteristics, one ' - ' line each."""
         description = ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
-        logger.info(f"PERSON UPDATE: {self.get_full_name()}\n{description}")
+        logger.info(
+            f"PERSON UPDATE: {self.get_full_name()}"
+            f"\n{description}"
+            f"\n - Sympathy: {self.sympathy100}" # Not told to player.
+            )
         return self
 
     def serialize(self) -> dict:

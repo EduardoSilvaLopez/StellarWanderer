@@ -8,9 +8,10 @@ seed; Galaxies knows nothing about this module.
 
 Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`).
 
-A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rock count changes, which happens when a
-rock melts. Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on
-the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top would be
+A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rocks change: when one melts, or is given an
+adjective. A Km2 has two batches: the ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals,
+see special_rocks.py). Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still glows
+on the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top would be
 hidden is raised to show (VISIBLE_TOP_SHARE).
 """
 
@@ -24,6 +25,7 @@ from OpenGL import GL
 
 from .constants import SURFACE_STARLIGHT
 from .rock_shape import FACES, rock_meshes, rotate
+from .special_rocks import SPLITS, special_mesh
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
@@ -45,13 +47,26 @@ VISIBLE_TOP_SHARE = 0.1
 DOWNWARD_DARKENING = 0.18
 
 
-class RockBatch:
-    """The rocks of one Km2 as arrays. Valid while the Km2's rock list is unchanged (see `is_current`)."""
+def settle(centre: np.ndarray, points: np.ndarray, size: np.ndarray) -> None:
+    """Puts rocks on the ground, changing `centre` (rocks, 1, 3) in place. `points` (rocks, points, 3) are relative to it. A rock
+    never floats: if its lowest point is above the ground, it is lowered onto it (a rock that is partly buried stays buried). A
+    rock always shows: if its top is below VISIBLE_TOP_SHARE of its `size`, it is raised until it does (only flattened shapes
+    get there, see Rock.CENTRE_MIN)."""
+    lowest = centre[:, 0, 1] + points[..., 1].min(axis=1) if len(centre) else np.zeros(0)
+    centre[:, 0, 1] -= np.maximum(0.0, lowest)
+    top = centre[:, 0, 1] + points[..., 1].max(axis=1) if len(centre) else np.zeros(0)
+    centre[:, 0, 1] += np.maximum(0.0, VISIBLE_TOP_SHARE * size - top)
 
-    def __init__(self, km2: Km2) -> None:
+
+class RockBatch:
+    """The rocks of one Km2 as arrays, those with an adjective or those without. Valid while that list of rocks is unchanged
+    (see `is_current`)."""
+
+    def __init__(self, km2: Km2, special: bool = False) -> None:
+        self.special: bool = special
         self.origin_x: int = km2.longitude  # vertices are relative to the Km2's corner: small, float32-safe
         self.origin_z: int = km2.latitude
-        self.rocks: Tuple[Rock, ...] = tuple(km2.rocks)
+        self.rocks: Tuple[Rock, ...] = self._rocks_of(km2)
         count = len(self.rocks)
 
         size = np.array([rock.size for rock in self.rocks], dtype=np.float64)
@@ -60,21 +75,23 @@ class RockBatch:
         centre = np.array([(rock.longitude - self.origin_x, rock.altitude, rock.latitude - self.origin_z)
                            for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)
 
-        triangles, normals, tones = rock_meshes([rock.shape_seed for rock in self.rocks])
-        points = rotate(triangles.reshape(count, FACES * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
-        # A rock never floats: if its lowest point is above the ground, it is lowered onto it (a rock that is
-        # partly buried stays buried). The scanner's box is not lowered with it, which is close enough for aiming.
-        lowest = centre[:, 0, 1] + points[..., 1].min(axis=1) if count else np.zeros(0)
-        centre[:, 0, 1] -= np.maximum(0.0, lowest)
-        # A rock always shows: if its top is below VISIBLE_TOP_SHARE of its size, it is raised until it does (only
-        # flattened shapes get there, see Rock.CENTRE_MIN).
-        top = centre[:, 0, 1] + points[..., 1].max(axis=1) if count else np.zeros(0)
-        centre[:, 0, 1] += np.maximum(0.0, VISIBLE_TOP_SHARE * size - top)
+        if special:
+            meshes = [special_mesh(rock.shape_seed, rock.adjective) for rock in self.rocks]
+            faces = FACES * SPLITS ** 2  # explicit: -1 cannot be worked out when there are no rocks
+            triangles = np.array([mesh[0] for mesh in meshes]).reshape(count, faces, 3, 3)
+            normals = np.array([mesh[1] for mesh in meshes]).reshape(count, faces, 3)
+            colours = np.array([mesh[2] for mesh in meshes]).reshape(count, faces, 3)
+        else:
+            triangles, normals, tones = rock_meshes([rock.shape_seed for rock in self.rocks])
+            colours = np.array([rock.initial_color for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3) * tones[..., None]
+        faces = triangles.shape[1]
+        points = rotate(triangles.reshape(count, faces * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
+        # The scanner's box is not lowered with the rock, which is close enough for aiming.
+        settle(centre, points, size)
         self.positions: np.ndarray = np.ascontiguousarray((centre + points).reshape(-1, 3), dtype=np.float32)
         self.face_normals: np.ndarray = rotate(normals, tilt, orientation)
         down = DOWNWARD_DARKENING * (1.0 - (self.face_normals[..., 1] + 1.0) / 2.0)
-        self.face_colours: np.ndarray = np.array(
-            [rock.initial_color for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)             * (tones * (1.0 - down))[..., None]
+        self.face_colours: np.ndarray = colours * (1.0 - down)[..., None]
         self.glow: np.ndarray = np.zeros((count, 3), dtype=np.int32)
         self._was_hot: List[bool] = [False] * count
         # The last colours computed, the sun they were computed for, and whether a glow has changed since.
@@ -82,9 +99,12 @@ class RockBatch:
         self._cached_sun: Tuple[float, float, float] = (0.0, 0.0, 0.0)
         self._glow_changed: bool = False
 
+    def _rocks_of(self, km2: Km2) -> Tuple[Rock, ...]:
+        return tuple(rock for rock in km2.rocks if bool(rock.adjective) == self.special)
+
     def is_current(self, km2: Km2) -> bool:
-        """False once a rock has melted away (the only way rocks leave a Km2, and none are added after creation)."""
-        return len(self.rocks) == len(km2.rocks)
+        """False once a rock has melted away, or has been given an adjective (none are added after creation)."""
+        return self.rocks == self._rocks_of(km2)
 
     def _refresh_glow(self) -> None:
         """The heat glow (rock.color above rock.initial_color). Only rocks that are hot, or were last frame,
@@ -145,7 +165,7 @@ class RockBatches:
     """One RockBatch per Km2, built on first use and rebuilt when its rock list changes. A Km2 that leaves memory
     takes its batch with it (weak keys)."""
 
-    _batches: "weakref.WeakKeyDictionary[Km2, RockBatch]" = weakref.WeakKeyDictionary()
+    _batches: "weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, RockBatch]]" = weakref.WeakKeyDictionary()  # ordinary, special
 
     @staticmethod
     def visible_km2s(world: World, player_x: float, player_z: float) -> List[Km2]:
@@ -157,8 +177,9 @@ class RockBatches:
     @staticmethod
     def draw(km2s: Sequence[Km2], player_x: float, player_z: float, light: SurfaceLight) -> None:
         for km2 in km2s:
-            batch = RockBatches._batches.get(km2)
-            if batch is None or not batch.is_current(km2):
-                batch = RockBatch(km2)
-                RockBatches._batches[km2] = batch
-            batch.draw(player_x, player_z, light)
+            batches = RockBatches._batches.get(km2)
+            if batches is None or not (batches[0].is_current(km2) and batches[1].is_current(km2)):
+                batches = (RockBatch(km2), RockBatch(km2, special=True))
+                RockBatches._batches[km2] = batches
+            for batch in batches:
+                batch.draw(player_x, player_z, light)

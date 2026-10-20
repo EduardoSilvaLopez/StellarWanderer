@@ -89,24 +89,29 @@ class Outpost(Updatable):
         outposts share a person."""
         return self.seed * 1000 + index
 
-    def staff_member(self, index: int) -> Person:
+    def generate_staff_member(self, index: int) -> Person:
         """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute."""
         last = index == self.STAFF_SIZE - 1
         return Person(self.staff_seed(index), self, 4 if last else 5,
                       self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
 
+    def generate_staff(self) -> Outpost:
+        """Creates the staff, once: later calls change nothing, so the same people are always returned."""
+        if not self.staff:
+            self.staff = [self.generate_staff_member(index) for index in range(self.STAFF_SIZE)]
+        return self
+
     def person_with_seed(self, seed: float) -> Optional[Person]:
-        """The staff member of this outpost with that seed, or None if the seed is not one of its staff. Created again
-        when the staff has not been prepared (nobody has visited the outpost in this session)."""
+        """The staff member of this outpost with that seed, or None if the seed is not one of its staff."""
+        self.generate_staff()
         for index in range(self.STAFF_SIZE):
             if self.staff_seed(index) == seed:
-                return self.staff[index] if self.staff else self.staff_member(index)
+                return self.staff[index]
         return None
 
     def prepare(self) -> Outpost:
         ''' Prepare for visit.'''
-        if not self.staff:
-            self.staff = [self.staff_member(index) for index in range(self.STAFF_SIZE)]
+        self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
         if self.my_random.random() < self.free_days:
             self.com_officer = self.staff[3]

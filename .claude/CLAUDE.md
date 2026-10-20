@@ -52,12 +52,12 @@ def generate_default(self) -> None:
   - `game_logging/`: logging
   - `savefile.py`: save and load (Savefile)
   - `updating.py`: time-based updates (UpdateQueue, Updatable)
-  - `audio.py`: sound effects, `play(name)` (the sounds are in `resources/sounds`, made by `tools/generate_sounds.py`); the ideas not done yet are in `temp/ideas/sounds.md`
+  - `audio.py`: sound effects, `play(name)` (the sounds are in `resources/sounds`, made by `tools/generate_sounds.py`)
   - `paths.py`: the writable data folder (saves, logs) and `resource_path`
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
-- `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the generators of the outpost texture, the sounds and the Milky Way panorama (`generate_milky_way.py`, drawn by `graphics/milky_way.py`; the ideas not done yet about it are in `temp/ideas/milky_way.md`)
-- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs. `temp/` holds `pycache`, `build` and `dist`, which can be deleted, and `ideas/`, which must be kept: the backlog of ideas discussed and not implemented yet, one file per epic (not tracked by git). `release/` holds the installer.
+- `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the generators of the outpost texture, the sounds and the Milky Way panorama (`generate_milky_way.py`, drawn by `graphics/milky_way.py`)
+- `data/`, `temp/`, `release/`: generated, not tracked. `data/Savefiles` is the player's progress: never delete or move it as a clean-up. `data/Logs` holds the logs. `temp/` holds `pycache`, `build` and `dist`, which can be deleted. `release/` holds the installer.
 
 ## Rules the code does not show
 

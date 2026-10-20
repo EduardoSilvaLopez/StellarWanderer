@@ -19,10 +19,10 @@ class DeliverPackage(Mission):
     """Deliver package: bring some package from a person of this outpost to a person of another one."""
 
     KIND = 'deliver_package'
-    CHANCES_PER_DAY = 0.10
+    CHANCES_PER_DAY = 1.0
     DAYS_MIN = 5
-    DAYS_MAX = 10
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
+    DAYS_MAX = 25
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.05  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
     def __init__(
             self, sender_seed: Optional[float] = None,
@@ -39,26 +39,19 @@ class DeliverPackage(Mission):
         taken_day = next((index for index, roll in enumerate(rolls) if roll < DeliverPackage.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
-        # The sender and the recipient are any of the staff of each outpost (the seeds of their persons). A new offer draws
-        # them from its seed; a loaded mission is given its own.
+        # The sender and the recipient are any of the staff of each outpost, which is generated here, so that nothing that
+        # reads them later (the description, drawn every frame) has to create anybody. A new offer draws them from its seed;
+        # a loaded mission is given the seeds of its own.
+        self.issuer_outpost.generate_staff()
+        self.destination_outpost.generate_staff()
         staff_size = self.issuer_outpost.STAFF_SIZE
-        self.sender_seed: float = self.issuer_outpost.staff_seed(self.my_random.randrange(staff_size)) \
-            if sender_seed is None else sender_seed
-        self.recipient_seed: float = self.destination_outpost.staff_seed(self.my_random.randrange(staff_size)) \
-            if recipient_seed is None else recipient_seed
-
-    @property
-    def sender(self) -> Person:
-        """The person of the issuing outpost who sends the package."""
-        return self._staff_member(self.issuer_outpost, self.sender_seed)
-
-    @property
-    def recipient(self) -> Person:
-        """The person of the destination outpost who is to receive it."""
-        return self._staff_member(self.destination_outpost, self.recipient_seed)
+        self.sender: Person = self.issuer_outpost.staff[self.my_random.randrange(staff_size)] \
+            if sender_seed is None else self._ensure_staff_member(self.issuer_outpost, sender_seed)
+        self.recipient: Person = self.destination_outpost.staff[self.my_random.randrange(staff_size)] \
+            if recipient_seed is None else self._ensure_staff_member(self.destination_outpost, recipient_seed)
 
     @staticmethod
-    def _staff_member(outpost: Outpost, seed: float) -> Person:
+    def _ensure_staff_member(outpost: Outpost, seed: float) -> Person:
         person = outpost.person_with_seed(seed)
         if person is None:
             raise KeyError(f"The outpost {outpost.name} has no staff member with the seed {seed}.")
@@ -92,7 +85,7 @@ class DeliverPackage(Mission):
     def description(self) -> str:
         return (
             f"{self.sender.get_full_name()} needs somebody to deliver an urgent package to"
-            f"{self.recipient.get_full_name()} in {self.destination_outpost.address()}."
+            f" {self.recipient.get_full_name()} in {self.destination_outpost.address()}."
             )
 
     def accept(self, now: datetime) -> None:
@@ -122,23 +115,18 @@ class DeliverPackage(Mission):
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
         # The main people involved are very happy.
-        self.sender.adjust_sympathy(15)
-        self.recipient.adjust_sympathy(15)
+        self.sender.adjust_sympathy(20)
+        self.recipient.adjust_sympathy(25)
 
         # But also so the whole outpost.
         from galaxies.outpost import Outpost
         if isinstance(self.sender.residency, Outpost):
             # Everybody there cheers up.
-            if len(self.sender.residency.staff) <= 0:
-                self.sender.residency.prepare()
             for s in self.sender.residency.staff:
                 s.adjust_sympathy(15)
         if isinstance(self.recipient.residency, Outpost):
-            if len(self.recipient.residency.staff) <= 0:
-                self.recipient.residency.prepare()
-            # Everybody there cheers up.
             for s in self.recipient.residency.staff:
-                s.adjust_sympathy(15)
+                s.adjust_sympathy(10)
 
 
     def shortfall(self, player: Player) -> str:
@@ -150,7 +138,7 @@ class DeliverPackage(Mission):
         return f"Thank you {player.get_title()}, this {package} was really expected."
 
     def serialize(self) -> dict:
-        return {**super().serialize(), 'sender_seed': self.sender_seed, 'recipient_seed': self.recipient_seed}
+        return {**super().serialize(), 'sender_seed': self.sender.seed, 'recipient_seed': self.recipient.seed}
 
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverPackage:

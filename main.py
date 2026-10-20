@@ -377,10 +377,13 @@ def main() -> None:
                 1 if keys[pygame.K_q] else 0,
                 keys[pygame.K_s]
             )
-        else:  # reducing them automatically.
-            ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
-            ship.attitude.update_pitch(delta_game_seconds, 0, 0, 1)
-            ship.attitude.update_roll(delta_game_seconds, 0, 0, 1)
+        else:  # reducing them automatically, only the rates that are not zero (a brake costs energy only while it acts).
+            if ship.attitude.yaw_rate:
+                ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
+            if ship.attitude.pitch_rate:
+                ship.attitude.update_pitch(delta_game_seconds, 0, 0, 1)
+            if ship.attitude.roll_rate:
+                ship.attitude.update_roll(delta_game_seconds, 0, 0, 1)
 
         # Always update position, even with no thrust keys held: W/A/D/X/KP_8/KP_2 now
         # control acceleration in all axes, so the ship keeps drifting on its

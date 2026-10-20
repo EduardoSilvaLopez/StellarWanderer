@@ -101,30 +101,32 @@ RELEASE "The Three Powers" created, with installer.
   * Melt rock a *BIT* later... 7.55
   * Package missions - who benefits? Improve. Give sympathy, for example, say who sent and who received.
   
-### 2026-10-20 (9/10) Extra time: 81h45' + 8:00 - 8:15 + 9:15 -
+### 2026-10-20 (9/10) Extra time: 81h45' + 8:00 - 8:15 + 9:15 - 11:15
 
   * Cargo of - no decimals.
   * Scan object mission (finish testing): "scanned" status or similar in the mission log.
   * The limit of ore collected from the mine did not work... why? It was not by far.
-
   * Low performance on high altitude / speed.
   * Rest of sounds
-
-  * Performance problems... after some gameplay only?
-  * Extra: Strange rocks look a bit different? Subtle texture?
-  * Extra: rethink all seeds, make your proposals.
   * Dragged zoom map remains dragged.
-
+>Committed
+  * Extra: Strange rocks look a bit different? Subtle texture? Done, untested.
+  * Test the package mission.
+>Done
+>Not started
 # BACKLOG
 * ASTEROIDS (II)
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
+  * Extra: rethink all seeds, make your proposals.
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
   * Extra: Can the Ai or another sevice create the photos?
   * Extra: Cooler laser.
+  * Extra: Improve the sounds for real.
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Extra: Download more faces of the main races.
   * Extra: Latinos.
+  * Idea: Strange rocks can be collected proactively and brought to the outpost.
 * OROGRAPHY
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
   * Craters

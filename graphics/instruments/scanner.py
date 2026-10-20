@@ -8,6 +8,7 @@ import pygame
 from ..constants import ACCENT
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
+from ..special_rocks import special_mesh
 from common.paths import resource_path
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
 
@@ -144,7 +145,12 @@ class Scanner:
         cos_view, sin_view = math.cos(view), math.sin(view)
         tilt, orientation = np.array([rock.tilt]), np.array([rock.orientation])
 
-        triangles, normals, tones = rock_meshes([rock.shape_seed])
+        if rock.adjective:
+            triangles, normals, colours = special_mesh(rock.shape_seed, rock.adjective)  # the minerals' own colours
+            triangles, normals = triangles[None], normals[None]
+        else:
+            triangles, normals, tones = rock_meshes([rock.shape_seed])
+            colours = np.array(rock.color, dtype=np.float64) * tones[0][:, None]
         points = rotate(triangles.reshape(1, -1, 3), tilt, orientation)[0].reshape(-1, 3, 3)
         normals = rotate(normals, tilt, orientation)[0]
 
@@ -162,8 +168,8 @@ class Scanner:
         # Triangles facing the viewer, farthest first.
         order = [i for i in np.argsort(-points[..., 2].mean(axis=1)) if normals[i, 2] < 0.0]
         for i in order:
-            shade = (0.55 + 0.45 * (normals[i, 1] + 1.0) / 2.0) * tones[0, i]
-            colour = tuple(min(255, int(value * shade)) for value in rock.color)
+            shade = 0.55 + 0.45 * (normals[i, 1] + 1.0) / 2.0
+            colour = tuple(min(255, int(value * shade)) for value in colours[i])
             pygame.draw.polygon(surface, colour, [(int(cx + x * scale), int(cy - y * scale)) for x, y, _ in points[i]])
 
     @staticmethod

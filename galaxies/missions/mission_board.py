@@ -15,14 +15,18 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 
-import galaxies.people.player as player_module
+import logging
+
 from common import audio
+import galaxies.people.player as player_module
 from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, ScanObject
 import game_environment as gem
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.player import Player
+
+logger = logging.getLogger(__name__)
 
 MIN_REPUTATION = 10.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
@@ -38,6 +42,7 @@ class MissionBoard:
         self.title: str = f'Outpost "{outpost.name}", message board'
 
     def update_missions(self, now: datetime) -> None:
+        logger.debug(f"Updating offers. {len(self.offers)} in the beginning.")
         self.offers = [offer for offer in self.offers if offer.deadline > now and not offer.is_taken_by_others(now)]
 
         # Insert the offers, day by day from LOOK_BACK_DAYS ago (or the last update, if it is later) to today: each day asks
@@ -56,6 +61,7 @@ class MissionBoard:
                     known.add(offer.seed)
             day += timedelta(days=1)
         self.updated_at = now
+        logger.debug(f"Offers updated. {len(self.offers)} now.")
 
     @staticmethod
     def is_available(player: Player) -> bool:

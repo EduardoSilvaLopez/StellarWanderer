@@ -23,7 +23,7 @@ class Attitude:
       relative to the local horizon is `Navigation.roll_angle`.
 
     Acceleration, braking and speed limit are the same on every axis: Ship.ANGULAR_ACC, ANGULAR_BRAKE and
-    MAX_ANGULAR_SPEED. Braking (S) brings all three rates to zero.
+    MAX_ANGULAR_SPEED. Braking (S) brings all three rates to zero, and costs energy only while it removes a rate.
     """
 
     def __init__(self, ship: Ship) -> None:
@@ -42,34 +42,43 @@ class Attitude:
 
     def _updated_rate(self, rate: float, direction: int, delta_time: float, braking: bool) -> float:
         if braking:
-            rate -= math.copysign(min(self.ship.ANGULAR_BRAKE * delta_time, abs(rate)), rate)
+            decel = min(self.ship.ANGULAR_BRAKE * delta_time, abs(rate))
+            rate -= math.copysign(decel, rate)
+            # The brake costs 1e5 per second while it acts: only for the time it took to remove this speed, so nothing
+            # when there is no rate to brake.
+            self.ship.energy -= 1e5 * decel / self.ship.ANGULAR_BRAKE
         else:
             rate += direction * self.ship.ANGULAR_ACC * delta_time
         return max(-self.ship.MAX_ANGULAR_SPEED, min(self.ship.MAX_ANGULAR_SPEED, rate))
 
     def update_yaw(self, delta_time: float, counterclockwise: int, clockwise: int, braking: bool = False) -> Attitude:
+        if delta_time == 0.0:
+            return self
         self.yaw_rate = self._updated_rate(self.yaw_rate, clockwise - counterclockwise, delta_time, braking)
         angle = math.radians(self.yaw_rate * delta_time)
         self.forward, self.right = Vector3.rotate_pair(self.forward, self.right, angle)
-        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (counterclockwise + clockwise != 0) else 0)
+        self.ship.energy -= delta_time * (5e4 if (not braking and counterclockwise + clockwise != 0) else 0)
         return self
 
     def update_pitch(self, delta_time: float, nose_up: int, nose_down: int, braking: bool = False) -> Attitude:
         if self.ship.is_bound:
             return self
+        if delta_time == 0.0:
+            return self
         self.pitch_rate = self._updated_rate(self.pitch_rate, nose_up - nose_down, delta_time, braking)
         angle = math.radians(self.pitch_rate * delta_time)
         self.forward, self.up = Vector3.rotate_pair(self.forward, self.up, angle)
-        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (nose_up + nose_down != 0) else 0)
+        self.ship.energy -= delta_time * (5e4 if (not braking and nose_up + nose_down != 0) else 0)
         return self
 
     def update_roll(self, delta_time: float, roll_right: int, roll_left: int, braking: bool = False) -> Attitude:
         if self.ship.is_bound:
             return self
+        if delta_time == 0.0: return self
         self.roll_rate = self._updated_rate(self.roll_rate, roll_left - roll_right, delta_time, braking)
         angle = math.radians(self.roll_rate * delta_time)
         self.right, self.up = Vector3.rotate_pair(self.right, self.up, angle)
-        self.ship.energy -= delta_time * (1e5 if braking else 5e4 if (roll_right + roll_left != 0) else 0)
+        self.ship.energy -= delta_time * (5e4 if (not braking and roll_right + roll_left != 0) else 0)
         return self
 
     def camera_components(self, vector: Vector3) -> Vector3:
