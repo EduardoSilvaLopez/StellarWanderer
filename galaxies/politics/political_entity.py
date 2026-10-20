@@ -6,7 +6,7 @@ from common.paths import resource_path
 
 
 class PoliticalEntity:
-    def __init__(self, name: str, color: tuple, icon_filename: str, titles: dict, names_1: list, names_2: list) -> None:
+    def __init__(self, name: str, color: tuple, icon_filename: str, titles: dict, names_1: dict, names_2: dict) -> None:
         self.name: str = name
         self.color: tuple = color
         self.icon: Optional[pygame.Surface] = None
@@ -27,7 +27,8 @@ class PoliticalEntity:
             print(f"Warning: Could not load political entity icon {icon_filename}: {e}")
 
     def generate_outpost_name(self, my_random: random.Random) -> str:
-        return my_random.choice(self.settlement_names_1) + " " + my_random.choice(self.settlement_names_2)
+        return self.settlement_names_1[my_random.randint(0, len(self.settlement_names_1) - 1)]\
+            + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
 
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
@@ -35,13 +36,19 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         (192, 0, 0),
         "PoliticalEntity.1.png",
         {
-         float('-inf'): 'Prisioner',
+         float('-inf'): 'Prisoner',
             -30: 'Dependent',
             -10: 'Student',
-            0: 'Citizen',
-            10: 'Comrade',
-            100: 'Speaker',
-            1000: 'Champion',
+            0: 'Pioneer',
+            10: 'Citizen',
+            20: 'Comrade',
+            50: 'Companion',
+            100: 'Forebear',
+            200: 'Speaker',
+            500: 'Coordinator',
+            1000: 'Guardian',
+            2000: 'Steward',
+            5000: 'Champion',
             10000: 'Premier'
         },
         [

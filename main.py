@@ -172,7 +172,7 @@ def start_game(action: str, value: object) -> float:
             title=f"Welcome, {player.get_title()} Pilot!",
             text=(
                 "Speaker Xi, the famous pilot trainer, has closed the communication with his last message. "
-                "Now he will train other Citizen Pilots. You are ready.\n\n"
+                "Now he will train other Pioneer Pilots. You are ready.\n\n"
                 f"{moon} extends in front of you. Your task is to plant mines in this ore-rich moon and bring it "
                 f"to the outpost in the planet, {planet}. The better you work, the more your reputation will increase.\n\n"
                 "The State of \"Those-Who-Share\" will provide you everything you need there, as they provided you "

@@ -236,5 +236,6 @@ class Person:
     def adjust_sympathy(self, change: float) -> Person:
         """Changes the sympathy and saves it (see record)."""
         self.sympathy100 = _nudged(self.sympathy100, change)
+        logger.debug(f"Sympathy of {self.get_full_name()} changed to {self.sympathy100:.2f}")
         return self.record()
     # endregion

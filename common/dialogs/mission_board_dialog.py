@@ -4,8 +4,8 @@ The list shows each mission by its title and a line about time, under headings. 
 description, and the button that acts on it, if there is one. Esc (or a right-click) goes back from the detail to the list,
 and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar can be dragged (see ScrollBar).
 
-MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there), with
-their deadlines. PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
+MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there, the
+latest deadline first), with their deadlines. PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
 left, and nothing to act on."""
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ class MissionListDialog(Dialog):
         self.open_mission: Optional[Mission] = None  # the mission whose detail is shown; None for the list
         self.notice: Optional[Tuple[str, str]] = None  # (mission title, text) shown in place of the list, after a delivery
         self.scroll: int = 0
+        self._list_scroll: int = 0  # the list's scroll while a detail is open, restored when the list is shown again
         self.content_height: int = 0
         self._clickable: List[Tuple[pygame.Rect, Callable[[], None]]] = []  # where the clickable lines were last drawn
         self._texture: Optional[pygame.Surface] = None
@@ -170,23 +171,26 @@ class MissionListDialog(Dialog):
 
     # region Changing the view
     def _show(self, mission: Mission) -> None:
+        self._list_scroll = self.scroll
         self.open_mission = mission
         self.scroll = 0
         self._clickable = []
 
     def _show_list(self) -> None:
+        """Back to the list, at the scroll it had. draw keeps that within the list's length, which may have changed."""
         self.open_mission = None
         self.notice = None
-        self.scroll = 0
+        self.scroll = self._list_scroll
         self._clickable = []
 
     def _act(self, action: Callable[[Mission], Optional[str]], mission: Mission) -> None:
-        """The board changes, so the list is shown again (the mission is no longer where it was). An action that answers
-        with a text (a delivery's reward) shows it first: Esc (or a right-click) then goes back to the list."""
+        """The board changes, so the list is shown again at its scroll. An action that answers with a text (a delivery's
+        reward) shows it first, from the top: Esc (or a right-click) then goes back to the list."""
         reply = action(mission)
         self._show_list()
         if reply is not None:
             self.notice = (mission.title(), reply)
+            self.scroll = 0
 
     # endregion
 
@@ -219,8 +223,11 @@ class MissionListDialog(Dialog):
         self._clickable = []
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)
+        items = self._items(self.text_rect.width)
+        self.content_height = sum(gap + block.get_height() for block, gap, _, _ in items)
+        self.scroll = min(self.scroll, self._max_scroll())  # the list may have become shorter since it was scrolled
         y = 0
-        for block, gap, rect, action in self._items(self.text_rect.width):
+        for block, gap, rect, action in items:
             y += gap
             top = self.text_rect.top + y - self.scroll
             if top + block.get_height() >= self.text_rect.top and top <= self.text_rect.bottom:
@@ -228,7 +235,6 @@ class MissionListDialog(Dialog):
             if rect is not None and action is not None:
                 self._clickable.append((rect.move(self.text_rect.left, top), action))
             y += block.get_height()
-        self.content_height = y
         surface.set_clip(previous_clip)
 
         self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
@@ -286,8 +292,9 @@ class MissionBoardDialog(MissionListDialog):
         self.board: MissionBoard = board
 
     def _sections(self) -> List[Section]:
+        offers = sorted(self.board.offers, key=lambda offer: offer.deadline, reverse=True)  # the latest deadline first
         return [('Your missions', self.board.mine(), 'None.'),
-                ('Available', list(self.board.offers), 'Nothing new.')]
+                ('Available', offers, 'Nothing new.')]
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
         if mission in self.board.mine():

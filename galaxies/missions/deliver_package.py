@@ -19,10 +19,10 @@ class DeliverPackage(Mission):
     """Deliver package: bring some package from a person of this outpost to a person of another one."""
 
     KIND = 'deliver_package'
-    CHANCES_PER_DAY = 1.0
+    CHANCES_PER_DAY = 0.05
     DAYS_MIN = 5
     DAYS_MAX = 25
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.05  # each day of an offer's life, from the day it is made: the chance somebody takes it
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
     def __init__(
             self, sender_seed: Optional[float] = None,
@@ -118,7 +118,7 @@ class DeliverPackage(Mission):
 
         reputation_change: float = 2.0 * speed_factor
         player.those_who_share.reputation += reputation_change
-        logger.info(f"MISSION COMPLETE: Package delivered at %{speed_factor} of time ahead of deadline. Reputation +{reputation_change} = {player.those_who_share.reputation}")
+        logger.info(f"MISSION COMPLETE: Package delivered at %{100*speed_factor:.0f} of time ahead of deadline. Reputation +{reputation_change} = {player.those_who_share.reputation}")
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
         # The main people involved are very happy.
@@ -139,6 +139,12 @@ class DeliverPackage(Mission):
         rnd = random.Random(self.seed)  # the same text each time it is shown
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
         return f"Thank you {player.get_title()}, this {package} was really expected."
+
+    def fail(self, player: Player) -> None:
+        # The main people involved are disappointed. But you tried.
+        self.sender.adjust_sympathy(-5)
+        self.recipient.adjust_sympathy(-2)
+        logger.info("MISSION FAILED: Package not delivered on time.")
     # endregion
 
     # region Persistence

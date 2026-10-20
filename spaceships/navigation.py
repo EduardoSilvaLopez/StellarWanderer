@@ -166,7 +166,7 @@ class Navigation:
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
         ship.velocity.add_vector(accel * delta_time)
-        ship.energy -= 5e4 * sum(abs(accel)) * delta_time
+        ship.energy -= 5e4 * abs(sum(accel)) * delta_time
 
     def has_motion_to_brake(self) -> bool:
         """True while the brake has something to do: speed relative to the frame it brakes against, or a rotation."""

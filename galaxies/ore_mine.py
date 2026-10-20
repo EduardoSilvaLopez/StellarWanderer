@@ -88,19 +88,12 @@ class OreMine(Updatable):
             logger.info(f"Mine at {self.longitude}, {self.latitude} starts to work.")
             return
 
-        time_passed = game_date_time - self.last_updated_at
-        periods_passed = time_passed.total_seconds() // OreMine.EXTRACTION_PERIOD
-
-        # May be under 1, save the rest for the next.
-        if periods_passed < 1.0:
+        # Under one period: nothing is extracted, the time is saved for the next update.
+        if self._extract_completed_periods(game_date_time) == 0:
             self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
             update_queue.add(self)
             return
 
-        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
-        ore_extracted = self.parent_field.extract(periods_passed, OreMine.MAX_CAPACITY - self.content)
-
-        self.content += ore_extracted
         if self.parent_field.remaining_ore <= 0:
             logger.info("Mine won't be updated anymore, field depleted.")
             self.next_update_at = None
@@ -109,11 +102,23 @@ class OreMine(Updatable):
         self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
         update_queue.add(self)
 
-        logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, {ore_extracted} ore extracted.")
+        logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, content {self.content}.")
+
+    def _extract_completed_periods(self, game_date_time: datetime) -> float:
+        """Extracts the whole extraction periods since last_updated_at, and returns how many there were (0 if under one).
+        The part of a period still running is left for later."""
+        periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
+        if periods_passed < 1.0:
+            return 0
+        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+        self.content += self.parent_field.extract(periods_passed, OreMine.MAX_CAPACITY - self.content)
+        return periods_passed
 
     def stop_updating(self) -> None:
-        # No last_updated_at: the time the mine is stopped is not work, so the next start begins a fresh period.
+        import game_environment as gem
         update_queue.remove(self)
+        if self.last_updated_at is not None:
+            self._extract_completed_periods(gem.current_environment.date_time)  # the periods finished before stopping
         self.next_update_at = None
-        self.last_updated_at = None
+        self.last_updated_at = None  # the time the mine is stopped is not work: the next start begins a fresh period
 

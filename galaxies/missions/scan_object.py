@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 class ScanObject(Mission):
     """Scan an object somewhere, then come back."""
     KIND = 'scan_object'
-    CHANCES_PER_DAY = 0.50
+    CHANCES_PER_DAY = 0.20
     DAYS_MIN = 10
     DAYS_MAX = 30
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.05  # each day of an offer's life, from the day it is made: the chance somebody takes it
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
     def __init__(
             self, object_type: str = '',
@@ -194,6 +194,11 @@ class ScanObject(Mission):
 
     def reward_text(self, player: Player) -> str:
         return f"Thank you {player.get_title()}, knowledge about this {self.adjective} object will help the Community."
+
+    def fail(self, player: Player) -> None:
+        reputation_change: float = -5 # If you did not have the time don't accept the mission.
+        player.those_who_share.reputation += reputation_change
+        logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = {player.those_who_share.reputation}")
     # endregion
 
     # region Persistence

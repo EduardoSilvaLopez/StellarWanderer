@@ -1,11 +1,4 @@
-# DEVELOPMENT LOG
-
-## Vision
-Learn modern technologies by building a prototype of a game I always dreamed about.
-
-## Mission
-Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype for a solo space game with realistic dimensions (time included), which implies never saving the world itself but only the changes caused by the player. The setting is the “world after the disaster” of my sci-fi concept, in the year 700.
-
+DEVELOPER'S DIARY
 
 > After the last release 2026-10-20 (9/10)
 
@@ -19,26 +12,29 @@ Extra time: 83h00' + 18:00 -
 
 # NOT STARTED YET = BACKLOG
 * ASTEROIDS (II)
-  * Thanks for package gives extra autonomy. Which allows asteroid missions.
+  * Promotion gives more autonomy, needed for asteroid missions.
+  * Place one in initial system, not too far away.
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Extra: rethink all seeds, make your proposals.
-  * Place one in initial system, not too far away.
-  * Outpost gives coordinates as prize?
+  * Outpost gives coordinates as prize? Or very good ones.
   * Extra: Cooler laser.
   * Extra: Improve the sounds for real.
   * Extra: Download more faces of the main races.
-  * Extra: Latinos.
   * Idea: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: decide what to do with Rodina: https://elliptic-games.com/
+  * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?
+
 * OROGRAPHY
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
-  * Extra: Arabs.
+  * Extra: Latinos.
 * JOVIAN PLANETS (with forbidden area)
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+  * Extra: Arabs.
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?
 * ATMOSPHERE

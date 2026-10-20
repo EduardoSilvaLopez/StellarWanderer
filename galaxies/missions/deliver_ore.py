@@ -82,6 +82,11 @@ class DeliverOre(Mission):
         mineral = rnd.choice(['platinum', 'palladium', 'rhodium', 'iridium', 'osmium', 'ruthenium'])
         return f"Thank you {player.get_title()}, this {mineral}-rich ore will help the Community."
 
+    def fail(self, player: Player) -> None:
+        reputation_change: float = -5 # If you did not have the time don't accept the mission.
+        player.those_who_share.reputation += reputation_change
+        logger.info(f"MISSION FAILED: Ore not brought. Reputation {reputation_change} = {player.those_who_share.reputation}")
+
     def serialize(self) -> dict:
         return {**super().serialize(), 'quantity': self.quantity}
 

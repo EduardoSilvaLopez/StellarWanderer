@@ -467,6 +467,7 @@ class ReportingInOutpost(Conversation):
         old_reputation: float = status.reputation
 
         self._apply_button(consequences, chosen_button)
+        logger.debug(f"Old reputation (after reply): {status.reputation}")
 
         # Reputation loss = need of stuff.
         rep_loss_maintenance = -((0.8 - ship.maintenance) if ship.maintenance < 0.8 else 0) * 24
@@ -525,7 +526,7 @@ class ReportingInOutpost(Conversation):
         old_title = entity.title_for(old_reputation)
         new_title = entity.title_for(status.reputation)
         if old_title != new_title:
-            self._welcome_to_new_title(old_title, new_title)
+            self._welcome_to_new_title(old_reputation, status.reputation)
         elif ship.cargo_hold.capacity <= ship.cargo_hold.INITIAL_CARGO_CAPACITY and status.reputation >= 0:
             # semi-new-title, *very* improbable to happen at the same time.
             self._we_tweaked_your_ship()
@@ -533,26 +534,49 @@ class ReportingInOutpost(Conversation):
             self.close()
         return self
 
-    def _welcome_to_new_title(self, old_title: str, new_title: str) -> None:
-        """The interlocutor's words for the new title; the conversation closes when the player answers. Only
-        Citizen to Comrade has any, as for now: any other change closes it at once."""
-        if old_title == "Citizen" and new_title == "Comrade":
+    def _welcome_to_new_title(self, old_rep: str, new_rep: str) -> None:
+        """The interlocutor's words for the new title; the conversation closes when the player answers."""
+        if old_rep < 10 and new_rep >= 10:
             # Prepare the message:
             text: str = (
-                f"We have spoken about you and we think we can trust you to do something more than collect ore." \
-                f"\n\nAnytime you want, check the mission board of our outposts [Numpad 5]."
-                f"\n\nAnyway, ore is always welcome... we increased your cargo hold as well."
-                f"{"\n\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
+                "We have spoken" if self.interlocutor.loyalty100 > 10 else "\n\n\nThey have been talking"
+                " about you and think can trust you to do something more than collect ore."
+                "\n\nAnytime you want, check the mission board of any outpost [Numpad 5]."
+                "\n\nAnyway, ore is always welcome..."
+                " we" if self.interlocutor.loyalty100 > 10 else " they"
+                " increased your cargo hold as well."
+                f"{"\n\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else 'Nice.'}"
                 )
 
             self.player.ship.cargo_hold.capacity = max(5000, self.player.ship.cargo_hold.capacity)
+            self._ask_then_close(text, self._thanks_buttons())
+            return
+        elif old_rep < 20 and new_rep >= 20:
+            # Prepare the message:
+            text: str = (
+                f"You have brought some ore over time, {self.player.get_title()} Pilot." \
+                f"\n\nThe Community thinks you need more space to store it."
+                f"\n\nWe" if self.interlocutor.loyalty100 > 10 else "\n\nThey"
+                " made some repairs to your old ship, some missions are hard and far away."
+                f'{"\n\n\nEnjoy." if self.interlocutor.loyalty100 > 10 else "\n\n\nIt's something, I guess."}'
+                )
+            self.player.ship.cargo_hold.capacity = max(10000, self.player.ship.cargo_hold.capacity)
+            self.player.ship.precariousness = 0.8 * self.player.ship.INITIAL_PRECARIOUSNESS
+            self.player.ship.energy_max = 2 * self.player.ship.INITIAL_ENERGY_MAX
+            self.player.ship.energy = self.player.ship.energy_max
+            self.player.ship.cargo_hold.air_max = 2 * self.player.ship.cargo_hold.INITIAL_AIR_MAX
+            self.player.ship.cargo_hold.air = self.player.ship.cargo_hold.air_max
+            self.player.ship.cargo_hold.water_max = 1.9 * self.player.ship.cargo_hold.INITIAL_WATER_MAX
+            self.player.ship.cargo_hold.water = self.player.ship.cargo_hold.water_max
+            self.player.ship.cargo_hold.food_max = 1.8 * self.player.ship.cargo_hold.INITIAL_FOOD_MAX
+            self.player.ship.cargo_hold.food = self.player.ship.cargo_hold.food_max
             self._ask_then_close(text, self._thanks_buttons())
             return
 
         self.close()
 
     def _we_tweaked_your_ship(self) -> None:
-        """The player arrived to an outpost for the first time, fine enough to remain 'Citizen'."""
+        """The player arrived to an outpost for the first time, fine enough to remain 'Pioneer'."""
         text: str = (
             f"You have proven you can do the job. We gave your ship now more cargo capacity."
             f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
