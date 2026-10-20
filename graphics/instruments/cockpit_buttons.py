@@ -2,12 +2,15 @@
 when there is a mission to see (see shows_missions), the pending missions, below the stellar systems."""
 
 from __future__ import annotations
-from typing import Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import pygame
 
 from common.paths import resource_path
 from ..constants import ACCENT, ACCENT_DIM, READOUT_BG
 from .political_info import PoliticalInfo
+
+if TYPE_CHECKING:
+    from galaxies.people.player import Player
 
 SYSTEMS = 'systems'  # the names the buttons are known by (see hit)
 PEOPLE = 'people'
@@ -15,7 +18,7 @@ MISSIONS = 'missions'
 ICON_FILES: Dict[str, str] = {SYSTEMS: 'stellar_system.png', PEOPLE: 'head.png', MISSIONS: 'missions.png'}  # white, in resources/icons
 
 
-def shows_missions(player) -> bool:
+def shows_missions(player: Player) -> bool:
     """The missions button is there for a pilot the outposts trust (the mission board's rule) or with a mission to see."""
     from galaxies.missions import OPEN  # local: the missions import the player, which imports this package
     from galaxies.missions.mission_board import MissionBoard
@@ -60,17 +63,17 @@ class CockpitButtons:
         return CockpitButtons._tinted[key]
 
     @staticmethod
-    def draw(surface: pygame.Surface, w: int, h: int, top: int, player) -> None:
+    def draw(surface: pygame.Surface, w: int, h: int, top: int, player: Player) -> None:
         """Draw the buttons with their top edge `top` pixels down (the bottom of the political icon, plus the gap)."""
         x = PoliticalInfo.PADDING_X
         y = top + CockpitButtons.GAP
         size = CockpitButtons.SIZE
         missions = shows_missions(player)
         while size > CockpitButtons.MIN_SIZE:  # both must fit the hull width at their bottom edge, and the column below
-            available = PoliticalInfo._hull_edge_x(y + size, w, h) - x - PoliticalInfo.EDGE_MARGIN
+            available = PoliticalInfo.hull_edge_x(y + size, w, h) - x - PoliticalInfo.EDGE_MARGIN
             fits = 2 * size + CockpitButtons.BUTTON_GAP <= available
             if missions:
-                below = PoliticalInfo._hull_edge_x(y + 2 * size + CockpitButtons.BUTTON_GAP, w, h) - x - PoliticalInfo.EDGE_MARGIN
+                below = PoliticalInfo.hull_edge_x(y + 2 * size + CockpitButtons.BUTTON_GAP, w, h) - x - PoliticalInfo.EDGE_MARGIN
                 fits = fits and size <= below
             if fits:
                 break

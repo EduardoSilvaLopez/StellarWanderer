@@ -4,17 +4,8 @@ from __future__ import annotations
 from typing import Any
 from datetime import datetime
 import pygame
+from galaxies.people.player import Player
 from ..constants import ACCENT, ACCENT_DIM, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
-
-if __name__ == '__main__':
-    from galaxies.people.player import Player
-else:
-    import sys
-    sys.path.insert(0, '../..')
-    try:
-        from galaxies.people.player import Player
-    except ImportError:
-        Player = None
 
 
 class Clock:
@@ -33,10 +24,7 @@ class Clock:
         label = label_font.render('SHIP TIME', True, ACCENT_DIM)
 
         # Highlight the rate whenever time is compressed or paused; the normal rate stays dim
-        if Player is not None:
-            rate_color = ACCENT_DIM if time_scale == Player.TIME_SCALE_MIN else AMBER
-        else:
-            rate_color = ACCENT_DIM
+        rate_color = ACCENT_DIM if time_scale == Player.TIME_SCALE_MIN else AMBER
         rate = label_font.render(Clock._format_time_scale(time_scale), True, rate_color)
 
         pad = max(8, int(h * 0.014))
@@ -66,6 +54,6 @@ class Clock:
     @staticmethod
     def _format_time_scale(scale: int) -> str:
         """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'; 'PAUSED' when the game is paused."""
-        if Player is not None and scale == Player.TIME_SCALE_PAUSED:
+        if scale == Player.TIME_SCALE_PAUSED:
             return 'PAUSED'
         return f'x{scale:,}'.replace(',', ' ')

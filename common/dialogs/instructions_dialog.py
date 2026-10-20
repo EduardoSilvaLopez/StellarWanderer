@@ -205,8 +205,8 @@ class InstructionsDialog(Dialog):
 
     def __init__(self) -> None:
         super().__init__(self.WIDTH, self.HEIGHT)
-        title_ink = title_font(TITLE_SIZE).render("Instructions", True, TITLE_COLOUR).get_bounding_rect()
-        box_top = self.TITLE_TOP + title_ink.bottom + self.BOX_GAP
+        self._title: pygame.Surface = title_font(TITLE_SIZE).render("Instructions", True, TITLE_COLOUR)
+        box_top = self.TITLE_TOP + self._title.get_bounding_rect().bottom + self.BOX_GAP
         self.box_rect = pygame.Rect(self.MARGIN, box_top, self.WIDTH - 2 * self.MARGIN,
                                     self.HEIGHT - box_top - self.BACK_HEIGHT)
         self.back_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.BACK_HEIGHT + 12, 200, 32)
@@ -236,8 +236,13 @@ class InstructionsDialog(Dialog):
         self._lines = lines
         self._text_height = sum(surface.get_height() + 4 for _, surface in lines)
 
+    @property
+    def _view_height(self) -> int:
+        """The height of the text that is in view: the box less its padding."""
+        return self.box_rect.height - 16
+
     def _max_scroll(self) -> int:
-        return max(0, self._text_height - (self.box_rect.height - 16))
+        return max(0, self._text_height - self._view_height)
 
     def _scroll_by(self, pixels: int) -> None:
         self.scroll = max(0, min(self._max_scroll(), self.scroll + pixels))
@@ -245,8 +250,7 @@ class InstructionsDialog(Dialog):
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((20, 20, 30))
 
-        title = title_font(TITLE_SIZE).render("Instructions", True, TITLE_COLOUR)
-        surface.blit(title, title.get_rect(topleft=(self.MARGIN, self.TITLE_TOP)))
+        surface.blit(self._title, self._title.get_rect(topleft=(self.MARGIN, self.TITLE_TOP)))
 
         pygame.draw.rect(surface, BOX_COLOUR, self.box_rect)
         pygame.draw.rect(surface, BOX_EDGE_COLOUR, self.box_rect, 2)
@@ -260,7 +264,7 @@ class InstructionsDialog(Dialog):
             y += line.get_height() + 4
         surface.set_clip(previous_clip)
 
-        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.box_rect.height - 16)
+        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self._view_height)
 
         pygame.draw.rect(surface, (110, 50, 50), self.back_rect)
         pygame.draw.rect(surface, (190, 110, 110), self.back_rect, 2)
@@ -270,7 +274,7 @@ class InstructionsDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
-        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self.box_rect.height - 16)
+        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self._view_height)
         if moved is not None:
             self.scroll = moved
             return None

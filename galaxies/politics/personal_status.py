@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class PersonalStatus:
     def __init__(self) -> None:
         self.reputation: float = 1.0

@@ -24,7 +24,7 @@ _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 # The message board's sign, by size in pixels (None for a size whose image could not be loaded).
 _board_signs: dict = {}
 
-# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of Rock.TEMP_MAX (black, dark red, gray, cyan, blue).
+# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of the rock's max_temperature (black, dark red, gray, cyan, blue).
 TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192), (32, 32, 255))
 
 
@@ -35,10 +35,10 @@ class Scanner:
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, title_top: int, bottom: int, mfd_right: int) -> None:
         """Draw the scanner display.
 
-        Mirrors whatever rock or ore mine is currently in the scanner's
+        Mirrors whatever outpost, rock or ore mine is currently in the scanner's
         crosshair (whether or not the beam is actually on), scaled to
         fill the square but kept at the same relative orientation and color
-        the player sees ahead. Rocks take priority if somehow both are set.
+        the player sees ahead. If somehow several are set, an outpost comes first, then a rock.
 
         A scanned outpost is titled SCANNER, with the message board's sign drawn to the right of the title when the pilot
         may use the board (see MissionBoard.is_available).
@@ -89,7 +89,7 @@ class Scanner:
             Scanner._draw_scanned_rock(surface, rect, ship, rock)
             if rock.temperature > 0.0:
                 temperature_text = label_font.render(
-                    f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock.temperature)
+                    f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock)
                 )
                 surface.blit(temperature_text, temperature_text.get_rect(center=rect.center))
         elif mine is not None:
@@ -112,10 +112,9 @@ class Scanner:
         return _board_signs[size]
 
     @staticmethod
-    def _temperature_color(temperature: float) -> Tuple[int, int, int]:
-        """The colour for a rock temperature above 0: one of TEMPERATURE_COLORS, by quarters of Rock.TEMP_MAX."""
-        from galaxies.rock import Rock
-        quarter = int(temperature / Rock.TEMP_MAX_MU * len(TEMPERATURE_COLORS))
+    def _temperature_color(rock: Rock) -> Tuple[int, int, int]:
+        """The colour for a rock's temperature above 0: one of TEMPERATURE_COLORS, by quarters of the rock's max_temperature."""
+        quarter = int(rock.temperature / rock.max_temperature * len(TEMPERATURE_COLORS))
         return TEMPERATURE_COLORS[min(len(TEMPERATURE_COLORS) - 1, max(0, quarter))]
 
     @staticmethod

@@ -17,7 +17,7 @@ from abc import abstractmethod
 from datetime import datetime
 import hashlib
 import random
-from typing import TYPE_CHECKING, Dict, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from common import audio
 from common.updating import Updatable, update_queue
@@ -32,7 +32,6 @@ DONE = 'done'
 FAILED = 'failed'
 
 _KINDS: Dict[str, Type[Mission]] = {}
-Kind = TypeVar('Kind', bound='Mission')  # lets `register` hand back the very class it is given, not just a Mission
 
 
 def seed_of(text: str) -> int:
@@ -78,6 +77,7 @@ class Mission(Updatable):
         # It only matters while the mission is an offer on a board; it is not saved.
         self.taken_by_others_at: Optional[datetime] = None
 
+    # region Offers
     @classmethod
     def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
         """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost and the
@@ -92,6 +92,12 @@ class Mission(Updatable):
     def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[Mission]:
         """The offer itself, once the day's chance has come up: its kind decides what it asks, with `chance` if it needs more."""
 
+    def is_taken_by_others(self, now: datetime) -> bool:
+        """Somebody else has taken this offer by `now`, so it is no longer on the board."""
+        return self.taken_by_others_at is not None and now >= self.taken_by_others_at
+    # endregion
+
+    # region Outposts
     @property
     def issuer_outpost(self) -> Outpost:
         """The outpost that asked for it, found from its keys."""
@@ -103,23 +109,14 @@ class Mission(Updatable):
         """The outpost it is for, found from its keys."""
         import game_environment as gem
         return gem.current_environment.galaxy.outpost_of(self.destination)
+    # endregion
 
-    def is_taken_by_others(self, now: datetime) -> bool:
-        """Somebody else has taken this offer by `now`, so it is no longer on the board."""
-        return self.taken_by_others_at is not None and now >= self.taken_by_others_at
-
+    # region Life of a mission
     def accept(self, now: datetime) -> None:
         """The player takes the offer: the clock starts."""
         self.accepted_at = now
         self.status = OPEN
         update_queue.add(self)
-
-    def on_rock_scanned(self, rock: Rock) -> None:
-        """A rock was scanned. Nothing by default."""
-
-    def progress(self) -> str:
-        """Where a taken mission stands, as a line for the player's log. Empty when there is nothing to say."""
-        return ''
 
     def watch_deadline(self) -> None:
         """Puts an OPEN mission back in the update queue, after a load."""
@@ -133,7 +130,6 @@ class Mission(Updatable):
         update_queue.remove(self)
         self.give_reward(player)
 
-    # Updatable: the deadline
     def get_next_update(self) -> datetime:
         return self.deadline
 
@@ -145,10 +141,19 @@ class Mission(Updatable):
         player.ship.notification.set(f"Mission failed: {self.title()}.")
         audio.play('mission_failed')
         self.fail(player)
+    # endregion
+
+    # region What each kind gives
+    def on_rock_scanned(self, rock: Rock) -> None:
+        """A rock was scanned. Nothing by default."""
+
+    def progress(self) -> str:
+        """Where a taken mission stands, as a line for the player's log. Empty when there is nothing to say."""
+        return ''
 
     @abstractmethod
     def title(self) -> str:
-        ...
+        """The mission in a few words, for the lists."""
 
     @abstractmethod
     def description(self) -> str:
@@ -156,7 +161,7 @@ class Mission(Updatable):
 
     @abstractmethod
     def can_complete(self, player: Player) -> bool:
-        ...
+        """Whether the player has what the mission asks."""
 
     @abstractmethod
     def complete(self, player: Player) -> None:
@@ -166,16 +171,18 @@ class Mission(Updatable):
     def shortfall(self, player: Player) -> str:
         """What the player still lacks, for the message shown when they try to complete it without enough."""
 
-    @abstractmethod
-    def reward_text(self, player: Player) -> str:
-        pass
-
     def give_reward(self, player: Player) -> None:
         """Gives the reward, after `complete` and once the mission is DONE. Nothing by default."""
 
+    @abstractmethod
+    def reward_text(self, player: Player) -> str:
+        """What the outpost says when the mission is delivered."""
+
     def fail(self, player: Player) -> None:
         """The effects of failing, per kind. Nothing yet."""
+    # endregion
 
+    # region Persistence
     def serialize(self) -> dict:
         return {
             'kind': self.KIND,
@@ -195,7 +202,7 @@ class Mission(Updatable):
     @classmethod
     @abstractmethod
     def _deserialize(cls, source: dict) -> Mission:
-        ...
+        """The mission of this kind, from its serialized form."""
 
     @staticmethod
     def _common(source: dict) -> dict:
@@ -209,3 +216,4 @@ class Mission(Updatable):
             'accepted_at': None if source['accepted_at'] is None else datetime.fromisoformat(source['accepted_at']),
             'status': source['status'],
         }
+    # endregion

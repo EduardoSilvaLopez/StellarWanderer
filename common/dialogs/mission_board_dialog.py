@@ -72,8 +72,7 @@ class MissionListDialog(Dialog):
             pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height), ACCENT
         )
 
-    # ---- what a subclass gives ----
-
+    # region What a subclass gives
     def _sections(self) -> List[Section]:
         raise NotImplementedError
 
@@ -85,8 +84,9 @@ class MissionListDialog(Dialog):
         """The button of the detail, its label and what it does, or None for no button."""
         return None
 
-    # ---- content ----
+    # endregion
 
+    # region Content
     def _items(self, width: int) -> List[Item]:
         """Every line of the content, top to bottom, for a text area `width` wide."""
         if self.notice is not None:
@@ -161,8 +161,14 @@ class MissionListDialog(Dialog):
         button.blit(caption, caption.get_rect(center=button.get_rect().center))
         return button
 
-    # ---- changing the view ----
+    def _max_scroll(self) -> int:
+        return max(0, self.content_height - self.text_rect.height)
 
+    def _scroll_by(self, pixels: int) -> None:
+        self.scroll = max(0, min(self._max_scroll(), self.scroll + pixels))
+    # endregion
+
+    # region Changing the view
     def _show(self, mission: Mission) -> None:
         self.open_mission = mission
         self.scroll = 0
@@ -182,8 +188,9 @@ class MissionListDialog(Dialog):
         if reply is not None:
             self.notice = (mission.title(), reply)
 
-    # ---- drawing ----
+    # endregion
 
+    # region Drawing
     def _background(self) -> Optional[pygame.Surface]:
         if not self._texture_loaded:
             self._texture_loaded = True
@@ -235,14 +242,9 @@ class MissionListDialog(Dialog):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx + sx * bracket, cy), 3)
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
 
-    # ---- events ----
+    # endregion
 
-    def _max_scroll(self) -> int:
-        return max(0, self.content_height - self.text_rect.height)
-
-    def _scroll_by(self, pixels: int) -> None:
-        self.scroll = max(0, min(self._max_scroll(), self.scroll + pixels))
-
+    # region Events
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
@@ -271,6 +273,7 @@ class MissionListDialog(Dialog):
                     action()
                     break
         return None
+    # endregion
 
 
 class MissionBoardDialog(MissionListDialog):

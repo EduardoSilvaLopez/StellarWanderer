@@ -95,7 +95,7 @@ class Console:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)
             WorldMap.draw(surface, fonts, screen, h, ship, date_time)
         else:
-            Radar.draw(surface, fonts, h, screen, ship, date_time)
+            Radar.draw(surface, screen, ship, date_time)
 
         # The scanner and cargo titles sit on the top of the map's screen; their boxes, the resource bars and the
         # cargo hold all start below the titles and end at the bottom of the cluster.

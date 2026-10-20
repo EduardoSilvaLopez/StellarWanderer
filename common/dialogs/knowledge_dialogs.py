@@ -147,6 +147,7 @@ class KnownPeopleDialog(_ListDialog):
         self._focus: Optional[float] = None  # the seed of the person whose comment is being typed
         super().__init__('People')
 
+    # region Cards
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
         import knowledge
@@ -180,7 +181,7 @@ class KnownPeopleDialog(_ListDialog):
         font = body_font(FIELD_SIZE)
         return [line for paragraph in text.split('\n') for line in (MessageDialog.wrap(paragraph, font, width) or [''])]
 
-    def _card(self, person, seed: float, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
+    def _card(self, person: Optional[Person], seed: float, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
         """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when the
         person could be found again). Returns the card and the box's rectangle inside it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
@@ -239,7 +240,9 @@ class KnownPeopleDialog(_ListDialog):
         lines = KnownPeopleDialog._comment_lines(person.comment, box.width - 2 * COMMENT_PADDING)
         for index, line in enumerate(lines):
             card.blit(font.render(line, True, TEXT_COLOR), (text_x, text_y + index * font.get_linesize()))
+    # endregion
 
+    # region Focus and typing
     def _box_at(self, position: Tuple[int, int]) -> Optional[float]:
         """The seed of the person whose comment box is at a mouse position (dialog coordinates), or None. A box scrolled
         out of the text area cannot be clicked."""
@@ -276,6 +279,7 @@ class KnownPeopleDialog(_ListDialog):
                 bottom = self._blocks[index][1] + box.bottom
                 scroll = min(max(self.scroll, bottom - self.text_rect.height), top)
                 self.scroll = max(0, min(self._max_scroll, scroll))
+                break
 
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if self._focus is not None and event.type == pygame.TEXTINPUT:
@@ -296,3 +300,4 @@ class KnownPeopleDialog(_ListDialog):
         if result is not None:
             self._set_focus(None)  # the text input stops with the dialog
         return result
+    # endregion

@@ -69,13 +69,13 @@ class DeliverOre(Mission):
     def complete(self, player: Player) -> None:
         player.ship.cargo_hold.ore -= self.quantity
 
+    def shortfall(self, player: Player) -> str:
+        return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
+
     def give_reward(self, player: Player) -> None:
         reputation_change: float = 0.006 * self.quantity
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = {player.those_who_share.reputation}")
-
-    def shortfall(self, player: Player) -> str:
-        return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
     def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown

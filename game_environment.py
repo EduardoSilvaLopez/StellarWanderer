@@ -5,6 +5,7 @@ from typing import Optional
 from galaxies.body import Body
 from galaxies.constants import INITIAL_STAR_POSITION
 from galaxies.galaxy import Galaxy
+from galaxies.orbit_layout import OrbitLayout
 from galaxies.stellar_system import StellarSystem
 from galaxies.world import World
 from common.vector3 import Vector3
@@ -31,10 +32,8 @@ class GameEnvironment:
         self.persons: dict = people_alterations if people_alterations else {}
 
     def generate_default(self) -> None:
-        from galaxies.orbit import Orbit
-
         self.nearest_system = self.galaxy.add_stellar_system(self.galaxy.fixed_star_at(INITIAL_STAR_POSITION))
-        current_orbit: Orbit = self.nearest_system.get_orbit(3.0)
+        current_orbit = self.nearest_system.get_orbit(float(OrbitLayout.INITIAL_ORBIT_NUMBER))
         self.fixed_body = self.targeted_body = self.last_fixed_body = current_orbit.planets[0].moons[0]
         logger.info(f"Initial world's radius: {self.fixed_body.radius}")
 

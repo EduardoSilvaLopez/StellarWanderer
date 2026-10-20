@@ -34,8 +34,10 @@ def format_credits(value: float) -> str:
     return f'{text} {CREDIT_SYMBOL}'
 
 
-def temperature_stress(ship: Ship, temperature: float) -> float:
-    """0 at TEMPERATURE_IDEAL, 1 at either end of the scale (Ship.TEMP_MIN, Ship.TEMP_MAX), linear on each side."""
+def temperature_stress(ship: Ship) -> float:
+    """How far the ship's temperature is from TEMPERATURE_IDEAL: 0 there, 1 at either end of the scale (Ship.TEMP_MIN,
+    Ship.TEMP_MAX), linear on each side."""
+    temperature = ship.temperature
     if temperature >= TEMPERATURE_IDEAL:
         stress = (temperature - TEMPERATURE_IDEAL) / (ship.TEMP_MAX - TEMPERATURE_IDEAL)
     else:
@@ -62,9 +64,10 @@ def _draw_bar(surface: pygame.Surface, track: pygame.Rect, fraction: float, warn
         pygame.draw.line(surface, WARNING_COLOUR, (x, track.top - 3), (x, track.bottom + 2), 2)
 
 
-def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship, temperature: float) -> None:
-    """The scale from Ship.TEMP_MIN to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the temperature, coloured by
-    its stress. Equal values give a single line of TEMPERATURE_MIN_WIDTH pixels."""
+def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship) -> None:
+    """The scale from Ship.TEMP_MIN to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the ship's temperature, coloured
+    by its stress. Equal values give a single line of TEMPERATURE_MIN_WIDTH pixels."""
+    temperature = ship.temperature
     pygame.draw.rect(surface, ACCENT_DIM, track, 1)
     inner = track.inflate(-4, -4)
 
@@ -76,7 +79,7 @@ def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship, t
     if right - left < TEMPERATURE_MIN_WIDTH:
         left = x_now - TEMPERATURE_MIN_WIDTH // 2
         right = left + TEMPERATURE_MIN_WIDTH
-    colour = level_colour(1.0 - temperature_stress(ship, temperature))
+    colour = level_colour(1.0 - temperature_stress(ship))
     pygame.draw.rect(surface, colour, (left, inner.top, right - left, inner.height))
 
 
@@ -114,4 +117,4 @@ class ResourceBars:
             elif name == 'Energy':
                 _draw_bar(surface, track, ship.energy / ship.INITIAL_ENERGY_MAX)
             else:
-                _draw_temperature(surface, track, ship, ship.temperature)
+                _draw_temperature(surface, track, ship)

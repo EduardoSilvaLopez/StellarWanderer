@@ -6,9 +6,7 @@ from datetime import datetime, timedelta
 
 import logging
 
-from common.updating import Updatable
-from common.updating import update_queue
-
+from common.updating import Updatable, update_queue
 
 if TYPE_CHECKING:
     from galaxies.ore_fields import OreField
@@ -34,7 +32,6 @@ class OreMine(Updatable):
             saved_attributes: Optional[dict] = None
             ) -> None:
         self.parent_field: OreField = parent_field
-        self.is_altered: bool = False
         if saved_attributes is None:
             self.longitude: float = longitude
             self.latitude: float = latitude
@@ -79,9 +76,10 @@ class OreMine(Updatable):
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
-        if not game_date_time:  # stop updating
-            return
-
+        # Called by the queue (which took this mine out first) or by Km2.start_updating (which only calls it when the
+        # mine is not queued). Queued already means a second entry would be made: fail early.
+        if self in update_queue:
+            raise RuntimeError(f"Mine at {self.longitude}, {self.latitude} updated while queued: a second queue entry.")
         if self.last_updated_at is None:
             # This mine did not start working. Start now.
             self.last_updated_at = game_date_time
@@ -112,3 +110,10 @@ class OreMine(Updatable):
         update_queue.add(self)
 
         logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, {ore_extracted} ore extracted.")
+
+    def stop_updating(self) -> None:
+        # No last_updated_at: the time the mine is stopped is not work, so the next start begins a fresh period.
+        update_queue.remove(self)
+        self.next_update_at = None
+        self.last_updated_at = None
+

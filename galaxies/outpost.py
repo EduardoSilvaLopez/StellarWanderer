@@ -1,3 +1,4 @@
+from __future__ import annotations
 import copy
 import random
 import math
@@ -5,8 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional
 
-from common.updating import update_queue
-from common.updating import Updatable
+from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
 
 import game_environment as gem
@@ -27,7 +27,7 @@ class Outpost(Updatable):
     the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
 
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
-    can target them (`Scanner.is_outpost_targeted`, the building box with the door on local +z, so `orientation`
+    can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
     is the heading the door faces), but the beam does nothing to them yet, and neither the laser nor the ground
     affects them yet.
     """
@@ -58,7 +58,6 @@ class Outpost(Updatable):
         self.orientation: float = self.my_random.random() * 360
 
         self.staff: List[Person] = []
-        self.work_shift: int = 4
         self.free_days: float = 0.33
         self.com_officer: Optional[Person] = None
         self.last_visited: Optional[datetime] = None
@@ -68,7 +67,7 @@ class Outpost(Updatable):
         self.is_altered = False
         self.saved_alterations: Optional[dict] = None
         if saved_alterations:
-            my_alterations = saved_alterations.get(self.get_alteration_key())
+            my_alterations = saved_alterations.get(self.get_alterations_key())
             if my_alterations:
                 self.saved_alterations = copy.deepcopy(my_alterations)
                 # Read here, not in prepare: a save made before the ship goes near the outpost must keep it, and prepare
@@ -84,39 +83,46 @@ class Outpost(Updatable):
         logger.info(f"- Seed {self.seed}")
         return self
 
-    def staff_seed(self, index: int) -> float:
-        """The seed of the staff member `index`. Outposts are 1000 apart, so each has room for up to 1000 staff and no two
-        outposts share a person."""
-        return self.seed * 1000 + index
-
-    def generate_staff_member(self, index: int) -> Person:
-        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute."""
-        last = index == self.STAFF_SIZE - 1
-        return Person(self.staff_seed(index), self, 4 if last else 5,
-                      self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
-
+    # region Staff
     def generate_staff(self) -> Outpost:
         """Creates the staff, once: later calls change nothing, so the same people are always returned."""
         if not self.staff:
-            self.staff = [self.generate_staff_member(index) for index in range(self.STAFF_SIZE)]
+            self.staff = [self._generate_staff_member(index) for index in range(self.STAFF_SIZE)]
         return self
 
     def person_with_seed(self, seed: float) -> Optional[Person]:
         """The staff member of this outpost with that seed, or None if the seed is not one of its staff."""
         self.generate_staff()
         for index in range(self.STAFF_SIZE):
-            if self.staff_seed(index) == seed:
+            if self._staff_seed(index) == seed:
                 return self.staff[index]
         return None
 
+    def _generate_staff_member(self, index: int) -> Person:
+        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute."""
+        last = index == self.STAFF_SIZE - 1
+        return Person(self._staff_seed(index), self, 4 if last else 5,
+                      self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+
+    def _staff_seed(self, index: int) -> float:
+        """The seed of the staff member `index`. Outposts are 1000 apart, so each has room for up to 1000 staff and no two
+        outposts share a person."""
+        return self.seed * 1000 + index
+
+    def _pick_com_officer(self, shift: int) -> None:
+        """The com officer of the 8-hour `shift`: its staff member, or the substitute on a free day."""
+        if self.my_random.random() < self.free_days:
+            self.com_officer = self.staff[self.STAFF_SIZE - 1]
+        else:
+            self.com_officer = self.staff[shift]
+    # endregion
+
+    # region Visits
     def prepare(self) -> Outpost:
         ''' Prepare for visit.'''
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
-        if self.my_random.random() < self.free_days:
-            self.com_officer = self.staff[3]
-        else:
-            self.com_officer = self.staff[shift]
+        self._pick_com_officer(shift)
         self.next_update_at: datetime = gem.current_environment.date_time
         self.next_update_at = self.next_update_at.replace(hour=8 * shift, minute=0, second=0, microsecond=0)
         self.next_update_at += timedelta(hours=8)
@@ -125,21 +131,38 @@ class Outpost(Updatable):
 
         return self
 
+    def open_mission_board(self) -> MissionBoard:
+        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to show."""
+        now = gem.current_environment.date_time
+        self.mission_board.update_missions(now)
+        self._set_last_visited(now)
+        return self.mission_board
+
+    def communicate(self) -> Outpost:
+        from galaxies.people.conversation import Conversation
+        Conversation.generate(self.com_officer)
+        self._set_last_visited(gem.current_environment.date_time)
+        return self
+
+    def _set_last_visited(self, new_value: datetime) -> Outpost:
+        self.last_visited = new_value
+        self.set_altered()
+        return self
+    # endregion
+
+    # region Updating
     def get_next_update(self) -> datetime:
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
         ''' Next employee...'''
-        shift = game_date_time.hour // 8
-        if self.my_random.random() < self.free_days:
-            self.com_officer = self.staff[3]
-        else:
-            self.com_officer = self.staff[shift]
+        self._pick_com_officer(game_date_time.hour // 8)
         self.next_update_at += timedelta(hours=8)
         update_queue.add(self)
-        pass
+    # endregion
 
-    def get_alteration_key(self) -> str:
+    # region Alterations
+    def get_alterations_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)
 
     def get_alterations(self) -> dict:
@@ -158,21 +181,18 @@ class Outpost(Updatable):
             self.is_altered = True
             self.planet.set_altered()
         return self
+    # endregion
 
-    def _set_last_visited(self, new_value: datetime) -> Outpost:
-        self.last_visited = new_value
-        self.set_altered()
-        return self
-
+    # region Place
     def stellar_position(self, current_datetime: datetime) -> Vector3:
         """Where the outpost is, in the stellar frame, moving with its planet."""
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
     def full_keys(self) -> str:
-        """Concatenation of key to locate this place as object."""
+        """The keys that find this outpost from the galaxy: system, orbit, planet and its own, joined by '|'."""
         orbit = self.planet.parent_orbit
         return '|'.join((orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key(),
-                         self.planet.get_alterations_key(), self.get_alteration_key()))
+                         self.planet.get_alterations_key(), self.get_alterations_key()))
 
     def address(self) -> str:
         """User-friendly address of the outpost."""
@@ -183,17 +203,4 @@ class Outpost(Updatable):
         else:
             place += f"planet {world.name}"
         return f"{place}, {world.parent_orbit.parent_stellar_system.name}"
-
-    def open_mission_board(self) -> MissionBoard:
-        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to show."""
-        now = gem.current_environment.date_time
-        self.mission_board.update_missions(now)
-        self._set_last_visited(now)
-        return self.mission_board
-
-    def communicate(self) -> Outpost:
-        import game_environment as gem
-        from galaxies.people.conversation import Conversation
-        Conversation.generate(self.com_officer)
-        self._set_last_visited(gem.current_environment.date_time)
-        return self
+    # endregion

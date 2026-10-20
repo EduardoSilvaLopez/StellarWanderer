@@ -51,13 +51,12 @@ SCATTER = 0.012  # share of the light a dust lane still shows (scattered), so la
 SCATTER_EXTINCTION = 0.1  # the scattered light is dimmed by this share of the dust in front: deep dust (the centre) stays dark
 
 
-def luminance(mag_per_arcsec2):
+def luminance(mag_per_arcsec2: float | np.ndarray) -> np.ndarray:
     """cd/m2 of a surface brightness in V mag/arcsec2."""
     return 1.08e5 * 10.0 ** (-0.4 * np.asarray(mag_per_arcsec2, dtype=np.float64))
 
 
-# ---- the stars ----
-
+# region The stars
 DISC_SCALE_LENGTH = 2.0
 DISC_SCALE_HEIGHT = 0.22
 ARM_SCALE_HEIGHT = 0.12  # young stars: thinner
@@ -91,9 +90,10 @@ BETA_PAD = (75.0, 25.0)  # degrees: the arm continues this far below and above t
 BETA_FADE = 25.0  # degrees over which the continued arm fades out
 ARM_GRID_EXTENT = 20.0
 ARM_GRID_STEP = 0.04
+# endregion
 
-# ---- the dust ----
 
+# region The dust
 DUST_KAPPA = 0.38  # optical depth per kpc in V, in the plane at the Sun's distance from the centre (outside the arms)
 DUST_SCALE_LENGTH = 3.0
 DUST_SCALE_HEIGHT = 0.11
@@ -121,9 +121,10 @@ CLOUDS = (
     ('Cygnus Rift', 80.0, 0.0, 0.800, 0.080, 2.5),
     ('Cygnus Rift', 70.0, 0.0, 0.600, 0.060, 2.0),
 )
+# endregion
 
-# ---- the objects ----
 
+# region The objects
 # Equatorial (J2000) to galactic.
 M_EQ_TO_GAL = np.array([
     [-0.0548755604, -0.8734370902, -0.4838350155],
@@ -156,10 +157,10 @@ def unit_vectors(longitude: np.ndarray, latitude: np.ndarray) -> np.ndarray:
     """(n, 3) galactic unit vectors (X, Y, Z) for the grid of longitudes and latitudes, row by row."""
     l, b = np.meshgrid(longitude, latitude)
     return np.stack([np.cos(b) * np.cos(l), np.cos(b) * np.sin(l), np.sin(b)], axis=-1).reshape(-1, 3)
+# endregion
 
 
-# ---- noise ----
-
+# region Noise
 def make_lattice(seed: int) -> np.ndarray:
     return np.random.default_rng(seed).standard_normal(LATTICE ** 3).astype(np.float32)
 
@@ -172,7 +173,7 @@ def noise3(lattice: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> 
     i0, j0, k0 = (c0.astype(np.int32) % LATTICE for c0 in (x0, y0, z0))
     i1, j1, k1 = (i0 + 1) % LATTICE, (j0 + 1) % LATTICE, (k0 + 1) % LATTICE
 
-    def at(i, j, k):
+    def at(i: np.ndarray, j: np.ndarray, k: np.ndarray) -> np.ndarray:
         return lattice[(i * LATTICE + j) * LATTICE + k]
 
     c00 = at(i0, j0, k0) * (1 - fx) + at(i1, j0, k0) * fx
@@ -180,10 +181,10 @@ def noise3(lattice: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> 
     c01 = at(i0, j0, k1) * (1 - fx) + at(i1, j0, k1) * fx
     c11 = at(i0, j1, k1) * (1 - fx) + at(i1, j1, k1) * fx
     return (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz
+# endregion
 
 
-# ---- the spiral arms, on a map of the plane ----
-
+# region The spiral arms, on a map of the plane
 def arm_maps() -> Tuple[np.ndarray, np.ndarray]:
     """The arms' contribution to the stars and to the dust, on a grid of the plane (X, Y), which the sight lines look up."""
     axis = np.arange(-ARM_GRID_EXTENT, ARM_GRID_EXTENT, ARM_GRID_STEP)
@@ -208,10 +209,10 @@ def look_up(grid: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
     i = np.clip(((x + ARM_GRID_EXTENT) / ARM_GRID_STEP).astype(np.int32), 0, size - 1)
     j = np.clip(((y + ARM_GRID_EXTENT) / ARM_GRID_STEP).astype(np.int32), 0, size - 1)
     return grid[i, j]
+# endregion
 
 
-# ---- the light along the sight lines ----
-
+# region The light along the sight lines
 def cloud_vectors() -> List[Tuple[np.ndarray, float, float]]:
     """(centre in kpc, sigma, optical depth through the centre) for every real dust cloud."""
     clouds = []
@@ -222,7 +223,8 @@ def cloud_vectors() -> List[Tuple[np.ndarray, float, float]]:
     return clouds
 
 
-def integrate(directions: np.ndarray, arms: Tuple[np.ndarray, np.ndarray], lattice: np.ndarray, clouds) -> np.ndarray:
+def integrate(directions: np.ndarray, arms: Tuple[np.ndarray, np.ndarray], lattice: np.ndarray,
+              clouds: List[Tuple[np.ndarray, float, float]]) -> np.ndarray:
     """(n, 3) linear RGB light along each sight line: the stars' light dimmed by the dust in front of it."""
     arm_stars, arm_dust = arms
     count = directions.shape[0]
@@ -275,11 +277,12 @@ def integrate(directions: np.ndarray, arms: Tuple[np.ndarray, np.ndarray], latti
         tau += kappa * ds
 
     return (light + SCATTER * free).T
+# endregion
 
 
-# ---- the objects ----
-
-def object_luminance(directions: np.ndarray, ra: float, dec: float, magnitude: float, components) -> np.ndarray:
+# region Drawing the objects
+def object_luminance(directions: np.ndarray, ra: float, dec: float, magnitude: float,
+                     components: Tuple[Tuple[float, str, float, float, float], ...]) -> np.ndarray:
     """cd/m2 of one object at each direction: exponential or gaussian components, with a total light of `magnitude`."""
     ra, dec = math.radians(ra), math.radians(dec)
     centre = M_EQ_TO_GAL @ np.array([math.cos(dec) * math.cos(ra), math.cos(dec) * math.sin(ra), math.sin(dec)])
@@ -307,13 +310,13 @@ def object_luminance(directions: np.ndarray, ra: float, dec: float, magnitude: f
         centre_flux = share * 10.0 ** (-0.4 * magnitude) / area
         result[near] += luminance(-2.5 * math.log10(centre_flux)) * profile
     return result
+# endregion
 
 
-# ---- the picture ----
-
+# region The picture
 def resize(image: np.ndarray, height: int, width: int) -> np.ndarray:
     """Bilinear resize of a (h, w) or (h, w, c) array."""
-    def axis_weights(old: int, new: int):
+    def axis_weights(old: int, new: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         position = np.clip((np.arange(new) + 0.5) * old / new - 0.5, 0, old - 1)
         low = np.floor(position).astype(int)
         high = np.minimum(low + 1, old - 1)
@@ -391,6 +394,7 @@ def report(light: np.ndarray, reference: float, longitude: np.ndarray, latitude:
         row = min(row, len(latitude) - 1)
         value = luminosity[row, column]
         print(f'    {label:>16} (l {l:4d}, b {b:3d}): {-2.5 * math.log10(max(value, 1e-12) / 1.08e5):5.1f}')
+# endregion
 
 
 def main() -> None:

@@ -19,6 +19,7 @@ SAVE_NAME_MAX_LENGTH = 40
 
 class Savefile:
 
+    # region Names
     @staticmethod
     def clean_name(text: str) -> str:
         '''A typed name made safe for a file name: printable, no path or reserved characters, no ".json" ending,
@@ -38,13 +39,57 @@ class Savefile:
     @staticmethod
     def exists(name: str) -> bool:
         return os.path.exists(data_path(SAVEFILES_DIR, name + '.json'))
+    # endregion
+
+    # region Saving
+    @staticmethod
+    def save() -> bool:
+        '''F5: saves the game under the default name. If that name is taken (another save in the same game second),
+        nothing is saved. Returns whether it saved.'''
+        name = Savefile.default_name()
+        if Savefile.exists(name):
+            return False
+        Savefile.save_as(name)
+        return True
+
+    @staticmethod
+    def save_as(name: str) -> None:
+        '''Saves the current state of the game to `name` (a clean name, see clean_name), from the GameEnvironment and
+        Player singletons. Replaces a save of that name.'''
+        env = gem.current_environment
+        player = pem.current_player
+
+        data = {
+            'environment': {
+                'galactic_seed': env.galaxy.seed,
+                'date_time': env.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'galaxy_alterations': env.galaxy.get_alterations(),
+                'persons': dict(env.persons)
+            }
+            , 'player': player.serialize()
+            , 'knowledge': knowledge.current_knowledge.serialize()
+        }
+        os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
+        file_path = data_path(SAVEFILES_DIR, name + '.json')
+        logger.info("New savefile's name: " + file_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    # endregion
+
+    # region Loading
+    @staticmethod
+    def load_last() -> None:
+        '''Loads the most recently written savefile directly into GameEnvironment and Player singletons.
+
+        WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
+        savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
+        if not savefiles:
+            raise FileNotFoundError("No savefiles found.")
+        Savefile.load_from_file(max(savefiles, key=os.path.getmtime))
 
     @staticmethod
     def load_from_file(filepath: str) -> None:
         '''Loads a specific savefile into GameEnvironment and Player singletons.
-
-        Args:
-            filepath: Path to the savefile to load
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
         from common.updating import update_queue
@@ -73,11 +118,10 @@ class Savefile:
         gem.current_environment.nearest_system = galaxy.add_stellar_system(
             galaxy.fixed_star_at((system_data['x'], system_data['y'], system_data['z']))
             )
-        from galaxies.orbit import Orbit
         if player_data['orbit'] is None:  # the star was the last fixed body
             body = gem.current_environment.nearest_system.star
         else:
-            current_orbit: Orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
+            current_orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
             planet_idx: int = player_data['planet']
             moon_idx: int = player_data['moon']
             if moon_idx is None:
@@ -95,66 +139,4 @@ class Savefile:
             world.update_surroundings(position_data['y'], position_data['x'], position_data['z'], game_date_time)
 
         pem.current_player = pem.Player.deserialize(load_object['player'])
-
-    @staticmethod
-    def load_last() -> None:
-        '''Loads the most recent savefile directly into GameEnvironment and Player singletons.
-
-        WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
-
-        if not savefiles:
-            raise FileNotFoundError("No savefiles found.")
-
-        # Parse datetime from filename and find the most recent
-        # Filename format: "Savefile {seed} {datetime}.json"
-        # DateTime format in filename: "YYYY-MM-DDTHH_MM_SS"
-        latest_file = None
-        latest_datetime = None
-
-        for filepath in savefiles:
-            file_datetime = os.path.getmtime(filepath)
-
-            if latest_datetime is None or file_datetime > latest_datetime:
-                latest_datetime = file_datetime
-                latest_file = filepath
-
-        if latest_file is None:
-            raise FileNotFoundError("No valid savefiles found with datetime information.")
-
-        Savefile.load_from_file(latest_file)
-
-    @staticmethod
-    def save() -> bool:
-        '''F5: saves the game under the default name. If that name is taken (another save in the same game second),
-        nothing is saved. Returns whether it saved.'''
-        name = Savefile.default_name()
-        if Savefile.exists(name):
-            return False
-        Savefile.save_as(name)
-        return True
-
-    @staticmethod
-    def save_as(name: str) -> None:
-        '''Saves the current state of the game to `name` (a clean name, see clean_name), from the GameEnvironment and
-        Player singletons. Replaces a save of that name.'''
-        env = gem.current_environment
-        player = pem.current_player
-
-        persons_dict = dict(env.persons)
-
-        data = {
-            'environment': {
-                'galactic_seed': env.galaxy.seed,
-                'date_time': env.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                'galaxy_alterations': env.galaxy.get_alterations(),
-                'persons': persons_dict
-            }
-            , 'player': player.serialize()
-            , 'knowledge': knowledge.current_knowledge.serialize()
-        }
-        os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
-        file_path = data_path(SAVEFILES_DIR, name + '.json')
-        logger.info("New savefile's name: " + file_path)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+    # endregion

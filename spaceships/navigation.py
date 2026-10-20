@@ -8,11 +8,12 @@ import logging
 import math
 
 from common.vector3 import Vector3, rotate_2d
+from galaxies.km2 import Km2
+from galaxies.world import World
 import game_environment as gem
 
 if TYPE_CHECKING:
     from galaxies.body import Body
-    from galaxies.world import World
     from .ship import Ship
 
 logger = logging.getLogger(__name__)
@@ -50,17 +51,14 @@ class Navigation:
         self.ship: Ship = ship
 
     # region Angles and directions
-    def _up_reference(self, body: Body, current_datetime: datetime) -> Vector3:
-        return -self.direction_down(body, current_datetime)
-
     def pitch_angle(self, body: Body, current_datetime: datetime) -> float:
         """Nose-up angle in degrees above the local horizon."""
-        up_reference = self._up_reference(body, current_datetime)
+        up_reference = -self.direction_down(body, current_datetime)
         return math.degrees(math.asin(max(-1.0, min(1.0, self.ship.attitude.forward.dot(up_reference)))))
 
     def roll_angle(self, body: Body, current_datetime: datetime) -> float:
         """Right-wing-down angle in degrees relative to the local horizon."""
-        up_reference = self._up_reference(body, current_datetime)
+        up_reference = -self.direction_down(body, current_datetime)
         attitude = self.ship.attitude
         return math.degrees(math.atan2(-attitude.right.dot(up_reference), attitude.up.dot(up_reference)))
 
@@ -73,7 +71,7 @@ class Navigation:
 
     def direction_to_star(self, body: Body, current_datetime: datetime) -> Vector3:
         if self.ship.is_bound:
-            return body.calculate_star_position(self.ship, current_datetime)  # bound: the body is a world
+            return body.star_offset_from_ship(self.ship, current_datetime)  # bound: the body is a world
         return -self.ship.position.as_vector()
 
     def direction_to_body(self, target: Body, current_datetime: datetime) -> Vector3:
@@ -84,11 +82,9 @@ class Navigation:
         if not self.ship.is_bound:
             return point - self.ship.position.as_vector()
         world = gem.current_environment.fixed_world
-        basis = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
-        ship_position = self._stellar_position_from_surface(world, world.calculate_stellar_position(current_datetime), basis)
-        relative = point - ship_position
+        relative = point - self.stellar_position(current_datetime)
         relative = Vector3(relative.x, -relative.y, relative.z)  # the surface basis has Y opposite to the orbital motion
-        east_hat, up_hat, north_hat = basis
+        east_hat, up_hat, north_hat = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
 
     def sky_rotation(self, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
@@ -140,12 +136,10 @@ class Navigation:
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
 
-        from galaxies.world import World
-        from galaxies.km2 import Km2
         if ship.is_bound:
             world = environment.fixed_world
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
-            if not ship.position.y > World.SURROUNDINGS_RADIUS * Km2.SIZE\
+            if not ship.position.y > World.SURROUNDINGS_RADIUS \
                 and (km2 is None or km2 != ship.position.km2):
                 world.update_surroundings(ship.position.y, ship.position.x, ship.position.z, environment.date_time)
                 km2 = world.get_km2_at(ship.position.x, ship.position.z)
@@ -157,23 +151,22 @@ class Navigation:
         attitude = ship.attitude
         if braking:
             self._brake(delta_time)
-        elif ship.is_bound:
+            return
+        if ship.is_bound:
             world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input, math.radians(attitude.yaw))
             accel = Vector3(
                 world_accel_x * ship.RIGHT_LEFT_ACC,
                 altitude_accel_input * ship.UP_DOWN_ACC,
                 world_accel_z * ship.FORWARD_BACKWARD_ACC,
             )
-            ship.velocity.add_vector(accel * delta_time)
-            self.ship.energy -= 5e4 * sum(accel) * delta_time
         else:
             accel = (
                 attitude.right * (longitude_accel_input * ship.RIGHT_LEFT_ACC)
                 + attitude.forward * (latitude_accel_input * ship.FORWARD_BACKWARD_ACC)
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
-            ship.velocity.add_vector(accel * delta_time)
-            self.ship.energy -= 5e4 * sum(accel) * delta_time
+        ship.velocity.add_vector(accel * delta_time)
+        ship.energy -= 5e4 * sum(abs(accel)) * delta_time
 
     def has_motion_to_brake(self) -> bool:
         """True while the brake has something to do: speed relative to the frame it brakes against, or a rotation."""
@@ -243,11 +236,11 @@ class Navigation:
         local_pos = world.stellar_to_surface_position(stellar_pos, current_datetime)
         longitude, altitude, latitude = local_pos
         basis = world.surface_basis(longitude, latitude, current_datetime)
-        surface_vel = world.stellar_to_surface_velocity_with_basis(stellar_vel, altitude, latitude, current_datetime, basis)
+        surface_vel = world.stellar_to_surface_velocity(stellar_vel, altitude, latitude, current_datetime, basis)
 
         ship.position.set_vector(local_pos)
         ship.velocity.set_vector(surface_vel)
-        forward_surface = world.stellar_vector_to_surface_with_basis(attitude.forward, basis)
+        forward_surface = world.stellar_vector_to_surface(attitude.forward, basis)
         yaw = math.atan2(forward_surface[0], forward_surface[2])
         attitude.forward, attitude.right = Vector3.rotate_pair(Vector3(0.0, 0.0, 1.0), Vector3(1.0, 0.0, 0.0), yaw)
         attitude.up = Vector3(0.0, 1.0, 0.0)
@@ -287,7 +280,7 @@ class Navigation:
         self._log_vectors("Velocities", {"World (stellar)": world_vel, "Ship (stellar)": ship_vel})
 
         attitude.right, attitude.up, attitude.forward = (
-            world.surface_vector_to_stellar_with_basis(axis, basis)
+            world.surface_vector_to_stellar(axis, basis)
             for axis in (attitude.right, attitude.up, attitude.forward)
         )
         ship.position.set_vector(ship_pos)

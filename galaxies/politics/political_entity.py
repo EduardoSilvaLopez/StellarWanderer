@@ -6,7 +6,7 @@ from common.paths import resource_path
 
 
 class PoliticalEntity:
-    def __init__(self, name: str, color: tuple, icon_filename: str, titles: dict, names_1: dict, names_2: dict) -> None:
+    def __init__(self, name: str, color: tuple, icon_filename: str, titles: dict, names_1: list, names_2: list) -> None:
         self.name: str = name
         self.color: tuple = color
         self.icon: Optional[pygame.Surface] = None
@@ -27,8 +27,7 @@ class PoliticalEntity:
             print(f"Warning: Could not load political entity icon {icon_filename}: {e}")
 
     def generate_outpost_name(self, my_random: random.Random) -> str:
-        return self.settlement_names_1[my_random.randint(0, len(self.settlement_names_1) - 1)]\
-            + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
+        return my_random.choice(self.settlement_names_1) + " " + my_random.choice(self.settlement_names_2)
 
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(

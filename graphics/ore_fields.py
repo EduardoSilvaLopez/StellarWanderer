@@ -63,7 +63,7 @@ class OreFields:
         # Set color for texture modulation (white leaves texture unchanged), lit by the sun on the ground
         GL.glColor3ub(*light.shade(ore_field.color, light.brightness(0.0, 1.0, 0.0)))
 
-        # Rotation angle in radians (clockwise, so negate for standard math)
+        # Rotation angle in radians
         angle = math.radians(ore_field.orientation)
         cos_a = math.cos(angle)
         sin_a = math.sin(angle)
@@ -99,9 +99,6 @@ class OreFields:
         img = pygame.image.load(texture_path)
         w, h = img.get_size()
 
-        # Create a new surface with RGBA
-        result = pygame.Surface((w, h), pygame.SRCALPHA, 32)
-
         # Get image data as pixel array and process each pixel
         img_data = pygame.image.tostring(img, 'RGB')
 
@@ -118,8 +115,7 @@ class OreFields:
             result_pixels.extend([r, g, b, alpha])
 
         # Create surface from the processed pixel data
-        result = pygame.image.fromstring(bytes(result_pixels), (w, h), 'RGBA')
-        return result
+        return pygame.image.fromstring(bytes(result_pixels), (w, h), 'RGBA')
 
     @staticmethod
     def _get_ore_field_texture() -> int:

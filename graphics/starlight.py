@@ -45,6 +45,9 @@ class Starlight:
             overlay.fill(added, special_flags=pygame.BLEND_RGB_ADD)  # the colour only: transparent pixels stay so
 
 
+_masks: Dict[Tuple, pygame.Surface] = {}
+
+
 def _edge_mask(w: int, h: int, colour: Tuple[int, int, int], max_alpha: int, inner: float) -> pygame.Surface:
     """A vignette at full strength for a window of w x h: transparent in the middle, opaque `colour` at the corners,
     starting at `inner` of the way from the centre to a corner. Built once per window size and colour."""
@@ -64,7 +67,15 @@ def _edge_mask(w: int, h: int, colour: Tuple[int, int, int], max_alpha: int, inn
     return mask
 
 
-_masks: Dict[Tuple, pygame.Surface] = {}
+def _draw_vignette(overlay: pygame.Surface, w: int, h: int, ship: Ship,
+                   colour: Tuple[int, int, int], max_alpha: int, inner: float) -> None:
+    """The edge mask over the view, as opaque as the temperature's stress (see temperature_stress)."""
+    stress = temperature_stress(ship)
+    if stress <= 0.0:
+        return
+    mask = _edge_mask(w, h, colour, max_alpha, inner)
+    mask.set_alpha(int(255 * stress))
+    overlay.blit(mask, (0, 0))
 
 
 class HeatVignette:
@@ -72,14 +83,8 @@ class HeatVignette:
 
     @staticmethod
     def draw(overlay: pygame.Surface, w: int, h: int, ship: Ship) -> None:
-        if ship.temperature <= TEMPERATURE_IDEAL:
-            return
-        stress = temperature_stress(ship, ship.temperature)
-        if stress <= 0.0:
-            return
-        mask = _edge_mask(w, h, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER)
-        mask.set_alpha(int(255 * stress))
-        overlay.blit(mask, (0, 0))
+        if ship.temperature > TEMPERATURE_IDEAL:
+            _draw_vignette(overlay, w, h, ship, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER)
 
 
 class FrostVignette:
@@ -87,11 +92,5 @@ class FrostVignette:
 
     @staticmethod
     def draw(overlay: pygame.Surface, w: int, h: int, ship: Ship) -> None:
-        if ship.temperature >= TEMPERATURE_IDEAL:
-            return
-        stress = temperature_stress(ship, ship.temperature)
-        if stress <= 0.0:
-            return
-        mask = _edge_mask(w, h, FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER)
-        mask.set_alpha(int(255 * stress))
-        overlay.blit(mask, (0, 0))
+        if ship.temperature < TEMPERATURE_IDEAL:
+            _draw_vignette(overlay, w, h, ship, FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER)

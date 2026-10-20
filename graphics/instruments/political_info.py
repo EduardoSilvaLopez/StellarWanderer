@@ -1,12 +1,9 @@
 """Political entity information display in the top-left corner."""
 
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+from typing import Any
 import pygame
 from ..constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP
-
-if TYPE_CHECKING:
-    from galaxies.people.player import Player
 
 
 class PoliticalInfo:
@@ -23,7 +20,7 @@ class PoliticalInfo:
     ICON_STEP = 4
 
     @staticmethod
-    def _hull_edge_x(y: float, w: int, h: int) -> float:
+    def hull_edge_x(y: float, w: int, h: int) -> float:
         """X position of the left A-pillar's inner edge at height y: the boundary
         between solid hull (left) and windshield glass (right). Mirrors the pillar
         geometry in Canopy.draw."""
@@ -37,7 +34,7 @@ class PoliticalInfo:
         return top_inset + (bottom_inset - top_inset) * fraction
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player) -> int:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int) -> int:
         """Draw political entity info in the top-left hull area, under the canopy's top rail. Returns the y of the
         bottom of what it drew (where the cockpit buttons start)."""
         import game_environment as gem
@@ -53,7 +50,7 @@ class PoliticalInfo:
 
         # Name: as large as fits the hull width at the top of the text (the pillar
         # only narrows slightly over the text's own height, so this is a safe bound).
-        max_text_width = PoliticalInfo._hull_edge_x(y, w, h) - x - PoliticalInfo.EDGE_MARGIN
+        max_text_width = PoliticalInfo.hull_edge_x(y, w, h) - x - PoliticalInfo.EDGE_MARGIN
         text_surface = fonts.render_to_fit(entity.name, entity.color, max(1, int(max_text_width)), PoliticalInfo.MAX_FONT_SIZE)
         surface.blit(text_surface, (x, y))
 
@@ -65,7 +62,7 @@ class PoliticalInfo:
         # bottom edge, the narrowest point of its vertical span.
         icon_size = PoliticalInfo.MAX_ICON_SIZE
         while icon_size > PoliticalInfo.MIN_ICON_SIZE:
-            available = PoliticalInfo._hull_edge_x(icon_y + icon_size, w, h) - x - PoliticalInfo.EDGE_MARGIN
+            available = PoliticalInfo.hull_edge_x(icon_y + icon_size, w, h) - x - PoliticalInfo.EDGE_MARGIN
             if icon_size <= available:
                 break
             icon_size -= PoliticalInfo.ICON_STEP

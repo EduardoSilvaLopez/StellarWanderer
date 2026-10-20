@@ -60,7 +60,7 @@ class OreMines:
         latitude are made relative to the player here, in double precision,
         before reaching glVertex3f — see the comment in Rocks.draw() for why.
         """
-        orientation = math.radians(getattr(mine, 'orientation', 0.0))
+        orientation = math.radians(mine.orientation)
         cos_o, sin_o = math.cos(orientation), math.sin(orientation)
         relative_longitude = mine.longitude - player_x
         relative_latitude = mine.latitude - player_z
@@ -81,16 +81,14 @@ class OreMines:
         top_y = base_y + mine.MINE_HEIGHT
         base_pts = OreMines._mine_circle_points(mine, base_y, player_x, player_z)
         top_pts = OreMines._mine_circle_points(mine, top_y, player_x, player_z)
-        orientation = math.radians(getattr(mine, 'orientation', 0.0))
-        cos_o, sin_o = math.cos(orientation), math.sin(orientation)
+        relative_longitude = mine.longitude - player_x
+        relative_latitude = mine.latitude - player_z
 
         GL.glBegin(GL.GL_QUAD_STRIP)
         for (bx, by, bz, u), (tx, ty, tz, _) in zip(base_pts, top_pts):
-            # The wall's outward normal at this segment (rotated like the points), lit by the sun.
-            angle = 2.0 * math.pi * u
-            lx, lz = math.cos(angle), math.sin(angle)
-            normal_x = lx * cos_o + lz * sin_o
-            normal_z = -lx * sin_o + lz * cos_o
+            # The wall's outward normal at this segment: from the axis to the point, lit by the sun.
+            normal_x = (bx - relative_longitude) / mine.MINE_RADIUS
+            normal_z = (bz - relative_latitude) / mine.MINE_RADIUS
             GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(normal_x, 0.0, normal_z)))
             GL.glTexCoord2f(u, 0.0)
             GL.glVertex3f(bx, by, bz)

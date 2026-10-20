@@ -147,23 +147,17 @@ class StarGl:
         _end_2d()
 
     @staticmethod
-    def glare_half_px(view: StarView) -> float:
-        """The glare's half-size in pixels: a multiple of the corona, so it is as big as the sun looks (and shrinks
-        with it, as the sun gets farther away)."""
-        return GLARE_SIZE_OF_CORONA * view.corona_px
-
-    @staticmethod
     def draw_glare(width: int, height: int, view: StarView, star: Star, visibility: float) -> None:
         """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Its size
-        follows the sun's apparent size (glare_half_px). Added to what is drawn (additive), so it brightens the sky and
-        the worlds, and is under the cockpit. `visibility` (see sun_visibility) scales it: a world that hides the sun
-        leaves no glare."""
+        is a multiple of the corona, so it follows the sun's apparent size (and shrinks as the sun gets farther away).
+        Added to what is drawn (additive), so it brightens the sky and the worlds, and is under the cockpit. `visibility`
+        (see sun_visibility) scales it: a world that hides the sun leaves no glare."""
         distance = math.hypot(view.x - width / 2, view.y - height / 2)
         reach = GLARE_RADIUS_SHARE * height
         strength = visibility * GLARE_MAX * max(0.0, 1.0 - distance / reach) ** 2
         if strength <= 0.0:
             return
-        half = StarGl.glare_half_px(view)
+        half = GLARE_SIZE_OF_CORONA * view.corona_px  # the glare's half-size, in pixels
         _begin_2d(width, height)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive
         GL.glColor4f(star.color[0] / 255 * strength, star.color[1] / 255 * strength, star.color[2] / 255 * strength, 1.0)
@@ -177,17 +171,8 @@ class StarGl:
         """The visor: the view darkened by `strength` (0 to 1). Drawn over the sky and the sun, under the cockpit."""
         if strength <= 0.0:
             return
-        GL.glViewport(0, 0, width, height)
-        GL.glDisable(GL.GL_TEXTURE_2D)
-        GL.glEnable(GL.GL_BLEND)
-        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
-        GL.glMatrixMode(GL.GL_PROJECTION)
-        GL.glPushMatrix()
-        GL.glLoadIdentity()
-        GL.glOrtho(0, width, height, 0, -1, 1)
-        GL.glMatrixMode(GL.GL_MODELVIEW)
-        GL.glPushMatrix()
-        GL.glLoadIdentity()
+        _begin_2d(width, height)
+        GL.glDisable(GL.GL_TEXTURE_2D)  # a plain colour
         GL.glColor4f(0.0, 0.0, 0.0, strength)
         GL.glBegin(GL.GL_QUADS)
         GL.glVertex2f(0, 0)
@@ -195,7 +180,4 @@ class StarGl:
         GL.glVertex2f(width, height)
         GL.glVertex2f(0, height)
         GL.glEnd()
-        GL.glPopMatrix()
-        GL.glMatrixMode(GL.GL_PROJECTION)
-        GL.glPopMatrix()
-        GL.glMatrixMode(GL.GL_MODELVIEW)
+        _end_2d()

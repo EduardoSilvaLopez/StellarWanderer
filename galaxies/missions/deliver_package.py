@@ -46,17 +46,19 @@ class DeliverPackage(Mission):
         self.destination_outpost.generate_staff()
         staff_size = self.issuer_outpost.STAFF_SIZE
         self.sender: Person = self.issuer_outpost.staff[self.my_random.randrange(staff_size)] \
-            if sender_seed is None else self._ensure_staff_member(self.issuer_outpost, sender_seed)
+            if sender_seed is None else self._staff_member(self.issuer_outpost, sender_seed)
         self.recipient: Person = self.destination_outpost.staff[self.my_random.randrange(staff_size)] \
-            if recipient_seed is None else self._ensure_staff_member(self.destination_outpost, recipient_seed)
+            if recipient_seed is None else self._staff_member(self.destination_outpost, recipient_seed)
 
     @staticmethod
-    def _ensure_staff_member(outpost: Outpost, seed: float) -> Person:
+    def _staff_member(outpost: Outpost, seed: float) -> Person:
+        """The staff member of `outpost` with that seed: it must be one of them."""
         person = outpost.person_with_seed(seed)
         if person is None:
             raise KeyError(f"The outpost {outpost.name} has no staff member with the seed {seed}.")
         return person
 
+    # region Offer
     @classmethod
     def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverPackage]:
         # The destinations: every other outpost of the system, in the order the worlds list them.
@@ -78,6 +80,14 @@ class DeliverPackage(Mission):
             deadline=created_at + timedelta(days=days),
             destination=destination_outpost.full_keys(),
         )
+    # endregion
+
+    # region The mission
+    def accept(self, now: datetime) -> None:
+        """Taken: the sender and the recipient are kept in `persons`, though the player has not met them."""
+        super().accept(now)
+        self.sender.record()
+        self.recipient.record()
 
     def title(self) -> str:
         return f"Deliver a package to {self.destination_outpost.name}"
@@ -88,17 +98,14 @@ class DeliverPackage(Mission):
             f" {self.recipient.get_full_name()} in {self.destination_outpost.address()}."
             )
 
-    def accept(self, now: datetime) -> None:
-        """Taken: the sender and the recipient are kept in `persons`, though the player has not met them."""
-        super().accept(now)
-        self.sender.ensure()
-        self.recipient.ensure()
-
     def can_complete(self, player: Player) -> bool:
         return True
 
     def complete(self, player: Player) -> None:
         """Nothing is taken from the player: the package is the mission."""
+
+    def shortfall(self, player: Player) -> str:
+        return f"Bring the package to {self.destination_outpost.name}."
 
     def give_reward(self, player: Player) -> None:
         import game_environment as gem
@@ -128,18 +135,17 @@ class DeliverPackage(Mission):
             for s in self.recipient.residency.staff:
                 s.adjust_sympathy(10)
 
-
-    def shortfall(self, player: Player) -> str:
-        return f"Bring the package to {self.destination_outpost.name}."
-
     def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         package = rnd.choice(['medicine', 'drug', 'equipment', 'gift', 'delicacy'])
         return f"Thank you {player.get_title()}, this {package} was really expected."
+    # endregion
 
+    # region Persistence
     def serialize(self) -> dict:
         return {**super().serialize(), 'sender_seed': self.sender.seed, 'recipient_seed': self.recipient.seed}
 
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverPackage:
         return DeliverPackage(source['sender_seed'], source['recipient_seed'], **Mission._common(source))
+    # endregion

@@ -1,4 +1,5 @@
-from typing import List, Optional
+from __future__ import annotations
+from typing import Callable, List, Optional
 
 import logging
 
@@ -23,37 +24,69 @@ class ReportingInOutpost(Conversation):
         self.time_since_last_visit: Optional[float] = None if not self.outpost.last_visited\
             else (self.date_time - self.outpost.last_visited).total_seconds()
 
+    def start(self) -> None:
+        since_last_communication = self._since_last_communication
+        if self.player.ship.cargo_hold.ore > 0:
+            self._greet_and_thank()
+        elif since_last_communication is None or since_last_communication > 60 * 60:
+            self._greet_without_ore()
+        elif since_last_communication >= 0:
+            self._ask_anything_else()
+        else:
+            logger.error(f"since_last_communication = {since_last_communication}")
+            self.close()
+
+    # region Helpers
     @property
     def player(self) -> Player:
         """The current player, looked up at each use: a new game or a load replaces the Player object."""
         return player_module.current_player
 
-    def start(self) -> None:
-        visit_time_delta: Optional[float] = None if not self.interlocutor.last_communication_at\
-            else (self.date_time - self.interlocutor.last_communication_at).total_seconds()
+    @property
+    def _since_last_communication(self) -> Optional[float]:
+        """Seconds since the interlocutor last talked to the player, None if never."""
+        if not self.interlocutor.last_communication_at:
+            return None
+        return (self.date_time - self.interlocutor.last_communication_at).total_seconds()
 
-        if self.player.ship.cargo_hold.ore > 0:
-            self._greet_and_thank()
-        elif visit_time_delta is None or visit_time_delta > 60 * 60:
-            self._greet_and_warn()
-        elif visit_time_delta >= 0:
-            self._greet_tell_me()
-        else:
-            logger.error(f"visit_time_delta = {visit_time_delta}")
-            self.close([])
+    def _ask(self, text: str, buttons: List[dict], then: Callable[[Optional[int], List[dict]], object]) -> None:
+        """Shows `text` with `buttons`; the answer goes to `then`, with the buttons."""
+        show_message(
+            self.prepare_message(self.title, text, buttons),
+            on_result=lambda button_index: then(button_index, buttons)
+            )
+
+    def _ask_then_close(self, text: str, buttons: List[dict]) -> None:
+        """Shows `text` with `buttons`; the answer applies its button, and the conversation closes."""
+        def answered(button_index: Optional[int]) -> None:
+            self._apply_button(buttons, button_index)
+            self.close()
+
+        show_message(self.prepare_message(self.title, text, buttons), on_result=answered)
+
+    def _presentation(self) -> str:
+        """How the interlocutor introduces themselves: formally if loyal, by first name if empathic."""
+        return \
+            f"I am {self.interlocutor.get_full_name()}" \
+            if self.interlocutor.loyalty100 - self.interlocutor.empathy100 > 0 \
+            else f"I am {self.interlocutor.name}, the ComOfficer here." \
+            if self.interlocutor.empathy100 > 80\
+            else f"I am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
+    # endregion
 
     # region Greet and thank
     def _greet_and_thank(self) -> None:
-        if self.interlocutor.last_communication_at and (gem.current_environment.date_time - self.interlocutor.last_communication_at).total_seconds() > 28 * 24 * 60 * 60:
-            self._say_had_not_seen_you_thanks()
-        elif self.interlocutor.last_communication_at:
-            self._say_hi_again_and_thanks()
+        since_last_communication = self._since_last_communication
+        if since_last_communication is not None and since_last_communication > 28 * 24 * 60 * 60:
+            self._thank_after_long_absence()
+        elif since_last_communication is not None:
+            self._thank_again()
         elif self.time_since_last_visit is not None:
-            self._say_i_am_and_thanks()
+            self._thank_as_new_officer()
         else:
-            self._say_this_is_and_thanks()
+            self._thank_on_first_visit()
 
-    def _say_had_not_seen_you_thanks(self) -> None:
+    def _thank_after_long_absence(self) -> None:
         # Prepare the text:
         introduction: str = ''
         if self.interlocutor.empathy100 < 20 or self.interlocutor.sympathy100 < 20:
@@ -90,12 +123,9 @@ class ReportingInOutpost(Conversation):
                 }
             ]
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._finish_operations(button_index, buttons)
-            )
+        self._ask(text, buttons, self._settle_visit)
 
-    def _say_hi_again_and_thanks(self) -> None:
+    def _thank_again(self) -> None:
         # Prepare the message:
         presentation: str = \
             f"Welcome back, {self.player.get_title()} Pilot." \
@@ -129,22 +159,11 @@ class ReportingInOutpost(Conversation):
                 }
             ]
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._finish_operations(button_index, buttons)
-            )
+        self._ask(text, buttons, self._settle_visit)
 
-    def _say_i_am_and_thanks(self) -> None:
-        # Prepare the message:
-        presentation: str = \
-            f"I am {self.interlocutor.get_full_name()}" \
-            if self.interlocutor.loyalty100 - self.interlocutor.empathy100 > 0 \
-            else f"I am {self.interlocutor.name}, the ComOfficer here." \
-            if self.interlocutor.empathy100 > 80\
-            else f"I am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
-
+    def _thank_as_new_officer(self) -> None:
         text: str = (
-            f"{presentation}"
+            f"{self._presentation()}"
             f"\n\nThank you for the ore, {self.player.get_title()}."
             f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else ''}"
             f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
@@ -163,22 +182,11 @@ class ReportingInOutpost(Conversation):
                 }
             ]
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._finish_operations(button_index, buttons)
-            )
+        self._ask(text, buttons, self._settle_visit)
 
-    def _say_this_is_and_thanks(self) -> None:
-        # Prepare the message:
-        presentation: str = \
-            f"I am {self.interlocutor.get_full_name()}" \
-            if self.interlocutor.loyalty100 - self.interlocutor.empathy100 > 0 \
-            else f"I am {self.interlocutor.name}, the ComOfficer here." \
-            if self.interlocutor.empathy100 > 80\
-            else f"I am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
-
+    def _thank_on_first_visit(self) -> None:
         text: str = (
-            f"{presentation}"
+            f"{self._presentation()}"
             f"\n\nThank you for sharing the ore, {self.player.get_title()}."
             f"{" It helps immensely." if self.interlocutor.loyalty100 > 10 else ''}"
             f"\n\nWe will now replenish your resources and repair your ship."
@@ -203,12 +211,10 @@ class ReportingInOutpost(Conversation):
                 }
             ]
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._say_what_the_fuck(button_index, buttons)
-            )
+        self._ask(text, buttons, self._react_to_cash_request)
 
-    def _say_what_the_fuck(self, chosen_button: int, consequences: List[dict]) -> ReportingInOutpost:
+    def _react_to_cash_request(self, chosen_button: Optional[int], consequences: List[dict]) -> ReportingInOutpost:
+        """The answer to _thank_on_first_visit: its third button (cash) gets a reply first."""
         if chosen_button == 2:
             subjective_title = self.interlocutor.get_player_title(self.player)
             # Prepare the text:
@@ -220,20 +226,15 @@ class ReportingInOutpost(Conversation):
             # Prepare the buttons: Here I can pass on or even change the consequences :)
             only_button = consequences[2]
             only_button['text'] = 'Ok, nevermind'
-            buttons = [only_button]
-
-            show_message(
-                self.prepare_message(self.title, text, buttons),
-                on_result=lambda button_index: self._finish_operations(button_index, buttons)
-                )
+            self._ask(text, [only_button], self._settle_visit)
             return self
 
-        self._finish_operations(chosen_button, consequences)
+        self._settle_visit(chosen_button, consequences)
         return self
-
     # endregion
 
-    def _greet_and_warn(self) -> None:
+    # region Greet without ore
+    def _greet_without_ore(self) -> None:
         subjective_title = self.interlocutor.get_player_title(self.player)
 
         # Prepare the text:
@@ -248,7 +249,7 @@ class ReportingInOutpost(Conversation):
             elif self.interlocutor.empathy100 > 80:
                 presentation = f"I am {self.interlocutor.name}, the ComOfficer here."
             else:
-                presentation = f"\n\nI am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
+                presentation = f"I am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
 
         is_conspiratory = self.interlocutor.loyalty100 < 20 and self.interlocutor.sociability100 > 80 and self.interlocutor.sympathy100 > 40
 
@@ -309,12 +310,11 @@ class ReportingInOutpost(Conversation):
                 }
             )
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._finish_operations(button_index, buttons)
-            )
+        self._ask(text, buttons, self._settle_visit)
+    # endregion
 
-    def _greet_tell_me(self) -> None:
+    # region Small talk
+    def _ask_anything_else(self) -> None:
         subjective_title = self.interlocutor.get_player_title(self.player)
 
         # Prepare the text:
@@ -327,12 +327,9 @@ class ReportingInOutpost(Conversation):
                 , { 'text': 'Nevermind.' }
             ]
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._say_about_politics(button_index, buttons)
-            )
+        self._ask(text, buttons, self._answer_about_politics)
 
-    def _say_about_politics(self, button_index: int, _: List[dict]) -> None:
+    def _answer_about_politics(self, button_index: Optional[int], _: List[dict]) -> None:
         # Prepare the text:
         if button_index == 0:
             if self.interlocutor.sociability100 > 30:
@@ -429,7 +426,7 @@ class ReportingInOutpost(Conversation):
         else:
             logger.debug(f"Reputation: {self.player.those_who_share.reputation}")
             logger.debug(f"Sympathy: {self.interlocutor.sympathy100}")
-            self.close(self.interaction_lines)
+            self.close()
             return
 
         # Prepare the buttons:
@@ -447,11 +444,10 @@ class ReportingInOutpost(Conversation):
                 }
             )
 
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: self._finish_operations(button_index, buttons)
-            )
+        self._ask(text, buttons, self._settle_visit)
+    # endregion
 
+    # region Settling the visit
     def _apply_button(self, consequences: List[dict], chosen_button: Optional[int]) -> None:
         """The consequences of the pressed button. Esc (None) presses nothing."""
         if chosen_button is None:
@@ -462,7 +458,9 @@ class ReportingInOutpost(Conversation):
         if 'sympathy' in my_consequences:
             self.interlocutor.adjust_sympathy(my_consequences['sympathy'])
 
-    def _finish_operations(self, chosen_button: int, consequences: List[dict]) -> ReportingInOutpost:
+    def _settle_visit(self, chosen_button: Optional[int], consequences: List[dict]) -> ReportingInOutpost:
+        """The pressed button's consequences, then the outpost restocks and repairs the ship and pays its ore in
+        reputation, gives mines, and closes the conversation (after a word on a new title or a bigger hold, if any)."""
         status = self.player.those_who_share
         ship = self.player.ship
         cargo_hold = ship.cargo_hold
@@ -532,7 +530,7 @@ class ReportingInOutpost(Conversation):
             # semi-new-title, *very* improbable to happen at the same time.
             self._we_tweaked_your_ship()
         else:
-            self.close(self.interaction_lines)
+            self.close()
         return self
 
     def _welcome_to_new_title(self, old_title: str, new_title: str) -> None:
@@ -548,28 +546,10 @@ class ReportingInOutpost(Conversation):
                 )
 
             self.player.ship.cargo_hold.capacity = max(5000, self.player.ship.cargo_hold.capacity)
-
-            # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
-            buttons = [
-                    {
-                    'text': 'Long live',
-                    'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
-                    'sympathy': 0.1 if self.interlocutor.loyalty100 > 10 else -1,
-                    }
-                    , {
-                    'text': 'Thank you for sharing',
-                    'sympathy': 0 if self.interlocutor.loyalty100 > 5 else 1,  # Took the hint
-                    }
-                ]
-
-            def answered(button_index: Optional[int]) -> None:
-                self._apply_button(buttons, button_index)
-                self.close(self.interaction_lines)
-
-            show_message(self.prepare_message(self.title, text, buttons), on_result=answered)
+            self._ask_then_close(text, self._thanks_buttons())
             return
 
-        self.close(self.interaction_lines)
+        self.close()
 
     def _we_tweaked_your_ship(self) -> None:
         """The player arrived to an outpost for the first time, fine enough to remain 'Citizen'."""
@@ -579,9 +559,11 @@ class ReportingInOutpost(Conversation):
             )
 
         self.player.ship.cargo_hold.capacity *= 1.5
+        self._ask_then_close(text, self._thanks_buttons())
 
-        # Prepare the buttons: If disloyal, will appreciate a "wrong" answer.
-        buttons = [
+    def _thanks_buttons(self) -> List[dict]:
+        """The answers to a gift (a new title, a bigger hold). If disloyal, will appreciate a "wrong" answer."""
+        return [
                 {
                 'text': 'Long live',
                 'reputation': 0.01 if self.interlocutor.loyalty100 > 10 else 0,
@@ -592,9 +574,4 @@ class ReportingInOutpost(Conversation):
                 'sympathy': 0 if self.interlocutor.loyalty100 > 5 else 1,  # Took the hint
                 }
             ]
-
-        def answered(button_index: Optional[int]) -> None:
-            self._apply_button(buttons, button_index)
-            self.close(self.interaction_lines)
-
-        show_message(self.prepare_message(self.title, text, buttons), on_result=answered)
+    # endregion

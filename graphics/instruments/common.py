@@ -1,35 +1,24 @@
 """Shared utilities and texture caching for cockpit instruments."""
 
 from __future__ import annotations
+import logging
 import math
 import pygame
 from typing import Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
+from common.paths import resource_path
 from ..constants import (
-    CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
+    ACCENT, CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     CONSOLE, HULL_EDGE_COLOR, HULL_DARK, READOUT_BG, CONSOLE_EDGE_COLOR,
     VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP,
 )
-from common.paths import resource_path
-from ..constants import ACCENT
-
-PANEL_TITLE_GAP = 6  # pixels between a panel's title and its box
-
-
-def panel_box_top(font: pygame.font.Font, title_top: int) -> int:
-    """Where the box of a panel starts, below its title, whose top is `title_top`."""
-    return title_top + font.get_linesize() + PANEL_TITLE_GAP
-
-
-def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int, colour: Tuple[int, int, int] = ACCENT) -> None:
-    """A panel's title, centred on centre_x with its top at `top`, in ACCENT unless another colour is given."""
-    label = font.render(text, True, colour)
-    surface.blit(label, label.get_rect(midtop=(centre_x, top)))
-
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
 
+logger = logging.getLogger(__name__)
+
+PANEL_TITLE_GAP = 6  # pixels between a panel's title and its box
 
 _cockpit_background: Optional[pygame.Surface] = None
 _windshield_frame_texture: Optional[pygame.Surface] = None
@@ -37,6 +26,7 @@ _windshield_frame_texture: Optional[pygame.Surface] = None
 _console_background: Optional[Tuple[int, int, int, pygame.Surface, pygame.Surface]] = None
 
 
+# region View geometry
 def view_geometry(h: int) -> Tuple[int, int, float]:
     """(view_h, horizon_y, focal_length_px) for a view of window height h. The horizon is in the middle of the view."""
     view_h = int(h * CONSOLE_TOP)
@@ -49,7 +39,7 @@ def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int, focal
     """Pinhole-project a direction (in the frame consumed by ship.attitude.camera_components)
     onto the screen. Returns None if the direction is behind the near-clip plane, or
     grazing it at a wide angle: an object can be just past NEAR_CLIP in front of the
-    camera but have a huge sideways offset (e.g. a world many AU away, nearly
+    camera but have a huge sideways offset (e.g. a world very far away, nearly
     perpendicular to the view), which would otherwise project to a screen coordinate
     large enough to overflow pygame's Rect."""
     right, cam_up, cam_forward = ship.attitude.camera_components(vector)
@@ -61,8 +51,10 @@ def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int, focal
     if abs(screen_x - w / 2) > off_screen_margin or abs(screen_y - horizon_y) > off_screen_margin:
         return None
     return screen_x, screen_y
+# endregion
 
 
+# region Textures
 def get_cockpit_background(w: int, h: int) -> pygame.Surface:
     """Load, scale, and apply gradient darkening to cockpit texture.
 
@@ -85,8 +77,6 @@ def get_cockpit_background(w: int, h: int) -> pygame.Surface:
             result.blit(gradient_overlay, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
             _cockpit_background = result
         except (pygame.error, FileNotFoundError) as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to load cockpit background texture from {texture_path}: {e}")
             # Create fallback solid color surface
             fallback = pygame.Surface((w, h))
@@ -146,37 +136,34 @@ def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
         frame_texture.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
         _windshield_frame_texture = frame_texture
     return _windshield_frame_texture
+# endregion
 
 
+# region Panels
 def bezel_depth(h: int) -> int:
     """Thickness, in pixels, of every instrument bezel. One value for all instruments at a given window
     height, so their borders match."""
     return max(2, int(h * 0.006))
 
 
-def draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | None = None, w: int | None = None, h: int | None = None) -> None:
-    """Draw a recessed instrument screen: a raised bezel frame around a
-    sunken readout, lit from the top-left (bezel highlight top/left,
-    shadow bottom/right; screen shadow top/left, inner highlight
-    bottom/right) instead of a single flat border line.
+def panel_box_top(font: pygame.font.Font, title_top: int) -> int:
+    """Where the box of a panel starts, below its title, whose top is `title_top`."""
+    return title_top + font.get_linesize() + PANEL_TITLE_GAP
 
-    The bezel thickness is bezel_depth(h) when h is given (callers should pass it), otherwise
-    a width-based value. When w and h are provided, the bezel background uses the cockpit texture
-    instead of a solid color.
+
+def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int, colour: Tuple[int, int, int] = ACCENT) -> None:
+    """A panel's title, centred on centre_x with its top at `top`, in ACCENT unless another colour is given."""
+    label = font.render(text, True, colour)
+    surface.blit(label, label.get_rect(midtop=(centre_x, top)))
+
+
+def draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int) -> None:
+    """Draw a recessed instrument screen: a raised bezel frame `depth` pixels thick (see bezel_depth) around a
+    sunken readout, lit from the top-left (bezel highlight top/left, shadow bottom/right; screen shadow top/left,
+    inner highlight bottom/right) instead of a single flat border line.
     """
-    if depth is None:
-        depth = bezel_depth(h) if h is not None else max(2, rect.width // 24)
     outer = rect.inflate(depth * 2, depth * 2)
-
-    if w is not None and h is not None:
-        background = get_cockpit_background(w, h)
-        try:
-            texture_portion = background.subsurface((outer.left, outer.top, outer.width, outer.height))
-            surface.blit(texture_portion, outer)
-        except (ValueError, pygame.error):
-            pygame.draw.rect(surface, CONSOLE, outer)
-    else:
-        pygame.draw.rect(surface, CONSOLE, outer)
+    pygame.draw.rect(surface, CONSOLE, outer)
 
     # Bezel: raised, so light catches top/left and shadow falls bottom/right.
     pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.right - 1, outer.top), depth)
@@ -191,3 +178,4 @@ def draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int | 
     pygame.draw.line(surface, HULL_EDGE_COLOR, (rect.left, rect.bottom - 1), (rect.right - 1, rect.bottom - 1), 1)
     pygame.draw.line(surface, HULL_EDGE_COLOR, (rect.right - 1, rect.top), (rect.right - 1, rect.bottom - 1), 1)
     pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, rect, 1)
+# endregion

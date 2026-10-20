@@ -6,23 +6,26 @@ Learn modern technologies by building a prototype of a game I always dreamed abo
 ## Mission
 Learn Python, a modern IDE, GitHub and Claude Code (AI), creating a prototype for a solo space game with realistic dimensions (time included), which implies never saving the world itself but only the changes caused by the player. The setting is the “world after the disaster” of my sci-fi concept, in the year 700.
 
-## Log (after last release, see Git for history)
 
->Committed
+> After the last release 2026-10-20 (9/10)
+
+Extra time: 83h00' + 18:00 - 
+
+> Not committed yet but done:
+  * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Extra: Strange rocks look a bit different? Subtle texture? Done, untested.
->Done
 
->Not started
-# BACKLOG
+> Not done yet but started:
+
+# NOT STARTED YET = BACKLOG
 * ASTEROIDS (II)
+  * Thanks for package gives extra autonomy. Which allows asteroid missions.
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Extra: rethink all seeds, make your proposals.
   * Place one in initial system, not too far away.
   * Outpost gives coordinates as prize?
-  * Extra: Can the Ai or another sevice create the photos?
   * Extra: Cooler laser.
   * Extra: Improve the sounds for real.
-  * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
   * Extra: Download more faces of the main races.
   * Extra: Latinos.
   * Idea: Strange rocks can be collected proactively and brought to the outpost.

@@ -66,9 +66,7 @@ DUST = (128, 118, 104)
 LEVEL_SPLIT = 120  # y of the ledge between the two levels, on a 240 px tall wall
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# Noise and array helpers
-
+# region Noise and array helpers
 def noise(rng: np.random.Generator, w: int, h: int, cells_x: int, cells_y: int) -> np.ndarray:
     """Smooth random values 0..1 as an (h, w) array: random cells, scaled up with smoothing."""
     cells_x, cells_y = max(2, cells_x), max(2, cells_y)
@@ -100,11 +98,11 @@ def to_surface(array: np.ndarray) -> pygame.Surface:
 
 def shade(colour: Colour, factor: float) -> Colour:
     return tuple(max(0, min(255, int(value * factor))) for value in colour)  # type: ignore[return-value]
+# endregion
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# Wear: dust, micrometeorite pits, sun-bleaching, a few scratches. No rain, no rust.
-
+# region Wear
+# Dust, micrometeorite pits, sun-bleaching, a few scratches. No rain, no rust.
 def weather(surface: pygame.Surface, rng: np.random.Generator, strength: float = 1.0) -> pygame.Surface:
     width, height = surface.get_size()
     array = to_array(surface)
@@ -142,11 +140,10 @@ def weather(surface: pygame.Surface, rng: np.random.Generator, strength: float =
         pygame.draw.line(scratches, colour, (x0, y0), end, 1)
     result.blit(scratches, (0, 0))
     return result
+# endregion
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# Painting helpers
-
+# region Painting helpers
 def rivet(surface: pygame.Surface, x: int, y: int, radius: int = 2) -> None:
     pygame.draw.circle(surface, (40, 42, 46), (x + 1, y + 1), radius)
     pygame.draw.circle(surface, (150, 152, 158), (x, y), radius)
@@ -305,6 +302,17 @@ def airlock_door(surface: pygame.Surface, door: pygame.Rect, label: str) -> None
     stencil(surface, label, (door.centerx, door.top + 62), 8, (214, 214, 206))
 
 
+def airlock_door_small(surface: pygame.Surface, door: pygame.Rect, label: str) -> None:
+    pygame.draw.rect(surface, FRAME_LIGHT, door.inflate(14, 8))
+    pygame.draw.rect(surface, FRAME_DARK, door.inflate(14, 8), 3)
+    pygame.draw.rect(surface, FRAME, door)
+    pygame.draw.line(surface, FRAME_DARK, (door.centerx, door.top), (door.centerx, door.bottom), 3)
+    pygame.draw.circle(surface, FRAME_DARK, (door.centerx, door.top + 30), 12)
+    pygame.draw.circle(surface, (16, 22, 28), (door.centerx, door.top + 30), 8)
+    hazard(surface, pygame.Rect(door.left - 8, door.bottom - 10, door.width + 16, 10))
+    stencil(surface, label, (door.centerx, door.top + 58), 14, (214, 214, 206))
+
+
 def window_socket(surface: pygame.Surface, rect: pygame.Rect) -> None:
     pygame.draw.rect(surface, FRAME_DARK, rect.inflate(12, 12))
     pygame.draw.rect(surface, FRAME_LIGHT, rect.inflate(12, 12), 1)
@@ -380,11 +388,11 @@ def lamp(centre: Tuple[int, int], colour: Colour, radius: int = 4) -> Emissive:
 
 def lit_choice(rng: np.random.Generator, probability: float) -> Tuple[bool, int]:
     return bool(rng.random() < probability), int(rng.random() < 0.2)
+# endregion
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# Faces. Each returns the painted face and the painters of its light pass.
-
+# region Faces
+# Each returns the painted face and the painters of its light pass.
 def base_wall(rng: np.random.Generator, w: int = 960, h: int = 240) -> pygame.Surface:
     """The shared two-level shell: parapet, upper cladding, ledge with the red band, lower cladding, plinth."""
     surface = pygame.Surface((w, h))
@@ -494,17 +502,6 @@ def paint_side(rng: np.random.Generator, number: str, door_x: int, ports_x: int)
     return surface, light
 
 
-def airlock_door_small(surface: pygame.Surface, door: pygame.Rect, label: str) -> None:
-    pygame.draw.rect(surface, FRAME_LIGHT, door.inflate(14, 8))
-    pygame.draw.rect(surface, FRAME_DARK, door.inflate(14, 8), 3)
-    pygame.draw.rect(surface, FRAME, door)
-    pygame.draw.line(surface, FRAME_DARK, (door.centerx, door.top), (door.centerx, door.bottom), 3)
-    pygame.draw.circle(surface, FRAME_DARK, (door.centerx, door.top + 30), 12)
-    pygame.draw.circle(surface, (16, 22, 28), (door.centerx, door.top + 30), 8)
-    hazard(surface, pygame.Rect(door.left - 8, door.bottom - 10, door.width + 16, 10))
-    stencil(surface, label, (door.centerx, door.top + 58), 14, (214, 214, 206))
-
-
 def paint_roof(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]]:
     w, h = 960, 480
     surface = pygame.Surface((w, h))
@@ -576,9 +573,8 @@ def paint_metal(rng: np.random.Generator) -> pygame.Surface:
     array = to_array(patch)
     array *= (0.92 + 0.16 * noise(rng, METAL[2], METAL[3], 8, 8))[..., None]
     return to_surface(array)
+# endregion
 
-
-# ---------------------------------------------------------------------------------------------------------------
 
 def finish(painted: Tuple[pygame.Surface, List[Emissive]], rng: np.random.Generator, strength: float = 1.0) -> pygame.Surface:
     surface, light = painted

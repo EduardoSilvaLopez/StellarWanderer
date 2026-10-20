@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from datetime import datetime
-from typing import Any, List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING
 import math
 import pygame
 from common.vector3 import Vector3
@@ -53,14 +53,12 @@ class Radar:
             (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS)
         ]
         for world in system.get_all_worlds():
-            if world.parent_planet:
-                found.append((world.calculate_stellar_position(date_time), RADAR_MOON_COLOR, RADAR_MOON_DOT_RADIUS))
-            else:
-                found.append((world.calculate_stellar_position(date_time), RADAR_WORLD_COLOR, RADAR_WORLD_DOT_RADIUS))
+            colour, radius = (RADAR_MOON_COLOR, RADAR_MOON_DOT_RADIUS) if world.parent_planet                 else (RADAR_WORLD_COLOR, RADAR_WORLD_DOT_RADIUS)
+            found.append((world.calculate_stellar_position(date_time), colour, radius))
         return found
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, h: int, rect: pygame.Rect, ship: Ship, date_time: datetime) -> None:
+    def draw(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, date_time: datetime) -> None:
         padding = max(6, int(rect.height * 0.04))
         half_height = rect.height / 2 - padding
         vertical_radius = half_height * Radar.ELLIPSE_FRACTION

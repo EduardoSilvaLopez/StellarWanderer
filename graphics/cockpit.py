@@ -23,7 +23,7 @@ class Cockpit:
     """Renders cockpit instrumentation: hull, console, and clock."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime, time_scale: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
         """Draw all cockpit elements.
 
         Args:
@@ -33,7 +33,6 @@ class Cockpit:
             h: Window height
             player: Player object
             date_time: Player's ship time
-            time_scale: Time acceleration factor
         """
         import game_environment as gem
         Canopy.draw(surface, w, h)
@@ -41,7 +40,7 @@ class Cockpit:
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)
         TargetMarker.draw(surface, w, h, gem.current_environment, player.ship)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
-        CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h, player), player)
+        CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h), player)
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         LocationInfo.draw_name(surface, fonts, w, h)
-        Clock.draw(surface, fonts, date_time, time_scale, w, h)
+        Clock.draw(surface, fonts, date_time, player.time_scale, w, h)

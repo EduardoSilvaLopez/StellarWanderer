@@ -36,22 +36,17 @@ class CargoHold:
         self.ore: int = 0
 
     @staticmethod
-    def load(ship: Ship, src: dict) -> CargoHold:
+    def deserialize(ship: Ship, src: dict) -> CargoHold:
         result = CargoHold(ship)
         result.capacity = src['capacity']
         result.air_max = src['air_max']
         result.water_max = src['water_max']
         result.food_max = src['food_max']
-        if 'air' in src:
-            result.air = src['air']
-        if 'water' in src:
-            result.water = src['water']
-        if 'food' in src:
-            result.food = src['food']
-        if 'mines' in src:
-            result.mines = src['mines']
-        if 'ore' in src:
-            result.ore = src['ore']
+        result.air = src['air']
+        result.water = src['water']
+        result.food = src['food']
+        result.mines = src['mines']
+        result.ore = src['ore']
         return result
 
     def serialize(self) -> dict:

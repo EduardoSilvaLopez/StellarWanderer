@@ -146,7 +146,8 @@ class LitWorlds:
 
     @staticmethod
     def draw_targeted(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        """The targeted body, lit by the star (used while unbound). The star is not drawn here: the OpenGL pass draws it (star_gl.py)."""
+        """The targeted body, lit by the star: for OpenGLGui while bound when there is no surface light. The star is not
+        drawn here: the OpenGL pass draws it (star_gl.py)."""
         from galaxies.world import World
         body = environment.targeted_body
         if not isinstance(body, World):  # the star

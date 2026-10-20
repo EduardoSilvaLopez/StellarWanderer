@@ -74,12 +74,10 @@ class WorldMap:
             WorldMap.drag_position = position
 
     @staticmethod
-    def zoom(steps: int) -> bool:
-        """Step the zoom (positive = closer) while the mouse is over the map. Returns whether it was."""
-        if not WorldMap.hovered:
-            return False
-        WorldMap._set_zoom(max(0, WorldMap.zoom_index + steps))  # draw() limits it to the finest level
-        return True
+    def zoom(steps: int) -> None:
+        """Step the zoom (positive = closer) while the mouse is over the map."""
+        if WorldMap.hovered:
+            WorldMap._set_zoom(max(0, WorldMap.zoom_index + steps))  # draw() limits it to the finest level
 
     @staticmethod
     def _set_zoom(index: int) -> None:
@@ -128,27 +126,7 @@ class WorldMap:
         WorldMap._set_zoom(min(WorldMap.zoom_index, len(levels) - 1))
         scale = levels[WorldMap.zoom_index]
 
-        # Header: the scale while the mouse is over the map, else the world's name; flanked by local year/day.
-        header_text = world_name_text
-        if WorldMap.hovered:
-            header_text = fonts.render_to_fit(f'1 px = {WorldMap._format_scale(scale)}', ACCENT, mfd.width - 12, title_size)
-        header_rect = header_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
-        surface.blit(header_text, header_rect)
-
-        side_font_size = max(8, int(h * 0.013))
-        side_gap = max(6, int(h * 0.008))
-        year_percent = int(100 * world.local_year_fraction(date_time))
-        day_percent = int(100 * world.local_day_fraction(date_time))
-
-        year_text = fonts.render_to_fit(
-            f'Local Y: {year_percent}%', ACCENT_DIM, max(20, header_rect.left - mfd.left - side_gap), side_font_size
-        )
-        surface.blit(year_text, year_text.get_rect(midleft=(mfd.left + side_gap, header_rect.centery)))
-
-        day_text = fonts.render_to_fit(
-            f'Local D: {day_percent}%', ACCENT_DIM, max(20, mfd.right - header_rect.right - side_gap), side_font_size
-        )
-        surface.blit(day_text, day_text.get_rect(midright=(mfd.right - side_gap, header_rect.centery)))
+        WorldMap._draw_header(surface, fonts, mfd, h, world, world_name_text, title_size, scale, date_time)
 
         if WorldMap.zoom_index == 0:
             pygame.draw.rect(surface, ACCENT_DIM, inner_area, 1)  # the world rectangle
@@ -183,6 +161,32 @@ class WorldMap:
         pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left), round(bottom - top)), 1)
         WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area)
         surface.set_clip(previous_clip)
+
+    @staticmethod
+    def _draw_header(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, world: World,
+                     world_name_text: pygame.Surface, title_size: int, scale: float, date_time: datetime) -> None:
+        """The header: the scale while the mouse is over the map, else the world's name; flanked by the local year and
+        day."""
+        header_text = world_name_text
+        if WorldMap.hovered:
+            header_text = fonts.render_to_fit(f'1 px = {WorldMap._format_scale(scale)}', ACCENT, mfd.width - 12, title_size)
+        header_rect = header_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
+        surface.blit(header_text, header_rect)
+
+        side_font_size = max(8, int(h * 0.013))
+        side_gap = max(6, int(h * 0.008))
+        year_percent = int(100 * world.local_year_fraction(date_time))
+        day_percent = int(100 * world.local_day_fraction(date_time))
+
+        year_text = fonts.render_to_fit(
+            f'Local Y: {year_percent}%', ACCENT_DIM, max(20, header_rect.left - mfd.left - side_gap), side_font_size
+        )
+        surface.blit(year_text, year_text.get_rect(midleft=(mfd.left + side_gap, header_rect.centery)))
+
+        day_text = fonts.render_to_fit(
+            f'Local D: {day_percent}%', ACCENT_DIM, max(20, mfd.right - header_rect.right - side_gap), side_font_size
+        )
+        surface.blit(day_text, day_text.get_rect(midright=(mfd.right - side_gap, header_rect.centery)))
 
     @staticmethod
     def _scale_levels(full_scale: float) -> List[float]:

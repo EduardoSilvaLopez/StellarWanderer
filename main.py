@@ -55,9 +55,7 @@ WINDOW_SIZE = (1920, 1080)
 MIN_SIZE = (640, 400)
 FPS = 60
 
-# Altitude change control
-ALTITUDE_CHANGE_PER_SECOND = 1  # meters per second at time_scale 1
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()  # datetime tops out at year 9999;
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()  # datetime tops out at year 9999
 EPOCH = gem.GameEnvironment.EPOCH
 
 
@@ -93,6 +91,54 @@ def resize_window(width: int, height: int) -> pygame.Surface:
     """Re-create the OpenGL window at the requested size (never below MIN_SIZE)."""
     size = (max(width, MIN_SIZE[0]), max(height, MIN_SIZE[1]))
     return pygame.display.set_mode(size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
+
+
+def run_modal_dialog(
+        dialog: Dialog, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[DialogResult, pygame.Surface]:
+    """Show `dialog` above the frozen game until it returns a result.
+
+    Game time is paused for as long as this runs: nothing that advances it (elapsed, date and
+    time, movement, scanner, the update queue) is called here, the game frame behind the dialog
+    is just re-rendered unchanged. Returns the result and the (possibly resized) window."""
+    player = player_module.current_player
+    if player.ship.laser.firing:
+        player.ship.laser.cease_fire()
+    audio.stop_loops()
+    audio.play(dialog.OPEN_SOUND)
+
+    result = None
+    while result is None:
+        for event in pygame.event.get():
+            if event.type == pygame.VIDEORESIZE:
+                screen = resize_window(event.w, event.h)
+                continue
+            result = dialog.handle_event(dialog.localize_event(event, pygame.display.get_window_size()))
+            if result is not None:
+                break
+        gui.draw(screen, fonts, gem.current_environment, player,
+                 top_layer=dialog.compose_overlay(pygame.display.get_window_size()))
+        pygame.display.flip()
+        clock.tick(FPS)
+    clock.tick()  # restart the frame timer, so the time spent in the dialog is not part of the next dt
+    audio.play(dialog.CLOSE_SOUND)
+    return result, screen
+
+
+def show_pending_messages(
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """Show the queued messages in order (show_message), each answer going to its callback.
+    Returns (keep running, window): closing the window while a message is open stops the game."""
+    pending_message = next_pending_message()
+    while pending_message is not None:
+        result, screen = run_modal_dialog(MessageDialog(pending_message.message), screen, gui, fonts, clock)
+        if result[0] == 'exit':
+            return False, screen
+        if pending_message.on_result is not None:
+            pending_message.on_result(result[1])  # the pressed button's index, None for Esc
+        pending_message = next_pending_message()
+    return True, screen
 
 
 def start_game(action: str, value: object) -> float:
@@ -138,31 +184,6 @@ def start_game(action: str, value: object) -> float:
     return elapsed
 
 
-def open_starting_dialog(
-        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
-        game_running: bool = True
-        ) -> Tuple[DialogResult, pygame.Surface]:
-    """Show the starting dialog above the frozen game (see run_modal_dialog). With game_running False (after a death)
-    there is no resuming: only a new game, a load, or exit."""
-    return run_modal_dialog(StartingDialog(game_running=game_running), screen, gui, fonts, clock)
-
-
-def show_pending_messages(
-        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
-        ) -> Tuple[bool, pygame.Surface]:
-    """Show the queued messages in order (show_message), each answer going to its callback.
-    Returns (keep running, window): closing the window while a message is open stops the game."""
-    pending_message = next_pending_message()
-    while pending_message is not None:
-        result, screen = run_modal_dialog(MessageDialog(pending_message.message), screen, gui, fonts, clock)
-        if result[0] == 'exit':
-            return False, screen
-        if pending_message.on_result is not None:
-            pending_message.on_result(result[1])  # the pressed button's index, None for Esc
-        pending_message = next_pending_message()
-    return True, screen
-
-
 def write_save(name: str) -> None:
     """Save the game as `name`; a file that cannot be written is reported in a message."""
     try:
@@ -200,7 +221,9 @@ def open_start_menu(
         elapsed: float, game_running: bool
         ) -> Tuple[bool, pygame.Surface, float]:
     """The starting dialog, and the game it chooses. Returns (keep running, window, elapsed ship seconds)."""
-    result, screen = open_starting_dialog(screen, gui, fonts, clock, game_running)
+    # Above the frozen game. With game_running False (after a death) there is no resuming: only a new game, a load,
+    # or exit.
+    result, screen = run_modal_dialog(StartingDialog(game_running=game_running), screen, gui, fonts, clock)
     if result[0] == 'exit':
         return False, screen, elapsed
     if result[0] == 'save':
@@ -216,38 +239,6 @@ def allowed_while_paused(event: pygame.event.Event) -> bool:
     if event.type in (pygame.QUIT, pygame.VIDEORESIZE):
         return True
     return event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_KP_PLUS)
-
-
-def run_modal_dialog(
-        dialog: Dialog, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
-        ) -> Tuple[DialogResult, pygame.Surface]:
-    """Show `dialog` above the frozen game until it returns a result.
-
-    Game time is paused for as long as this runs: nothing that advances it (elapsed, date and
-    time, movement, scanner, the update queue) is called here, the game frame behind the dialog
-    is just re-rendered unchanged. Returns the result and the (possibly resized) window."""
-    player = player_module.current_player
-    if player.ship.laser.firing:
-        player.ship.laser.cease_fire()
-    audio.stop_loops()
-    audio.play(dialog.OPEN_SOUND)
-
-    result = None
-    while result is None:
-        for event in pygame.event.get():
-            if event.type == pygame.VIDEORESIZE:
-                screen = resize_window(event.w, event.h)
-                continue
-            result = dialog.handle_event(dialog.localize_event(event, pygame.display.get_window_size()))
-            if result is not None:
-                break
-        gui.draw(screen, fonts, gem.current_environment, player,
-                 top_layer=dialog.compose_overlay(pygame.display.get_window_size()))
-        pygame.display.flip()
-        clock.tick(FPS)
-    clock.tick()  # restart the frame timer, so the time spent in the dialog is not part of the next dt
-    audio.play(dialog.CLOSE_SOUND)
-    return result, screen
 
 
 def main() -> None:
@@ -268,9 +259,7 @@ def main() -> None:
     logger.info("Game started.")
     logger.info("================================================================================")
     # Now create the main OpenGL display
-    screen = pygame.display.set_mode(
-        WINDOW_SIZE, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE
-    )
+    screen = resize_window(*WINDOW_SIZE)
     pygame.display.set_caption(WINDOW_TITLE)
     center_window_on_screen(WINDOW_TITLE, WINDOW_SIZE)
     clock = pygame.time.Clock()
@@ -313,7 +302,6 @@ def main() -> None:
                 elif event.key == pygame.K_F5:
                     Savefile.save()
                 elif event.key == pygame.K_F6:
-                    update_queue.clear()
                     audio.stop_loops()
                     Savefile.load_last()
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
@@ -322,9 +310,9 @@ def main() -> None:
                     gem.current_environment.cycle_targeted_body(step, player_module.current_player.ship.position.as_vector())
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
-                    player_module.current_player.ship.set_mine_pressed()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and CockpitButtons.hit(event.pos) is not None:
-                pressed = CockpitButtons.hit(event.pos)
+                    player_module.current_player.ship.place_mine()
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 if pressed == MISSIONS:
                     dialog = PendingMissionsDialog([m for m in player_module.current_player.missions if m.status == OPEN])
                 else:

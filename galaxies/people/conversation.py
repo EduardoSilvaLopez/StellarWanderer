@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class Conversation(ABC):
+    def __init__(self, interlocutor: Person) -> None:
+        self.interlocutor: Person = interlocutor.meet()
+        self.date_time: datetime = gem.current_environment.date_time
+        self.interaction_lines: List[str] = []
+
     @staticmethod
     def generate(interlocutor: Person) -> Optional[Conversation]:
         """Starts the conversation that fits the interlocutor's residency, and returns it (None if there is none yet)."""
@@ -28,40 +33,20 @@ class Conversation(ABC):
     def start(self) -> None:
         """Shows the first message of the conversation."""
 
-    def __init__(self, interlocutor: Person) -> None:
-        self.interlocutor: Person = interlocutor.meet()
-        self.date_time: datetime = gem.current_environment.date_time
-        self.interaction_lines: List[str] = []
-
     def prepare_message(self, title: str, text: str, button_dicts: List[dict]) -> Message:
-        '''Gets a dict of dicts with "text" for every button and the related effects.'''
-        result: Message = None
-        if len(button_dicts) == 1:
-            result = Message(
-                title=title,
-                text=text,
-                buttons=[button_dicts[0]['text']],
-                open_sound='radio_open'
-            )
-        elif len(button_dicts) == 2:
-            result = Message(
-                title=title,
-                text=text,
-                buttons=[button_dicts[0]['text'], button_dicts[1]['text']],
-                open_sound='radio_open'
-            )
-        else:
-            result = Message(
-                title=title,
-                text=text,
-                buttons=[button_dicts[0]['text'], button_dicts[1]['text'], button_dicts[2]['text']],
-                open_sound='radio_open'
-            )
-        return result
+        '''A message over the radio, with one button for each dict of `button_dicts` (its "text"; the rest are the
+        button's effects).'''
+        return Message(
+            title=title,
+            text=text,
+            buttons=[button['text'] for button in button_dicts],
+            open_sound='radio_open'
+        )
 
-    def close(self, interaction_lines: List[str]) -> None:
+    def close(self) -> None:
+        """Ends the conversation: the interlocutor remembers it, with its interaction_lines."""
         self.interlocutor.last_communication_at = self.date_time
-        self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = interaction_lines
-        self.interlocutor.ensure()
-        self.interlocutor.log_update()
+        self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = self.interaction_lines
+        self.interlocutor.record()
+        self.interlocutor.log_description()
         logger.debug("Finished.")

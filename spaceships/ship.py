@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 import math
 
 import logging
@@ -56,6 +56,7 @@ class Ship(Updatable):
 
     INITIAL_ENERGY_MAX = 200e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
 
+    # region Life
     def __init__(self, owner: Player) -> None:
         self.owner: Player = owner
         self.is_bound: bool = False
@@ -87,77 +88,30 @@ class Ship(Updatable):
         self.position.y = Ship.HEIGHT
         self.position.z = central_km2.latitude + 500
         return self
+    # endregion
 
-    @staticmethod
-    def load(owner: Player, src: dict) -> Ship:
-        result = owner.ship
-        result.is_bound = src['is_bound']
-        result.position = Position.deserialize(src['position'])
-        result.velocity = Velocity.deserialize(src['velocity'])
-        result.attitude = Attitude.load(result, src['attitude'])
-        if result.is_bound:
-            result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
-        if 'last_update_at' in src:
-            result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
-        if 'precariousness' in src:
-            result.precariousness = src['precariousness']
-        if 'maintenance' in src:
-            result.maintenance = src['maintenance']
-        result.energy_max = src['energy_max']
-        if 'energy' in src:
-            result.energy = src['energy']
-        if 'temp_shield_reduction' in src:
-            result.temperature = src['temp_shield_reduction']
-        if 'temperature' in src:
-            result.temperature = src['temperature']
-        result.cargo_hold = CargoHold.load(result, src['cargo_hold'])
-        return result
-
-    def serialize(self) -> dict:
-        return {
-            'is_bound': self.is_bound,
-            'position': self.position.serialize(),
-            'velocity': self.velocity.serialize(),
-            'attitude': self.attitude.serialize(),
-            'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'precariousness': self.precariousness,
-            'maintenance': self.maintenance,
-            'energy_max': self.energy_max,
-            'energy': self.energy,
-            'temp_shield_reduction': self.temp_shield_reduction,
-            'temperature': self.temperature,
-            'cargo_hold': self.cargo_hold.serialize()
-        }
-
+    # region Updating
     def get_next_update(self) -> datetime:
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
-        if self.last_update_at is None:
-            self.last_update_at = game_date_time
-            self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
-            if self in update_queue._queue:
-                logger.error("Ship still in the queue.")
-            else:
-                update_queue.add(self)
-            return
-
-        days = (game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60)
-
-        self._reduce_resources(days)
-
+        """Every UPDATE_PERIOD, the ship lives through the time passed since the last update (see _live_through). The
+        first call only starts the clock."""
+        next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
+        if self.last_update_at is not None:
+            self._live_through((game_date_time - self.last_update_at).total_seconds() / (24 * 60 * 60))
+            next_update_at = next_update_at.replace(minute=0).replace(second=0)  # Better for debugging.
         self.last_update_at = game_date_time
-        self.next_update_at = game_date_time + timedelta(seconds=Ship.UPDATE_PERIOD)
-        self.next_update_at = self.next_update_at.replace(minute=0).replace(second=0)
-            # Better for debugging.
+        self.next_update_at = next_update_at
 
-        if self in update_queue._queue:
+        if self in update_queue:
             logger.error("Ship still in the queue.")
         else:
             update_queue.add(self)
 
-    def _reduce_resources(self, days: float) -> Ship:
-
+    def _live_through(self, days: float) -> Ship:
+        """`days` pass: maintenance, energy, air, water and food are spent, the temperature moves, the pilot is warned when
+        a level is crossed, and dies when one runs out."""
         old_maintenance: float = self.maintenance
         old_energy: float = self.energy
         old_temperature: float = self.temperature
@@ -195,8 +149,6 @@ class Ship(Updatable):
             self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
         elif self.temperature <= -35 < old_temperature:
             self.notification.set("CRITICAL: Freezing. Leave this place or take measures *now*.")
-        elif self.energy <= 0.01 * Ship.INITIAL_ENERGY_MAX < old_energy:
-            self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
             self.notification.set('WARNING: Ship needs air refill. Remain near an outpost.')
         elif self.cargo_hold.air <= 2.0 < old_air:
@@ -222,9 +174,37 @@ class Ship(Updatable):
             self.owner.game_over('You die of hunger. A slow and horrible death.')
 
         return self
+    # endregion
+
+    # region Mines
+    def place_mine(self) -> None:
+        '''React to the "place mine" button: a mine on the ore field MINE_FRONT_DISTANCE metres ahead, unless something
+        forbids it (the pilot is told what).'''
+        if self.cargo_hold.mines <= 0:
+            self.notification.set("No mines available.", 'mine_refused')
+            return
+        if not self.is_bound:
+            self.notification.set("Mines can only be placed on a world.", 'mine_refused')
+            return
+        if self._mine_too_near():
+            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused')
+            return
+        if self._rock_in_front():
+            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused')
+            return
+        front_lon, front_lat = self._mine_spot()
+        targeted_field = self._ore_field_at(front_lon, front_lat)
+        if targeted_field is None:
+            self.notification.set("No ore field here.", 'mine_refused')
+            return
+
+        new_mine = OreMine(targeted_field, front_lon, front_lat, self.attitude.yaw)
+        targeted_field.mines.append(new_mine)
+        self.cargo_hold.mines -= 1
+        audio.play('mine_placed')
 
     def _mine_spot(self) -> Tuple[float, float]:
-        '''Where a mine placed now would stand: FRONT_DISTANCE metres ahead of the ship, on the ground, along its yaw.'''
+        '''Where a mine placed now would stand: MINE_FRONT_DISTANCE metres ahead of the ship, on the ground, along its yaw.'''
         radians = math.radians(self.attitude.yaw)
         return (
             self.position.x + Ship.MINE_FRONT_DISTANCE * math.sin(radians),
@@ -232,7 +212,7 @@ class Ship(Updatable):
         )
 
     def _mine_too_near(self) -> bool:
-        '''True if an ore mine already placed stands within MINE_SPACING_MULTIPLE mine radii of the spot where a new one
+        '''True if an ore mine already placed stands within OreMine.MINE_MIN_DISTANCE of the spot where a new one
         would go (see _mine_spot).
 
         Only the loaded Km2s are searched. Every mine within that distance lies in the loaded area around the ship, so
@@ -246,72 +226,66 @@ class Ship(Updatable):
                         return True
         return False
 
-    def set_mine_pressed(self) -> None:
-        '''React to the "place mine" button.'''
-        # Check conditions.
-        if self.cargo_hold.mines <= 0:
-            self.notification.set("No mines available.", 'mine_refused')
-            return
-        if not self.is_bound:
-            self.notification.set("Mines can only be placed on a world.", 'mine_refused')
-            return
-        if self._mine_too_near():
-            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused')
-            return
-
-        # Check if rocks nearby.
-        player_lon: float = self.position.x
-        player_lat: float = self.position.z
-        player_yaw: float = self.attitude.yaw
-        from galaxies.km2 import Km2
-        relevant_km2s: List[Km2] = []
-        import game_environment as gem
-        world = gem.current_environment.fixed_world
-        for km2 in world.km2s:
-            if ((km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude
-                    and (1 + km2.longitude // Km2.SIZE) * Km2.SIZE != km2.longitude):
-                continue
-            if ((km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude
-                    and (1 + km2.latitude // Km2.SIZE) * Km2.SIZE != km2.latitude):
-                continue
-            relevant_km2s.append(km2)
-
-        # Cancel if hitting a rock.
-        hitting_a_rock = False
-        for km2 in relevant_km2s:
+    def _rock_in_front(self) -> bool:
+        '''True if a rock stands less than 100 m away, within 45 degrees of the ship's yaw.'''
+        for km2 in gem.current_environment.fixed_world.km2s:
             for rock in km2.rocks:
-                if math.hypot(rock.longitude - player_lon, rock.latitude - player_lat) >= 100:
+                delta_x = rock.longitude - self.position.x
+                delta_z = rock.latitude - self.position.z
+                if math.hypot(delta_x, delta_z) >= 100:
                     continue
-                delta_x = rock.longitude - player_lon
-                delta_z = rock.latitude - player_lat
                 bearing = math.degrees(math.atan2(delta_x, delta_z))
-                angle_diff = abs(player_yaw - bearing)
-                angle_diff = min(angle_diff, 360 - angle_diff)
-                if angle_diff > 45:
-                    continue
-                hitting_a_rock = True
-                break
-            if hitting_a_rock:
-                break
-        if hitting_a_rock:
-            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused')
-            return
+                angle_diff = abs(self.attitude.yaw - bearing)
+                if min(angle_diff, 360 - angle_diff) <= 45:
+                    return True
+        return False
 
-        # Cancel if no ore field.
-        front_lon, front_lat = self._mine_spot()
-        targeted_field: OreField = None
+    def _ore_field_at(self, longitude: float, latitude: float) -> Optional[OreField]:
+        '''The ore field that holds the point, the one with the nearest centre if several do; None if none does.'''
+        targeted_field: Optional[OreField] = None
         closest_distance = float('inf')
-        for km2 in relevant_km2s:
+        for km2 in gem.current_environment.fixed_world.km2s:
             for field in km2.ore_fields:
-                distance_to_field = math.hypot(field.longitude - front_lon, field.latitude - front_lat)
+                distance_to_field = math.hypot(field.longitude - longitude, field.latitude - latitude)
                 if distance_to_field < field.radius and distance_to_field < closest_distance:
                     targeted_field = field
                     closest_distance = distance_to_field
-        if targeted_field is None:
-            self.notification.set("No ore field here.", 'mine_refused')
-            return
+        return targeted_field
+    # endregion
 
-        new_mine = OreMine(targeted_field, front_lon, front_lat, player_yaw)
-        targeted_field.mines.append(new_mine)
-        self.cargo_hold.mines -= 1
-        audio.play('mine_placed')
+    # region Persistence
+    def serialize(self) -> dict:
+        return {
+            'is_bound': self.is_bound,
+            'position': self.position.serialize(),
+            'velocity': self.velocity.serialize(),
+            'attitude': self.attitude.serialize(),
+            'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'precariousness': self.precariousness,
+            'maintenance': self.maintenance,
+            'energy_max': self.energy_max,
+            'energy': self.energy,
+            'temp_shield_reduction': self.temp_shield_reduction,
+            'temperature': self.temperature,
+            'cargo_hold': self.cargo_hold.serialize()
+        }
+
+    @staticmethod
+    def deserialize(owner: Player, src: dict) -> Ship:
+        result = owner.ship
+        result.is_bound = src['is_bound']
+        result.position = Position.deserialize(src['position'])
+        result.velocity = Velocity.deserialize(src['velocity'])
+        result.attitude = Attitude.deserialize(result, src['attitude'])
+        if result.is_bound:
+            result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
+        result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
+        result.precariousness = src['precariousness']
+        result.maintenance = src['maintenance']
+        result.energy_max = src['energy_max']
+        result.energy = src['energy']
+        result.temp_shield_reduction = src['temp_shield_reduction']
+        result.temperature = src['temperature']
+        result.cargo_hold = CargoHold.deserialize(result, src['cargo_hold'])
+        return result
+    # endregion

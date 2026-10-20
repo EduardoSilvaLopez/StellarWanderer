@@ -8,7 +8,7 @@ def format_compact_distance(meters: float) -> str:
     for symbol, scale in COMPACT_DISTANCE_UNITS:
         value = round(meters / scale)
         if abs(value) < 1_000_000 or symbol == 'Pm':
-            return f'{value} {symbol}'
+            break
     return f'{value} {symbol}'
 
 

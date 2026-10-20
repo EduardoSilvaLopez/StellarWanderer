@@ -87,6 +87,7 @@ class Star(Body):
 
     is_world = False
 
+    # region Generation
     def __init__(self, seed: float, position: tuple[float, float, float], star_type: Optional[Star.Type] = None) -> None:
         """`star_type` forces the type (the seed's type is still drawn, so the other values do not change)."""
         self.seed: float = seed
@@ -94,7 +95,7 @@ class Star(Body):
         self._system: Optional[StellarSystem] = None
         my_random: random.Random = random.Random(self.seed)
         self.name: str = Star._generate_name(my_random)
-        self.type: Star.Type = Star._generate_star_type(my_random)
+        self.type: Star.Type = Star._generate_type(my_random)
         if star_type is not None:
             self.type = star_type
         self.mass: float = self._generate_mass(my_random)
@@ -103,12 +104,12 @@ class Star(Body):
         self.temperature: float = self._generate_temperature()
         self.color: tuple = self._generate_color()  # after the temperature, which it depends on
         self.rotation_period: float = self._generate_rotation_period(my_random)
-        self.default_heat_radius: int = self._generate_heat_effect_distance(my_random)
-        self.default_death_radius: int = self._generate_heat_death_distance(my_random)
+        self.default_heat_radius: int = self._generate_heat_radius(my_random)
+        self.default_death_radius: int = self._generate_death_radius(my_random)
 
     @staticmethod
     def _generate_name(my_random: random.Random) -> str:
-        """Generate a random name for the world."""
+        """Generate a random name for the star."""
         vocals = "aeiouaeio"  # repeating the most common.
         consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
         name = ""
@@ -119,7 +120,7 @@ class Star(Body):
             if my_random.random() < 0.4:
                 name += my_random.choice(consonants)
 
-        name.replace("q", "qu")
+        name = name.replace("q", "qu")
 
         if my_random.random() < 0.5:
             name += "eia"
@@ -127,7 +128,7 @@ class Star(Body):
         return name.capitalize()
 
     @staticmethod
-    def _generate_star_type(my_random: random.Random) -> Star.Type:
+    def _generate_type(my_random: random.Random) -> Star.Type:
         rnd = my_random.random()
 
         if rnd <= 0.75:
@@ -144,10 +145,6 @@ class Star(Body):
             return Star.Type.B
         else:
             return Star.Type.O
-
-    def _generate_color(self) -> tuple:
-        """The blackbody colour at the star's temperature, made more vivid by STAR_COLOUR_VIVIDNESS."""
-        return _vivid(blackbody_rgb(self.temperature), STAR_COLOUR_VIVIDNESS)
 
     def _generate_mass(self, my_random: random.Random) -> float:
         """The mass (kg), drawn within the range of the star's type."""
@@ -176,9 +173,9 @@ class Star(Body):
         """The effective temperature (K), from the luminosity and the radius (Stefan-Boltzmann law)."""
         return (self.luminosity / (4 * math.pi * self.radius ** 2 * Star.STEFAN_BOLTZMANN)) ** 0.25
 
-    def distance_at_flux(self, flux: float) -> float:
-        """The distance (m) from the star at which its light is `flux` W/m^2."""
-        return math.sqrt(self.luminosity / (4 * math.pi * flux))
+    def _generate_color(self) -> tuple:
+        """The blackbody colour at the star's temperature, made more vivid by STAR_COLOUR_VIVIDNESS."""
+        return _vivid(blackbody_rgb(self.temperature), STAR_COLOUR_VIVIDNESS)
 
     def _generate_rotation_period(self, my_random: random.Random) -> float:
         """
@@ -207,31 +204,19 @@ class Star(Body):
         period_seconds = (2 * math.pi * self.radius) / v_eq
         return period_seconds
 
-    def _generate_heat_effect_distance(self, my_random: random.Random) -> int:
+    def _generate_heat_radius(self, my_random: random.Random) -> int:
         """The distance at which the ship starts to heat up: where the light is HEAT_FLUX, with a little spread."""
         return int(self.distance_at_flux(Star.HEAT_FLUX) * (0.9 + 0.2 * my_random.random()))
 
-    def _generate_heat_death_distance(self, my_random: random.Random) -> int:
+    def _generate_death_radius(self, my_random: random.Random) -> int:
         """The distance of the ship's maximum temperature: where the light is DEATH_FLUX, with a little spread."""
         return int(self.distance_at_flux(Star.DEATH_FLUX) * (0.9 + 0.2 * my_random.random()))
+    # endregion
 
-    def markdown(self) -> str:
-        '''Markdown of the star: its astronomical data. The luminosity and gravity are estimated from the
-        radius, mass and temperature.'''
-        GRAVITATIONAL_CONSTANT: float = 6.674e-11  # m^3 kg^-1 s^-2
-        gravity: float = GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2
-        equatorial_speed: float = 2 * math.pi * self.radius / self.rotation_period
-        return (
-            f"### Star {self.name}\n"
-            f"* Type: {self.type.value}\n"
-            f"* Effective temperature: {self.temperature:.0f} K\n"
-            f"* Mass: {self.mass:.3e} kg\n"
-            f"* Radius: {self.radius:.3e} m ({int(self.radius / 1000)} Km)\n"
-            f"* Surface gravity: {gravity:.1f} m/s²\n"
-            f"* Luminosity: {self.luminosity:.3e} W\n"
-            f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed {equatorial_speed / 1000:.1f} Km/s\n"
-            f"\n"
-            )
+    # region Light
+    def distance_at_flux(self, flux: float) -> float:
+        """The distance (m) from the star at which its light is `flux` W/m^2."""
+        return math.sqrt(self.luminosity / (4 * math.pi * flux))
 
     @property
     def absolute_magnitude(self) -> float:
@@ -242,7 +227,9 @@ class Star(Body):
         """How bright the star looks from distance_m meters away; lower is brighter."""
         distance_ly = distance_m / LIGHT_YEAR_M
         return self.absolute_magnitude + 5 * math.log10(distance_ly / ABSOLUTE_MAGNITUDE_DISTANCE_LY)
+    # endregion
 
+    # region Body
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, 0.0)
 
@@ -261,3 +248,24 @@ class Star(Body):
     @property
     def stellar_system(self) -> StellarSystem:
         return self._system
+    # endregion
+
+    # region Almanack
+    def markdown(self) -> str:
+        '''Markdown of the star: its astronomical data. The luminosity and gravity are estimated from the
+        radius, mass and temperature.'''
+        GRAVITATIONAL_CONSTANT: float = 6.674e-11  # m^3 kg^-1 s^-2
+        gravity: float = GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2
+        equatorial_speed: float = 2 * math.pi * self.radius / self.rotation_period
+        return (
+            f"### Star {self.name}\n"
+            f"* Type: {self.type.value}\n"
+            f"* Effective temperature: {self.temperature:.0f} K\n"
+            f"* Mass: {self.mass:.3e} kg\n"
+            f"* Radius: {self.radius:.3e} m ({int(self.radius / 1000)} Km)\n"
+            f"* Surface gravity: {gravity:.1f} m/s²\n"
+            f"* Luminosity: {self.luminosity:.3e} W\n"
+            f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed {equatorial_speed / 1000:.1f} Km/s\n"
+            f"\n"
+            )
+    # endregion

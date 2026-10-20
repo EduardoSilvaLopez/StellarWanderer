@@ -3,7 +3,7 @@ random planes, which leave flat fracture faces and sharp edges.
 
 The shape is a pure function of the rock's `shape_seed` (set in galaxies/rock.py), so the same rock always has
 the same shape. It is expressed in the rock's local unit coordinates and fills the cube [-1, 1] on every axis,
-so the cube the scanner tests (rock.size on a side, see Scanner.is_rock_targeted) is exactly the boulder's
+so the cube the scanner tests (rock.size on a side, see Scanner._rock_entry) is exactly the boulder's
 bounding box. The renderers scale it by half the rock's size and rotate it (tilt, then orientation).
 """
 

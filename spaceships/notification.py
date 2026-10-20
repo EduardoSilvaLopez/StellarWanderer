@@ -21,7 +21,7 @@ class Notification(Updatable):
         """Shows `message` and plays one sound for it: `sound` if given (an event with a sound of its own), else the alert for a
         CRITICAL text and the soft ping for the rest."""
         if not message:
-            return
+            return self
 
         self.message = message
         self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
@@ -40,4 +40,3 @@ class Notification(Updatable):
     def update(self, game_date_time: datetime) -> None:
         self.message = ''
         self.next_update_at = None
-        return

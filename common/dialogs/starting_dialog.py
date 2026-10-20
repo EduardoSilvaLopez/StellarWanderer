@@ -10,6 +10,8 @@ import pygame
 from datetime import datetime
 
 from common import audio
+from common.paths import data_path, resource_path, SAVEFILES_DIR
+from common.savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .instructions_dialog import InstructionsDialog
@@ -18,9 +20,6 @@ from .messages import Message
 from .scroll_bar import ScrollBar
 
 logger = logging.getLogger(__name__)
-from common.paths import data_path, SAVEFILES_DIR
-from common.savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
-from common.paths import resource_path
 
 ICON_PATH = resource_path('presentation', 'game_icon.png')
 DOUBLE_CLICK_MS = 400
@@ -119,10 +118,16 @@ class StartingDialog(Dialog):
 
         self._load_savefiles()
 
+    # region Savefile list
     @property
     def _max_visible(self) -> int:
         """How many savefile rows fit in the list."""
         return self.list_rect.height // self.ITEM_HEIGHT
+
+    @property
+    def _max_offset(self) -> int:
+        """The largest scroll offset: the last savefile on the last row."""
+        return max(0, len(self.savefiles) - self._max_visible)
 
     def _load_savefiles(self) -> None:
         """Load list of available savefiles."""
@@ -150,14 +155,6 @@ class StartingDialog(Dialog):
                     'display_name': display_name,
                 })
 
-    def _ensure_fonts(self) -> None:
-        if self.font_title is None:
-            self.font_title = title_font(self.TITLE_SIZE)
-            self.icon = pygame.transform.smoothscale(pygame.image.load(ICON_PATH), self.icon_rect.size)
-            self.font_normal = body_font(20)
-            self.font_small = body_font(17)
-            self.font_savefile = body_font(16)  # the save names are long: kept small to fit the rows
-
     def _savefile_rect(self, index: int) -> pygame.Rect:
         """Screen rectangle of the savefile at `index` (only meaningful while it is visible)."""
         y = self.list_rect.top + 5 + (index - self.scroll_offset) * self.ITEM_HEIGHT
@@ -166,8 +163,12 @@ class StartingDialog(Dialog):
     def _visible_indices(self) -> range:
         return range(self.scroll_offset, min(self.scroll_offset + self._max_visible, len(self.savefiles)))
 
+    def _savefile_at(self, position: Tuple[int, int]) -> Optional[int]:
+        """The visible savefile under `position`, or None."""
+        return next((i for i in self._visible_indices() if self._savefile_rect(i).collidepoint(position)), None)
+
     def _scroll_to(self, offset: int) -> None:
-        self.scroll_offset = max(0, min(max(0, len(self.savefiles) - self._max_visible), offset))
+        self.scroll_offset = max(0, min(self._max_offset, offset))
 
     def _select(self, index: int) -> None:
         """Select a savefile and scroll so that it is visible."""
@@ -177,6 +178,17 @@ class StartingDialog(Dialog):
                 self._scroll_to(index)
             elif index >= self.scroll_offset + self._max_visible:
                 self._scroll_to(index - self._max_visible + 1)
+    # endregion
+
+    # region Drawing
+    def _ensure_resources(self) -> None:
+        """The fonts and the icon, loaded on the first draw."""
+        if self.font_title is None:
+            self.font_title = title_font(self.TITLE_SIZE)
+            self.icon = pygame.transform.smoothscale(pygame.image.load(ICON_PATH), self.icon_rect.size)
+            self.font_normal = body_font(20)
+            self.font_small = body_font(17)
+            self.font_savefile = body_font(16)  # the save names are long: kept small to fit the rows
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the dialog: seed input, New Game button, scrollable savefile list, Exit game button."""
@@ -186,11 +198,10 @@ class StartingDialog(Dialog):
         if self.prompt is not None:
             self.prompt.draw(surface)
             return
-        self._ensure_fonts()
+        self._ensure_resources()
         surface.fill((20, 20, 30))
 
-        # Title
-        # Title, right-aligned with the list; the icon at the right of the button rows
+        # Title, left-aligned with the list; the icon at the right of the button rows
         title = self.font_title.render(self.TITLE, True, (100, 200, 255))
         surface.blit(title, title.get_rect(topleft=(self.MARGIN, self.TITLE_TOP)))
         surface.blit(self.icon, self.icon_rect)
@@ -198,19 +209,11 @@ class StartingDialog(Dialog):
         # Seed input section, its label vertically centred on the box
         seed_label = self.font_normal.render("World Seed:", True, (150, 200, 255))
         surface.blit(seed_label, seed_label.get_rect(midleft=(self.MARGIN, self.input_rect.centery)))
+        self._draw_input(surface, self.input_rect, self.seed_input, self.seed_input_active)
 
-        pygame.draw.rect(surface, (50, 50, 80) if self.seed_input_active else (40, 40, 60), self.input_rect)
-        pygame.draw.rect(surface, (100, 150, 255) if self.seed_input_active else (80, 80, 120), self.input_rect, 2)
-        seed_text = self.font_small.render(self.seed_input, True, (200, 200, 200))
-        _blit_centred_on_ink(surface, seed_text, self.input_rect.x + 8, self.input_rect)
+        self._draw_button(surface, self.new_game_rect, "New Game", (70, 115, 70), (110, 190, 110), self.font_small)
 
-        # New Game button
-        pygame.draw.rect(surface, (70, 115, 70), self.new_game_rect)
-        pygame.draw.rect(surface, (110, 190, 110), self.new_game_rect, 2)
-        new_text = self.font_small.render("New Game", True, (255, 255, 255))
-        _blit_centred_on_ink(surface, new_text, self.new_game_rect.centerx - new_text.get_width() // 2, self.new_game_rect)
-
-        # Instructions button (a gear for now, no function yet)
+        # Instructions button: a gear
         pygame.draw.rect(surface, (40, 40, 60), self.instructions_rect)
         pygame.draw.rect(surface, (80, 80, 120), self.instructions_rect, 2)
         _draw_gear(surface, self.instructions_rect.inflate(-6, -6), (40, 40, 60))
@@ -219,19 +222,8 @@ class StartingDialog(Dialog):
         if self.game_running:
             name_label = self.font_normal.render("File name:", True, (150, 200, 255))
             surface.blit(name_label, name_label.get_rect(midleft=(self.MARGIN, self.name_rect.centery)))
-
-            pygame.draw.rect(surface, (50, 50, 80) if self.name_input_active else (40, 40, 60), self.name_rect)
-            pygame.draw.rect(surface, (100, 150, 255) if self.name_input_active else (80, 80, 120), self.name_rect, 2)
-            if self.name_input:
-                name_text = self.font_small.render(self.name_input, True, (200, 200, 200))
-            else:
-                name_text = self.font_small.render(Savefile.default_name(), True, (110, 110, 130))
-            _blit_centred_on_ink(surface, name_text, self.name_rect.x + 8, self.name_rect)
-
-            pygame.draw.rect(surface, (70, 115, 70), self.save_rect)
-            pygame.draw.rect(surface, (110, 190, 110), self.save_rect, 2)
-            save_text = self.font_small.render("Save", True, (255, 255, 255))
-            _blit_centred_on_ink(surface, save_text, self.save_rect.centerx - save_text.get_width() // 2, self.save_rect)
+            self._draw_input(surface, self.name_rect, self.name_input, self.name_input_active, Savefile.default_name())
+            self._draw_button(surface, self.save_rect, "Save", (70, 115, 70), (110, 190, 110), self.font_small)
 
         # Save files list section
         pygame.draw.rect(surface, (30, 30, 50), self.list_rect)
@@ -252,21 +244,36 @@ class StartingDialog(Dialog):
                 surface.blit(text, (rect.x + 10, rect.y + 8))
 
             # Scrollbar, if the list does not fit
-            self.scroll_bar.draw(surface, self.scroll_offset, max(0, len(self.savefiles) - self._max_visible), self._max_visible)
+            self.scroll_bar.draw(surface, self.scroll_offset, self._max_offset, self._max_visible)
         else:
             no_saves = self.font_normal.render("No save files found", True, (150, 150, 150))
             surface.blit(no_saves, (self.width // 2 - no_saves.get_width() // 2, self.list_rect.top + 60))
 
         # Exit game button, at the very bottom
-        pygame.draw.rect(surface, (110, 50, 50), self.exit_rect)
-        pygame.draw.rect(surface, (190, 110, 110), self.exit_rect, 2)
-        exit_text = self.font_normal.render("Exit game", True, (255, 255, 255))
-        _blit_centred_on_ink(surface, exit_text, self.exit_rect.centerx - exit_text.get_width() // 2, self.exit_rect)
+        self._draw_button(surface, self.exit_rect, "Exit game", (110, 50, 50), (190, 110, 110), self.font_normal)
 
-    def _savefile_at(self, position: Tuple[int, int]) -> Optional[int]:
-        """The visible savefile under `position`, or None."""
-        return next((i for i in self._visible_indices() if self._savefile_rect(i).collidepoint(position)), None)
+    def _draw_input(self, surface: pygame.Surface, rect: pygame.Rect, text: str, active: bool,
+                    placeholder: Optional[str] = None) -> None:
+        """A text box, lit while `active`. Empty, it shows the `placeholder` in grey, if there is one."""
+        pygame.draw.rect(surface, (50, 50, 80) if active else (40, 40, 60), rect)
+        pygame.draw.rect(surface, (100, 150, 255) if active else (80, 80, 120), rect, 2)
+        if text or placeholder is None:
+            text_surface = self.font_small.render(text, True, (200, 200, 200))
+        else:
+            text_surface = self.font_small.render(placeholder, True, (110, 110, 130))
+        _blit_centred_on_ink(surface, text_surface, rect.x + 8, rect)
 
+    @staticmethod
+    def _draw_button(surface: pygame.Surface, rect: pygame.Rect, label: str, fill: Tuple[int, int, int],
+                     edge: Tuple[int, int, int], font: pygame.font.Font) -> None:
+        """A button, its white label centred."""
+        pygame.draw.rect(surface, fill, rect)
+        pygame.draw.rect(surface, edge, rect, 2)
+        text = font.render(label, True, (255, 255, 255))
+        _blit_centred_on_ink(surface, text, rect.centerx - text.get_width() // 2, rect)
+    # endregion
+
+    # region Actions
     def _ask_delete(self, index: int) -> None:
         """Right-click on a save: the question, Delete or Cancel."""
         name = os.path.splitext(self.savefiles[index]['filename'])[0]
@@ -321,7 +328,9 @@ class StartingDialog(Dialog):
         self.seed_input_active = False
         self.name_input_active = False
         return None
+    # endregion
 
+    # region Events
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         """Handle one event (mouse positions in dialog coordinates)."""
         if self.instructions is not None:
@@ -341,9 +350,7 @@ class StartingDialog(Dialog):
         if event.type == pygame.QUIT:
             return ('exit', None)
 
-        moved = self.scroll_bar.handle_event(
-            event, self.scroll_offset, max(0, len(self.savefiles) - self._max_visible), self._max_visible
-        )
+        moved = self.scroll_bar.handle_event(event, self.scroll_offset, self._max_offset, self._max_visible)
         if moved is not None:
             self._scroll_to(moved)
             return None
@@ -369,9 +376,9 @@ class StartingDialog(Dialog):
             else:
                 self.seed_input_active = False
                 self.name_input_active = False
-                for i in self._visible_indices():
-                    if self._savefile_rect(i).collidepoint(event.pos):
-                        return self._click_savefile(i)
+                index = self._savefile_at(event.pos)
+                if index is not None:
+                    return self._click_savefile(index)
 
         elif event.type == pygame.MOUSEMOTION:
             self.hover_index = self._savefile_at(event.pos)
@@ -412,3 +419,4 @@ class StartingDialog(Dialog):
                 return ('load', self.savefiles[self.selected_index]['path'])
 
         return None
+    # endregion

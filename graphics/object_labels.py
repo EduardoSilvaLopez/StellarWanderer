@@ -4,7 +4,10 @@ from __future__ import annotations
 from typing import Dict, Tuple, TYPE_CHECKING
 import math
 import pygame
+from common.units import format_compact_distance
 from common.vector3 import Vector3
+from .instruments.common import view_geometry, project_to_camera
+from .outpost_markers import OutpostMarkers
 from .constants import (
     ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP,
 )
@@ -54,14 +57,17 @@ class ObjectLabels:
 
         A moon's label is skipped when it would overlap its planet's label.
         """
-        from graphics.instruments.common import view_geometry, project_to_camera
-        from common.units import format_compact_distance
         _, horizon_y, focal_length_px = view_geometry(h)
         label_font = fonts.get(max(9, int(h * 0.017)))
+        ObjectLabels._draw_outpost_labels(surface, label_font, w, h, horizon_y, focal_length_px, environment, ship)
+        if not ship.is_bound:
+            ObjectLabels._draw_body_labels(surface, label_font, w, h, horizon_y, focal_length_px, environment, ship)
 
-        # Outposts in the fixed zone: label with name and distance, also when they are behind their planet. Bound, the
-        # label sits where the 3D view draws the building (flat offsets); unbound, where the sphere puts it.
-        from .outpost_markers import OutpostMarkers
+    @staticmethod
+    def _draw_outpost_labels(surface: pygame.Surface, label_font: FallbackFont, w: int, h: int, horizon_y: int,
+                             focal_length_px: float, environment: GameEnvironment, ship: Ship) -> None:
+        """Outposts in the fixed zone: label with name and distance, also when they are behind their planet. Bound, the
+        label sits where the 3D view draws the building (flat offsets); unbound, where the sphere puts it."""
         for outpost, point, visible in OutpostMarkers.in_fixed_zone(environment, ship):
             if ship.is_bound:
                 vector, distance = ObjectLabels._bound_view_of_outpost(outpost, ship)
@@ -81,9 +87,10 @@ class ObjectLabels:
             )
             surface.blit(label_surf, rect)
 
-        if ship.is_bound:
-            return
-
+    @staticmethod
+    def _draw_body_labels(surface: pygame.Surface, label_font: FallbackFont, w: int, h: int, horizon_y: int,
+                          focal_length_px: float, environment: GameEnvironment, ship: Ship) -> None:
+        """The star and every world of the targeted body's system (unbound)."""
         body = environment.targeted_body
         system = body.stellar_system
 

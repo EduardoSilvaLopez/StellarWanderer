@@ -55,10 +55,6 @@ FALLBACK = Look(gradient=((66, 66, 72), (98, 98, 104), (56, 56, 62)), veins=(226
 _cache: Dict[Tuple[int, str], Tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 
 
-def look_of(adjective: str) -> Look:
-    return LOOKS.get(adjective, FALLBACK)
-
-
 def special_mesh(shape_seed: int, adjective: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """(triangles (F, 3, 3), normals (F, 3), colours (F, 3) in 0-255 floats) of a rock with an adjective, in local unit
     coordinates, F being 80 * SPLITS ** 2. Remembered: a rock's mesh is asked for in every rebuild of a batch."""
@@ -72,7 +68,7 @@ def special_mesh(shape_seed: int, adjective: str) -> Tuple[np.ndarray, np.ndarra
             triangles = np.concatenate([np.stack(corners, axis=1) for corners in
                                         ((a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca))])
             normals = np.tile(normals, (4, 1))
-        _cache[key] = (triangles, normals, _colours(triangles.mean(axis=1), shape_seed, look_of(adjective)))
+        _cache[key] = (triangles, normals, _colours(triangles.mean(axis=1), shape_seed, LOOKS.get(adjective, FALLBACK)))
     return _cache[key]
 
 

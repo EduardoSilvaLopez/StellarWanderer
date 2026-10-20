@@ -9,13 +9,12 @@ from galaxies.world import World
 if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
 
-'''An earthlike orbit can have 2 planets, even more later - but very seldom. Asteroid belt and jovian orbits have none
-for now: they only mark where they are (see orbit_layout.py).'''
-
 
 class Orbit:
     """One orbit of a stellar system, numbered from the star (1.0 is the closest, then 2.0, 3.0... every kind together). Its `kind` and
-    `distance_from_star` come from the system's layout (`OrbitLayout`); only earthlike orbits have planets."""
+    `distance_from_star` come from the system's layout (`OrbitLayout`). An earthlike orbit can have 2 planets, even more
+    later, but very seldom. Asteroid belt and jovian orbits have none for now: they only mark where they are (see
+    orbit_layout.py)."""
 
     def __init__(self,
                  parent_stellar_system: StellarSystem,
@@ -43,12 +42,8 @@ class Orbit:
         self.planets: List[World] = []
         if kind is OrbitKind.EARTHLIKE:
             world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1)  # >1 is extraordinary!
-
-            first_world = World(self, None, self.saved_alterations)
-            self.planets.append(first_world)
-            if world_count > 1:
-                second_world = World(self, None, self.saved_alterations)
-                self.planets.append(second_world)
+            for _ in range(world_count):
+                self.planets.append(World(self, None, self.saved_alterations))
 
     def set_altered(self) -> Orbit:
         self.is_altered = True
@@ -66,8 +61,6 @@ class Orbit:
                     world_alterations: Optional[dict] = world.get_alterations()
                     if world_alterations:
                         alterations[world.get_alterations_key()] = world_alterations
-                    else:
-                        alterations.pop(world.get_alterations_key(), None)
         if not alterations:
             return None
         return alterations

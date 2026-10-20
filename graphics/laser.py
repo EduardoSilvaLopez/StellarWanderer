@@ -77,14 +77,10 @@ class Laser:
                 for centre, base, right, up in zip((cx, cy, cz), origin, right_axis, up_axis)
             )
 
-        s_tr = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, 1, 1)
-        s_br = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, 1, -1)
-        s_bl = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, -1, -1)
-        s_tl = corner(ship.scanner.start_x, ship.scanner.start_y, ship.scanner.start_z, -1, 1)
-        e_tr = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, 1, 1)
-        e_br = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, 1, -1)
-        e_bl = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, -1, -1)
-        e_tl = corner(ship.scanner.end_x, ship.scanner.end_y, ship.scanner.end_z, -1, 1)
+        scanner = ship.scanner
+        signs = ((1, 1), (1, -1), (-1, -1), (-1, 1))  # top right, bottom right, bottom left, top left
+        s_tr, s_br, s_bl, s_tl = (corner(scanner.start_x, scanner.start_y, scanner.start_z, *sign) for sign in signs)
+        e_tr, e_br, e_bl, e_tl = (corner(scanner.end_x, scanner.end_y, scanner.end_z, *sign) for sign in signs)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glColor3ub(*LASER_COLOR)

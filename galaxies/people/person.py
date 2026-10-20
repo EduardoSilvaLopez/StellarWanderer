@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from galaxies.people.player import Player
 
 PEOPLE_DIR = resource_path('people')
+SECONDS_PER_YEAR = 365.2425 * 24 * 60 * 60
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,11 @@ def _pick_name(my_random: random.Random, file_name: str) -> str:
     return my_random.choice(names) if names else ''
 
 
+def _nudged(value: float, change: float) -> float:
+    """A 'personality' trait (0 to 100) after `change`: it moves slower the nearer it is to the extremes."""
+    return max(0, min(100, value + change / (1 + abs(value - 50))))
+
+
 class Person:
     class Race(Enum):
         ASIAN = 1
@@ -48,6 +54,7 @@ class Person:
         MALE = 1
         FEMALE = 2
 
+    # region Generation
     def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70) -> None:
         my_random = random.Random(seed)
         self.seed: float = seed
@@ -75,7 +82,7 @@ class Person:
         self.empathy100: float = my_random.random() * 100
         self.sociability100: float = my_random.random() * 100
         self.loyalty100: float = my_random.random() * 100
-        self._adjust_loyalty(self.reputation - 5)
+        self.loyalty100 = _nudged(self.loyalty100, self.reputation - 5)
         self.sympathy100: float = 50.0
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
@@ -85,11 +92,11 @@ class Person:
         self.last_communication_at: Optional[datetime] = None
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
-        self.portrait = self._load_portrait(my_random)
+        self._load_icon(my_random)
 
         self.interactions: dict = {}
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
-        # (see meet). None until then, also for a person already in `persons` (see ensure).
+        # (see meet). None until then, also for a person already in `persons` (see record).
         self.first_met_at: Optional[str] = None
         self.comment: str = ''  # what the player wrote about this person (see set_comment)
         if self.seed in gem.current_environment.persons:
@@ -97,7 +104,7 @@ class Person:
             my_alterations = gem.current_environment.persons[self.seed]
             self.first_met_at = my_alterations['first_met_at']
             self.comment = my_alterations.get('comment', '')
-            if 'last_communication_at' in my_alterations and my_alterations.get('last_communication_at'):
+            if my_alterations.get('last_communication_at'):
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
             if 'sympathy' in my_alterations:
                 self.sympathy100 = my_alterations['sympathy']
@@ -105,13 +112,13 @@ class Person:
                 for dt_str, lines in my_alterations['interactions'].items():
                     dt = datetime.fromisoformat(dt_str)
                     self.interactions[dt] = lines
-            self.log_update()
+            self.log_description()
 
-    def _load_portrait(self, my_random: random.Random) -> Optional[str]:
-        age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
-        age_group: str = 'young' if age < 30\
-            else 'adult' if age < 45\
-            else 'mature' if age < 65\
+    def _load_icon(self, my_random: random.Random) -> None:
+        """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the seed."""
+        age_group: str = 'young' if self.age < 30\
+            else 'adult' if self.age < 45\
+            else 'mature' if self.age < 65\
             else 'old'
 
         from galaxies.outpost import Outpost
@@ -129,7 +136,7 @@ class Person:
         candidates = sorted(name for name in names if name.startswith(filename_prefix))
         if not candidates:
             print(f"Warning: No person portrait starting with {filename_prefix} in {portraits_dir}")
-            return None
+            return
         filename: str = my_random.choice(candidates)
 
         icon_path = os.path.join(portraits_dir, filename)
@@ -137,20 +144,23 @@ class Person:
             self.icon = pygame.image.load(icon_path)
         except Exception as e:
             print(f"Warning: Could not load person entity icon {filename}: {e}")
-            return None
+    # endregion
 
-        return icon_path
+    # region Description
+    @property
+    def age(self) -> int:
+        """Whole years since the date of birth, at the game's date."""
+        return int((gem.current_environment.date_time - self.dob).total_seconds() / SECONDS_PER_YEAR)
 
     def description_fields(self) -> list[tuple[str, str]]:
         """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty
         for the gender and race, which are shown as a plain line."""
-        age: int = int((gem.current_environment.date_time - self.dob).total_seconds() / (365.2425 * 24 * 60 * 60))
         last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
         ltm_str = last_time_met.strftime('%Y-%m-%d') if last_time_met else "Not met yet" if self.first_met_at is None else "Don't remember."
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
-            ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({age} y.o.)"),
+            ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({self.age} y.o.)"),
             ('Last time met', f"{ltm_str}"),
         ]
 
@@ -163,7 +173,7 @@ class Person:
             ))
         return result
 
-    def log_update(self) -> Person:
+    def log_description(self) -> Person:
         """Logs the person's characteristics, one ' - ' line each."""
         description = ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
         logger.info(
@@ -173,6 +183,19 @@ class Person:
             )
         return self
 
+    def get_player_title(self, player: Player) -> str:
+        value_adjusted = player.those_who_share.reputation * (self.sympathy100 * 2) / 100
+        return political_entity.THOSE_WHO_SHARE.title_for(value_adjusted)
+
+    def get_title(self) -> str:
+        # Find out where this person is... as for now, guess Those-Who-Share
+        return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
+
+    def get_full_name(self) -> str:
+        return f"{self.get_title()} {self.name} {self.surname}"  # No Chinese exception. Intentional.
+    # endregion
+
+    # region Record
     def serialize(self) -> dict:
         interactions_dict: dict = {
             int_date_time.strftime("%Y-%m-%d %H:%M:%S"): int_lines for int_date_time, int_lines in self.interactions.items()
@@ -189,16 +212,16 @@ class Person:
 
         return result
 
-    def set_comment(self, text: str) -> Person:
-        """The player's comment on this person, saved with the person (in `persons`) at once."""
-        self.comment = text
-        return self.ensure()
-
-    def ensure(self) -> Person:
+    def record(self) -> Person:
         """Writes this person into `persons` as they are now: makes the record, or updates it. Call it after anything about
         the person changes. A person the player has not met is kept too, with `first_met_at` None (`meet` fills it in)."""
         gem.current_environment.persons[self.seed] = self.serialize()
         return self
+
+    def set_comment(self, text: str) -> Person:
+        """The player's comment on this person, saved with the person (in `persons`) at once."""
+        self.comment = text
+        return self.record()
 
     def meet(self) -> Person:
         """The player talks to this person (a Conversation starts): from now on they are in `persons`, with the place
@@ -207,27 +230,11 @@ class Person:
         if self.first_met_at is None:
             from galaxies.outpost import Outpost
             self.first_met_at = self.residency.address() if isinstance(self.residency, Outpost) else ''
-            self.ensure()
+            self.record()
         return self
 
-    def get_player_title(self, player: Player) -> str:
-        value_adjusted = player.those_who_share.reputation * (self.sympathy100 * 2) / 100
-        return political_entity.THOSE_WHO_SHARE.title_for(value_adjusted)
-
-    def get_title(self) -> str:
-        # Find out where this person is... as for now, guess Those-Who-Share
-        return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
-
-    def get_full_name(self) -> str:
-        return f"{self.get_title()} {self.name} {self.surname}"  # No Chinese exception. Intentional.
-
-    # 'Personality' traits change slower the more they approach the extremes of 0 and 100
-    def _adjust_loyalty(self, change: float) -> Person:
-        self.loyalty100 += change / (1 + abs(self.loyalty100 - 50))
-        self.loyalty100 = max(0, min(100, self.loyalty100))
-
     def adjust_sympathy(self, change: float) -> Person:
-        """Changes the sympathy and saves it (see ensure)."""
-        self.sympathy100 += change / (1 + abs(self.sympathy100 - 50))
-        self.sympathy100 = max(0, min(100, self.sympathy100))
-        return self.ensure()
+        """Changes the sympathy and saves it (see record)."""
+        self.sympathy100 = _nudged(self.sympathy100, change)
+        return self.record()
+    # endregion

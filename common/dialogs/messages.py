@@ -30,17 +30,13 @@ class Message:
 
     @property
     def paragraphs(self) -> List[str]:
-        return _paragraphs(self.text)
-
-
-def _paragraphs(text: str) -> List[str]:
-    """Split on blank lines; the lines of a paragraph are joined into one string to be wrapped."""
-    result: List[str] = []
-    for block in text.replace('\r\n', '\n').split('\n\n'):
-        joined = ' '.join(line.strip() for line in block.split('\n') if line.strip())
-        if joined:
-            result.append(joined)
-    return result
+        """The text split on blank lines; the lines of a paragraph are joined into one string to be wrapped."""
+        result: List[str] = []
+        for block in self.text.replace('\r\n', '\n').split('\n\n'):
+            joined = ' '.join(line.strip() for line in block.split('\n') if line.strip())
+            if joined:
+                result.append(joined)
+        return result
 
 
 # Called with the index of the pressed button (in the order of the message's buttons), or None when the
@@ -77,7 +73,3 @@ def confirm(title: str, text: str, confirm_label: str, on_confirm: Callable[[], 
 def next_pending_message() -> Optional[PendingMessage]:
     """Remove and return the oldest pending message, or None."""
     return _pending.pop(0) if _pending else None
-
-
-def has_pending_messages() -> bool:
-    return bool(_pending)

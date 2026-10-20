@@ -26,7 +26,7 @@ class Scanner:
 
     The scanner decides what is targeted; the laser (spaceships/laser.py) only fires at it. While bound, the beam
     (drawn by graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
-    slope from the emitter (`_emitter_offset()`, half of Ship.HEIGHT, below the camera) down to the ground at
+    slope from the emitter (half of Ship.HEIGHT below the camera) down to the ground at
     MAX_LENGTH metres ahead (horizontally), so it hits the ground at full range when the ship is low. Rocks closer
     than the slope's height at their distance pass over the beam. A hit counts only within MAX_LENGTH metres of the
     camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach. `targeted_rock` and `targeted_mine` are what the scanner panel
@@ -47,6 +47,7 @@ class Scanner:
         self.end_y = 0.0
         self.end_z = 0.0
 
+    # region Targets
     # Imported here, not at module level: galaxies.ore_mine needs spaceships.ship to load first.
     @property
     def targeted_rock(self) -> Optional[Rock]:
@@ -63,16 +64,12 @@ class Scanner:
         from galaxies.outpost import Outpost
         return self.target if isinstance(self.target, Outpost) else None
 
-    def _emitter_offset(self) -> float:
-        """How far below the camera the scanner beam starts: half the ship's height."""
-        return self.ship.HEIGHT / 2
-
     def update_target(self) -> None:
         """Recompute the beam's start and end from the ship's attitude and position, then the object it hits
         first. Called once per frame, so the scanner always shows what is in the crosshair."""
         ship = self.ship
         self.target = None
-        offset = self._emitter_offset()
+        offset = ship.HEIGHT / 2  # the emitter, below the camera
         forward, up = ship.attitude.forward, ship.attitude.up
 
         # Unbound, the beam is stored relative to the ship. Bound, it is in surface coordinates and starts above
@@ -116,7 +113,9 @@ class Scanner:
             return
         self.target = target
         self.end_x, self.end_y, self.end_z = hit_x, hit_y, hit_z
+    # endregion
 
+    # region Actions
     def activate(self, time_passed: int) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a rock with an adjective,
         the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch the
@@ -173,7 +172,9 @@ class Scanner:
     def deactivate(self) -> Scanner:
         self.ship.laser.cease_fire()
         return self
+    # endregion
 
+    # region Search
     def _closest_hit(self, world: World) -> Optional[Tuple[Target, float]]:
         """The target the beam enters first, with its t-value, or None."""
         hits = []
@@ -184,16 +185,16 @@ class Scanner:
         return min(hits, key=lambda hit: hit[1], default=None)
 
     def _candidates(self, world: World) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
-        """Every target within reach, each with the test that finds where the beam enters it. Outposts are
-        not inside Km2s: when they become targets, yield them from world.outposts here, with their own filter."""
+        """Every target within reach (the rocks, mines and outpost of the Km2s near the beam), each with the test that
+        finds where the beam enters it."""
         for km2 in self._get_relevant_km2s(world):
             for rock in km2.rocks:
-                yield rock, self.is_rock_targeted
+                yield rock, self._rock_entry
             for field in km2.ore_fields:
                 for mine in field.mines:
-                    yield mine, self._is_mine_targeted
+                    yield mine, self._mine_entry
             if km2.outpost:
-                yield km2.outpost, self.is_outpost_targeted
+                yield km2.outpost, self._outpost_entry
 
     def _get_relevant_km2s(self, world: World) -> List[Km2]:
         """Km2s whose square lies within the beam's reach in longitude and latitude. A rough filter, applied
@@ -205,7 +206,9 @@ class Scanner:
             if position.x - reach - km2.SIZE < km2.longitude < position.x + reach
             and position.z - reach - km2.SIZE < km2.latitude < position.z + reach
         ]
+    # endregion
 
+    # region Beam geometry
     @staticmethod
     def _clip_slab(start: float, delta: float, low: float, high: float, t_min: float, t_max: float) -> Optional[Tuple[float, float]]:
         """Narrow [t_min, t_max] to the part of the beam between the planes low and high on one axis."""
@@ -272,19 +275,17 @@ class Scanner:
             half_sizes,
         )
 
-    def is_outpost_targeted(self, outpost: Outpost) -> Optional[float]:
-        """t-value where the beam first enters the outpost building, or None. The building is a box of
-        Outpost.WIDTH x HEIGHT x DEPTH standing on the ground at (longitude, latitude), with its width along local x
-        and its depth along local z; the door is on the local +z side, so orientation is the heading the door faces."""
-        from galaxies.outpost import Outpost
+    def _rock_entry(self, rock: Rock) -> Optional[float]:
+        """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
+        rock.size, centred on (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation.
+        The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is not the whole
+        cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
+        half = rock.size / 2.0
         return self._beam_enters_oriented_box(
-            (outpost.longitude, Outpost.HEIGHT / 2, outpost.latitude),
-            (Outpost.WIDTH / 2, Outpost.HEIGHT / 2, Outpost.DEPTH / 2),
-            0.0,
-            outpost.orientation,
+            (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
         )
 
-    def _is_mine_targeted(self, mine: OreMine) -> Optional[float]:
+    def _mine_entry(self, mine: OreMine) -> Optional[float]:
         """t-value where the beam first enters the mine, or None. A mine is a vertical cylinder of radius
         MINE_RADIUS and height MINE_HEIGHT, standing on the ground at (longitude, latitude). Being rotationally
         symmetric, it needs no un-rotation, unlike rocks."""
@@ -317,12 +318,15 @@ class Scanner:
         t_min, t_max = clipped
         return t_min if t_min <= t_max else None
 
-    def is_rock_targeted(self, rock: Rock) -> Optional[float]:
-        """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
-        rock.size, centred on (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation.
-        The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is not the whole
-        cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
-        half = rock.size / 2.0
+    def _outpost_entry(self, outpost: Outpost) -> Optional[float]:
+        """t-value where the beam first enters the outpost building, or None. The building is a box of
+        Outpost.WIDTH x HEIGHT x DEPTH standing on the ground at (longitude, latitude), with its width along local x
+        and its depth along local z; the door is on the local +z side, so orientation is the heading the door faces."""
+        from galaxies.outpost import Outpost
         return self._beam_enters_oriented_box(
-            (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
+            (outpost.longitude, Outpost.HEIGHT / 2, outpost.latitude),
+            (Outpost.WIDTH / 2, Outpost.HEIGHT / 2, Outpost.DEPTH / 2),
+            0.0,
+            outpost.orientation,
         )
+    # endregion

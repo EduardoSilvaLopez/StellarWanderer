@@ -29,7 +29,8 @@ class OreField:
         self.mines: List[OreMine] = []
 
     @staticmethod
-    def generate_new(original_rock: Rock) -> OreField:
+    def from_rock(original_rock: Rock) -> OreField:
+        """The field a molten ore-rich rock leaves."""
         result = OreField()
         result.parent_km2 = original_rock.parent_km2
         result.longitude = original_rock.longitude
@@ -45,7 +46,7 @@ class OreField:
         return result
 
     @staticmethod
-    def generate_loaded(parent_km2: Km2, serialized_dict: dict) -> OreField:
+    def deserialize(parent_km2: Km2, serialized_dict: dict) -> OreField:
         result = OreField()
         result.parent_km2 = parent_km2
         result.longitude = serialized_dict['longitude']
@@ -56,10 +57,7 @@ class OreField:
         result.initial_color = tuple(serialized_dict['initial_color'])
         result.color = tuple(serialized_dict['color'])
         result.orientation = serialized_dict['orientation']
-
-        list_of_mines = serialized_dict.get('mines')
-        result.mines = [OreMine(result, saved_attributes=mine_dict) for mine_dict in list_of_mines]
-
+        result.mines = [OreMine(result, saved_attributes=mine_dict) for mine_dict in serialized_dict['mines']]
         return result
 
     def serialize(self) -> dict:

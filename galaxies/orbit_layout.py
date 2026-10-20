@@ -149,8 +149,7 @@ class OrbitLayout:
         """The distance (m) from a star of the luminosity (W) at which a black body is at the temperature (K)."""
         return math.sqrt(luminosity / (16.0 * math.pi * Star.STEFAN_BOLTZMANN * temperature ** 4))
 
-    # ---- the layout ----
-
+    # region The layout
     @staticmethod
     def generate(star: Star, my_random: random.Random, is_initial_system: bool) -> OrbitLayout:
         """The orbits of the star's system: none for a star of type O, unless it is the initial one. For the initial
@@ -280,9 +279,9 @@ class OrbitLayout:
                 continue
             result.append(entry)
         return result
+    # endregion
 
-    # ---- the initial system ----
-
+    # region The initial system
     @staticmethod
     def _can_start(entries: List[Entry], star: Star) -> bool:
         """True if the orbit INITIAL_ORBIT_NUMBER is an earthlike planet where the game can start: outside the star's
@@ -302,3 +301,4 @@ class OrbitLayout:
         room = World.MOON_MIN_ROOM_RADII / World.moon_limit_in_radii(1.0, star.mass)
         third = max(star.default_death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
         return [(third * ratio, OrbitKind.EARTHLIKE) for ratio in OrbitLayout.FALLBACK_RATIOS]
+    # endregion

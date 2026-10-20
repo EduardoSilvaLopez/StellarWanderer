@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 class StellarSystem:
 
+    # region Generation
     def __init__(self, parent_galaxy: Galaxy, star: Star, saved_alterations: dict) -> None:
         ''' Using galactic coordinates here, in ly: the system is where its star is. The star is given by the galaxy.'''
         self.parent_galaxy: Galaxy = parent_galaxy
-        self.entity_name: str = 'Those-Who-Share'
         self.x, self.y, self.z = star.position
         self.seed: float = StellarSystem.seed_of(self.parent_galaxy.seed, self.x, self.y, self.z)
         my_random: random.Random = random.Random(self.seed)
@@ -42,6 +42,11 @@ class StellarSystem:
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         self.orbits: List[Orbit] = self._generate_orbits(my_random)
+
+    @staticmethod
+    def seed_of(galaxy_seed: float, x: float, y: float, z: float) -> float:
+        '''The seed of the stellar system at galactic coordinates (x, y, z), in ly. Its star's seed is one more.'''
+        return (galaxy_seed + x*1e1 + y + z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
 
     def _generate_orbits(self, my_random: random.Random) -> List[Orbit]:
         """The orbits of the system, nearest first and numbered 1.0, 2.0...: earthlike planets, asteroid belts and jovian
@@ -74,27 +79,26 @@ class StellarSystem:
                 f" - Orbit {orbit.number}: {orbit.kind.value}, {format_compact_distance(orbit.distance_from_star)}, "
                 f"period {period:.3g} s"
             )
+    # endregion
 
-    @staticmethod
-    def seed_of(galaxy_seed: float, x: float, y: float, z: float) -> float:
-        '''The seed of the stellar system at galactic coordinates (x, y, z), in ly. Its star's seed is one more.'''
-        return (galaxy_seed + x*1e1 + y + z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
+    # region Bodies
+    def get_orbit(self, number: float) -> Orbit:
+        return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
-    def markdown(self) -> str:
-        '''Markdown of the system.'''
-        text: str = (
-            f"## {self.name} ({self.political_entity.name})\n"
-            f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
-        )
-        text += self.star.markdown()
-        AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
-        text += "### Orbits\n" + ''.join(
-            f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"
-            for orbit in self.orbits
-        )
-        text += ''.join(planet.markdown() for orbit in self.orbits for planet in orbit.planets)
-        return text
+    def get_all_bodies(self) -> List[Body]:
+        """The star first, then every world (each planet before its moons)."""
+        return [self.star] + self.get_all_worlds()
 
+    def get_all_worlds(self) -> List[World]:
+        result: List[World] = []
+        for orbit in self.orbits:
+            for planet in orbit.planets:
+                result.append(planet)
+                result.extend(planet.moons)
+        return result
+    # endregion
+
+    # region Alterations
     def set_altered(self) -> StellarSystem:
         self.is_altered = True
         self.parent_galaxy.set_altered()
@@ -112,23 +116,22 @@ class StellarSystem:
                     orbit_alterations: Optional[dict] = orbit.get_alterations()
                     if orbit_alterations:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
-                    else:
-                        alterations.pop(orbit.get_alterations_key(), None)
         if not alterations:
             return None
         return alterations
+    # endregion
 
-    def get_orbit(self, number: float) -> Orbit:
-        return next((orbit for orbit in self.orbits if orbit.number == number), None)
-
-    def get_all_bodies(self) -> List[Body]:
-        """The star first, then every world (each planet before its moons)."""
-        return [self.star] + self.get_all_worlds()
-
-    def get_all_worlds(self) -> List[World]:
-        result: List[World] = []
-        for orbit in self.orbits:
-            for planet in orbit.planets:
-                result.append(planet)
-                result = result + list(planet.moons)
-        return result
+    def markdown(self) -> str:
+        '''Markdown of the system.'''
+        text: str = (
+            f"## {self.name} ({self.political_entity.name})\n"
+            f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
+        )
+        text += self.star.markdown()
+        AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
+        text += "### Orbits\n" + ''.join(
+            f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"
+            for orbit in self.orbits
+        )
+        text += ''.join(planet.markdown() for orbit in self.orbits for planet in orbit.planets)
+        return text

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+from datetime import datetime
 import math
 import random
 from typing import List, TYPE_CHECKING, Optional
@@ -10,8 +10,10 @@ import logging
 import galaxies.constants
 from galaxies.rock import Rock
 from galaxies.ore_fields import OreField
+from common.updating import update_queue
 
 if TYPE_CHECKING:
+    from galaxies.outpost import Outpost
     from galaxies.world import World
 
 logger = logging.getLogger(__name__)
@@ -22,20 +24,17 @@ class Km2:
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
     def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict) -> None:
+        from galaxies.outpost import Outpost  # local: the outpost module needs the world, which needs this one
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
         self.seed: float = (self.parent_world.seed + 1e3*self.longitude + 1e-6*self.latitude + 1) % galaxies.constants.SEEDS_SCALING
 
         self.is_altered: bool = False
-        alterations_key: str = self.get_alterations_key()
-        own_alterations: Optional[dict] = None
-        if saved_alterations is not None \
-            and saved_alterations.get('Km2s') is not None\
-            and saved_alterations.get('Km2s').get(alterations_key) is not None:
-                    own_alterations = saved_alterations.get('Km2s').get(alterations_key)
+        own_alterations: Optional[dict] = ((saved_alterations or {}).get('Km2s') or {}).get(self.get_alterations_key())
         if own_alterations is not None:
             self.set_altered()
+        own: dict = own_alterations or {}
 
         # From the planet (if at all):
         self.outpost: Optional[Outpost] = None
@@ -50,15 +49,14 @@ class Km2:
         self.molten_rocks: List[str] = []
         self.ore_fields: List[OreField] = []
 
-        all_rocks_alterations: Optional[dict] = own_alterations.get('rocks') if own_alterations is not None else None
-        molten_rocks: Optional[dict] = own_alterations.get('molten_rocks') if own_alterations is not None else None
+        all_rocks_alterations: Optional[dict] = own.get('rocks')
+        molten_rocks: Optional[dict] = own.get('molten_rocks')
         outpost_center = ((self.outpost.longitude, self.outpost.latitude)
                           if self.outpost else None)
         rich_ore_count: int = 0
         for _ in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 999)
             rock_lat = self.latitude + my_random.randint(0, 999)
-            from galaxies.outpost import Outpost
             if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat - outpost_center[1]) < Outpost.CLEARED_RADIUS:
                 continue  # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
             rock_key = f"{rock_lon} {rock_lat}"
@@ -76,13 +74,14 @@ class Km2:
             if new_rock.is_ore_rich():
                 rich_ore_count += 1
 
-        ore_fields: Optional[dict] = own_alterations.get('ore_fields') if own_alterations is not None else None
+        ore_fields: Optional[dict] = own.get('ore_fields')
         if ore_fields:
-            self.ore_fields = [OreField.generate_loaded(self, f) for f in ore_fields]
+            self.ore_fields = [OreField.deserialize(self, f) for f in ore_fields]
 
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
+    # region Alterations
     def set_altered(self) -> Km2:
         self.is_altered = True
         if not self.parent_world.is_altered:
@@ -114,13 +113,15 @@ class Km2:
             return None
 
         return alterations
+    # endregion
 
+    # region Updating
     def stop_updating(self) -> None:
         for rock in self.rocks:
             rock.stop_updating()
 
         for mine in (m for field in self.ore_fields for m in field.mines):
-            mine.update(None)
+            mine.stop_updating()
 
         logger.info(f"Stop updating: {self.longitude} {self.latitude}")
 
@@ -129,14 +130,16 @@ class Km2:
             rock.start_updating(update_time)
 
         for mine in (m for field in self.ore_fields for m in field.mines):
-            mine.update(update_time)
+            if mine not in update_queue:  # a mine already queued keeps its entry (see OreMine.update)
+                mine.update(update_time)
 
         logger.info(f"Start updating: {self.longitude} {self.latitude}")
+    # endregion
 
     def melt_rock(self, tgt_rock: Rock) -> Km2:
         self.molten_rocks.append(tgt_rock.get_alterations_key())
         self.rocks.remove(tgt_rock)
         self.set_altered()
         if tgt_rock.is_ore_rich():
-            self.ore_fields.append(OreField.generate_new(tgt_rock))
+            self.ore_fields.append(OreField.from_rock(tgt_rock))
         return self

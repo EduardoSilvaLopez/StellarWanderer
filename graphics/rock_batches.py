@@ -169,7 +169,8 @@ class RockBatches:
 
     @staticmethod
     def visible_km2s(world: World, player_x: float, player_z: float) -> List[Km2]:
-        """The Km2s whose rocks are drawn: the same selection as OpenGLGui._rocks (two Km2s around the player)."""
+        """The Km2s whose rocks are drawn, those within two Km2s of the player. OpenGLGui.draw also draws their ore fields
+        and mines."""
         return [km2 for km2 in world.km2s
                 if km2.longitude - km2.SIZE * 2 <= player_x < km2.longitude + km2.SIZE * 2
                 and km2.latitude - km2.SIZE * 2 <= player_z < km2.latitude + km2.SIZE * 2]

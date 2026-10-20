@@ -29,9 +29,7 @@ if TYPE_CHECKING:
     from galaxies.people.player import Player
     from spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from galaxies.ore_fields import OreField
     from galaxies.outpost import Outpost
-    from galaxies.ore_mine import OreMine
 
 
 class OpenGLGui:
@@ -54,6 +52,7 @@ class OpenGLGui:
         self.dialog_texture: Optional[int] = None
         self._uploaded_textures: set = set()
 
+    # region Frame
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
              top_layer: Optional[pygame.Surface] = None) -> None:
         """Render one complete frame into the active OpenGL window.
@@ -85,15 +84,7 @@ class OpenGLGui:
         OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
 
         self.overlay_surface.fill((0, 0, 0, 0))
-        Cockpit.draw(
-            self.overlay_surface,
-            fonts,
-            width,
-            height,
-            player,
-            environment.date_time,
-            player.time_scale,
-        )
+        Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
         Starlight.tint_cockpit(self.overlay_surface, environment, ship)
         HeatVignette.draw(self.overlay_surface, width, height, ship)
         FrostVignette.draw(self.overlay_surface, width, height, ship)
@@ -107,42 +98,23 @@ class OpenGLGui:
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
             StarGl.draw_star(width, height, view, seconds, player.time_scale)
-        self._draw_texture(self.world_surface, self.world_texture, blend=True)
+        self._draw_texture(self.world_surface, self.world_texture)
         if view is not None:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
         if light is not None:
+            km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
+            ore_fields = [field for km2 in km2s for field in km2.ore_fields]
             Rocks.draw(
-                width, height, ship,
-                RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z),
-                self._ore_fields(environment, ship),
-                self._ore_mines(environment, ship),
-                self._outposts(environment, ship),
-                light,
+                width, height, ship, km2s, ore_fields, [mine for field in ore_fields for mine in field.mines],
+                self._outposts(environment, ship), light,
             )
         Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
-        self._draw_texture(self.overlay_surface, self.overlay_texture, blend=True)
+        self._draw_texture(self.overlay_surface, self.overlay_texture)
         if top_layer is not None:
-            self._draw_texture(top_layer, self.dialog_texture, blend=True)
-
-    def _ore_fields(self, environment: GameEnvironment, ship: Ship) -> List[OreField]:
-        ore_fields: List[OreField] = []
-        for km2 in environment.fixed_world.km2s:
-            if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
-                km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
-                ore_fields.extend(km2.ore_fields)
-        return ore_fields
-
-    def _ore_mines(self, environment: GameEnvironment, ship: Ship) -> List[OreMine]:
-        mines: List[OreMine] = []
-        for km2 in environment.fixed_world.km2s:
-            if (km2.longitude - km2.SIZE * 2 <= ship.position.x < km2.longitude + km2.SIZE * 2 and
-                km2.latitude - km2.SIZE * 2 <= ship.position.z < km2.latitude + km2.SIZE * 2):
-                for ore_field in km2.ore_fields:
-                    mines.extend(ore_field.mines)
-        return mines
+            self._draw_texture(top_layer, self.dialog_texture)
 
     def _outposts(self, environment: GameEnvironment, ship: Ship) -> List[Outpost]:
         """Outposts of the fixed world (planets only) within draw distance of the ship.
@@ -156,7 +128,9 @@ class OpenGLGui:
             outpost for outpost in world.outposts.values()
             if math.hypot(outpost.longitude - ship.position.x, outpost.latitude - ship.position.z) < MAX_DEPTH
         ]
+    # endregion
 
+    # region Textures
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
         if self.world_surface is None or self.world_surface.get_size() != size:
@@ -210,7 +184,8 @@ class OpenGLGui:
             )
             self._uploaded_textures.add(texture)
 
-    def _draw_texture(self, surface: pygame.Surface, texture: int, blend: bool = False) -> None:
+    def _draw_texture(self, surface: pygame.Surface, texture: int) -> None:
+        """Draws `surface` over the whole window, blended by its alpha, through `texture`."""
         width, height = surface.get_size()
         # Keep Pygame's top-to-bottom row order for the top-left screen quad.
         # A 32-bit surface laid out as BGRA is uploaded as a plain copy of its memory (get_buffer().raw),
@@ -221,11 +196,8 @@ class OpenGLGui:
             self._upload_texture(texture, width, height, GL.GL_BGRA, surface.get_buffer().raw)
         else:
             self._upload_texture(texture, width, height, GL.GL_RGBA, pygame.image.tostring(surface, 'RGBA', False))
-        if blend:
-            GL.glEnable(GL.GL_BLEND)
-            GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
-        else:
-            GL.glDisable(GL.GL_BLEND)
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPushMatrix()
@@ -249,3 +221,4 @@ class OpenGLGui:
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPopMatrix()
         GL.glDisable(GL.GL_TEXTURE_2D)
+    # endregion

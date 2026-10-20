@@ -41,6 +41,20 @@ class MissionBoard:
         self.updated_at: Optional[datetime] = None  # not saved: only so that the days already asked are not asked again
         self.title: str = f'Outpost "{outpost.name}", message board'
 
+    @staticmethod
+    def is_available(player: Player) -> bool:
+        return player.those_who_share.reputation >= MIN_REPUTATION
+
+    @property
+    def player(self) -> Player:
+        """The current player, looked up at each use: a new game or a load replaces the Player object."""
+        return player_module.current_player
+
+    def mine(self) -> List[Mission]:
+        """The missions which can be completed here."""
+        dest_keys = self.outpost.full_keys()
+        return [m for m in self.player.missions if m.destination == dest_keys and m.status == OPEN]
+
     def update_missions(self, now: datetime) -> None:
         logger.debug(f"Updating offers. {len(self.offers)} in the beginning.")
         self.offers = [offer for offer in self.offers if offer.deadline > now and not offer.is_taken_by_others(now)]
@@ -62,20 +76,6 @@ class MissionBoard:
             day += timedelta(days=1)
         self.updated_at = now
         logger.debug(f"Offers updated. {len(self.offers)} now.")
-
-    @staticmethod
-    def is_available(player: Player) -> bool:
-        return player.those_who_share.reputation >= MIN_REPUTATION
-
-    @property
-    def player(self) -> Player:
-        """The current player, looked up at each use: a new game or a load replaces the Player object."""
-        return player_module.current_player
-
-    def mine(self) -> List[Mission]:
-        """The missions which can be completed here."""
-        dest_keys = self.outpost.full_keys()
-        return [m for m in self.player.missions if m.destination == dest_keys and m.status == OPEN]
 
     def accept(self, offer: Mission) -> None:
         """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has passed

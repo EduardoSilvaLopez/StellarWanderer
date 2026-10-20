@@ -54,6 +54,7 @@ class MessageDialog(Dialog):
         self.message: Message = message
         self.OPEN_SOUND = message.open_sound
 
+        self._button_texts: List[List[str]] = [self._button_lines(label) for label in self.message.buttons]
         self.button_rects: List[pygame.Rect] = self._layout_buttons()
         self.hover: Optional[int] = None  # the button under the mouse
         self.focus: int = 0  # the button Enter or Space press
@@ -77,8 +78,7 @@ class MessageDialog(Dialog):
         self._texture: Optional[pygame.Surface] = None
         self._texture_loaded: bool = False
 
-    # ---- layout ----
-
+    # region Layout
     def _button_lines(self, label: str) -> List[str]:
         """The label, uppercase and wrapped to the button's width less its padding, as lines to draw."""
         return self.wrap(label.upper(), body_font(self.BODY_SIZE), self._button_width - 2 * self.BUTTON_PADDING)
@@ -91,7 +91,6 @@ class MessageDialog(Dialog):
         """One rectangle per button, stacked and each as wide as the text area; the first at the top, the last at the
         bottom. A button grows taller only when its label wraps."""
         font = body_font(self.BODY_SIZE)
-        self._button_texts: List[List[str]] = [self._button_lines(label) for label in self.message.buttons]
         heights = [
             max(self.BUTTON_HEIGHT, font.get_linesize() * len(lines) + 2 * self.BUTTON_PADDING_Y)
             for lines in self._button_texts
@@ -137,9 +136,13 @@ class MessageDialog(Dialog):
             lines.append(current)
         return lines
 
+    @property
+    def _line_height(self) -> int:
+        """The height of a line of text, its spacing included: also the step of the arrow keys."""
+        return int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)
+
     def _layout_text(self) -> None:
         font = body_font(self.BODY_SIZE)
-        line_height = int(font.get_linesize() * self.LINE_SPACING / 1.0)
         y = 0
         self.lines = []
         for index, paragraph in enumerate(self.message.paragraphs):
@@ -147,7 +150,7 @@ class MessageDialog(Dialog):
                 y += self.PARAGRAPH_GAP
             for line in self.wrap(paragraph, font, self.text_rect.width):
                 self.lines.append((line, y))
-                y += line_height
+                y += self._line_height
         self.content_height = y
 
     @property
@@ -156,9 +159,9 @@ class MessageDialog(Dialog):
 
     def _scroll_by(self, pixels: int) -> None:
         self.scroll = max(0, min(self._max_scroll, self.scroll + pixels))
+    # endregion
 
-    # ---- drawing ----
-
+    # region Drawing
     def _background(self) -> Optional[pygame.Surface]:
         if not self._texture_loaded:
             self._texture_loaded = True
@@ -227,11 +230,11 @@ class MessageDialog(Dialog):
             for line_index, line in enumerate(lines):
                 label = font.render(line, True, ACCENT)
                 surface.blit(label, label.get_rect(midtop=(rect.centerx, top + line_index * font.get_linesize())))
+    # endregion
 
+    # region Events
     def _button_at(self, position: Tuple[int, int]) -> Optional[int]:
         return next((index for index, rect in enumerate(self.button_rects) if rect.collidepoint(position)), None)
-
-    # ---- events ----
 
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         """Handle one event (mouse positions in dialog coordinates)."""
@@ -249,7 +252,7 @@ class MessageDialog(Dialog):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 return ('close', self.focus)
-            line = int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)
+            line = self._line_height
             count = len(self.button_rects)
             if event.key == pygame.K_TAB:
                 step = -1 if event.mod & pygame.KMOD_SHIFT else 1
@@ -272,8 +275,7 @@ class MessageDialog(Dialog):
                 self.scroll = self._max_scroll
 
         elif event.type == pygame.MOUSEWHEEL:
-            line = int(body_font(self.BODY_SIZE).get_linesize() * self.LINE_SPACING)
-            self._scroll_by(-event.y * line * 3)
+            self._scroll_by(-event.y * self._line_height * 3)
 
         elif event.type == pygame.MOUSEMOTION:
             self.hover = self._button_at(event.pos)
@@ -286,3 +288,4 @@ class MessageDialog(Dialog):
                 return ('close', pressed)
 
         return None
+    # endregion

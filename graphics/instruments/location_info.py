@@ -8,6 +8,7 @@ from ..constants import CANOPY_TOP, ACCENT
 from common.units import format_compact_distance
 
 if TYPE_CHECKING:
+    from galaxies.body import Body
     from spaceships.ship import Ship
 
 
@@ -21,11 +22,16 @@ class LocationInfo:
     axes, shown without a sign. The target is not shown here (see ProximityMeter)."""
 
     @staticmethod
-    def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> None:
-        """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's height."""
+    def _reference_body() -> Body:
+        """The fixed body while the ship is fixed, else the targeted body's star."""
         import game_environment as gem
         environment = gem.current_environment
-        reference = environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
+        return environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
+
+    @staticmethod
+    def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> None:
+        """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's height."""
+        reference = LocationInfo._reference_body()
         stellar_system = reference.stellar_system
         stellar_label = reference.name + ", " + stellar_system.name \
             if reference.is_world else stellar_system.name
@@ -55,10 +61,8 @@ class LocationInfo:
             ]
 
         import game_environment as gem
-        environment = gem.current_environment
-        reference = environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
-        date_time = environment.date_time
-        body = reference  # pitch and roll: relative to the same body as the position box
+        body = LocationInfo._reference_body()  # pitch and roll: relative to the same body as the position box
+        date_time = gem.current_environment.date_time
         speed = ship.velocity.as_vector().length()
         texts = []
         for label, position, velocity in axis_lines:

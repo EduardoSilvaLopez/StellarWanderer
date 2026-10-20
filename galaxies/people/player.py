@@ -41,6 +41,55 @@ class Player:
         self.those_who_share = PersonalStatus()
         return self
 
+    # region Time scale
+    @property
+    def is_paused(self) -> bool:
+        """The game is frozen: nothing advances and only Esc and Numpad + act (see main.allowed_while_paused)."""
+        return self.time_scale == self.TIME_SCALE_PAUSED
+
+    def increase_time_scale(self) -> Player:
+        """Faster: from the pause, back to TIME_SCALE_MIN (0 times 10 is still 0)."""
+        old_time_scale = self.time_scale
+        self.time_scale = min(max(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
+        if self.time_scale != old_time_scale:
+            audio.play('time_up')
+        return self
+
+    def decrease_time_scale(self) -> Player:
+        """Slower: from TIME_SCALE_MIN into the pause."""
+        old_time_scale = self.time_scale
+        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_PAUSED)
+        if self.time_scale != old_time_scale:
+            audio.play('time_down')
+        return self
+    # endregion
+
+    def get_title(self) -> str:
+        if gem.current_environment.nearest_system.political_entity == political_entity.THOSE_WHO_SHARE:
+            return political_entity.THOSE_WHO_SHARE.title_for(self.those_who_share.reputation)
+        logger.warning("Unknown political entity.")
+        return str()
+
+    def game_over(self, reason: str) -> None:
+        """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
+        if self.is_dead:
+            return
+        self.is_dead = True
+
+        statistics: str = (
+            f"STATISTICS:\n\n"
+            f" * Denomination: {self.get_title()}\n\n"
+            f" * Federal Credits: {self.credits} Ȼ\n\n"
+            f" * Imperial Rank: Foreigner"
+        )
+        show_message(Message(
+            title='GAME OVER',
+            text=f"\n{reason}\n\n{statistics}",
+            buttons=["Damn!"],
+            open_sound='game_over'
+        ))
+
+    # region Persistence
     def serialize(self) -> dict:
         body = gem.current_environment.last_fixed_body  # the body the ship is around, even when it is outside every fixed zone
         system = body.stellar_system
@@ -73,69 +122,19 @@ class Player:
     def deserialize(loaded_attributes: dict) -> Player:
         result = Player()
         result.time_scale = loaded_attributes['time_scale']
-        if 'credits' in loaded_attributes:
-            result.credits = loaded_attributes['credits']
+        result.credits = loaded_attributes['credits']
 
         result.missions = [Mission.deserialize(mission) for mission in loaded_attributes['missions']]
         for mission in result.missions:
             mission.watch_deadline()
-        result.ship = Ship.load(result, loaded_attributes['ship'])
+        result.ship = Ship.deserialize(result, loaded_attributes['ship'])
 
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == political_entity.THOSE_WHO_SHARE.name:
                 result.those_who_share = PersonalStatus.deserialize(values)
 
         return result
-
-    @property
-    def is_paused(self) -> bool:
-        """The game is frozen: nothing advances and only Esc and Numpad + act (see main.allowed_while_paused)."""
-        return self.time_scale == self.TIME_SCALE_PAUSED
-
-    def increase_time_scale(self) -> Player:
-        """Faster: from the pause, back to TIME_SCALE_MIN (0 times 10 is still 0)."""
-        old_time_scale = self.time_scale
-        self.time_scale = min(max(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
-        if self.time_scale != old_time_scale:
-            audio.play('time_up')
-        return self
-
-    def decrease_time_scale(self) -> Player:
-        """Slower: from TIME_SCALE_MIN into the pause."""
-        old_time_scale = self.time_scale
-        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_PAUSED)
-        if self.time_scale != old_time_scale:
-            audio.play('time_down')
-        return self
-
-    def get_title(self) -> str:
-        if gem.current_environment.nearest_system.political_entity == political_entity.THOSE_WHO_SHARE:
-            return political_entity.THOSE_WHO_SHARE.title_for(self.those_who_share.reputation)
-        else:
-            logger.warning("Unknown political entity.")
-            return str()
-
-    def game_over(self, reason: str) -> None:
-        """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
-        if self.is_dead:
-            return
-        self.is_dead = True
-
-        statistics: str = (
-            f"STATISTICS:\n\n"
-            f" * Denomination: {self.get_title()}\n\n"
-            f" * Federal Credits: {self.credits} Ȼ\n\n"
-            f" * Imperial Rank: Foreigner"
-        )
-        show_message(
-            Message(
-                title='GAME OVER',
-                text=f"\n{reason}\n\n{statistics}",
-                buttons=["Damn!"],
-                open_sound='game_over'
-                )
-            , None  # pending
-            )
+    # endregion
 
 
 current_player: Player = None
