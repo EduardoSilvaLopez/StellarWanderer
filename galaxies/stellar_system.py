@@ -11,8 +11,9 @@ from galaxies import seeds
 from galaxies.body import Body
 from galaxies.star import Star
 from galaxies.world import World
+from galaxies.asteroid_belt import AsteroidBelt
 from galaxies.orbit import Orbit
-from galaxies.orbit_layout import OrbitLayout
+from galaxies.orbit_layout import OrbitKind, OrbitLayout
 from galaxies.politics import political_entity
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
@@ -51,7 +52,8 @@ class StellarSystem:
         is_initial_system = self.star.position == galaxies.constants.INITIAL_STAR_POSITION
         layout = OrbitLayout.generate(self.star, my_random, is_initial_system)
         orbits = [
-            Orbit(self, plan.number, plan.kind, plan.distance, self.saved_alterations)
+            (AsteroidBelt if plan.kind is OrbitKind.ASTEROID_BELT else Orbit)(
+                self, plan.number, plan.kind, plan.distance, self.saved_alterations)
             for plan in layout.plans
         ]
         self._log_orbits(layout, orbits)

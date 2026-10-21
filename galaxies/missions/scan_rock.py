@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 @register
-class ScanObject(Mission):
+class ScanRock(Mission):
     """Scan an object somewhere, then come back."""
-    KIND = 'scan_object'
+    KIND = 'scan_rock'
     CHANCES_PER_DAY = 0.20
     DAYS_MIN = 10
     DAYS_MAX = 30
@@ -45,14 +45,14 @@ class ScanObject(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanObject.DAYS_MIN, ScanObject.DAYS_MAX)
+        days = self.my_random.randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)
 
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a moment
         # in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
-        taken_day = next((index for index, roll in enumerate(rolls) if roll < ScanObject.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+        taken_day = next((index for index, roll in enumerate(rolls) if roll < ScanRock.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
         self.was_scanned: bool = was_scanned
@@ -119,7 +119,7 @@ class ScanObject(Mission):
 
     # region Offer
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[ScanObject]:
+    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[ScanRock]:
         object_types = ['rock']  # Later: worlds, outposts (spionage!), mines, ore fields.
         object_type = chance.choice(object_types)
         mission = cls.generate(day, object_type, outpost)
@@ -128,11 +128,11 @@ class ScanObject(Mission):
         return mission
 
     @staticmethod
-    def generate(created_at: datetime, object_type: str, outpost: Outpost) -> ScanObject:
+    def generate(created_at: datetime, object_type: str, outpost: Outpost) -> ScanRock:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
-        seed = of_text(f"{outpost.full_keys()} {ScanObject.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(ScanObject.DAYS_MIN, ScanObject.DAYS_MAX)  # the first draw of the seed, as in __init__
-        return ScanObject(
+        seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
+        days = random.Random(seed).randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)  # the first draw of the seed, as in __init__
+        return ScanRock(
             object_type=object_type,
             seed=seed,
             issuer=outpost.full_keys(),
@@ -208,7 +208,7 @@ class ScanObject(Mission):
                 'adjective': self.adjective, 'was_scanned': self.was_scanned}
 
     @classmethod
-    def _deserialize(cls, source: dict) -> ScanObject:
-        return ScanObject(source['object_type'], source['rock_site'], source['adjective'], source['was_scanned'],
+    def _deserialize(cls, source: dict) -> ScanRock:
+        return ScanRock(source['object_type'], source['rock_site'], source['adjective'], source['was_scanned'],
                           **Mission._common(source))
     # endregion

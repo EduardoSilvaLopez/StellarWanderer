@@ -9,16 +9,17 @@ DEVELOPER'S DIARY
   * Promotion gives more autonomy, needed for asteroid missions.
   * Outpost main dialog to distribute.
   * Types of ships per level.
+  * Extra: Seed generation re-done.
 
 > Not committed yet but done:
 
 > Not done yet but started:
-  * Extra: rethink all seeds, make your proposals.
 
-### 2026-10-21 (10/10) Extra time: 85h45' + 3:15-
+### 2026-10-21 (10/10) Extra time: 85h45' + 3:15-5:30 + 7:15 - 8:00 + 8:15-9:00 + 9:15-9:45
 
 # NOT STARTED YET = BACKLOG
   * Place one in initial system, not too far away.
+  * Hull integrity damages and events when in the asteroids.
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Outpost gives coordinates as prize? Or very good ones.
   * Extra: Cooler laser.

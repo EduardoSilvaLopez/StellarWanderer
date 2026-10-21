@@ -1,7 +1,8 @@
 """The layout of a stellar system's orbits: how many there are, of which kind, and how far from the star.
 
 Three kinds of orbit (`OrbitKind`): earthlike (terrestrial) planets, asteroid belts and jovian planets. Jovian planets are
-only laid out, not created yet: `Orbit` gives them no planets. The layout is a pure function of the star and of the
+only laid out, not created yet: `Orbit` gives them no planets. An asteroid belt is created as an `AsteroidBelt`
+(asteroid_belt.py), which generates its asteroids. The layout is a pure function of the star and of the
 system's random generator, so the same seed always gives the same system. Orbits are numbered 1.0, 2.0, ... from the
 star, every kind together. Stars of type O have no orbits (their discs do not last long enough to form planets), except
 the initial star, which always has some.

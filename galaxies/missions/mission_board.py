@@ -20,7 +20,7 @@ import logging
 
 from common import audio
 import galaxies.people.player as player_module
-from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, ScanObject
+from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, ScanRock
 import game_environment as gem
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 MIN_REPUTATION = 10.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
-KINDS = (DeliverOre, DeliverPackage, ScanObject)  # what a board offers: a new kind of mission comes here
+KINDS = (DeliverOre, DeliverPackage, ScanRock)  # what a board offers: a new kind of mission comes here
 LOOK_BACK_DAYS = max(kind.DAYS_MAX for kind in KINDS)  # an older offer has expired, whatever its kind
 
 class MissionBoard:

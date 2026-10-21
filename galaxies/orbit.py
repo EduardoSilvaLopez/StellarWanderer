@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 class Orbit:
     """One orbit of a stellar system, numbered from the star (1.0 is the closest, then 2.0, 3.0... every kind together). Its `kind` and
     `distance_from_star` come from the system's layout (`OrbitLayout`). An earthlike orbit can have 2 planets, even more
-    later, but very seldom. Asteroid belt and jovian orbits have none for now: they only mark where they are (see
-    orbit_layout.py)."""
+    later, but very seldom. Jovian orbits have none for now: they only mark where they are (see orbit_layout.py). An
+    asteroid belt is an `AsteroidBelt` (asteroid_belt.py), a kind of orbit, chosen by `StellarSystem._generate_orbits`."""
 
     def __init__(self,
                  parent_stellar_system: StellarSystem,
