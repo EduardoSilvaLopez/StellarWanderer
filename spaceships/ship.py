@@ -27,8 +27,9 @@ class Ship(Updatable):
     laser, cargo hold) and its flight limits.
 
     This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
-    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS, TEMP_SHIELD_REDUCTION) and the cargo hold class
-    (CARGO_HOLD). The ship is upgraded by replacing it with another configuration (see upgrade_to).
+    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS, TEMP_SHIELD_REDUCTION), the forward and backward
+    acceleration (FORWARD_BACKWARD_ACC) and the cargo hold class (CARGO_HOLD). The ship is upgraded by replacing it
+    with another configuration (see upgrade_to).
 
     `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
     east, y up, z north) or free in the star's frame.
@@ -40,13 +41,12 @@ class Ship(Updatable):
 
     HEIGHT = 4  # meters, up to the camera
 
-    UP_DOWN_ACC = 5.0  # meters per second squared
-    RIGHT_LEFT_ACC = 10  # meters per second squared
-    FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
+    UP_DOWN_ACC = 5.0  # m/s^2
+    RIGHT_LEFT_ACC = 10  # m/s^2
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
-    BRAKE_ACC = 10.0  # meters per second squared, max deceleration while braking, of each of the three axes (see Navigation._brake)
+    BRAKE_ACC = 10.0  # m/s^2, max deceleration while braking, of each of the three axes (see Navigation._brake)
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
@@ -59,7 +59,8 @@ class Ship(Updatable):
     # Set by each configuration, never here.
     ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
-    TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
+    TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, used for TEMP_MAX inside the ship.
+    FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
     CARGO_HOLD: ClassVar[type[CargoHold]]
 
     # Every configuration, by qualified name.
@@ -134,8 +135,8 @@ class Ship(Updatable):
             update_queue.add(self)
 
     def _live_through(self, days: float) -> Ship:
-        """`days` pass: maintenance, energy, air, water and food are spent, the temperature moves, the pilot is warned when
-        a level is crossed, and dies when one runs out."""
+        """`days` pass: maintenance, energy, air, water and food are spent, the temperature moves, the pilot is
+        warned when a level is crossed, and dies when one runs out."""
         old_maintenance: float = self.maintenance
         old_energy: float = self.energy
         old_temperature: float = self.temperature
@@ -154,7 +155,8 @@ class Ship(Updatable):
             if dist < gem.current_environment.nearest_system.star.default_heat_radius:
                 default_heat_radius = gem.current_environment.nearest_system.star.default_heat_radius
                 default_death_radius = gem.current_environment.nearest_system.star.default_death_radius
-                self.temperature = Ship.TEMP_MAX - Ship.TEMP_DEFAULT * (dist - default_death_radius)/(default_heat_radius - default_death_radius)
+                self.temperature = Ship.TEMP_MAX \
+                    - Ship.TEMP_DEFAULT * (dist - default_death_radius)/(default_heat_radius - default_death_radius)
 
         self.cargo_hold.air -= days
         self.cargo_hold.water -= days
@@ -189,7 +191,8 @@ class Ship(Updatable):
         elif self.temperature <= self.TEMP_MIN:
             self.owner.game_over('You freeze inside your ship. How this could happen, nobody knows.')
         elif self.temperature > self.TEMP_MAX:
-            self.owner.game_over('You die of a heat stroke inside your ship. Better than burning alive or dying of the massive radioactivity around here, at least.')
+            self.owner.game_over('You die of a heat stroke inside your ship. Better than burning alive or dying of' \
+            ' the massive radioactivity around here, at least.')
         elif self.cargo_hold.air <= 0.0:
             self.owner.game_over('You die of CO2 intoxication. A somehow funny death but you are anyway dead.')
         elif self.cargo_hold.water <= -2.0:  # Dying of thirst after 2 days without water.
@@ -202,9 +205,9 @@ class Ship(Updatable):
 
     # region Upgrades
     def upgrade_to(self, configuration: type[Ship]) -> Ship:
-        """Replaces this ship with one of `configuration`, which takes over where it is, its systems (rebound to it), its
-        cargo and its turn in the update queue. What the configuration changes is refilled to its new maximum; the rest
-        is kept. Sets the owner's ship to the new one and returns it."""
+        """Replaces this ship with one of `configuration`, which takes over where it is, its systems (rebound to it),
+        its cargo and its turn in the update queue. What the configuration changes is refilled to its new maximum;
+        the rest is kept. Sets the owner's ship to the new one and returns it."""
         upgraded = configuration(self.owner)  # queues itself, and starts its clock
         update_queue.remove(self)
         upgraded.is_bound = self.is_bound
@@ -227,7 +230,7 @@ class Ship(Updatable):
         return upgraded
 
     def change_cargo_hold(self, configuration: type[CargoHold]) -> Ship:
-        """Gives the ship a cargo hold of `configuration` in place of its own, keeping the stock (see take_stock_from)."""
+        """Gives the ship a cargo hold of `configuration` in place of its own, keeping the stock."""
         self.cargo_hold = configuration(self).take_stock_from(self.cargo_hold)
         return self
     # endregion
@@ -260,7 +263,8 @@ class Ship(Updatable):
         audio.play('mine_placed')
 
     def _mine_spot(self) -> Tuple[float, float]:
-        '''Where a mine placed now would stand: MINE_FRONT_DISTANCE metres ahead of the ship, on the ground, along its yaw.'''
+        '''Where a mine placed now would stand:
+        MINE_FRONT_DISTANCE metres ahead of the ship, on the ground, along its yaw.'''
         radians = math.radians(self.attitude.yaw)
         return (
             self.position.x + Ship.MINE_FRONT_DISTANCE * math.sin(radians),

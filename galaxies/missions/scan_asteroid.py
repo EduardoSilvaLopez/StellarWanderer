@@ -33,8 +33,8 @@ class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
     CHANCES_PER_DAY = 0.50 # Testing
-    DAYS_MIN = 20
-    DAYS_MAX = 40
+    DAYS_MIN = 30
+    DAYS_MAX = 60
     # Each day of an offer's life, from the day it is made: the chance somebody takes it.
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02
     FREE_LIVING_CHANCE = 0.10  # of the offers in a system with a belt: the target belongs to no belt

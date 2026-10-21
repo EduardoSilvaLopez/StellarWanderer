@@ -7,25 +7,26 @@ DEVELOPER'S DIARY
 
 * ASTEROIDS (II)
   * Promotion gives more autonomy, needed for asteroid missions.
-  * Outpost main dialog to distribute.
+  * Outpost dialog rewire.
+
+### 2026-10-21 (10/10)
+
   * Types of ships per level.
   * Extra: Seed generation re-done.
   * Phase 1: Generate the belt itself. Cosmetic asteroids, limits to generation by size and 'distance' (sectors).
   Hierarchy of sectors. 'Relevant asteroids' are different.
+  * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
 
 > Not committed yet but done:
 
 > Not done yet but started:
 
-  * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
+  * Phase 3: Show the asteroid in radar and label.
 
-### 2026-10-21 (10/10)
-
-Extra time: 88h00' + 11:00 - 12:45
+Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 
 
 # NOT STARTED YET = BACKLOG
-  * Phase 3: Show the asteroid in radar and label, define how it looks like (no collision yet).
-  * Phase 4: How to scan. Land?
+  * Phase 4: How they look like. How to scan. Land?
   * Hull integrity damages and events when in the asteroids.
   * Outpost gives coordinates as prize? Or very good ones.
   * Extra: Cooler laser.
@@ -33,16 +34,25 @@ Extra time: 88h00' + 11:00 - 12:45
   * Idea: Strange rocks can be collected proactively and brought to the outpost.
   * Extra: decide what to do with Rodina: https://elliptic-games.com/
   * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?
+  * Extra: Sealing as cargo, incidents on route.
 
 * OROGRAPHY
   * Extra: 120 chars in code.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
+  * Extra: Retirement.
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
   * Extra: Latinos.
 * JOVIAN PLANETS (with forbidden area)
   * Extra: Arabs.
+* OUTPOST REVAMP
+  * Much bigger dialog, whole screen. You are inside the outpost.
+  * The current dialog is substituted by a screen on which different things happen. Time passes there, so start
+  ordering maintenance and then do the rest.
+  * The com. officer becomes the dockmaster. The outpost gets 8 more people, but prolly invisible (affects the package missions, though).
+  * Hangar? Think about the vaccuum, though.
+  * Missions get also an "ambience" pic.
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?

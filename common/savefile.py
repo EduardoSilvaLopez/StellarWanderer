@@ -118,7 +118,9 @@ class Savefile:
         gem.current_environment.nearest_system = galaxy.add_stellar_system(
             galaxy.fixed_star_at((system_data['x'], system_data['y'], system_data['z']))
             )
-        if player_data['orbit'] is None:  # the star was the last fixed body
+        if player_data['asteroid'] is not None:  # a mission's asteroid was the last fixed body
+            body = gem.current_environment.nearest_system.asteroid_from_site(player_data['asteroid'])
+        elif player_data['orbit'] is None:  # the star was the last fixed body
             body = gem.current_environment.nearest_system.star
         else:
             current_orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))

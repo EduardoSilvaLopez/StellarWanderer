@@ -1,5 +1,23 @@
-# Ruff, the linter the VS Code extension runs. Lines are at most 120 characters: longer ones are warnings (E501).
+# Ruff settings for Stellar Wanderer: the VS Code extension reads this file (ruff.configurationPreference = filesystemFirst).
 line-length = 120
+target-version = "py314"
 
 [lint]
-extend-select = ["E501"]
+select = [
+    "F",    # pyflakes: unused imports and names, undefined names
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # bugbear: likely bugs
+    "C4",   # comprehensions
+    "SIM",  # simplifications
+    "UP",   # newer Python idioms
+    "PL",   # pylint rules
+]
+ignore = [
+    "UP006", "UP045", "UP035",       # typing.List / Optional style: the project keeps the typing module
+    "PLR2004",                       # magic numbers: game constants and tuning values are written in place
+    "PLC0415",                       # imports inside functions: used on purpose to avoid circular imports
+    "PLR0913", "PLR0917",            # many arguments: rendering and dialogs take many values
+    "PLR0912", "PLR0915", "PLR0911", # long or branchy functions
+    "B905",                          # zip without strict: not needed here
+]

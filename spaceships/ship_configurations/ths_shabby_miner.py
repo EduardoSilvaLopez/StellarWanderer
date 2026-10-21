@@ -11,6 +11,7 @@ class ShabbyThsMiner(Ship):
     ENERGY_MAX = 200e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 1  # The maximum. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION = 1  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
+    FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
 
     class ShabbyHold(CargoHold):
         CAPACITY = 2000

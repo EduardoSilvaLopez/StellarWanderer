@@ -252,16 +252,20 @@ class ReportingInOutpost(Conversation):
             else:
                 presentation = f"I am ComOfficer {self.interlocutor.name} {self.interlocutor.surname}"
 
-        is_conspiratory = self.interlocutor.loyalty100 < 20 and self.interlocutor.sociability100 > 80 and self.interlocutor.sympathy100 > 40
+        is_conspiratory = self.interlocutor.loyalty100 < 20 \
+            and self.interlocutor.sociability100 > 80 \
+            and self.interlocutor.sympathy100 > 40
 
         warning = None
         if self.interlocutor.sympathy100 > 80:
             warning = f"No ore for us, hey, {subjective_title}?"
         elif is_conspiratory:
-            warning = "You bring no ore... look, I won't judge if you... but if you are not careful, they will take away you ship. Welcome to Those-Who-Share, you know what I mean?"
+            warning = "You bring no ore... look, I won't judge if you... but if you are not careful, they will take"
+            " away you ship. Welcome to Those-Who-Share, you know what I mean?"
         elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 20:
             warning = "No ore. Hum."
-        elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 80 and self.interlocutor.sociability100 < 40:
+        elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 80 \
+                and self.interlocutor.sociability100 < 40:
             warning = "No ore... ok."
         elif self.player.those_who_share.reputation > 50 and self.interlocutor.sympathy100 < 80:
             warning = f"No ore for us. Don't worry, we know you, {subjective_title}."
@@ -270,7 +274,8 @@ class ReportingInOutpost(Conversation):
         elif self.player.those_who_share.reputation > 10:
             warning = "No ore this time. Pity."
         else:
-            warning = f"You bring no ore, {subjective_title}. Please remember that you license will be revoked if you do not use what you are shared to help."
+            warning = f"You bring no ore, {subjective_title}. Please remember that you license will be revoked if"
+            " you do not use what you are shared to help."
 
         bye = None
         if is_conspiratory:
@@ -496,11 +501,15 @@ class ReportingInOutpost(Conversation):
         rep_change = rep_loss + rep_gain_ore
 
         # Reputation loss due to mines: if too much, give less mines. And top 50% of cargo for them anyway.
-        mines_can_be_loaded = int(0.5 * cargo_hold.free_capacity() // cargo_hold.MINE_WEIGHT)
+        mines_can_be_loaded = int(0.25 * cargo_hold.free_capacity() // cargo_hold.MINE_WEIGHT)
         mines_to_give = min(5 - cargo_hold.mines, int(status.reputation + rep_change), mines_can_be_loaded)
-        logger.debug(f"Player had {cargo_hold.mines} mines already, his remaining reputation is {status.reputation + rep_change}, {mines_can_be_loaded} mines can be loaded. Giving him {mines_to_give}.")
+        logger.debug(
+            f"Player had {cargo_hold.mines} mines already, his remaining"
+            f"reputation is {status.reputation + rep_change}, {mines_can_be_loaded} mines can be loaded."
+            f"Giving him {mines_to_give}."
+            )
         ship.cargo_hold.mines += mines_to_give
-        rep_loss_mines = -mines_to_give
+        rep_loss_mines = -2 * mines_to_give
         rep_change += rep_loss_mines
 
         logger.debug(

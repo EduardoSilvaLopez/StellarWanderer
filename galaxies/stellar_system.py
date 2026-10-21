@@ -9,7 +9,7 @@ import galaxies.constants
 import knowledge
 from common.units import format_compact_distance
 from galaxies import seeds
-from galaxies.asteroid import Asteroid
+from galaxies.asteroid import Asteroid, AsteroidKey
 from galaxies.asteroid_belt import AsteroidBelt
 from galaxies.body import Body
 from galaxies.orbit import Orbit
@@ -105,8 +105,32 @@ class StellarSystem:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
     def get_all_bodies(self) -> list[Body]:
-        """The star first, then every world (each planet before its moons)."""
-        return [self.star] + self.get_all_worlds()
+        """The star first, then every world (each planet before its moons), then the asteroids of the ongoing
+        missions."""
+        return [self.star] + self.get_all_worlds() + self.mission_asteroids()
+
+    def mission_asteroids(self) -> list[Asteroid]:
+        """The asteroids of the pilot's accepted, not yet finished scan missions whose target is in this system. They
+        are shown, and can be targeted and fixed to."""
+        # Local: the player imports the missions, which import this package.
+        import galaxies.people.player as player_module
+        from galaxies.missions import OPEN, ScanAsteroid
+        player = player_module.current_player
+        if player is None:
+            return []
+        key = self.get_alterations_key()
+        return [mission.asteroid() for mission in player.missions
+                if isinstance(mission, ScanAsteroid) and mission.status == OPEN
+                and mission.asteroid_site['system'] == key]
+
+    def asteroid_from_site(self, site: dict) -> Asteroid:
+        """The asteroid that `Asteroid.site` describes, in this system: the kept one if it is kept (a belt's relevant one, or
+        a free-living one of `free_asteroids`), else one made from the site. The same asteroid as before the save."""
+        if site['belt'] is None:
+            return self.free_asteroids.get(site['seed']) or Asteroid.free_living(self, site['seed'])
+        belt = self.get_orbit(float(site['belt']))
+        key = AsteroidKey.from_ints(site['key'].split())
+        return belt.relevant.get(key) or belt.build(key)
 
     def get_all_worlds(self) -> list[World]:
         result: list[World] = []

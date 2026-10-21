@@ -79,7 +79,8 @@ class Asteroid(Body):
 
     def __init__(self, stellar_system: StellarSystem, seed: int, my_random: random.Random, semi_major_axis: float,
                  diameter: float, eccentricity: float, inclination: float,
-                 parent_belt: AsteroidBelt | None = None, key: AsteroidKey | None = None) -> None:
+                 parent_belt: AsteroidBelt | None = None, key: AsteroidKey | None = None,
+                 offer_seed: int | None = None) -> None:
         """Made by `of_belt` and `free_living`, which have drawn from `my_random` (the generator of `seed`) the values
         that differ between them. The node, the periapsis argument and the mean anomaly follow, and the name last."""
         self._position_cache: tuple[datetime, Vector3] | None = None
@@ -87,6 +88,7 @@ class Asteroid(Body):
         self._stellar_system: StellarSystem = stellar_system
         self.parent_belt: AsteroidBelt | None = parent_belt  # None for a free-living asteroid
         self.key: AsteroidKey | None = key
+        self.offer_seed: int | None = offer_seed  # the seed of the mission it comes from, for a free-living asteroid
         self.seed: int = seed
 
         self.radius: float = diameter / 2.0
@@ -136,7 +138,15 @@ class Asteroid(Body):
         weights = [weight for _, weight in Asteroid.FREE_TIERS]
         tier = my_random.choices(tiers, weights)[0]
         diameter = float(sample_diameters(tier, np.random.default_rng(my_random.getrandbits(64)), 1)[0])
-        return Asteroid(stellar_system, seed, my_random, semi_major_axis, diameter, eccentricity, inclination)
+        return Asteroid(stellar_system, seed, my_random, semi_major_axis, diameter, eccentricity, inclination,
+                        offer_seed=offer_seed)
+
+    def site(self) -> dict:
+        """What identifies the asteroid in its system, as a savefile holds it: the belt's orbit number and the key for a
+        belt-born one, the offer's seed for a free-living one (see StellarSystem.asteroid_from_site)."""
+        if self.parent_belt is not None:
+            return {'belt': int(self.parent_belt.number), 'key': str(self.key), 'seed': None}
+        return {'belt': None, 'key': None, 'seed': self.offer_seed}
 
     def _generate_name(self, my_random: random.Random) -> str:
         """The asteroid's name, derived from its discoverer, usually a scientist."""

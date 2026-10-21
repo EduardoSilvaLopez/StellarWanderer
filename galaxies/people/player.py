@@ -5,6 +5,7 @@ from typing import List
 
 from common import audio
 from common.dialogs.messages import Message, show_message
+from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
@@ -95,7 +96,11 @@ class Player:
     def serialize(self) -> dict:
         body = gem.current_environment.last_fixed_body  # the body the ship is around, even when it is outside every fixed zone
         system = body.stellar_system
-        if not body.is_world:  # the star: it has no orbit, planet or moon
+        asteroid_site = None
+        if isinstance(body, Asteroid):  # a mission's asteroid: saved by its own identity, see StellarSystem.asteroid_from_site
+            asteroid_site = body.site()
+            orbit_number = planet_index = moon_index = None
+        elif not body.is_world:  # the star: it has no orbit, planet or moon
             orbit_number = planet_index = moon_index = None
         elif body.parent_planet:
             orbit_number = body.parent_orbit.number
@@ -112,6 +117,7 @@ class Player:
             'orbit': orbit_number,
             'planet': planet_index,
             'moon': moon_index,
+            'asteroid': asteroid_site,
             'ship': self.ship.serialize(),
             'credits': self.credits,
             'missions': [mission.serialize() for mission in self.missions],

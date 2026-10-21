@@ -35,6 +35,8 @@ RADAR_MOON_COLOR = (150, 190, 215)
 RADAR_STAR_DOT_RADIUS = 3
 RADAR_WORLD_DOT_RADIUS = 3
 RADAR_MOON_DOT_RADIUS = 2
+RADAR_ASTEROID_COLOR = (175, 150, 215)  # the asteroids of the ongoing missions: a lilac, apart from the worlds' colours
+RADAR_ASTEROID_DOT_RADIUS = 2
 READOUT_BG = (9, 17, 21)
 LASER_COLOR = (255, 255, 0)
 
