@@ -204,8 +204,6 @@ class LongDistanceAdvisor:
     def update(player: Player, environment: GameEnvironment) -> None:
         """Once per frame, after the ship has moved: works out the advice, and when it changes from one piece to another
         puts the time compression back to x1 and plays the sound."""
-        if player.is_paused:
-            return
         advisor = LongDistanceAdvisor
         body = environment.targeted_body
         same_target = body is advisor._target  # a new target starts without a past

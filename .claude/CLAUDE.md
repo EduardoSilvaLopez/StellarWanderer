@@ -2,7 +2,7 @@
 
 ## Project Summary
 
-**Stellar Wanderer** is a proof-of-concept space exploration game with realistic scale. Procedurally generated worlds, time compression (pause, then 1x to 1,000,000x), and persistence via alteration tracking (only player changes saved, world regenerated from seed on load).
+**Stellar Wanderer** is a proof-of-concept space exploration game with realistic scale. Procedurally generated worlds, time compression (1x to 1,000,000x), and persistence via alteration tracking (only player changes saved, world regenerated from seed on load).
 
 See `DEVLOG.md` for architecture deep-dive and design rationale.
 
@@ -81,7 +81,6 @@ def generate_default(self) -> None:
 - **Do not change code unless asked.** Analysis-only requests are answered in text; wait for an explicit go-ahead before editing.
 - **In doubt, ask.** When a request leaves a real choice open, or I am unsure what is wanted, ask instead of changing code.
 - **Ignore `DEVLOG.md`.** Do not read, analyse, quote or use it in any way, even when it is open in the IDE or the project summary points to it.
-- **Pause**: while `Player.is_paused` (the time scale is `TIME_SCALE_PAUSED`), the game is frozen: `main.allowed_while_paused` lets through only the window, Esc and Numpad +, and the veil (`graphics/pause_overlay.py`) covers the screen. Nothing else may act on time or on the player while paused.
 - **Keep labels and comments accurate.** When behaviour changes, update the docstring or comment that describes it in the same change.
 
 ## Testing Without a Window (for Claude)

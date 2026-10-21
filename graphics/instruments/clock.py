@@ -23,7 +23,7 @@ class Clock:
         digits = digit_font.render(text, True, ACCENT)
         label = label_font.render('SHIP TIME', True, ACCENT_DIM)
 
-        # Highlight the rate whenever time is compressed or paused; the normal rate stays dim
+        # Highlight the rate whenever time is compressed; the normal rate stays dim
         rate_color = ACCENT_DIM if time_scale == Player.TIME_SCALE_MIN else AMBER
         rate = label_font.render(Clock._format_time_scale(time_scale), True, rate_color)
 
@@ -53,7 +53,5 @@ class Clock:
 
     @staticmethod
     def _format_time_scale(scale: int) -> str:
-        """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'; 'PAUSED' when the game is paused."""
-        if scale == Player.TIME_SCALE_PAUSED:
-            return 'PAUSED'
+        """Compression rate as a compact multiplier, e.g. 'x1' or 'x1 000 000'."""
         return f'x{scale:,}'.replace(',', ' ')

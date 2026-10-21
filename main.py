@@ -48,7 +48,6 @@ from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
-from graphics.pause_overlay import pause_layer
 from common.updating import update_queue
 
 logger = logging.getLogger(__name__)
@@ -278,13 +277,6 @@ def open_start_menu(
     return True, screen, elapsed
 
 
-def allowed_while_paused(event: pygame.event.Event) -> bool:
-    """While the game is paused it is frozen: only the window, Esc (the menu) and Numpad + (resume the time) act."""
-    if event.type in (pygame.QUIT, pygame.VIDEORESIZE):
-        return True
-    return event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_KP_PLUS)
-
-
 def main() -> None:
     configure_logging()
     pygame.init()
@@ -325,8 +317,6 @@ def main() -> None:
             continue
 
         for event in pygame.event.get():
-            if player_module.current_player.is_paused and not allowed_while_paused(event):
-                continue
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
@@ -376,8 +366,7 @@ def main() -> None:
 
         # The world map zooms while the mouse is over it, and drags with the left button (polled once per frame).
         focused = pygame.mouse.get_focused()
-        left_pressed = (focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
-                        and not player_module.current_player.is_paused)
+        left_pressed = focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
         WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
         dt = clock.tick(FPS) / 1000.0
@@ -390,7 +379,7 @@ def main() -> None:
 
         keys = pygame.key.get_pressed()
 
-        if player.time_scale == 1:  # Yaw, pitch, roll only at x1: disabled when faster and when paused.
+        if player.time_scale == 1:  # Yaw, pitch, roll only at x1: disabled when faster.
             # Yaw: Numpad 4 (left) and 6 (right)
             ship.attitude.update_yaw(
                 delta_game_seconds,
@@ -435,7 +424,7 @@ def main() -> None:
             1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
             keys[pygame.K_s]
         )
-        thrusting = not player.is_paused and (
+        thrusting = (
             keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
             or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
             or (keys[pygame.K_s] and ship.navigation.has_motion_to_brake()))
@@ -446,22 +435,18 @@ def main() -> None:
             or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
         # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
         audio.set_loop('attitude', rotating)
-        if player.is_paused:
-            ship.scanner.deactivate()  # frozen: nothing is aimed or fired
+        ship.scanner.update_target()
+        if keys[pygame.K_SPACE]:
+            ship.scanner.activate(delta_game_seconds)
         else:
-            ship.scanner.update_target()
-            if keys[pygame.K_SPACE]:
-                ship.scanner.activate(delta_game_seconds)
-            else:
-                ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
-                if ship.laser.firing:
-                    ship.scanner.deactivate()
+            ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
+            if ship.laser.firing:
+                ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
         LongDistanceAdvisor.update(player, gem.current_environment)
 
-        veil = pause_layer(fonts, *pygame.display.get_window_size()) if player.is_paused else None
-        gui.draw(screen, fonts, gem.current_environment, player_module.current_player, top_layer=veil)
+        gui.draw(screen, fonts, gem.current_environment, player_module.current_player)
         pygame.display.flip()
 
     pygame.quit()

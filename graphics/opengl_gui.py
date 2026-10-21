@@ -59,7 +59,7 @@ class OpenGLGui:
              top_layer: Optional[pygame.Surface] = None) -> None:
         """Render one complete frame into the active OpenGL window.
 
-        top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay, or the pause veil)
+        top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay)
         drawn above everything else."""
         # The real window size, not screen.get_size(): for an OpenGL window pygame can keep returning
         # a surface of the size first requested, which then differs from the window's client area
