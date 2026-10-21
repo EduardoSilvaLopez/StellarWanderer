@@ -28,10 +28,11 @@ DEVELOPER'S DIARY
 
 > STARTED:
   
-Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 - 
+Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 - 22:45
 
 # NOT STARTED YET = BACKLOG
   * Extra: Cooler laser.
+  * Extra: No more PAUSED mode.
 
   * Extra: decide what to do with Rodina: https://elliptic-games.com/
   * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?

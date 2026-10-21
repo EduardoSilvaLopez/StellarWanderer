@@ -48,6 +48,32 @@ RADAR_ASTEROID_COLOR = (175, 150, 215)  # the asteroids of the ongoing missions:
 RADAR_ASTEROID_DOT_RADIUS = 2
 READOUT_BG = (9, 17, 21)
 LASER_COLOR = (255, 255, 0)
+# The beam's glow (graphics/laser.py) is additive, so it brightens what is behind it. It is round: concentric
+# cylinders, each a layer (radius as a share of the beam's half-size, colour, alpha 0-255). Stacked, the layers near
+# the axis add up to white-hot, and the light falls off smoothly, with no edge.
+LASER_HALO_COLOR = (255, 170, 40)
+LASER_CORE_COLOR = (255, 255, 230)
+LASER_BEAM_SEGMENTS = 20  # the round cross-section of the beam and of the muzzle flash
+LASER_BEAM_LAYERS = (
+    (3.0, LASER_HALO_COLOR, 10),
+    (2.3, LASER_HALO_COLOR, 14),
+    (1.7, LASER_HALO_COLOR, 22),
+    (1.2, LASER_COLOR, 36),
+    (0.8, LASER_COLOR, 70),
+    (0.5, LASER_COLOR, 140),
+    (0.25, LASER_CORE_COLOR, 255),
+)
+# The muzzle flash: a round glow at the emitter, bright for a moment when the beam switches on, then steady and
+# flickering
+LASER_MUZZLE_COLOR = (255, 250, 220)
+LASER_MUZZLE_RADIUS = 0.5  # metres
+LASER_MUZZLE_STEADY = 0.35  # the share of full brightness while the beam fires, between the bursts
+LASER_MUZZLE_BURST_SECONDS = 0.12  # real seconds: the burst at the start of the beam falls away in about this time
+LASER_IMPACT_COLOR = (255, 250, 220)
+LASER_IMPACT_RADIUS = 0.8  # metres: the hot spot on a rock at its hottest, smaller when it is cooler
+LASER_IMPACT_LIFT = 0.3  # metres: the spot sits this far back along the beam, so it is not inside the rock
+LASER_IMPACT_ALPHA = 255  # 0-255: the hot spot's centre, at the rock's hottest
+LASER_IMPACT_SEGMENTS = 16
 
 # Ore mine geometry and texture
 MINE_SEGMENTS = 16

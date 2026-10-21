@@ -137,6 +137,18 @@ def atmosphere(seconds: float, peak: float, loudness: float, seed: int) -> np.nd
     return loudness * wave_ * rise * flutter / np.abs(wave_ * rise).max()
 
 
+def sizzle(loudness: float) -> np.ndarray:
+    """One second of hot metal hissing under a beam: crackling noise, brighter than the hiss, pulsing a few times a
+    second. Made to loop without a click: the noise is high-passed around the loop (np.roll), and the pulses are whole
+    numbers of Hz."""
+    t = np.arange(RATE) / RATE
+    noise = np.random.default_rng(13).uniform(-1.0, 1.0, len(t))
+    crackle_ = noise - np.roll(noise, 1)
+    pulse = 0.6 + 0.4 * np.sin(2 * np.pi * 7 * t) * np.sin(2 * np.pi * 3 * t + 1) ** 2
+    wave_ = crackle_ * pulse
+    return loudness * wave_ / np.abs(wave_).max()
+
+
 def silence(seconds: float) -> np.ndarray:
     return np.zeros(int(RATE * seconds))
 
@@ -173,7 +185,10 @@ def main() -> None:
     save('time_up', [sweep(500, 800, 0.08, 0.45)])
     save('time_down', [sweep(800, 500, 0.08, 0.45)])
     save('game_over', [sweep(400, 70, 1.0, 0.6), tone(55, 0.7, 0.6, decay=3.0)])
-    save('laser', [machinery(0.6)])
+    # the beam's hum, with a whine over it
+    save('laser', [machinery(0.3) + hum([(880, 1.0), (1320, 0.5), (1760, 0.25)], tremolo=6, loudness=0.2)])
+    save('laser_on', [sweep(2200, 700, 0.14, 0.4)])  # a zap: the pitch falls away
+    save('laser_hit', [sizzle(0.3)])
     save('thrust', [hum([(55, 1.0), (82, 0.6), (110, 0.4), (165, 0.15)], tremolo=3, loudness=0.5)])
     save('scan', [hum([(38, 1.0), (57, 0.5), (76, 0.3)], tremolo=5, loudness=0.35)])  # low, soft: a passive beam
 

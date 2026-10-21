@@ -9,8 +9,8 @@ game will.
 The same sound is not repeated within MIN_GAP_MS (scrolling or a held key would machine-gun it). Without a sound device,
 or without the file, `play` does nothing: sound must never disturb the game.
 
-A loop (the laser, the thrust, the attitude, the scan) is switched with `set_loop(name, on)`, which may be called
-every frame; `stop_loops` ends them all (a new game, a load, a dialog opening)."""
+A loop (the laser and its sizzle on a rock, the thrust, the attitude, the scan) is switched with `set_loop(name, on)`,
+which may be called every frame; `stop_loops` ends them all (a new game, a load, a dialog opening)."""
 
 from __future__ import annotations
 from typing import Dict, NamedTuple, Optional
@@ -47,14 +47,16 @@ SOUNDS: Dict[str, SoundSpec] = {
     'time_up': SoundSpec('time_up.wav', 0.4, False),
     'time_down': SoundSpec('time_down.wav', 0.4, False),
     'game_over': SoundSpec('game_over.wav', 0.7, False),  # the death message opens with it
-    'laser': SoundSpec('laser.wav', 0.3, True),  # loop
+    'laser': SoundSpec('laser.wav', 0.3, True),  # loop: the beam's hum, with a whine over it
+    'laser_on': SoundSpec('laser_on.wav', 0.4, True),  # a zap when the beam is switched on
+    'laser_hit': SoundSpec('laser_hit.wav', 0.3, True),  # loop: the sizzle of the beam on a rock
     'thrust': SoundSpec('thrust.wav', 0.25, True),  # loop
     'attitude': SoundSpec('thrust.wav', 0.1, True),  # loop: the thrust's sound, softer, for yaw, pitch and roll
     'scan': SoundSpec('scan.wav', 0.3, True),  # loop: the low, soft buzz of the beam scanning an asteroid
 }
 
 MIN_GAP_MS = 80  # the least time between two plays of the same sound
-LOOPS = ('laser', 'thrust', 'attitude', 'scan')  # the sounds started with set_loop
+LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan')  # the sounds started with set_loop
 
 _loaded: Dict[str, Optional[pygame.mixer.Sound]] = {}  # None for a sound that could not be loaded
 _last_played_at: Dict[str, int] = {}
