@@ -37,7 +37,8 @@ from common import audio
 import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
-    Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, StartingDialog, confirm,
+    Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, ShipSpecificationsDialog,
+    StartingDialog, confirm,
     MissionBoardDialog, PendingMissionsDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.missions.mission_board import MissionBoard
@@ -45,8 +46,7 @@ from galaxies.outpost import Outpost
 from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
-from graphics.instruments.cockpit_buttons import MISSIONS, SYSTEMS, CockpitButtons
-from galaxies.missions import OPEN
+from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
 from graphics.pause_overlay import pause_layer
 from common.updating import update_queue
@@ -143,6 +143,28 @@ def show_pending_messages(
             pending_message.on_result(result[1])  # the pressed button's index, None for Esc
         pending_message = next_pending_message()
     return True, screen
+
+
+def manage_missions(
+        screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """The missions of the pilot (the cockpit's MISSIONS button). Forgetting the asteroid of a finished mission asks
+    first (its message is shown, then the missions open again). Returns (keep running, window)."""
+    while True:
+        result, screen = run_modal_dialog(
+            PendingMissionsDialog(player_module.current_player.missions), screen, gui, fonts, clock)
+        if result[0] != 'forget':
+            return result[0] != 'exit', screen
+        mission = result[1]
+        confirm(
+            title='FORGET ASTEROID?',
+            text='Forget this asteroid?',
+            confirm_label='Forget',
+            on_confirm=mission.forget,
+        )
+        keep_running, screen = show_pending_messages(screen, gui, fonts, clock)
+        if not keep_running:
+            return False, screen
 
 
 def visit_mission_board(
@@ -338,8 +360,10 @@ def main() -> None:
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 if pressed == MISSIONS:
-                    dialog = PendingMissionsDialog([m for m in player_module.current_player.missions
-                                                    if m.status == OPEN])
+                    running, screen = manage_missions(screen, gui, fonts, clock)
+                    continue
+                if pressed == SHIP:
+                    dialog = ShipSpecificationsDialog(player_module.current_player.ship)
                 else:
                     dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
                 result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)

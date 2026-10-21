@@ -20,28 +20,25 @@ DEVELOPER'S DIARY
   * Target not lost in save / load.
   * Ship configurations adjusted.
   * Phase 3: Show the asteroid in radar and label.
+  * Savegame prefix: Seed and game time, and they remain when the player starts writing.
+  * Phase 4: How they look like. How to scan.
+  * Extra: button for ship specifications.
 
 > DONE (not committed)
 
-  * Savegame prefix: Seed and game time, and they remain when the player starts writing.
-
 > STARTED:
-  * Phase 4: How they look like. How to scan.
   
 Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 - 
 
 # NOT STARTED YET = BACKLOG
-  * Extra: button for ship specifications.
-  * Incidents: Hull integrity damages and events, particularly when in the asteroids.
-  * Extra: Gravity. Evaluate, at least... for realism's sake.
   * Extra: Cooler laser.
-  * Extra: Improve the sounds for real.
-  * Extra: Strange rocks can be collected proactively and brought to the outpost.
+
   * Extra: decide what to do with Rodina: https://elliptic-games.com/
   * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?
-  * Extra: Sealing as cargo, incidents on route.
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
 
 * OROGRAPHY
+  * Extra: Gravity. Evaluate, at least... for realism's sake.
   * Extra: 120 chars in code.
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
@@ -51,6 +48,7 @@ Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 -
   * Mountains.
   * Extra: Latinos.
 * JOVIAN PLANETS (with forbidden area)
+  * Extra: Improve the sounds for real.
   * Extra: Arabs.
 * OUTPOST REVAMP
   * Much bigger dialog, whole screen. You are inside the outpost.
@@ -60,8 +58,13 @@ Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 -
   * Hangar? Think about the vaccuum, though.
   * Missions get also an "ambience" pic.
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
+  * Directly? Try the current ship configurations.
   * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+* INCIDENTS
+  * Get sealing equipment in the outposts.
+  * Randome events, particularly in the asteroid belts, damage the hull (maintenance).
+  * Seal to repair.
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?
 * KUIPER: Drawf planets, land on big asteoids.

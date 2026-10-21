@@ -193,6 +193,13 @@ class Mission(Updatable):
     def shortfall(self, player: Player) -> str:
         """What the player still lacks, for the message shown when they try to complete it without enough."""
 
+    def can_forget(self, player: Player) -> bool:
+        """Whether the pilot may forget what a finished mission was about (see `forget`). Nothing by default."""
+        return False
+
+    def forget(self) -> None:
+        """Forgets what the mission was about; the mission stays in the history. Nothing by default."""
+
     def give_reward(self, player: Player) -> None:
         """Gives the reward, after `complete` and once the mission is DONE. Nothing by default."""
 

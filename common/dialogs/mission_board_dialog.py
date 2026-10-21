@@ -47,7 +47,6 @@ FOOTER_HEIGHT = 70  # the band under the text that MissionBoardDialog keeps for 
 FOOTER_BUTTON_HEIGHT = 64
 FOOTER_BUTTON_GAP = 30
 FOOTER_LABELS = ('Leave', 'Communicate')
-PORTRAIT_SIZE = (38, 57)  # 2:3, as the portraits
 
 # One line of the content: (surface, gap above it, its clickable rect inside the surface or None, what a click does).
 Item = Tuple[pygame.Surface, int, Optional[pygame.Rect], Optional[Callable[[], None]]]
@@ -66,6 +65,7 @@ class MissionListDialog(Dialog):
         self.notice: Optional[Tuple[str, str]] = None
         self.scroll: int = 0
         self._list_scroll: int = 0  # the list's scroll while a detail is open, restored when the list is shown again
+        self.outcome: Optional[DialogResult] = None  # set by an action that ends the dialog (see _act)
         self.content_height: int = 0
         self._clickable: List[Tuple[pygame.Rect, Callable[[], None]]] = []  # where the clickable lines were last drawn
         self._texture: Optional[pygame.Surface] = None
@@ -302,7 +302,7 @@ class MissionListDialog(Dialog):
                 if rect.collidepoint(event.pos):
                     audio.play('ui_click')
                     action()
-                    break
+                    return self.outcome
         return None
     # endregion
 
@@ -311,7 +311,7 @@ class MissionBoardDialog(MissionListDialog):
     """The board of an outpost: the player's missions to deliver here, and the offers to take.
 
     Under the list (not under a detail or a notice) are two buttons: Leave, which does what Esc does there, and
-    Communicate, with the portrait of the outpost's com officer. Results: ('close', None) and ('communicate', None); the
+    Communicate. Results: ('close', None) and ('communicate', None); the
     host talks to the officer and opens the board again (see main.visit_mission_board). Tab, Left and Right move the
     focus between the buttons, Enter presses the focused one, and the mouse moves the focus too."""
 
@@ -326,25 +326,14 @@ class MissionBoardDialog(MissionListDialog):
         self._footer_rects: List[pygame.Rect] = [
             pygame.Rect(MARGIN + index * (width + FOOTER_BUTTON_GAP), top, width, FOOTER_BUTTON_HEIGHT)
             for index in range(len(FOOTER_LABELS))]
-        icon = board.outpost.com_officer.icon  # no officer is an error: the outpost is prepared when its Km2 is made
-        self._portrait: Optional[pygame.Surface] = (
-            None if icon is None else pygame.transform.smoothscale(icon, PORTRAIT_SIZE))
 
     def _draw_footer(self, surface: pygame.Surface) -> None:
         font = body_font(20)
         for index, (label, rect) in enumerate(zip(FOOTER_LABELS, self._footer_rects)):
             pygame.draw.rect(surface, BUTTON_FILL_HOVER if index == self.focus else BUTTON_FILL, rect)
             pygame.draw.rect(surface, ACCENT, rect, 2)
-            label_area = rect
-            if label == 'Communicate':
-                portrait_rect = pygame.Rect((0, 0), PORTRAIT_SIZE)
-                portrait_rect.midleft = (rect.left + 12, rect.centery)
-                if self._portrait is not None:
-                    surface.blit(self._portrait, portrait_rect)
-                pygame.draw.rect(surface, ACCENT, portrait_rect, 1)
-                label_area = pygame.Rect(portrait_rect.right, rect.top, rect.right - portrait_rect.right, rect.height)
             caption = font.render(label, True, ACCENT)
-            surface.blit(caption, caption.get_rect(center=label_area.center))
+            surface.blit(caption, caption.get_rect(center=rect.center))
 
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
@@ -386,17 +375,32 @@ class MissionBoardDialog(MissionListDialog):
 
 
 class PendingMissionsDialog(MissionListDialog):
-    """The missions the player has taken and not yet done, with the time left. Nothing to act on here: delivery is at
-    the outpost's board."""
+    """The missions the player has taken: those not yet done, with the time left (delivery is at the outpost's board),
+    and those finished, whose detail can forget what they were about (result ('forget', mission), see main)."""
 
     def __init__(self, missions: List[Mission]) -> None:
-        super().__init__('Pending missions')
+        super().__init__('Missions')
         self.missions: List[Mission] = missions
 
     def _sections(self) -> List[Section]:
-        return [('Pending missions', self.missions, 'None.')]
+        from galaxies.missions import OPEN
+        pending = [mission for mission in self.missions if mission.status == OPEN]
+        finished = [mission for mission in self.missions if mission.status != OPEN]
+        return [('Pending missions', pending, 'None.'), ('Finished', finished, 'None.')]
+
+    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
+        import galaxies.people.player as player_module  # local: the player's module imports this package's users
+        if not mission.can_forget(player_module.current_player):
+            return None
+        return 'Forget', lambda: self._ask_forget(mission)
+
+    def _ask_forget(self, mission: Mission) -> None:
+        self.outcome = ('forget', mission)
 
     def _deadline_line(self, mission: Mission) -> str:
+        from galaxies.missions import DONE, OPEN
+        if mission.status != OPEN:
+            return 'Done' if mission.status == DONE else 'Failed'
         import game_environment as gem  # local: the game's environment, not needed by the rest of this module
         left = mission.deadline - gem.current_environment.date_time
         if left.total_seconds() <= 0:

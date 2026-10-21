@@ -63,6 +63,7 @@ class Ship(Updatable):
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
     BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]
+    NAME: ClassVar[str]  # the kind of ship, as the pilot knows it (ShipSpecificationsDialog)
 
     # Every configuration, by qualified name.
     by_name: ClassVar[dict[str, type[Ship]]] = {}

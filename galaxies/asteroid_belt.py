@@ -26,7 +26,7 @@ Relevant asteroids. The ones the player follows are promoted (`promote`): the co
 `Asteroid` takes its place, on a full elliptical orbit. They are kept in `relevant` and saved as the belt's alterations:
 only their keys and scans, as the rest is derived from the keys. `build` makes the `Asteroid` of a key without
 promoting it (a mission can name it in an offer), and `random_key` draws the key of a cosmetic asteroid from the
-belt's density.
+belt's density. `forget` drops a relevant asteroid again, once its mission is over: it returns to the cosmetic crowd.
 """
 
 from __future__ import annotations
@@ -417,6 +417,13 @@ class AsteroidBelt(Orbit):
             self.relevant[key] = asteroid
             self.set_altered()
         return asteroid
+
+    def forget(self, key: AsteroidKey) -> None:
+        """Forgets a promoted asteroid: it goes back to the cosmetic population, nameless, and its scan is lost. When
+        the belt has no relevant asteroid left, it is no longer altered: the one exception to 'once altered, always'."""
+        self.relevant.pop(key, None)
+        if not self.relevant:
+            self.is_altered = False
 
     def get_alterations(self) -> dict | None:
         if not self.relevant:

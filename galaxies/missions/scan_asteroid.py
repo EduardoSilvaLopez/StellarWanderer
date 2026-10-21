@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from galaxies.seeds import of_text
 
-from .mission import Mission, register
+from .mission import DONE, FAILED, OPEN, Mission, register
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
@@ -147,6 +147,10 @@ class ScanAsteroid(Mission):
     def progress(self) -> str:
         if self.accepted_at is None:
             return ''
+        if self.status == DONE:  # the asteroid may be forgotten by now: the history keeps what was done
+            return f"The asteroid {self.asteroid().name} was scanned."
+        if self.status == FAILED:
+            return f"The asteroid {self.asteroid().name} was not scanned in time."
         if self.asteroid().scan_progress >= 1.0:
             return f"The asteroid {self.asteroid().name} is scanned: bring the results to {self.issuer_outpost.name}."
         return f"The asteroid {self.asteroid().name} is scanned {self.asteroid().scan_progress:.0%}."
@@ -164,6 +168,35 @@ class ScanAsteroid(Mission):
             f"\n\nMake sure you have the experience and autonomy for this mission."
             f"\n\nBring the results to here, at {self.issuer_outpost.address()}."
             )
+
+    def can_forget(self, player: Player) -> bool:
+        """Once the mission is over, its asteroid can be forgotten while it is still kept by its system or belt and no
+        open mission asks for it."""
+        if self.status == OPEN or any(
+                isinstance(other, ScanAsteroid) and other.status == OPEN and other.asteroid_site == self.asteroid_site
+                for other in player.missions):
+            return False
+        return self._kept()
+
+    def forget(self) -> None:
+        import game_environment as gem
+        from galaxies.asteroid import AsteroidKey
+        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
+        if self.asteroid_site['belt'] is None:
+            system.forget_free_asteroid(self.asteroid_site['seed'])
+        else:
+            belt = system.get_orbit(float(self.asteroid_site['belt']))
+            belt.forget(AsteroidKey.from_ints(self.asteroid_site['key'].split()))
+
+    def _kept(self) -> bool:
+        """Whether the asteroid is still kept: by its system (free-living) or its belt."""
+        import game_environment as gem
+        from galaxies.asteroid import AsteroidKey
+        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
+        if self.asteroid_site['belt'] is None:
+            return self.asteroid_site['seed'] in system.free_asteroids
+        belt = system.get_orbit(float(self.asteroid_site['belt']))
+        return AsteroidKey.from_ints(self.asteroid_site['key'].split()) in belt.relevant
 
     def can_complete(self, player: Player) -> bool:
         return self.asteroid().scan_progress >= 1.0

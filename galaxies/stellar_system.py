@@ -54,6 +54,10 @@ class StellarSystem:
         for offer_seed, saved in (self.saved_alterations or {}).get('free_asteroids', {}).items():
             self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed)).apply_alterations(saved)
 
+    def forget_free_asteroid(self, offer_seed: int) -> None:
+        """Forgets a kept free-living asteroid: it is no longer in the system, and it is not made again."""
+        self.free_asteroids.pop(offer_seed, None)
+
     def promote_free_asteroid(self, offer_seed: int) -> Asteroid:
         """The free-living asteroid of the offer's seed as a kept one (made if it was not); the system is marked as
         altered."""

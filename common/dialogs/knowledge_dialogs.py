@@ -1,5 +1,6 @@
-"""What the pilot knows, from the cockpit buttons: the stellar systems (KnownSystemsDialog) and the people they have
-talked to (KnownPeopleDialog). Both have the look of the message dialogs, a scrollable list and one Close button.
+"""What the pilot knows, from the cockpit buttons: the stellar systems (KnownSystemsDialog), the people they have
+talked to (KnownPeopleDialog) and the specifications of the ship they fly (ShipSpecificationsDialog). All have the look
+of the message dialogs, a scrollable list and one Close button.
 
 The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`,
 which ends with the asteroids that matter (see `Asteroid.markdown`): its markdown headings and bullets are drawn as
@@ -19,6 +20,7 @@ from .messages import Message
 
 if TYPE_CHECKING:
     from galaxies.people.person import Person
+    from spaceships.ship import Ship
 
 LABEL_COLOR = (120, 175, 175)
 HEADING_COLOR = (225, 245, 245)
@@ -314,3 +316,41 @@ class KnownPeopleDialog(_ListDialog):
             self._set_focus(None)  # the text input stops with the dialog
         return result
     # endregion
+
+
+SI_PREFIXES = ((1e15, 'P'), (1e12, 'T'), (1e9, 'G'), (1e6, 'M'), (1e3, 'k'), (1.0, ''))
+
+
+def _si(value: float, unit: str) -> str:
+    """A value with the SI prefix that keeps its number between 1 and 1000: '400 GWh', '1.5 TWh'."""
+    for scale, prefix in SI_PREFIXES:
+        if abs(value) >= scale:
+            return f"{value / scale:.3g} {prefix}{unit}"
+    return f"{value:.3g} {unit}"
+
+
+class ShipSpecificationsDialog(_ListDialog):
+    """The specifications of the pilot's ship: its kind (the name of its configuration), then the values that vary from
+    one kind to another (see spaceships/ship_configurations). Same results as KnownSystemsDialog."""
+
+    def __init__(self, ship: Ship) -> None:
+        self._ship: Ship = ship
+        super().__init__('Ship specifications')
+
+    def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
+        configuration = type(self._ship)
+        hold = type(self._ship.cargo_hold)
+        fields = [
+            ('Energy capacity', _si(configuration.ENERGY_MAX, 'Wh')),
+            ('Acceleration, forward and backward', f"{configuration.FORWARD_BACKWARD_ACC:g} m/s²"),
+            ('Braking', f"{configuration.BRAKE_ACC:g} m/s²"),
+            ('Cargo hold', f"{hold.CAPACITY} kg"),
+            ('Air carried at most', f"{hold.AIR_MAX:g} kg"),
+            ('Water carried at most', f"{hold.WATER_MAX:g} kg"),
+            ('Food carried at most', f"{hold.FOOD_MAX:g} kg"),
+        ]
+        blocks: List[Tuple[pygame.Surface, int]] = [(title_font(22).render(configuration.NAME, True, ACCENT),
+                                                     SECTION_GAP)]
+        for label, value in fields:
+            blocks += [(surface, 2) for surface in _ListDialog._field(label, value, width)]
+        return blocks

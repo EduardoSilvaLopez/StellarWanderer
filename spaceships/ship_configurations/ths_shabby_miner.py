@@ -8,6 +8,7 @@ class ShabbyThsMiner(Ship):
     """The ship a Those-Who-Share pilot starts with.
     Its cargo hold grows with the reputation: first repaired (no longer shabby), then extended."""
 
+    NAME = 'Shabby THS miner'
     ENERGY_MAX = 400e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 1  # The maximum. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION = 1  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
