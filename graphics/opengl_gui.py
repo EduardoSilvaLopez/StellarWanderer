@@ -19,6 +19,7 @@ from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
 from .fixed_world import FixedWorld
 from .orbit_path import OrbitPath
+from .asteroids import Asteroids
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
@@ -104,6 +105,8 @@ class OpenGLGui:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
+        if not ship.is_bound:
+            Asteroids.draw(width, height, ship, environment)
         if light is not None:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
             ore_fields = [field for km2 in km2s for field in km2.ore_fields]

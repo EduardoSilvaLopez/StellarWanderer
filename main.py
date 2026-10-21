@@ -42,6 +42,7 @@ from common.dialogs import (
 )
 from galaxies.missions.mission_board import MissionBoard
 from galaxies.outpost import Outpost
+from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
 from graphics.instruments.cockpit_buttons import MISSIONS, SYSTEMS, CockpitButtons
@@ -433,6 +434,7 @@ def main() -> None:
                     ship.scanner.deactivate()
 
         update_queue.update(gem.current_environment.date_time)
+        LongDistanceAdvisor.update(player, gem.current_environment)
 
         veil = pause_layer(fonts, *pygame.display.get_window_size()) if player.is_paused else None
         gui.draw(screen, fonts, gem.current_environment, player_module.current_player, top_layer=veil)

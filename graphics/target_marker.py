@@ -1,8 +1,9 @@
 """The target marker: an X on the canopy where the targeted body is, or on the canopy's border in the direction to it
-when the body is out of view. Drawn while unbound only (while bound, the target is the world under the ship)."""
+when the body is out of view. Drawn while unbound only (while bound, the target is the world under the ship).
+`TargetMarker.place` gives the same placement to any other mark (graphics/lead_marker.py)."""
 
 from __future__ import annotations
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 import pygame
 from .constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP, NEAR_CLIP, TARGET_MARKER_COLOR
 from .instruments.common import view_geometry
@@ -28,8 +29,15 @@ class TargetMarker:
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         if ship.is_bound:
             return
-        body = environment.targeted_body
-        direction = ship.navigation.direction_to_body(body, environment.date_time)
+        direction = ship.navigation.direction_to_body(environment.targeted_body, environment.date_time)
+        point = TargetMarker.place(w, h, ship, direction)
+        if point is not None:
+            TargetMarker._draw_x(surface, point)
+
+    @staticmethod
+    def place(w: int, h: int, ship: Ship, direction: Any) -> Optional[Point]:
+        """Where a mark for the unit `direction` goes: where it projects if that is inside the window, else where the
+        ray from the crosshair toward it leaves the window."""
         window = TargetMarker._window(w, h)
         _, horizon_y, focal_length_px = view_geometry(h)
         centre: Point = (w / 2, horizon_y)  # where the crosshair is: the projection of the forward direction
@@ -41,14 +49,11 @@ class TargetMarker:
                 horizon_y - focal_length_px * up / forward,
             )
             if TargetMarker._inside(on_screen, window):
-                TargetMarker._draw_x(surface, on_screen)
-                return
+                return on_screen
         # Out of view (behind, or beyond the window): the ray from the crosshair in the same screen direction as the
         # body leaves the window at this point.
         ray = (right, -up)
-        point = TargetMarker._exit_point(centre, ray, window)
-        if point is not None:
-            TargetMarker._draw_x(surface, point)
+        return TargetMarker._exit_point(centre, ray, window)
 
     @staticmethod
     def _window(w: int, h: int) -> List[Point]:

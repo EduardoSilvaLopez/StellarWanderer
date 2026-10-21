@@ -24,9 +24,10 @@ class Navigation:
 
     The fixed zone is the sphere of FIXED_ZONE_RADIUS_MULTIPLE radii around a body's centre. The fixed body is the
     nearest body whose fixed zone holds the ship (see `GameEnvironment.refresh_fixed_body`). Being fixed is what makes
-    the ship's coordinates and braking relative to that body: while unbound, the position is always the star's frame,
-    and braking is relative to the fixed body only inside its fixed zone (the star is at rest, so near it the two are
-    the same). Outside every fixed zone, the body the instruments show is `GameEnvironment.targeted_body` instead.
+    the ship's coordinates relative to that body: while unbound, the position is always the star's frame. Braking is
+    relative to the fixed body inside its fixed zone and, outside every fixed zone, to the body the instruments show,
+    `GameEnvironment.targeted_body`: braking to rest with respect to the target is how a trip ends (see
+    `velocity_reference_frame`).
     Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
@@ -45,6 +46,7 @@ class Navigation:
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
+    ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship changes its speed by, thrusting or braking
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -168,7 +170,7 @@ class Navigation:
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
         ship.velocity.add_vector(accel * delta_time)
-        ship.energy -= 5e4 * abs(sum(accel)) * delta_time
+        ship.energy -= Navigation.ENERGY_PER_SPEED * abs(sum(accel)) * delta_time
 
     def has_motion_to_brake(self) -> bool:
         """True while the brake has something to do: speed relative to the frame it brakes against, or a rotation."""
@@ -182,7 +184,7 @@ class Navigation:
         engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
-        frame when the slowest engine is done. Each engine's change of speed costs 5e4 energy per m/s."""
+        frame when the slowest engine is done. Each engine's change of speed costs ENERGY_PER_SPEED energy per m/s."""
         ship = self.ship
         reference = self.velocity_reference_frame()
         relative = ship.velocity.as_vector() - reference
@@ -199,7 +201,7 @@ class Navigation:
             component = relative.dot(axis)
             decel = min(ship.BRAKE_ACC * delta_time, abs(component))
             braked = braked - axis * math.copysign(decel, component)
-            ship.energy -= 5e4 * decel
+            ship.energy -= Navigation.ENERGY_PER_SPEED * decel
         ship.velocity.set_vector(reference + braked)
 
     def _update_position(self, delta_time: float) -> None:
@@ -329,11 +331,15 @@ class Navigation:
 
     def velocity_reference_frame(self) -> Vector3:
         """The velocity that braking (S) and the prograde/retrograde markers are measured against: the fixed body's
-        inside its fixed zone, otherwise the star's (zero)."""
-        body = gem.current_environment.fixed_body
+        inside its fixed zone, else, while unbound, the targeted body's (the long distance advice brakes against it),
+        else zero."""
+        environment = gem.current_environment
+        body = environment.fixed_body
         if body is None or not self.in_fixed_zone(body):
+            body = None if self.ship.is_bound else environment.targeted_body
+        if body is None:
             return Vector3(0.0, 0.0, 0.0)
-        return body.calculate_stellar_velocity(gem.current_environment.date_time)
+        return body.calculate_stellar_velocity(environment.date_time)
 
     def _relative_to_body(self, body: Body) -> Tuple[Vector3, Vector3]:
         current_datetime = gem.current_environment.date_time

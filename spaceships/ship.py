@@ -28,7 +28,8 @@ class Ship(Updatable):
 
     This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
     change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS, TEMP_SHIELD_REDUCTION), the forward and backward
-    acceleration (FORWARD_BACKWARD_ACC) and the cargo hold class (CARGO_HOLD). The ship is upgraded by replacing it
+    acceleration (FORWARD_BACKWARD_ACC), the braking (BRAKE_ACC, never less than the acceleration) and the cargo hold
+    class (CARGO_HOLD). The ship is upgraded by replacing it
     with another configuration (see upgrade_to).
 
     `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
@@ -46,7 +47,6 @@ class Ship(Updatable):
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
-    BRAKE_ACC = 10.0  # m/s^2, max deceleration while braking, of each of the three axes (see Navigation._brake)
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
 
     UPDATE_PERIOD = 60 * 60
@@ -61,6 +61,7 @@ class Ship(Updatable):
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, used for TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
+    BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]
 
     # Every configuration, by qualified name.
@@ -69,6 +70,8 @@ class Ship(Updatable):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         Ship.by_name[cls.__qualname__] = cls
+        if cls.BRAKE_ACC < cls.FORWARD_BACKWARD_ACC:
+            raise TypeError(f"{cls.__qualname__}: BRAKE_ACC cannot be less than FORWARD_BACKWARD_ACC.")
 
     # region Configuration
     @property

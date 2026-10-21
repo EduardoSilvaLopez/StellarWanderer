@@ -16,6 +16,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from datetime import datetime
 import random
+import numpy as np
 from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from common import audio
@@ -23,6 +24,7 @@ from common.updating import Updatable, update_queue
 from galaxies.seeds import of_text
 
 if TYPE_CHECKING:
+    from galaxies.body import Body
     from galaxies.outpost import Outpost
     from galaxies.people.player import Player
     from galaxies.rock import Rock
@@ -155,6 +157,29 @@ class Mission(Updatable):
     @abstractmethod
     def description(self) -> str:
         """What the mission asks, as the outpost says it, for the offer's detail."""
+
+    def target_body(self) -> Optional[Body]:
+        """The body in the issuer's system that the pilot has to travel to, if the mission takes them far: None by
+        default (it is the body the long distance advice would be given for)."""
+        return None
+
+    def warning(self) -> Optional[str]:
+        """A warning for the offer's detail, or None: when the long distance advice, flying from the issuer outpost to
+        the target body with the ship at full energy and stores, would be "Too far", it names what the ship may lack
+        (`LongDistanceAdvisor.shortage`). It never stops the player from taking the mission: they may be an expert, or
+        willing to die trying."""
+        import game_environment as gem
+        from spaceships.long_distance_advice import LongDistanceAdvisor
+        body = self.target_body()
+        if body is None:
+            return None
+        date = gem.current_environment.date_time
+        outpost = self.issuer_outpost
+        position = np.array(tuple(outpost.stellar_position(date)))
+        velocity = np.array(tuple(outpost.planet.calculate_stellar_velocity(date)))
+        import galaxies.people.player as player_module
+        lacking = LongDistanceAdvisor.shortage(player_module.current_player.ship, body, date, position, velocity)
+        return None if lacking is None else f"Your ship may lack the necessary {lacking} for this trip."
 
     @abstractmethod
     def can_complete(self, player: Player) -> bool:

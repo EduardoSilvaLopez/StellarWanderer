@@ -1,12 +1,12 @@
 """What the pilot knows, from the cockpit buttons: the stellar systems (KnownSystemsDialog) and the people they have
 talked to (KnownPeopleDialog). Both have the look of the message dialogs, a scrollable list and one Close button.
 
-The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`:
-its markdown headings and bullets are drawn as headings and 'label: value' lines. The people are those in
-`GameEnvironment.persons` (the ones the player has talked to, and those of a mission they took, "Not met yet"): each is
-a card, with the portrait beside the fields of `Person.description_fields()`, and a comment box that the player can
-write in (saved with the person, see Person.set_comment). A system or a person that is not in memory is generated again
-from its key or seed."""
+The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`,
+which ends with the asteroids that matter (see `Asteroid.markdown`): its markdown headings and bullets are drawn as
+headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones the player has talked to,
+and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
+`Person.description_fields()`, and a comment box that the player can write in (saved with the person, see
+Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple

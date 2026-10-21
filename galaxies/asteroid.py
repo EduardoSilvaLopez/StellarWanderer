@@ -23,8 +23,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from common.units import format_compact_distance
 from common.vector3 import Vector3
 from galaxies import seeds
+from galaxies.asteroid_class import class_of
 from galaxies.asteroid_sizes import AsteroidTier, sample_diameters
 from galaxies.body import Body
 from galaxies.kepler import eccentric_anomaly, orbit_axes
@@ -201,6 +203,51 @@ class Asteroid(Body):
         x = a * (np.cos(anomalies) - e)
         y = a * math.sqrt(1.0 - e * e) * np.sin(anomalies)
         return x[:, None] * np.array(self._periapsis_axis) + y[:, None] * np.array(self._quarter_axis)
+
+    def markdown(self) -> str:
+        """The asteroid's entry in the knowledge base: what the game works out about it, in the friendly units of the
+        almanack (AU, Earth years, Km/s), like the planets' entries."""
+        AU: float = 1.496e11
+        star = self.stellar_system.star
+        asteroid_class = class_of(self.seed)
+        diameter = 2.0 * self.radius
+        tier = next((tier for tier in AsteroidTier if tier.lower <= diameter < tier.upper), AsteroidTier.HUGE)
+        mass = asteroid_class.density * 4.0 / 3.0 * math.pi * self.radius ** 3
+        gravity = World.GRAVITATIONAL_CONSTANT * mass / self.radius ** 2
+        escape_speed = math.sqrt(2.0 * World.GRAVITATIONAL_CONSTANT * mass / self.radius)
+        a, e = self.semi_major_axis, self.eccentricity
+        periapsis, apoapsis = a * (1.0 - e), a * (1.0 + e)
+        gm = World.GRAVITATIONAL_CONSTANT * star.mass
+        speed_at_periapsis = math.sqrt(gm * (2.0 / periapsis - 1.0 / a))
+        speed_at_apoapsis = math.sqrt(gm * (2.0 / apoapsis - 1.0 / a))
+
+        def temperature(distance: float) -> float:  # K, in balance with the light it takes in (as World's)
+            absorbed = star.luminosity * (1.0 - asteroid_class.reflectance)
+            return (absorbed / (16.0 * math.pi * star.STEFAN_BOLTZMANN * distance ** 2)) ** 0.25
+
+        place = (f"belt {int(self.parent_belt.number)}, at {self.parent_belt.distance_from_star / AU:.2f} AU"
+                 if self.parent_belt is not None else "free-living, in no belt")
+        return (
+            f"### Asteroid {self.name}\n"
+            f"* Place: {place}\n"
+            f"* Class: {asteroid_class.name} (it reflects {100.0 * asteroid_class.reflectance:.0f} % of the light)\n"
+            f"* Size: {tier.name.lower()}, {format_compact_distance(diameter)} across\n"
+            f"* Mass: {mass:.2e} Kg (a bulk density of {asteroid_class.density:.0f} Kg/m3)\n"
+            f"* Surface gravity: {gravity:.2e} m/s2, escape speed {escape_speed:.3g} m/s\n"
+            f"* Distance from the star: {a / AU:.2f} AU on average, {periapsis / AU:.2f} AU at the closest, "
+            f"{apoapsis / AU:.2f} AU at the farthest\n"
+            f"* Year: {math.tau / self.mean_motion / (365.2425 * 24 * 60 * 60):.2f} Earth years\n"
+            f"* Orbital speed: {speed_at_periapsis / 1000:.1f} Km/s at the closest, "
+            f"{speed_at_apoapsis / 1000:.1f} Km/s at the farthest\n"
+            f"* Eccentricity: {e:.3f}\n"
+            f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
+            f"* Longitude of the ascending node: {math.degrees(self.node_longitude):.1f}°\n"
+            f"* Argument of periapsis: {math.degrees(self.periapsis_argument):.1f}°\n"
+            f"* Position in its orbit at the start of the game: {math.degrees(self.mean_anomaly_at_epoch):.1f}°\n"
+            f"* Temperature: {temperature(apoapsis) - 273.15:.0f} °C at the farthest, "
+            f"{temperature(periapsis) - 273.15:.0f} °C at the closest\n"
+            f"\n"
+        )
 
     def _mean_anomaly(self, current_datetime: datetime) -> float:
         # Local: as World does, the game environment needs the galaxy to load.

@@ -152,6 +152,9 @@ class ScanAsteroid(Mission):
             return f"The asteroid {self.asteroid().name} is scanned: bring the results to {self.issuer_outpost.name}."
         return f"The asteroid {self.asteroid().name} is not scanned yet."
 
+    def target_body(self) -> Asteroid:
+        return self.asteroid()
+
     def title(self) -> str:
         return f"Scan the asteroid {self.asteroid().name}."
 

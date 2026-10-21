@@ -12,9 +12,9 @@ from common.paths import data_path, SAVEFILES_DIR
 
 logger = logging.getLogger(__name__)
 
-# A save's file name is the name typed in the starting dialog (or the default), plus ".json".
+# A save's file name is "<seed> <game date and time> <name typed>" plus ".json": the name typed is optional.
 SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
-SAVE_NAME_MAX_LENGTH = 40
+SAVE_NAME_MAX_LENGTH = 60
 
 
 class Savefile:
@@ -22,19 +22,19 @@ class Savefile:
     # region Names
     @staticmethod
     def clean_name(text: str) -> str:
-        '''A typed name made safe for a file name: printable, no path or reserved characters, no ".json" ending,
-        at most SAVE_NAME_MAX_LENGTH characters. Empty when nothing usable is left.'''
-        cleaned = ''.join(c for c in text if c.isprintable() and c not in SAVE_NAME_FORBIDDEN).strip()
+        '''A name made safe for a file name: printable, no path or reserved characters, no ".json" ending, at most
+        SAVE_NAME_MAX_LENGTH characters. The spaces at its end are kept, the default name ends with one.'''
+        cleaned = ''.join(c for c in text if c.isprintable() and c not in SAVE_NAME_FORBIDDEN).lstrip()
         if cleaned.lower().endswith('.json'):
-            cleaned = cleaned[:-len('.json')].strip()
-        return cleaned[:SAVE_NAME_MAX_LENGTH].strip()
+            cleaned = cleaned[:-len('.json')]
+        return cleaned[:SAVE_NAME_MAX_LENGTH]
 
     @staticmethod
     def default_name() -> str:
-        '''The name of a save when none is typed: the seed and the game's date and time, to the second.'''
+        '''The start of every save's name, which is the whole name when nothing is typed after it: the seed, the game's
+        date and time to the second (underscores for the colons, as Windows file names have no colons), and a space.'''
         env = gem.current_environment
-        time_text = env.date_time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', 'T').replace(':', '_')[:19]
-        return 'Savefile ' + str(env.galaxy.seed) + ' ' + time_text
+        return f"{env.galaxy.seed} {env.date_time.strftime('%Y-%m-%dT%H_%M_%S')} "
 
     @staticmethod
     def exists(name: str) -> bool:
@@ -64,7 +64,8 @@ class Savefile:
                 'galactic_seed': env.galaxy.seed,
                 'date_time': env.date_time.strftime('%Y-%m-%d %H:%M:%S.%f'),
                 'galaxy_alterations': env.galaxy.get_alterations(),
-                'persons': dict(env.persons)
+                'persons': dict(env.persons),
+                'target_index': env.target_index(player.ship.position.as_vector())
             }
             , 'player': player.serialize()
             , 'knowledge': knowledge.current_knowledge.serialize()
@@ -130,8 +131,8 @@ class Savefile:
                 body = current_orbit.planets[planet_idx]
             else:
                 body = current_orbit.planets[planet_idx].moons[moon_idx]
-        # The target is not saved: it starts as the body the ship was last fixed to. A bound ship is fixed to its world;
-        # an unbound one is fixed only if it is in a fixed zone, which the next frame works out (refresh_fixed_body).
+        # A bound ship is fixed to its world; an unbound one is fixed only if it is in a fixed zone, which the next
+        # frame works out (refresh_fixed_body). The target is set once the ship and the missions are loaded (below).
         gem.current_environment.targeted_body = gem.current_environment.last_fixed_body = body
         gem.current_environment.fixed_body = body if player_data['ship']['is_bound'] else None
 
@@ -141,4 +142,10 @@ class Savefile:
             world.update_surroundings(position_data['y'], position_data['x'], position_data['z'], game_date_time)
 
         pem.current_player = pem.Player.deserialize(load_object['player'])
+        # The target is the body at the saved place in the Tab order, which depends on the ship and its missions, so
+        # it is read only now. While fixed, the target is the fixed body (already set above).
+        target_index: int = load_object['environment']['target_index']
+        if gem.current_environment.fixed_body is None and target_index >= 0:
+            bodies = gem.current_environment.bodies_by_distance(pem.current_player.ship.position.as_vector())
+            gem.current_environment.targeted_body = bodies[target_index]
     # endregion

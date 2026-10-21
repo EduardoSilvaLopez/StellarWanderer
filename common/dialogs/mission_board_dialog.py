@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 TEXTURE_PATH = resource_path('textures', 'dialog_background.png')
 LABEL_COLOR = (120, 175, 175)
 DIM_COLOR = (110, 120, 120)
+WARNING_COLOR = (240, 176, 92)  # amber: the warning of an offer, which does not stop the player from taking it
 ROW_FILL = (14, 24, 30)
 WIDTH = 800
 HEIGHT = 600
@@ -146,6 +147,11 @@ class MissionListDialog(Dialog):
             for line_index, line in enumerate(MessageDialog.wrap(paragraph, body, width)):
                 gap = paragraph_gap if index > 0 and line_index == 0 else 4
                 items.append((body.render(line, True, TEXT_COLOR), gap, None, None))
+        warning = mission.warning() if mission.accepted_at is None else None
+        if warning is not None:
+            for line_index, line in enumerate(MessageDialog.wrap(warning, body, width)):
+                gap = paragraph_gap if line_index == 0 else 4
+                items.append((body.render(line, True, WARNING_COLOR), gap, None, None))
         action = self._action(mission)
         if action is not None:
             label, do = action

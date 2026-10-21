@@ -133,6 +133,14 @@ class StellarSystem:
         key = AsteroidKey.from_ints(site['key'].split())
         return belt.relevant.get(key) or belt.build(key)
 
+    def promoted_asteroids(self) -> list[Asteroid]:
+        """The asteroids that matter in this system, whatever became of their missions: the relevant ones of its belts,
+        then the free-living ones."""
+        from galaxies.asteroid_belt import AsteroidBelt
+        result = [asteroid for orbit in self.orbits if isinstance(orbit, AsteroidBelt)
+                  for asteroid in orbit.relevant.values()]
+        return result + list(self.free_asteroids.values())
+
     def get_all_worlds(self) -> list[World]:
         result: list[World] = []
         for orbit in self.orbits:
@@ -180,4 +188,5 @@ class StellarSystem:
             for orbit in self.orbits
         )
         text += ''.join(planet.markdown() for orbit in self.orbits for planet in orbit.planets)
+        text += ''.join(asteroid.markdown() for asteroid in self.promoted_asteroids())
         return text

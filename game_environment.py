@@ -61,17 +61,26 @@ class GameEnvironment:
             self.targeted_body = fixed
             self.last_fixed_body = fixed
 
-    def cycle_targeted_body(self, step: int, player_position: Vector3) -> None:
-        """Moves targeted_body `step` places (+1 or -1) through the bodies of nearest_system, sorted by distance from
-        the ship, the star included, wrapping around. Only outside every fixed zone: while fixed, the target is the
-        fixed body."""
-        if self.fixed_body is not None:
-            return
-        bodies = sorted(
+    def bodies_by_distance(self, player_position: Vector3) -> list[Body]:
+        """The bodies of nearest_system sorted by distance from the ship, the star included: the order the Tab key goes
+        through."""
+        return sorted(
             self.nearest_system.get_all_bodies(),
             key=lambda body: math.dist(player_position, body.calculate_stellar_position(self.date_time)),
         )
-        index = bodies.index(self.targeted_body) if self.targeted_body in bodies else -1
+
+    def target_index(self, player_position: Vector3) -> int:
+        """The place of targeted_body in bodies_by_distance, saved in the savefile; -1 if it is not there."""
+        bodies = self.bodies_by_distance(player_position)
+        return bodies.index(self.targeted_body) if self.targeted_body in bodies else -1
+
+    def cycle_targeted_body(self, step: int, player_position: Vector3) -> None:
+        """Moves targeted_body `step` places (+1 or -1) through bodies_by_distance, wrapping around. Only outside every
+        fixed zone: while fixed, the target is the fixed body."""
+        if self.fixed_body is not None:
+            return
+        bodies = self.bodies_by_distance(player_position)
+        index = self.target_index(player_position)
         self.targeted_body = bodies[(index + step) % len(bodies)]
 
 

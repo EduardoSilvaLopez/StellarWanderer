@@ -7,6 +7,7 @@ import logging
 import math
 import os
 import pygame
+import re
 from datetime import datetime
 
 from common import audio
@@ -23,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 ICON_PATH = resource_path('presentation', 'game_icon.png')
 DOUBLE_CLICK_MS = 400
+# A save's name, as Savefile.default_name starts it: the seed, the time, then the name typed (possibly empty)
+SAVE_NAME_PATTERN = re.compile(r'(\S+) (\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2})(?: (.*))?$')
 
 
 def _blit_centred_on_ink(surface: pygame.Surface, text: pygame.Surface, x: int, rect: pygame.Rect) -> None:
@@ -52,7 +55,8 @@ class StartingDialog(Dialog):
     Shown when the program starts and again on Esc while playing (game_running=True, where Esc
     resumes the game). Results: ('new', seed), ('load', path), ('save', name), ('exit', None), ('resume', None).
     The Instructions button shows the instructions screen (see InstructionsDialog) in its place until Back.
-    ('save', '') means the default name: the text box is empty, and its grey text shows that name.
+    The name box starts with the default name (Savefile.default_name: the seed and the game's time), which the player
+    may go on writing after. ('save', '') means the default name too, when the box has been emptied.
 
     Esc opens it from the game and does not quit; the Exit game button (or closing the window) does. A right-click
     outside the saves does what Esc does; a right-click on a save asks to delete it.
@@ -78,7 +82,7 @@ class StartingDialog(Dialog):
         self.selected_index: int = -1  # -1 means no savefile selected
         self.seed_input: str = "1"
         self.seed_input_active: bool = False
-        self.name_input: str = ""  # empty shows the default name, in grey
+        self.name_input: str = Savefile.default_name() if game_running else ""  # the default name, then what is typed
         self.name_input_active: bool = False
         self.instructions: Optional[InstructionsDialog] = None  # open while the instructions screen is shown
         self.scroll_offset: int = 0  # first visible savefile of the list
@@ -143,12 +147,13 @@ class StartingDialog(Dialog):
                 real_time = datetime.fromtimestamp(os.path.getmtime(filepath))
                 real_time_formatted = real_time.strftime('%Y-%m-%d %H:%M:%S')
 
-                # A default name is "Savefile {seed} {datetime}", with the datetime as "YYYY-MM-DDTHH_MM_SS"
-                parts = name[len('Savefile '):].split(' ', 1) if name.startswith('Savefile ') else []
-                if len(parts) == 2:
-                    seed, game_time_str = parts
+                match = SAVE_NAME_PATTERN.match(name)
+                if match:
+                    seed, game_time_str, typed = match.group(1), match.group(2), match.group(3) or ''
                     game_time_formatted = game_time_str.replace('T', ' ').replace('_', ':')
                     display_name = f"Seed {seed}   -   Time: {game_time_formatted}   -   Saved at {real_time_formatted}"
+                    if typed:
+                        display_name = f"{typed}   -   {display_name}"
                 else:
                     display_name = f"{name}   -   Saved at {real_time_formatted}"
 
@@ -225,7 +230,7 @@ class StartingDialog(Dialog):
         if self.game_running:
             name_label = self.font_normal.render("File name:", True, (150, 200, 255))
             surface.blit(name_label, name_label.get_rect(midleft=(self.MARGIN, self.name_rect.centery)))
-            self._draw_input(surface, self.name_rect, self.name_input, self.name_input_active, Savefile.default_name())
+            self._draw_input(surface, self.name_rect, self.name_input, self.name_input_active)
             self._draw_button(surface, self.save_rect, "Save", (70, 115, 70), (110, 190, 110), self.font_small)
 
         # Save files list section
@@ -255,16 +260,15 @@ class StartingDialog(Dialog):
         # Exit game button, at the very bottom
         self._draw_button(surface, self.exit_rect, "Exit game", (110, 50, 50), (190, 110, 110), self.font_normal)
 
-    def _draw_input(self, surface: pygame.Surface, rect: pygame.Rect, text: str, active: bool,
-                    placeholder: Optional[str] = None) -> None:
-        """A text box, lit while `active`. Empty, it shows the `placeholder` in grey, if there is one."""
+    def _draw_input(self, surface: pygame.Surface, rect: pygame.Rect, text: str, active: bool) -> None:
+        """A text box, lit while `active`. Text wider than the box is cut at its start, so the end being typed shows."""
         pygame.draw.rect(surface, (50, 50, 80) if active else (40, 40, 60), rect)
         pygame.draw.rect(surface, (100, 150, 255) if active else (80, 80, 120), rect, 2)
-        if text or placeholder is None:
-            text_surface = self.font_small.render(text, True, (200, 200, 200))
-        else:
-            text_surface = self.font_small.render(placeholder, True, (110, 110, 130))
-        _blit_centred_on_ink(surface, text_surface, rect.x + 8, rect)
+        text_surface = self.font_small.render(text, True, (200, 200, 200))
+        x = min(rect.x + 8, rect.right - 8 - text_surface.get_width())
+        surface.set_clip(rect.inflate(-4, -4))
+        _blit_centred_on_ink(surface, text_surface, x, rect)
+        surface.set_clip(None)
 
     @staticmethod
     def _draw_button(surface: pygame.Surface, rect: pygame.Rect, label: str, fill: Tuple[int, int, int],

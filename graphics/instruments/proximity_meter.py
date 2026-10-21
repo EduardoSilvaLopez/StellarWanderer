@@ -4,9 +4,11 @@ indicators are two columns of the console, drawn separately."""
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, ACCENT_LABEL, BINDING_NEAR_GREEN, SPEED_WARNING_RED
+from ..constants import (ACCENT, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR, ADVICE_DECELERATE_COLOR,
+                         ADVICE_STAY_COLOR, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
 from .common import draw_beveled_panel, bezel_depth
-from common.units import format_compact_distance, format_compact_speed
+from common.units import format_compact_distance, format_compact_duration, format_compact_speed
+from spaceships.long_distance_advice import Advice, LongDistanceAdvisor
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -24,7 +26,9 @@ class ProximityMeter:
 
     The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the ship
     is in the fixed zone, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each value sits on
-    its label's row, after the label.
+    its label's row, after the label. Below them, while `LongDistanceAdvisor.current` holds advice, "Long distance
+    advice:" in the advice colour, after a free row, and under it ACCELERATE, STAY or DECELERATE, each in its own
+    colour, with the time left of the plan; "Too far" when no plan keeps the reserves.
 
     The "Approaching" readout is the signed rate of change of the distance to the targeted body
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
@@ -90,3 +94,14 @@ class ProximityMeter:
         draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
                   approach_colour)
         draw_pair(3, 'Drift:', ACCENT_LABEL, f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)
+
+        advisory = LongDistanceAdvisor.current
+        if advisory is not None:
+            draw_pair(5, 'Long distance advice:', ADVICE_COLOR, '', ACCENT)
+            if advisory.advice is None:
+                draw_pair(6, 'Too far', SPEED_WARNING_RED, '', ACCENT)
+            else:
+                word_colour = {Advice.ACCELERATE: ADVICE_ACCELERATE_COLOR, Advice.STAY: ADVICE_STAY_COLOR,
+                               Advice.DECELERATE: ADVICE_DECELERATE_COLOR}[advisory.advice]
+                eta = '' if advisory.eta is None else format_compact_duration(advisory.eta)
+                draw_pair(6, advisory.advice.name, word_colour, eta, ACCENT)

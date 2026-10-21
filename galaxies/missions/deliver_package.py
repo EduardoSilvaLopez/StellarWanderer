@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.person import Person
     from galaxies.people.player import Player
+    from galaxies.world import World
 
 @register
 class DeliverPackage(Mission):
@@ -92,6 +93,9 @@ class DeliverPackage(Mission):
         super().accept(now)
         self.sender.record()
         self.recipient.record()
+
+    def target_body(self) -> World:
+        return self.destination_outpost.planet
 
     def title(self) -> str:
         return f"Deliver a package to {self.destination_outpost.name}"
