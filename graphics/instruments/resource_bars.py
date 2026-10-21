@@ -115,6 +115,6 @@ class ResourceBars:
                 # outposts only restore it to 0.8: that is intended
                 _draw_bar(surface, track, max(0.0, min(1.0, ship.maintenance)), warning=ship.MAINTENANCE_WARNING)
             elif name == 'Energy':
-                _draw_bar(surface, track, ship.energy / ship.INITIAL_ENERGY_MAX)
+                _draw_bar(surface, track, ship.energy / ship.energy_max)
             else:
                 _draw_temperature(surface, track, ship)

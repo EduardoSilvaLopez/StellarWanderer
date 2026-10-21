@@ -117,7 +117,9 @@ class Scanner:
 
     # region Actions
     def activate(self, time_passed: int) -> Scanner:
-        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a rock with an adjective,
+        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost, talk to its
+        com officer, unless the pilot may use the mission board: for them the keypress opens the board instead (see main.py),
+        and holding the key does nothing here. On a rock with an adjective,
         the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch the
         beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so it does
         not search again."""
@@ -141,8 +143,9 @@ class Scanner:
             return self
 
         if self.targeted_outpost is not None:
-            outpost: Outpost = self.targeted_outpost
-            outpost.communicate()
+            from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs this module's package
+            if not MissionBoard.is_available(self.ship.owner):
+                self.targeted_outpost.communicate()
             return self
 
         rock = self.targeted_rock

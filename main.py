@@ -9,7 +9,8 @@ Controls:
     Numpad 4/6 yaw left/right
     Q/E        roll left/right
     S          brake (linear and rotational)
-    SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine)
+    SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); on a targeted
+               outpost, open its mission board (reputation 10 or more) or talk to its com officer
     M          place mine
     O          show or hide the orbit of the targeted body
     Esc       open the starting dialog (new game, load, exit game); Esc again resumes.
@@ -40,6 +41,7 @@ from common.dialogs import (
     MissionBoardDialog, PendingMissionsDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.missions.mission_board import MissionBoard
+from galaxies.outpost import Outpost
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
 from graphics.instruments.cockpit_buttons import MISSIONS, SYSTEMS, CockpitButtons
@@ -139,6 +141,21 @@ def show_pending_messages(
             pending_message.on_result(result[1])  # the pressed button's index, None for Esc
         pending_message = next_pending_message()
     return True, screen
+
+
+def visit_mission_board(
+        outpost: Outpost, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """The mission board of `outpost`. Communicate talks to the com officer: the conversation's messages are shown
+    (show_pending_messages) and, when the last is answered, the board opens again. Returns (keep running, window)."""
+    while True:
+        result, screen = run_modal_dialog(MissionBoardDialog(outpost.open_mission_board()), screen, gui, fonts, clock)
+        if result[0] != 'communicate':
+            return result[0] != 'exit', screen
+        outpost.communicate()
+        keep_running, screen = show_pending_messages(screen, gui, fonts, clock)
+        if not keep_running:
+            return False, screen
 
 
 def start_game(action: str, value: object) -> float:
@@ -292,11 +309,10 @@ def main() -> None:
                     player_module.current_player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:
                     player_module.current_player.decrease_time_scale()
-                elif event.key == pygame.K_KP5:  # the message board of the outpost in the scanner
+                elif event.key == pygame.K_SPACE:  # the message board of the outpost in the scanner, for a pilot who may use it
                     outpost = player_module.current_player.ship.scanner.targeted_outpost
                     if outpost is not None and MissionBoard.is_available(player_module.current_player):
-                        result, screen = run_modal_dialog(MissionBoardDialog(outpost.open_mission_board()), screen, gui, fonts, clock)
-                        running = result[0] != 'exit'
+                        running, screen = visit_mission_board(outpost, screen, gui, fonts, clock)
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
                     OrbitPath.shown = not OrbitPath.shown
                 elif event.key == pygame.K_F5:

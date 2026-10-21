@@ -8,6 +8,7 @@ from common.dialogs.messages import show_message
 from galaxies.politics import political_entity
 from galaxies.politics.political_entity import PoliticalEntity
 from galaxies.outpost import Outpost
+from spaceships.ship_configurations import ThsMiner, ShabbyThsMiner
 from .. import player as player_module
 from ..player import Player
 from ..person import Person
@@ -527,7 +528,7 @@ class ReportingInOutpost(Conversation):
         new_title = entity.title_for(status.reputation)
         if old_title != new_title:
             self._welcome_to_new_title(old_reputation, status.reputation)
-        elif ship.cargo_hold.capacity <= ship.cargo_hold.INITIAL_CARGO_CAPACITY and status.reputation >= 0:
+        elif isinstance(ship.cargo_hold, ShabbyThsMiner.ShabbyHold) and status.reputation >= 0:
             # semi-new-title, *very* improbable to happen at the same time.
             self._we_tweaked_your_ship()
         else:
@@ -541,14 +542,14 @@ class ReportingInOutpost(Conversation):
             text: str = (
                 "We have spoken" if self.interlocutor.loyalty100 > 10 else "\n\n\nThey have been talking"
                 " about you and think can trust you to do something more than collect ore."
-                "\n\nAnytime you want, check the mission board of any outpost [Numpad 5]."
+                "\n\nAnytime you want, check the mission board of any outpost [Space]."
                 "\n\nAnyway, ore is always welcome..."
                 " we" if self.interlocutor.loyalty100 > 10 else " they"
                 " increased your cargo hold as well."
                 f"{"\n\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else 'Nice.'}"
                 )
 
-            self.player.ship.cargo_hold.capacity = max(5000, self.player.ship.cargo_hold.capacity)
+            self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
             self._ask_then_close(text, self._thanks_buttons())
             return
         elif old_rep < 20 and new_rep >= 20:
@@ -560,16 +561,7 @@ class ReportingInOutpost(Conversation):
                 " made some repairs to your old ship, some missions are hard and far away."
                 f'{"\n\n\nEnjoy." if self.interlocutor.loyalty100 > 10 else "\n\n\nIt's something, I guess."}'
                 )
-            self.player.ship.cargo_hold.capacity = max(10000, self.player.ship.cargo_hold.capacity)
-            self.player.ship.precariousness = 0.8 * self.player.ship.INITIAL_PRECARIOUSNESS
-            self.player.ship.energy_max = 2 * self.player.ship.INITIAL_ENERGY_MAX
-            self.player.ship.energy = self.player.ship.energy_max
-            self.player.ship.cargo_hold.air_max = 2 * self.player.ship.cargo_hold.INITIAL_AIR_MAX
-            self.player.ship.cargo_hold.air = self.player.ship.cargo_hold.air_max
-            self.player.ship.cargo_hold.water_max = 1.9 * self.player.ship.cargo_hold.INITIAL_WATER_MAX
-            self.player.ship.cargo_hold.water = self.player.ship.cargo_hold.water_max
-            self.player.ship.cargo_hold.food_max = 1.8 * self.player.ship.cargo_hold.INITIAL_FOOD_MAX
-            self.player.ship.cargo_hold.food = self.player.ship.cargo_hold.food_max
+            self.player.ship.upgrade_to(ThsMiner)
             self._ask_then_close(text, self._thanks_buttons())
             return
 
@@ -582,7 +574,7 @@ class ReportingInOutpost(Conversation):
             f"{"\n\nLong live the Community." if self.interlocutor.loyalty100 > 10 else ''}"
             )
 
-        self.player.ship.cargo_hold.capacity *= 1.5
+        self.player.ship.change_cargo_hold(ShabbyThsMiner.StandardHold)
         self._ask_then_close(text, self._thanks_buttons())
 
     def _thanks_buttons(self) -> List[dict]:

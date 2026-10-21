@@ -2,17 +2,20 @@ DEVELOPER'S DIARY
 
 > After the last release 2026-10-20 (9/10)
 
-Extra time: 83h00' + 18:00 - 
-
-> Not committed yet but done:
   * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
-  * Extra: Strange rocks look a bit different? Subtle texture? Done, untested.
+  * Extra: Strange rocks look different.
 
-> Not done yet but started:
-
-# NOT STARTED YET = BACKLOG
 * ASTEROIDS (II)
   * Promotion gives more autonomy, needed for asteroid missions.
+
+> Not committed yet but done:
+> Not done yet but started:
+
+Extra time: 85h45'
+  * Outpost main dialog to distribute.
+  * Types of ships per level.
+
+# NOT STARTED YET = BACKLOG
   * Place one in initial system, not too far away.
   * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Extra: rethink all seeds, make your proposals.

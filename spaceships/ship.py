@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Tuple
 import math
 
 import logging
@@ -26,6 +26,10 @@ class Ship(Updatable):
     """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
     laser, cargo hold) and its flight limits.
 
+    This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
+    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS, TEMP_SHIELD_REDUCTION) and the cargo hold class
+    (CARGO_HOLD). The ship is upgraded by replacing it with another configuration (see upgrade_to).
+
     `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
     east, y up, z north) or free in the star's frame.
 
@@ -47,14 +51,37 @@ class Ship(Updatable):
 
     UPDATE_PERIOD = 60 * 60
 
-    INITIAL_PRECARIOUSNESS = 1 # The maximum. Better ships will decrease this.
     TEMP_MIN = -50
     TEMP_DEFAULT = 25
     TEMP_MAX = 50
-    INITIAL_TEMP_SHIELD_REDUCTION = 1 # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
-    INITIAL_ENERGY_MAX = 200e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    # Set by each configuration, never here.
+    ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
+    TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
+    CARGO_HOLD: ClassVar[type[CargoHold]]
+
+    # Every configuration, by qualified name.
+    by_name: ClassVar[dict[str, type[Ship]]] = {}
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        Ship.by_name[cls.__qualname__] = cls
+
+    # region Configuration
+    @property
+    def energy_max(self) -> float:
+        return self.ENERGY_MAX
+
+    @property
+    def precariousness(self) -> float:
+        return self.PRECARIOUSNESS
+
+    @property
+    def temp_shield_reduction(self) -> float:
+        return self.TEMP_SHIELD_REDUCTION
+    # endregion
 
     # region Life
     def __init__(self, owner: Player) -> None:
@@ -64,15 +91,12 @@ class Ship(Updatable):
         self.velocity: Velocity = Velocity()
         self.attitude: Attitude = Attitude(self)
         self.navigation: Navigation = Navigation(self)
-        self.precariousness: float = Ship.INITIAL_PRECARIOUSNESS
         self.maintenance: float = 1.0
-        self.energy_max: float = Ship.INITIAL_ENERGY_MAX
         self.energy: float = self.energy_max
-        self.temp_shield_reduction: float = Ship.INITIAL_TEMP_SHIELD_REDUCTION
         self.temperature: float = Ship.TEMP_DEFAULT
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
-        self.cargo_hold: CargoHold = CargoHold(self)
+        self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
         self.last_update_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
@@ -139,7 +163,7 @@ class Ship(Updatable):
         # Maintenance thresholds:
         if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:
             self.notification.set('CRITICAL: Ship needs urgently maintenance. Go to outpost.')
-        elif self.energy <= 0.01 * Ship.INITIAL_ENERGY_MAX < old_energy:
+        elif self.energy <= 0.01 * self.energy_max < old_energy:
             self.notification.set('CRITICAL: Ship needs urgently more energy. Stop using laser. Go to outpost.')
         elif old_temperature <= 35 < self.temperature:
             self.notification.set("WARNING: It's getting hot in here. You wanna take your clothes off.")
@@ -173,6 +197,38 @@ class Ship(Updatable):
         elif self.cargo_hold.food <= -14.0:  # Starvation at 14 days without food.
             self.owner.game_over('You die of hunger. A slow and horrible death.')
 
+        return self
+    # endregion
+
+    # region Upgrades
+    def upgrade_to(self, configuration: type[Ship]) -> Ship:
+        """Replaces this ship with one of `configuration`, which takes over where it is, its systems (rebound to it), its
+        cargo and its turn in the update queue. What the configuration changes is refilled to its new maximum; the rest
+        is kept. Sets the owner's ship to the new one and returns it."""
+        upgraded = configuration(self.owner)  # queues itself, and starts its clock
+        update_queue.remove(self)
+        upgraded.is_bound = self.is_bound
+        upgraded.position = self.position
+        upgraded.velocity = self.velocity
+        upgraded.maintenance = self.maintenance
+        upgraded.energy = self.energy if upgraded.energy_max == self.energy_max else upgraded.energy_max
+        upgraded.temperature = self.temperature
+        upgraded.notification = self.notification
+        upgraded.last_update_at = self.last_update_at
+        upgraded.next_update_at = self.next_update_at
+        upgraded.cargo_hold.take_stock_from(self.cargo_hold)
+        upgraded.attitude = self.attitude
+        upgraded.navigation = self.navigation
+        upgraded.scanner = self.scanner
+        upgraded.laser = self.laser
+        for system in (upgraded.attitude, upgraded.navigation, upgraded.scanner, upgraded.laser):
+            system.ship = upgraded
+        self.owner.ship = upgraded
+        return upgraded
+
+    def change_cargo_hold(self, configuration: type[CargoHold]) -> Ship:
+        """Gives the ship a cargo hold of `configuration` in place of its own, keeping the stock (see take_stock_from)."""
+        self.cargo_hold = configuration(self).take_stock_from(self.cargo_hold)
         return self
     # endregion
 
@@ -256,23 +312,21 @@ class Ship(Updatable):
     # region Persistence
     def serialize(self) -> dict:
         return {
+            'configuration': type(self).__qualname__,
             'is_bound': self.is_bound,
             'position': self.position.serialize(),
             'velocity': self.velocity.serialize(),
             'attitude': self.attitude.serialize(),
             'last_update_at': self.last_update_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'precariousness': self.precariousness,
             'maintenance': self.maintenance,
-            'energy_max': self.energy_max,
             'energy': self.energy,
-            'temp_shield_reduction': self.temp_shield_reduction,
             'temperature': self.temperature,
             'cargo_hold': self.cargo_hold.serialize()
         }
 
     @staticmethod
     def deserialize(owner: Player, src: dict) -> Ship:
-        result = owner.ship
+        result = Ship.by_name[src['configuration']](owner)
         result.is_bound = src['is_bound']
         result.position = Position.deserialize(src['position'])
         result.velocity = Velocity.deserialize(src['velocity'])
@@ -280,11 +334,8 @@ class Ship(Updatable):
         if result.is_bound:
             result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
         result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
-        result.precariousness = src['precariousness']
         result.maintenance = src['maintenance']
-        result.energy_max = src['energy_max']
         result.energy = src['energy']
-        result.temp_shield_reduction = src['temp_shield_reduction']
         result.temperature = src['temperature']
         result.cargo_hold = CargoHold.deserialize(result, src['cargo_hold'])
         return result

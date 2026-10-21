@@ -41,11 +41,8 @@ class Cargo:
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
-        for element, quantity in ship.cargo_hold.serialize().items():
-            if element == "capacity":
-                continue # the capacity is shown above
-            if element.endswith('_max'):
-                continue  # the hold's limits are saved with it, but they are not cargo
+        for element in ('air', 'water', 'food', 'mines', 'ore'):  # the capacity is shown above, the rest is not cargo
+            quantity = getattr(ship.cargo_hold, element)
             # Red at or below the warning level, as the ship's notice says.
             warning = element in warning_days and quantity <= warning_days[element]
             colour = BINDING_MARK_RED if warning else ACCENT

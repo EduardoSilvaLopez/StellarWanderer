@@ -8,7 +8,9 @@ from common.dialogs.messages import Message, show_message
 from galaxies.missions import Mission
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
+from common.updating import update_queue
 from spaceships.ship import Ship
+from spaceships.ship_configurations import ShabbyThsMiner
 import game_environment as gem
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ class Player:
 
     def __init__(self) -> None:
         self.time_scale: int = 1  # Default time scale
-        self.ship: Ship = Ship(self)
+        self.ship: Ship = ShabbyThsMiner(self)
         self.credits: int = 0
         self.those_who_share: PersonalStatus = PersonalStatus()
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
@@ -121,6 +123,7 @@ class Player:
     @staticmethod
     def deserialize(loaded_attributes: dict) -> Player:
         result = Player()
+        update_queue.remove(result.ship)  # the default ship made above; the saved one replaces it
         result.time_scale = loaded_attributes['time_scale']
         result.credits = loaded_attributes['credits']
 
