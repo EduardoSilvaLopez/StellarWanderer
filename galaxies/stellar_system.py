@@ -1,20 +1,23 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional
 
 import logging
 import math
 import random
+from typing import TYPE_CHECKING
+
 import galaxies.constants
 import knowledge
 from common.units import format_compact_distance
 from galaxies import seeds
-from galaxies.body import Body
-from galaxies.star import Star
-from galaxies.world import World
+from galaxies.asteroid import Asteroid
 from galaxies.asteroid_belt import AsteroidBelt
+from galaxies.body import Body
 from galaxies.orbit import Orbit
 from galaxies.orbit_layout import OrbitKind, OrbitLayout
 from galaxies.politics import political_entity
+from galaxies.star import Star
+from galaxies.world import World
+
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
 
@@ -36,19 +39,36 @@ class StellarSystem:
         knowledge.current_knowledge.learn_system(self.get_alterations_key())
 
         self.is_altered: bool = False
-        self.saved_alterations: Optional[dict] = None
+        self.saved_alterations: dict | None = None
         alterations_key: str = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        self.orbits: List[Orbit] = self._generate_orbits(my_random)
+        self.orbits: list[Orbit] = self._generate_orbits(my_random)
 
-    def _generate_orbits(self, my_random: random.Random) -> List[Orbit]:
-        """The orbits of the system, nearest first and numbered 1.0, 2.0...: earthlike planets, asteroid belts and jovian
-        planets, at distances that follow the star's luminosity (see orbit_layout.py); none for a star of type O. The
-        initial system always has an earthlike planet in orbit `OrbitLayout.INITIAL_ORBIT_NUMBER`. The layout is logged."""
+        # The free-living asteroids that matter (a mission's target), by the seed of the offer they come from. Saved by
+        # that seed alone: each is rebuilt from it (see Asteroid.free_living).
+        self.free_asteroids: dict[int, Asteroid] = {}
+        for offer_seed in (self.saved_alterations or {}).get('free_asteroids', {}):
+            self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed))
+
+    def promote_free_asteroid(self, offer_seed: int) -> Asteroid:
+        """The free-living asteroid of the offer's seed as a kept one (made if it was not); the system is marked as
+        altered."""
+        asteroid = self.free_asteroids.get(offer_seed)
+        if asteroid is None:
+            asteroid = Asteroid.free_living(self, offer_seed)
+            self.free_asteroids[offer_seed] = asteroid
+            self.set_altered()
+        return asteroid
+
+    def _generate_orbits(self, my_random: random.Random) -> list[Orbit]:
+        """The orbits of the system, nearest first and numbered 1.0, 2.0...: earthlike planets, asteroid belts and
+        jovian planets, at distances that follow the star's luminosity (see orbit_layout.py); none for a star of type O.
+        The initial system always has an earthlike planet in orbit `OrbitLayout.INITIAL_ORBIT_NUMBER`. The layout is
+        logged."""
         is_initial_system = self.star.position == galaxies.constants.INITIAL_STAR_POSITION
         layout = OrbitLayout.generate(self.star, my_random, is_initial_system)
         orbits = [
@@ -59,11 +79,12 @@ class StellarSystem:
         self._log_orbits(layout, orbits)
         return orbits
 
-    def _log_orbits(self, layout: OrbitLayout, orbits: List[Orbit]) -> None:
+    def _log_orbits(self, layout: OrbitLayout, orbits: list[Orbit]) -> None:
         scales = layout.scales
         logger.info(
             f"Orbits of {self.name}: {len(orbits)} orbits. Star {self.star.type.name}: luminosity "
-            f"{scales.luminosity:.3g} W, mass {scales.mass:.3g} kg. Inner edge {format_compact_distance(scales.inner_edge)}, "
+            f"{scales.luminosity:.3g} W, mass {scales.mass:.3g} kg. "
+            f"Inner edge {format_compact_distance(scales.inner_edge)}, "
             f"snow line {format_compact_distance(scales.snow_line)}."
         )
         if layout.attempts > 1:
@@ -83,12 +104,12 @@ class StellarSystem:
     def get_orbit(self, number: float) -> Orbit:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
-    def get_all_bodies(self) -> List[Body]:
+    def get_all_bodies(self) -> list[Body]:
         """The star first, then every world (each planet before its moons)."""
         return [self.star] + self.get_all_worlds()
 
-    def get_all_worlds(self) -> List[World]:
-        result: List[World] = []
+    def get_all_worlds(self) -> list[World]:
+        result: list[World] = []
         for orbit in self.orbits:
             for planet in orbit.planets:
                 result.append(planet)
@@ -106,14 +127,16 @@ class StellarSystem:
         '''The integer cell of the star, so that the key is the same whatever the float position.'''
         return " ".join(str(c) for c in self.star.cell)
 
-    def get_alterations(self) -> Optional[dict]:
+    def get_alterations(self) -> dict | None:
         alterations = {}
         if self.is_altered:
             for orbit in self.orbits:
                 if orbit.is_altered:
-                    orbit_alterations: Optional[dict] = orbit.get_alterations()
+                    orbit_alterations: dict | None = orbit.get_alterations()
                     if orbit_alterations:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
+            if self.free_asteroids:
+                alterations['free_asteroids'] = {str(offer_seed): {} for offer_seed in self.free_asteroids}
         if not alterations:
             return None
         return alterations

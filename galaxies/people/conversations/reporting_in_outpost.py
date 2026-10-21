@@ -484,7 +484,8 @@ class ReportingInOutpost(Conversation):
         cargo_hold.food = ship.cargo_hold.food_max
 
         # Reputation gain: ore
-        rep_gain_ore = 0.005 * cargo_hold.ore
+        from galaxies.missions.deliver_ore import ORE_REPUTATION_REWARD
+        rep_gain_ore = 0.5 * ORE_REPUTATION_REWARD * cargo_hold.ore
         cargo_hold.ore = 0
 
         rep_loss = rep_loss_maintenance \
@@ -552,7 +553,7 @@ class ReportingInOutpost(Conversation):
             self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
             self._ask_then_close(text, self._thanks_buttons())
             return
-        elif old_rep < 20 and new_rep >= 20:
+        elif old_rep < 50 and new_rep >= 50:
             # Prepare the message:
             text: str = (
                 f"You have brought some ore over time, {self.player.get_title()} Pilot." \

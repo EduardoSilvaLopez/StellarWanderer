@@ -110,7 +110,8 @@ class OreMine(Updatable):
         periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
         if periods_passed < 1.0:
             return 0
-        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+        self.last_updated_at += 0.25 * timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+            # Adjusted together with EXTRACTION_PERIOD to tune the extraction.
         self.content += self.parent_field.extract(periods_passed, OreMine.MAX_CAPACITY - self.content)
         return periods_passed
 

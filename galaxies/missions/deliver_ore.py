@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+ORE_REPUTATION_REWARD = 0.010 # Used for normal delivery too.
+
 @register
 class DeliverOre(Mission):
     """Deliver ore: bring some ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery.
@@ -74,7 +76,7 @@ class DeliverOre(Mission):
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 0.006 * self.quantity
+        reputation_change: float = ORE_REPUTATION_REWARD * self.quantity
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = {player.those_who_share.reputation}")
 

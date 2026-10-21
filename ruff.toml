@@ -1,0 +1,5 @@
+# Ruff, the linter the VS Code extension runs. Lines are at most 120 characters: longer ones are warnings (E501).
+line-length = 120
+
+[lint]
+extend-select = ["E501"]

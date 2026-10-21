@@ -10,17 +10,23 @@ DEVELOPER'S DIARY
   * Outpost main dialog to distribute.
   * Types of ships per level.
   * Extra: Seed generation re-done.
+  * Phase 1: Generate the belt itself. Cosmetic asteroids, limits to generation by size and 'distance' (sectors).
+  Hierarchy of sectors. 'Relevant asteroids' are different.
 
 > Not committed yet but done:
 
 > Not done yet but started:
 
-### 2026-10-21 (10/10) Extra time: 85h45' + 3:15-5:30 + 7:15 - 8:00 + 8:15-9:00 + 9:15-9:45
+  * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
+
+### 2026-10-21 (10/10)
+
+Extra time: 88h00' + 11:00 - 12:45
 
 # NOT STARTED YET = BACKLOG
-  * Place one in initial system, not too far away.
+  * Phase 3: Show the asteroid in radar and label, define how it looks like (no collision yet).
+  * Phase 4: How to scan. Land?
   * Hull integrity damages and events when in the asteroids.
-  * Asteroid belt similar to fixed stars, for a star. Only shown where near enough (radar, label).
   * Outpost gives coordinates as prize? Or very good ones.
   * Extra: Cooler laser.
   * Extra: Improve the sounds for real.
@@ -29,6 +35,7 @@ DEVELOPER'S DIARY
   * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?
 
 * OROGRAPHY
+  * Extra: 120 chars in code.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
   * Craters
   * Terrain elevation / sinkage.

@@ -4,17 +4,18 @@ A belt has asteroids down to dust, and the count N(>D) grows without limit towar
 MIN_DIAMETER (1 m, about a tonne) up are generated. Above MAX_DIAMETER (the diameter of the smallest world) a body is a
 dwarf planet, made by another method; the law gives the number to expect there, so both methods fit.
 
-The cumulative count follows a broken power law, N(>D) ~ D^-b, anchored on the main belt's measured N(>1 km). The slopes follow
-the surveys (approximately; the real curve is wavy): collisional equilibrium (2.5, Dohnanyi) below 100 m, steeper from 100 m to
-1 km, about 1.85 from 1 km to 100 km, and a steep top end above that, which leaves about half a body above MAX_DIAMETER in the reference belt (Ceres).
+The cumulative count follows a broken power law, N(>D) ~ D^-b, anchored on the main belt's measured N(>1 km). The slopes
+follow the surveys (approximately; the real curve is wavy): collisional equilibrium (2.5, Dohnanyi) below 100 m, steeper
+from 100 m to 1 km, about 1.85 from 1 km to 100 km, and a steep top end above that, which leaves about half a body above
+MAX_DIAMETER in the reference belt (Ceres).
 
-The tiers split the diameters by decades. Each has its own grid of sectors (see asteroid_belt.py), so that a query for big
-asteroids does not generate the countless tiny ones.
+The tiers split the diameters by decades. Each has its own grid of sectors (see asteroid_belt.py), so that a query for
+big asteroids does not generate the countless tiny ones.
 """
 
 from __future__ import annotations
+
 from enum import Enum
-from typing import Union
 
 import numpy as np
 
@@ -59,7 +60,7 @@ class AsteroidTier(Enum):
         self.upper: float = upper  # m: up to here (excluded)
 
 
-def cumulative(diameter: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+def cumulative(diameter: float | np.ndarray) -> float | np.ndarray:
     """N(>D) as a multiple of N(>ANCHOR_DIAMETER), for diameters from MIN_DIAMETER to MAX_DIAMETER."""
     segment = np.clip(np.searchsorted(BREAKS, diameter, side='right') - 1, 0, len(SLOPES) - 1)
     return CUMULATIVE[segment] * (diameter / BREAKS[segment]) ** -SLOPES[segment]

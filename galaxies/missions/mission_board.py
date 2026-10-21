@@ -20,7 +20,7 @@ import logging
 
 from common import audio
 import galaxies.people.player as player_module
-from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, ScanRock
+from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, ScanAsteroid, ScanRock
 import game_environment as gem
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 MIN_REPUTATION = 10.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
-KINDS = (DeliverOre, DeliverPackage, ScanRock)  # what a board offers: a new kind of mission comes here
+KINDS = (DeliverOre, DeliverPackage, ScanRock, ScanAsteroid)  # what a board offers: a new kind of mission comes here
 LOOK_BACK_DAYS = max(kind.DAYS_MAX for kind in KINDS)  # an older offer has expired, whatever its kind
 
 class MissionBoard:
@@ -79,8 +79,8 @@ class MissionBoard:
         logger.debug(f"Offers updated. {len(self.offers)} now.")
 
     def accept(self, offer: Mission) -> None:
-        """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has passed
-        (it is removed from the board at the next update)."""
+        """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has
+        passed (it is removed from the board at the next update)."""
         if offer not in self.offers:
             return
         now = gem.current_environment.date_time
@@ -94,8 +94,8 @@ class MissionBoard:
         audio.play('mission_taken')
 
     def deliver(self, mission: Mission) -> Optional[str]:
-        """The player brings what a mission they have taken asks for. Returns the reward text, to show, when it is done.
-        Not enough: they are told what is missing, and nothing is returned."""
+        """The player brings what a mission they have taken asks for. Returns the reward text, to show, when it is
+        done. Not enough: they are told what is missing, and nothing is returned."""
         if mission not in self.mine():
             return None
         if not mission.can_complete(self.player):

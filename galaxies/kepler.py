@@ -1,11 +1,11 @@
-"""Kepler's equation and the orientation of an elliptical orbit, in the reference frame of the stellar system (z along the
-spin axes, the reference plane x, y)."""
+"""Kepler's equation and the orientation of an elliptical orbit, in the reference frame of the stellar system (z along
+the spin axes, the reference plane x, y)."""
 
 from __future__ import annotations
-import math
-from typing import Tuple
 
-Axis = Tuple[float, float, float]
+import math
+
+Axis = tuple[float, float, float]
 
 
 def eccentric_anomaly(eccentricity: float, mean_anomaly: float) -> float:
@@ -21,7 +21,7 @@ def eccentric_anomaly(eccentricity: float, mean_anomaly: float) -> float:
     return anomaly
 
 
-def orbit_axes(node_longitude: float, inclination: float, periapsis_argument: float) -> Tuple[Axis, Axis]:
+def orbit_axes(node_longitude: float, inclination: float, periapsis_argument: float) -> tuple[Axis, Axis]:
     """The orbit's two in-plane axes: towards the periapsis, and a quarter turn on."""
     cos_node, sin_node = math.cos(node_longitude), math.sin(node_longitude)
     cos_incl, sin_incl = math.cos(inclination), math.sin(inclination)

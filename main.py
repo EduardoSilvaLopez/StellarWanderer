@@ -188,13 +188,16 @@ def start_game(action: str, value: object) -> float:
         show_message(Message(
             title=f"Welcome, {player.get_title()} Pilot!",
             text=(
-                "Speaker Xi, the famous pilot trainer, has closed the communication with his last message. "
-                "Now he will train other Pioneer Pilots. You are ready.\n\n"
-                f"{moon} extends in front of you. Your task is to plant mines in this ore-rich moon and bring it "
-                f"to the outpost in the planet, {planet}. The better you work, the more your reputation will increase.\n\n"
-                "The State of \"Those-Who-Share\" will provide you everything you need there, as they provided you "
-                "this ship as long as you need it to perform your tasks for the Community.\n\n"
-                "You trained years for this. Now it is the time to decide what you do with your new freedom."
+                "Coordinator Xi, the famous pilot trainer, has closed the communication with his last message."
+                " Happy New Year indeed. Now he will train other Pioneer Pilots. You are ready."
+                f"\n\n{moon} extends in front of you. Your main task is to find the best ore-rich rocks, melt them"
+                f" and install those precious mines on the resulting fields. Then wait, days if needed, and collect"
+                f" the ore, bringing it to the outpost in the planet, {planet}. The better you work, the more your"
+                " reputation will rise."
+                "\n\nThe State of \"Those-Who-Share\" will provide everything you need there, as they provided"
+                "you this ship, as long as you need it."
+                "\n\nYou trained years for this."
+                "\n\nNow it is the time to decide what you do with your new freedom."
             ),
             buttons=["Understood"],
         ))

@@ -49,6 +49,7 @@ class Person:
         ASIAN = 1
         BLACK = 2
         WHITE = 3
+        LATIN = 4
 
     class GenderGroup(Enum):  # aesthetically speaking, identification can be done later.
         MALE = 1
@@ -61,9 +62,11 @@ class Person:
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()
-        if rnd > 0.9:
+        if rnd > 0.93:
             self.race = Person.Race.BLACK
-        elif rnd > 0.6:
+        elif rnd > 0.82:
+            self.race = Person.Race.LATIN
+        elif rnd > 0.53:
             self.race = Person.Race.WHITE
 
         self.gender_group = Person.GenderGroup.MALE
@@ -71,8 +74,10 @@ class Person:
         if rnd > 0.55:  # sue me :D
             self.gender_group = Person.GenderGroup.FEMALE
 
-        # All these can change later: mixed heritage, gender-fluid...
-        language = 'chinese' if self.race == Person.Race.ASIAN else 'english'
+        # All these can change later: mixed heritage, gender-fluid, french, german
+        language = 'chinese' if self.race == Person.Race.ASIAN \
+            else 'english' if self.race in (Person.Race.WHITE, Person.Race.BLACK) \
+            else 'spanish'
         gender = self.gender_group.name.lower()
 
         self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')

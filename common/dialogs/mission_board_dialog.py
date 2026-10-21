@@ -134,8 +134,13 @@ class MissionListDialog(Dialog):
         ]
         if mission.progress():
             items.append((body.render(mission.progress(), True, ACCENT), 4, None, None))
-        items += [(body.render(line, True, TEXT_COLOR), 4, None, None)
-                  for line in MessageDialog.wrap(mission.description(), body, width)]
+        # Paragraphs (the blank lines of the description) are wrapped one by one, as the messages do: the wrap only
+        # breaks at spaces, so a blank line inside a word would be measured as part of it and break the lines too early.
+        paragraph_gap = 14
+        for index, paragraph in enumerate(mission.description().split('\n\n')):
+            for line_index, line in enumerate(MessageDialog.wrap(paragraph, body, width)):
+                gap = paragraph_gap if index > 0 and line_index == 0 else 4
+                items.append((body.render(line, True, TEXT_COLOR), gap, None, None))
         action = self._action(mission)
         if action is not None:
             label, do = action
