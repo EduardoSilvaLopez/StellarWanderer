@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import logging
 from common.units import format_compact_distance
 import galaxies.constants
+from galaxies import seeds
 import knowledge
 from galaxies.body import Body
 from galaxies.km2 import Km2
@@ -113,14 +114,12 @@ class World(Body):
             self.parent_planet: World = parent_planet
             self.parent_orbit: Orbit = parent_planet.parent_orbit
             self.index = len(self.parent_planet.moons)
-            seed_origin: float = self.parent_planet.seed
+            self.seed: int = seeds.derive(self.parent_planet.seed, 'moon', self.index)
         else:
             self.parent_planet: World = None
             self.parent_orbit: Orbit = parent_orbit
             self.index = len(self.parent_orbit.planets)
-            seed_origin: float = self.parent_orbit.seed
-
-        self.seed: float = (seed_origin + self.index + 1) % galaxies.constants.SEEDS_SCALING
+            self.seed: int = seeds.derive(self.parent_orbit.seed, 'planet', self.index)
         my_random: random.Random = random.Random(self.seed)
 
         self.name: str =\

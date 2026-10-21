@@ -41,12 +41,12 @@ class SpotQuad(NamedTuple):
     half_height: float
 
 
-def _random(star_seed: float, salt: int) -> random.Random:
+def _random(star_seed: int, salt: int) -> random.Random:
     return random.Random(int(star_seed * 1000) * 7919 + salt)
 
 
 def granulation(width: int, height: int, centre_x: float, centre_y: float, disc_px: float,
-                star_seed: float) -> np.ndarray:
+                star_seed: int) -> np.ndarray:
     """The granules' brightness factor (height x width, float32) for the disc: 1 outside it. Coordinates are as the
     texture of star_gl: pixels, rows first."""
     rnd = _random(star_seed, 17)
@@ -64,7 +64,7 @@ def granulation(width: int, height: int, centre_x: float, centre_y: float, disc_
     return np.where(on_disc, brightness, 1.0).astype(np.float32)
 
 
-def sunspots(star_seed: float) -> List[Sunspot]:
+def sunspots(star_seed: int) -> List[Sunspot]:
     """The star's sunspots: a few, by the star's seed."""
     rnd = _random(star_seed, 29)
     count = SPOT_COUNT_MIN + rnd.randrange(SPOT_COUNT_EXTRA + 1)

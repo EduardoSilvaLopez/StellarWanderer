@@ -88,9 +88,9 @@ class Star(Body):
     is_world = False
 
     # region Generation
-    def __init__(self, seed: float, position: tuple[float, float, float], star_type: Optional[Star.Type] = None) -> None:
+    def __init__(self, seed: int, position: tuple[float, float, float], star_type: Optional[Star.Type] = None) -> None:
         """`star_type` forces the type (the seed's type is still drawn, so the other values do not change)."""
-        self.seed: float = seed
+        self.seed: int = seed
         self.position: tuple[float, float, float] = position  # galactic coordinates, in ly
         self._system: Optional[StellarSystem] = None
         my_random: random.Random = random.Random(self.seed)

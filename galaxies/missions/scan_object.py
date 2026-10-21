@@ -14,7 +14,8 @@ import logging
 import math
 import random
 
-from .mission import Mission, OPEN, register, seed_of
+from galaxies.seeds import of_text
+from .mission import Mission, OPEN, register
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
@@ -129,7 +130,7 @@ class ScanObject(Mission):
     @staticmethod
     def generate(created_at: datetime, object_type: str, outpost: Outpost) -> ScanObject:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
-        seed = seed_of(f"{outpost.full_keys()} {ScanObject.KIND} {created_at.date().isoformat()}")
+        seed = of_text(f"{outpost.full_keys()} {ScanObject.KIND} {created_at.date().isoformat()}")
         days = random.Random(seed).randint(ScanObject.DAYS_MIN, ScanObject.DAYS_MAX)  # the first draw of the seed, as in __init__
         return ScanObject(
             object_type=object_type,

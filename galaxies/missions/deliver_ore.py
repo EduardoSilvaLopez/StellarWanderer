@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, Any, Optional
 import random
 
 import logging
-from .mission import Mission, register, seed_of
+from galaxies.seeds import of_text
+from .mission import Mission, register
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -47,7 +48,7 @@ class DeliverOre(Mission):
     @staticmethod
     def generate(created_at: datetime, outpost: Outpost) -> DeliverOre:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
-        seed = seed_of(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
+        seed = of_text(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
         days = random.Random(seed).randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)  # the first draw of the seed, as in __init__
         return DeliverOre(
             seed=seed,

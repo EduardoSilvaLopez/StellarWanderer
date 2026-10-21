@@ -7,6 +7,7 @@ import random
 import galaxies.constants
 import knowledge
 from common.units import format_compact_distance
+from galaxies import seeds
 from galaxies.body import Body
 from galaxies.star import Star
 from galaxies.world import World
@@ -25,7 +26,7 @@ class StellarSystem:
         ''' Using galactic coordinates here, in ly: the system is where its star is. The star is given by the galaxy.'''
         self.parent_galaxy: Galaxy = parent_galaxy
         self.x, self.y, self.z = star.position
-        self.seed: float = StellarSystem.seed_of(self.parent_galaxy.seed, self.x, self.y, self.z)
+        self.seed: int = seeds.derive(star.seed, 'system')
         my_random: random.Random = random.Random(self.seed)
         self.political_entity = political_entity.THOSE_WHO_SHARE
         self.star: Star = star  # the system's star, as a body ships can navigate to
@@ -42,11 +43,6 @@ class StellarSystem:
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
         self.orbits: List[Orbit] = self._generate_orbits(my_random)
-
-    @staticmethod
-    def seed_of(galaxy_seed: float, x: float, y: float, z: float) -> float:
-        '''The seed of the stellar system at galactic coordinates (x, y, z), in ly. Its star's seed is one more.'''
-        return (galaxy_seed + x*1e1 + y + z*1e-5 + 1) % galaxies.constants.SEEDS_SCALING
 
     def _generate_orbits(self, my_random: random.Random) -> List[Orbit]:
         """The orbits of the system, nearest first and numbered 1.0, 2.0...: earthlike planets, asteroid belts and jovian

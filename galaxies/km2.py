@@ -7,7 +7,7 @@ from typing import List, TYPE_CHECKING, Optional
 
 import logging
 
-import galaxies.constants
+from galaxies import seeds
 from galaxies.rock import Rock
 from galaxies.ore_fields import OreField
 from common.updating import update_queue
@@ -28,7 +28,7 @@ class Km2:
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
-        self.seed: float = (self.parent_world.seed + 1e3*self.longitude + 1e-6*self.latitude + 1) % galaxies.constants.SEEDS_SCALING
+        self.seed: int = seeds.derive(self.parent_world.seed, 'km2', self.longitude, self.latitude)
 
         self.is_altered: bool = False
         own_alterations: Optional[dict] = ((saved_alterations or {}).get('Km2s') or {}).get(self.get_alterations_key())

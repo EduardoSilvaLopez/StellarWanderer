@@ -48,7 +48,7 @@ def _texture(key: Tuple, make_array: Callable[[], np.ndarray]) -> int:
     return texture
 
 
-def _star_texture(colour: Tuple[int, int, int], star_seed: float, detailed: bool = True) -> int:
+def _star_texture(colour: Tuple[int, int, int], star_seed: int, detailed: bool = True) -> int:
     """The sun's texture; `detailed` adds the granulation (not for the glare, which draws it at another scale)."""
     size = 2 * int(STAR_CORONA_EXTENT * STAR_TEXTURE_DISC)
     centre = size / 2

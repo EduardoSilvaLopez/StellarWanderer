@@ -181,7 +181,7 @@ class KnownPeopleDialog(_ListDialog):
         font = body_font(FIELD_SIZE)
         return [line for paragraph in text.split('\n') for line in (MessageDialog.wrap(paragraph, font, width) or [''])]
 
-    def _card(self, person: Optional[Person], seed: float, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
+    def _card(self, person: Optional[Person], seed: int, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
         """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when the
         person could be found again). Returns the card and the box's rectangle inside it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
@@ -254,7 +254,7 @@ class KnownPeopleDialog(_ListDialog):
                 return seed
         return None
 
-    def _set_focus(self, seed: Optional[float]) -> None:
+    def _set_focus(self, seed: Optional[int]) -> None:
         """Focuses the comment box of `seed` (None for none): the keys type into it. The text input is on only while focused."""
         if seed == self._focus:
             return

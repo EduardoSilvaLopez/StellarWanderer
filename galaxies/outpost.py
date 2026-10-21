@@ -10,7 +10,7 @@ from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
 
 import game_environment as gem
-import galaxies.constants
+from galaxies import seeds
 if TYPE_CHECKING:
     from galaxies.missions.mission_board import MissionBoard
 from galaxies.world import World
@@ -44,8 +44,7 @@ class Outpost(Updatable):
     def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
-        # Planets' seeds are consecutive: 1000 apart, each planet has room for up to 1000 outposts with no seed in common.
-        self.seed: float = (planet.seed * 1000 + self.index + 1) % galaxies.constants.SEEDS_SCALING
+        self.seed: int = seeds.derive(planet.seed, 'outpost', self.index)
         self.my_random: random.Random = random.Random(self.seed)
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
@@ -90,7 +89,7 @@ class Outpost(Updatable):
             self.staff = [self._generate_staff_member(index) for index in range(self.STAFF_SIZE)]
         return self
 
-    def person_with_seed(self, seed: float) -> Optional[Person]:
+    def person_with_seed(self, seed: int) -> Optional[Person]:
         """The staff member of this outpost with that seed, or None if the seed is not one of its staff."""
         self.generate_staff()
         for index in range(self.STAFF_SIZE):
@@ -104,10 +103,9 @@ class Outpost(Updatable):
         return Person(self._staff_seed(index), self, 4 if last else 5,
                       self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
 
-    def _staff_seed(self, index: int) -> float:
-        """The seed of the staff member `index`. Outposts are 1000 apart, so each has room for up to 1000 staff and no two
-        outposts share a person."""
-        return self.seed * 1000 + index
+    def _staff_seed(self, index: int) -> int:
+        """The seed of the staff member `index`."""
+        return seeds.derive(self.seed, 'person', index)
 
     def _pick_com_officer(self, shift: int) -> None:
         """The com officer of the 8-hour `shift`: its staff member, or the substitute on a free day."""

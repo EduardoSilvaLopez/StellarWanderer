@@ -1,12 +1,14 @@
 """The fixed stars: the stars of the sectors around the initial star, generated from the galaxy seed and kept in memory.
 
-Galactic space is cut into cubes of SECTOR_SIZE ly, aligned to multiples of it. The sectors within SECTOR_RADIUS of the
-initial star's sector (a block of 2 * SECTOR_RADIUS + 1 sectors on each side, 5 x 5 x 5 for a radius of 2) are generated. Each sector draws its stars from a seed derived from its index,
-so the same galaxy always gives the same stars. A star has a float position inside its sector and occupies the integer
-cell (1 ly) that contains it; no two stars share a cell.
+Galactic space is cut into cubes of SECTOR_SIZE ly, aligned to multiples of it. Sectors sit in districts (DISTRICT_SIZE ly)
+and districts in quadrants (QUADRANT_SIZE ly); those two levels only feed the seeds for now (see seeds.py). The sectors
+within SECTOR_RADIUS of the initial star's sector (a block of 2 * SECTOR_RADIUS + 1 sectors on each side, 5 x 5 x 5 for a
+radius of 2) are generated. Each sector draws its stars from a seed derived from its quadrant, its district and its
+index, so the same galaxy always gives the same stars. A star has a float position inside its sector and occupies the
+integer cell (1 ly) that contains it; no two stars share a cell, and its seed comes from that cell.
 
 A fixed star is only its seed and position, plus the properties Star derives from its seed: no orbits, planets or moons.
-The initial star gets the seed a StellarSystem gives it, so the system and the fixed star describe the same star.
+Its StellarSystem takes its seed from the star's, so the system and the fixed star describe the same star.
 
 Nothing is saved for a fixed star: it is regenerated from the galaxy seed whenever it is needed.
 """
@@ -17,25 +19,26 @@ import random
 from collections import Counter
 from itertools import product
 
+from galaxies import seeds
 from galaxies.constants import (
+    DISTRICT_SIZE,
     FIXED_STARS_MEAN_PER_SECTOR,
     INITIAL_STAR_POSITION,
     LIGHT_YEAR_M,
+    QUADRANT_SIZE,
     SECTOR_RADIUS,
     SECTOR_SIZE,
-    SEEDS_SCALING,
 )
 from galaxies.star import Star, cell_of
-from galaxies.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 
 REPORT_RADIUS = 40.0  # ly: the radius around the initial star in which the log counts the stars
 
 
-def sector_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
-    """The index of the sector that contains the position."""
-    return (math.floor(position[0] / SECTOR_SIZE), math.floor(position[1] / SECTOR_SIZE), math.floor(position[2] / SECTOR_SIZE))
+def region_of(position: tuple[float, float, float], size: int) -> tuple[int, int, int]:
+    """The index of the cube of `size` ly, aligned to multiples of it, that contains the position."""
+    return (math.floor(position[0] / size), math.floor(position[1] / size), math.floor(position[2] / size))
 
 
 def _sector_origin(sector: tuple[int, int, int]) -> tuple[float, float, float]:
@@ -43,13 +46,11 @@ def _sector_origin(sector: tuple[int, int, int]) -> tuple[float, float, float]:
 
 
 def _sector_seed(galaxy_seed: float, sector: tuple[int, int, int]) -> int:
-    # The indices are shifted to be non-negative and packed into 13 bits each: hash() of a negative int is not
-    # injective (hash(-1) == hash(-2)), so it cannot be used on the indices. hash() of the galaxy seed (a float) is
-    # not randomised per process (unlike str), so the seed is the same in every run.
-    key: int = 0
-    for index in sector:
-        key = key * 8192 + (index + 4096)
-    return ((hash(galaxy_seed) & (2 ** 64 - 1)) << 39) | key
+    """The seed of a sector, through the quadrant and the district that contain it."""
+    origin: tuple[float, float, float] = _sector_origin(sector)
+    quadrant_seed: int = seeds.derive(galaxy_seed, 'quadrant', *region_of(origin, QUADRANT_SIZE))
+    district_seed: int = seeds.derive(quadrant_seed, 'district', *region_of(origin, DISTRICT_SIZE))
+    return seeds.derive(district_seed, 'sector', *sector)
 
 
 def _poisson(my_random: random.Random, mean: float) -> int:
@@ -66,7 +67,8 @@ def _poisson(my_random: random.Random, mean: float) -> int:
 def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int], used_cells: set[tuple[int, int, int]]) -> tuple[list[Star], int]:
     """The random stars of one sector, and the number skipped because their cell was taken. `used_cells` holds the
     cells taken so far, in the whole region; it is updated."""
-    my_random: random.Random = random.Random(_sector_seed(galaxy_seed, sector))
+    sector_seed: int = _sector_seed(galaxy_seed, sector)
+    my_random: random.Random = random.Random(sector_seed)
     origin: tuple[float, float, float] = _sector_origin(sector)
     stars: list[Star] = []
     skipped: int = 0
@@ -76,7 +78,7 @@ def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int], used_cell
             skipped += 1  # one attempt only: a collision is rare, and losing the star is harmless
             continue
         used_cells.add(cell_of(position))
-        stars.append(Star(float(my_random.getrandbits(48)), position))
+        stars.append(Star(seeds.derive(sector_seed, 'star', *cell_of(position)), position))
     return stars, skipped
 
 
@@ -90,12 +92,12 @@ def stellar_position(position: tuple[float, float, float]) -> tuple[float, float
 
 def generate_region(galaxy_seed: float) -> list[Star]:
     """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs aggregate results."""
-    initial_star_seed: float = (StellarSystem.seed_of(galaxy_seed, *INITIAL_STAR_POSITION) + 1) % SEEDS_SCALING
+    centre: tuple[int, int, int] = region_of(INITIAL_STAR_POSITION, SECTOR_SIZE)
+    initial_star_seed: int = seeds.derive(_sector_seed(galaxy_seed, centre), 'star', *cell_of(INITIAL_STAR_POSITION))
     initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION, Star.Type.G)
     stars: list[Star] = [initial_star]
     used_cells: set[tuple[int, int, int]] = {cell_of(INITIAL_STAR_POSITION)}
 
-    centre: tuple[int, int, int] = sector_of(INITIAL_STAR_POSITION)
     per_sector_counts: list[int] = []
     skipped_total: int = 0
     for offset in product(range(-SECTOR_RADIUS, SECTOR_RADIUS + 1), repeat=3):

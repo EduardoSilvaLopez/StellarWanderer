@@ -7,6 +7,7 @@ import random
 from typing import TYPE_CHECKING, Optional
 
 from common.updating import Updatable, update_queue
+from galaxies import seeds
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
@@ -28,7 +29,7 @@ class Rock(Updatable):
     # region Generation
     def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
         self.parent_km2: Km2 = parent_km2
-        my_random: random.Random = random.Random(parent_km2.seed + 1e3*latitude + longitude)
+        my_random: random.Random = random.Random(seeds.derive(parent_km2.seed, 'rock', longitude, latitude))
         self.size: float = abs(my_random.lognormvariate(math.log(10), 0.8))
         self.longitude: int = longitude
         # Height of the rock's centre above the ground, in metres (the rock is drawn and hit-tested

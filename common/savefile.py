@@ -102,8 +102,8 @@ class Savefile:
         # Before the environment: the systems it generates add to the knowledge.
         knowledge.current_knowledge = knowledge.Knowledge.deserialize(load_object['knowledge'])
         game_date_time = datetime.strptime(load_object['environment']['date_time'], '%Y-%m-%d %H:%M:%S.%f')
-        # JSON keys are text; the people are looked up by their float seed.
-        people_alterations = {float(seed): values for seed, values in load_object['environment']['persons'].items()}
+        # JSON keys are text; the people are looked up by their int seed.
+        people_alterations = {int(seed): values for seed, values in load_object['environment']['persons'].items()}
         gem.current_environment = gem.GameEnvironment(
             load_object['environment']['galactic_seed'],
             game_date_time,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import random
 
+from galaxies import seeds
 from galaxies.ore_mine import OreMine
 
 from typing import TYPE_CHECKING, List
@@ -39,7 +40,8 @@ class OreField:
         result.initial_ore = result.remaining_ore = int(original_rock.ore_per_m3() * original_rock.size**3)
         result.color = result.initial_color = tuple(min(255, value + 50) for value in original_rock.initial_color)
 
-        my_random = random.Random(original_rock.parent_km2.seed + original_rock.latitude + original_rock.longitude + result.radius)
+        my_random = random.Random(
+            seeds.derive(original_rock.parent_km2.seed, 'ore_field', original_rock.longitude, original_rock.latitude))
         result.orientation = my_random.random() * 360.0
         result.parent_km2.set_altered()  # Any ore field is an alteration by definition.
 

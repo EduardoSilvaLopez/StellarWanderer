@@ -15,12 +15,12 @@ the OPEN missions back."""
 from __future__ import annotations
 from abc import abstractmethod
 from datetime import datetime
-import hashlib
 import random
 from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from common import audio
 from common.updating import Updatable, update_queue
+from galaxies.seeds import of_text
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -32,12 +32,6 @@ DONE = 'done'
 FAILED = 'failed'
 
 _KINDS: Dict[str, Type[Mission]] = {}
-
-
-def seed_of(text: str) -> int:
-    """A seed for a text. The same text gives the same seed in every run (unlike hash()), so a mission's seed can be kept
-    in a save and the rest of the mission rebuilt from it."""
-    return int.from_bytes(hashlib.sha256(text.encode('utf-8')).digest()[:8], 'big')
 
 
 def register[Kind: 'Mission'](kind: Type[Kind]) -> Type[Kind]:
@@ -82,7 +76,7 @@ class Mission(Updatable):
     def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
         """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost and the
         day only, so it is the same however the board was visited."""
-        chance = random.Random(seed_of(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
+        chance = random.Random(of_text(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
         if chance.random() >= cls.CHANCES_PER_DAY:
             return None
         return cls.offer(day, outpost, chance)

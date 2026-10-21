@@ -15,12 +15,12 @@ from .constants import FLARE_SLOT_SECONDS, FLARE_CHANCE, FLARE_RISE_SECONDS, FLA
 FLARE_MIN_SHAPE = 0.01  # a flare fainter than this is not drawn
 
 
-def _random(star_seed: float, salt: int) -> random.Random:
+def _random(star_seed: int, salt: int) -> random.Random:
     """A generator that depends only on the star's seed and `salt`, so the same slot always gives the same flare."""
     return random.Random(int(star_seed * 1000) * 1000003 + salt)
 
 
-def flares_active(star_seed: float, game_seconds: float) -> List[Tuple[float, float]]:
+def flares_active(star_seed: int, game_seconds: float) -> List[Tuple[float, float]]:
     """(longitude, intensity from 0 to 1) of each flare visible at `game_seconds` (game time since EPOCH). The longitude
     is in radians from the centre of the disc, positive to the right."""
     slot = int(math.floor(game_seconds / FLARE_SLOT_SECONDS))

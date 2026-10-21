@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 import random
 
 import logging
-from .mission import Mission, register, seed_of
+from galaxies.seeds import of_text
+from .mission import Mission, register
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,8 @@ class DeliverPackage(Mission):
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02  # each day of an offer's life, from the day it is made: the chance somebody takes it
 
     def __init__(
-            self, sender_seed: Optional[float] = None,
-            recipient_seed: Optional[float] = None,
+            self, sender_seed: Optional[int] = None,
+            recipient_seed: Optional[int] = None,
             **common: Any) -> None:
         super().__init__(**common)
 
@@ -51,7 +52,7 @@ class DeliverPackage(Mission):
             if recipient_seed is None else self._staff_member(self.destination_outpost, recipient_seed)
 
     @staticmethod
-    def _staff_member(outpost: Outpost, seed: float) -> Person:
+    def _staff_member(outpost: Outpost, seed: int) -> Person:
         """The staff member of `outpost` with that seed: it must be one of them."""
         person = outpost.person_with_seed(seed)
         if person is None:
@@ -71,7 +72,7 @@ class DeliverPackage(Mission):
     @staticmethod
     def generate(created_at: datetime, destination_outpost: Outpost, outpost: Outpost) -> DeliverPackage:
         """The offer made on the day of `created_at`, from `outpost` to `destination_outpost`."""
-        seed = seed_of(f"{outpost.full_keys()} {DeliverPackage.KIND} {created_at.date().isoformat()}")
+        seed = of_text(f"{outpost.full_keys()} {DeliverPackage.KIND} {created_at.date().isoformat()}")
         days = random.Random(seed).randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)  # the first draw of the seed, as in __init__
         return DeliverPackage(
             seed=seed,

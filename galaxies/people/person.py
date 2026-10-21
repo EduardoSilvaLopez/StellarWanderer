@@ -55,9 +55,9 @@ class Person:
         FEMALE = 2
 
     # region Generation
-    def __init__(self, seed: float, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70) -> None:
+    def __init__(self, seed: int, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70) -> None:
         my_random = random.Random(seed)
-        self.seed: float = seed
+        self.seed: int = seed
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()

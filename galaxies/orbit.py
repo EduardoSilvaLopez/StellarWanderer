@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, List, Optional
 
-import galaxies.constants
+from galaxies import seeds
 from galaxies.orbit_layout import OrbitKind
 from galaxies.world import World
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ class Orbit:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number
         self.kind: OrbitKind = kind
-        self.seed: float = (self.parent_stellar_system.seed + self.number + 1) % galaxies.constants.SEEDS_SCALING
+        self.seed: int = seeds.derive(self.parent_stellar_system.seed, 'orbit', self.number)
         my_random: random.Random = random.Random(self.seed)
 
         self.is_altered: bool = False
