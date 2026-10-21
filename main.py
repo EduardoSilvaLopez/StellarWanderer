@@ -222,7 +222,7 @@ def save_from_menu(
         name: str, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
         ) -> Tuple[bool, pygame.Surface]:
     """Save from the starting dialog. '' is the default name, which is not saved over an existing file (the same
-    game second). A name in use asks first; Overwrite saves, Cancel does nothing. Returns (keep running, window)."""
+    game day). A name in use asks first; Overwrite saves, Cancel does nothing. Returns (keep running, window)."""
     if not name:
         if not Savefile.exists(Savefile.default_name()):
             write_save(Savefile.default_name())

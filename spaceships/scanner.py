@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
+    from galaxies.asteroid import Asteroid
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,13 @@ class Scanner:
     camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach.
     `targeted_rock` and `targeted_mine` are what the scanner panel (graphics/instruments/scanner.py, a different class
     with the same name) shows, and what `activate` heats or collects from.
+
+    Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned: it is
+    `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it can): out of range, too fast
+    or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no problem, the scan
+    advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays off until SPACE
+    is released. The time scale is capped at its minimum then, and stays there: the progress of the first frame at the
+    old scale does not count. When it reaches 1, the ship says so.
     """
 
     MAX_LENGTH = 200  # metres
@@ -39,6 +47,9 @@ class Scanner:
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
         self.target: Optional[Target] = None
+        self.scan_asteroid: Optional[Asteroid] = None  # the targeted asteroid, if it can still be scanned
+        self.scan_problem: Optional[str] = None  # why it cannot be now, for the scanner panel
+        self._scan_held: bool = False  # SPACE went down on an asteroid and is still down: the laser stays off
         # the rock with an adjective whose scan was announced since SPACE went down
         self._announced_rock: Optional[Rock] = None
         self.start_x = 0.0
@@ -70,6 +81,9 @@ class Scanner:
         first. Called once per frame, so the scanner always shows what is in the crosshair."""
         ship = self.ship
         self.target = None
+        self.scan_asteroid = self.scan_problem = None
+        if not ship.is_bound:
+            self._look_for_asteroid()
         offset = ship.HEIGHT / 2  # the emitter, below the camera
         forward, up = ship.attitude.forward, ship.attitude.up
 
@@ -116,6 +130,47 @@ class Scanner:
         self.end_x, self.end_y, self.end_z = hit_x, hit_y, hit_z
     # endregion
 
+    # region Asteroids
+    def _look_for_asteroid(self) -> None:
+        """Sets `scan_asteroid` to the targeted body if it is an asteroid still to scan, and `scan_problem` to what
+        keeps the beam from working on it."""
+        import game_environment as gem
+        from common.units import format_compact_distance
+        from galaxies.asteroid import Asteroid
+        environment = gem.current_environment
+        body = environment.targeted_body
+        if not isinstance(body, Asteroid) or body.scan_progress >= 1.0:
+            return
+        self.scan_asteroid = body
+
+        ship = self.ship
+        distance = ship.navigation.distance_to_body_centre(body)
+        reach = min(Asteroid.SCAN_RANGE_DIAMETERS * 2.0 * body.radius, Asteroid.SCAN_MAX_RANGE)
+        relative_speed = math.dist(tuple(ship.velocity.as_vector()),
+                                   tuple(body.calculate_stellar_velocity(environment.date_time)))
+        direction = ship.navigation.direction_to_body(body, environment.date_time)
+        cosine = direction.dot(ship.attitude.forward) / max(direction.length(), 1e-9)
+        in_crosshair = distance <= body.radius or cosine >= math.cos(math.asin(body.radius / distance))
+        if distance - body.radius > reach:
+            self.scan_problem = (f"Out of range: {format_compact_distance(distance - body.radius)}, "
+                                 f"{format_compact_distance(reach)} at most")
+        elif relative_speed > Asteroid.SCAN_MAX_SPEED:
+            self.scan_problem = f"Too fast: {relative_speed:.0f} m/s, {Asteroid.SCAN_MAX_SPEED:.0f} m/s at most"
+        elif not in_crosshair:
+            self.scan_problem = "Aim at the asteroid"
+
+    def _scan(self, asteroid: Asteroid, game_seconds: float) -> None:
+        """The beam works on the asteroid for the time of this frame (see the class docstring for the time scale)."""
+        player = self.ship.owner
+        if player.time_scale > player.TIME_SCALE_MIN:
+            player.time_scale = player.TIME_SCALE_MIN
+            return
+        if asteroid.advance_scan(game_seconds):
+            self.ship.notification.set(
+                f"Asteroid {asteroid.name} scanned, {player.get_title()} Pilot: the results are in the ship computer.",
+                'mission_delivered')
+    # endregion
+
     # region Actions
     def activate(self, time_passed: int) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost,
@@ -150,6 +205,15 @@ class Scanner:
                 self.targeted_outpost.communicate()
             return self
 
+        self._scan_held = self._scan_held or self.scan_asteroid is not None
+        scanning = self.scan_asteroid is not None and self.scan_problem is None
+        audio.set_loop('scan', scanning)
+        if scanning:
+            self._scan(self.scan_asteroid, time_passed)
+        if self._scan_held:
+            self.ship.laser.cease_fire()
+            return self
+
         rock = self.targeted_rock
         if rock is not None and rock.adjective:
             # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten. Announced
@@ -173,10 +237,13 @@ class Scanner:
     def release(self) -> Scanner:
         """SPACE is up: the next press of it announces a scanned rock again."""
         self._announced_rock = None
+        self._scan_held = False
+        audio.set_loop('scan', False)
         return self
 
     def deactivate(self) -> Scanner:
         self.ship.laser.cease_fire()
+        audio.set_loop('scan', False)
         return self
     # endregion
 

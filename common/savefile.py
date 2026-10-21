@@ -12,7 +12,7 @@ from common.paths import data_path, SAVEFILES_DIR
 
 logger = logging.getLogger(__name__)
 
-# A save's file name is "<seed> <game date and time> <name typed>" plus ".json": the name typed is optional.
+# A save's file name is "<seed> <game date> <name typed>" plus ".json": the name typed is optional.
 SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
 SAVE_NAME_MAX_LENGTH = 60
 
@@ -32,9 +32,9 @@ class Savefile:
     @staticmethod
     def default_name() -> str:
         '''The start of every save's name, which is the whole name when nothing is typed after it: the seed, the game's
-        date and time to the second (underscores for the colons, as Windows file names have no colons), and a space.'''
+        date in ISO format, and a space.'''
         env = gem.current_environment
-        return f"{env.galaxy.seed} {env.date_time.strftime('%Y-%m-%dT%H_%M_%S')} "
+        return f"{int(env.galaxy.seed)} {env.date_time.strftime('%Y-%m-%d')} "
 
     @staticmethod
     def exists(name: str) -> bool:
@@ -44,13 +44,9 @@ class Savefile:
     # region Saving
     @staticmethod
     def save() -> bool:
-        '''F5: saves the game under the default name. If that name is taken (another save in the same game second),
-        nothing is saved. Returns whether it saved.'''
-        name = Savefile.default_name()
-        if Savefile.exists(name):
-            return False
-        Savefile.save_as(name)
-        return True
+        '''F5: saves the game under the default name, silently replacing a save of that name (another save on the same
+        game day).'''
+        Savefile.save_as(Savefile.default_name())
 
     @staticmethod
     def save_as(name: str) -> None:

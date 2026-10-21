@@ -16,29 +16,27 @@ DEVELOPER'S DIARY
   * Phase 1: Generate the belt itself. Cosmetic asteroids, limits to generation by size and 'distance' (sectors).
   Hierarchy of sectors. 'Relevant asteroids' are different.
   * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
-
-> Not committed yet but done: 
-
-> Not done yet but started:
-
+  * Far distance advice.
+  * Target not lost in save / load.
+  * Ship configurations adjusted.
   * Phase 3: Show the asteroid in radar and label.
-  * Navigation help for long distances.
 
-Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 6:30 - 
+> DONE (not committed)
 
-  * The target is lost on load / save. We do not need more dependencies from generation, so just "number of tabs"
-  would be fine.
   * Savegame prefix: Seed and game time, and they remain when the player starts writing.
 
+> STARTED:
+  * Phase 4: How they look like. How to scan.
+  
+Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 18:30 - 
+
 # NOT STARTED YET = BACKLOG
-  * Phase 4: How they look like. How to scan. Land?
   * Extra: button for ship specifications.
-  * Hull integrity damages and events when in the asteroids.
-  * Outpost gives coordinates as prize? Or very good ones.
+  * Incidents: Hull integrity damages and events, particularly when in the asteroids.
   * Extra: Gravity. Evaluate, at least... for realism's sake.
   * Extra: Cooler laser.
   * Extra: Improve the sounds for real.
-  * Idea: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
   * Extra: decide what to do with Rodina: https://elliptic-games.com/
   * Extra: Try to talk with https://www.reddit.com/user/theartlav/ again?
   * Extra: Sealing as cargo, incidents on route.
@@ -66,6 +64,7 @@ Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15 + 6:30 -
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?
+* KUIPER: Drawf planets, land on big asteoids.
 * ATMOSPHERE
   * Even suggestions of life?
 * CIVILISATION:

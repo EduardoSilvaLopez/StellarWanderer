@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
 import numpy as np
 import pygame
-from ..constants import ACCENT
+from ..constants import ACCENT, ACCENT_LABEL, AMBER
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
 from ..special_rocks import special_mesh
@@ -14,6 +14,7 @@ from .common import draw_beveled_panel, bezel_depth, panel_box_top
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
+    from galaxies.asteroid import Asteroid
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
@@ -49,6 +50,12 @@ class Scanner:
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
         A mine's content is written above the square, in place of the title, and its field's remaining
         ore inside the square, at the bottom.
+
+        While unbound, the targeted asteroid that is not yet fully scanned (`Scanner.scan_asteroid`) takes the square
+        when nothing else is in it: its name in place of the title, its shape as the ship sees it (the mesh the 3D view
+        draws, lit by the star), and over it the share scanned in the middle with a bar under it,
+        and under that, in amber, what keeps the beam from working (`Scanner.scan_problem`) or, if nothing does, an
+        invitation to hold SPACE (accent colour while the beam is on it).
         """
         label_font = fonts.get(max(9, int(h * 0.017)))
 
@@ -67,6 +74,7 @@ class Scanner:
         rock = ship.scanner.targeted_rock
         mine = ship.scanner.targeted_mine
         outpost = ship.scanner.targeted_outpost
+        asteroid = ship.scanner.scan_asteroid if outpost is None and rock is None and mine is None else None
         # What the square shows (outposts first, then rocks, then mines), and the title above it. An ore rich rock
         # shows its purity, a mine its content, in place of the title.
         ore_rock = rock if outpost is None and rock is not None and rock.is_ore_rich() else None
@@ -75,6 +83,8 @@ class Scanner:
             title = label_font.render(f'Ore Purity: {round(ore_rock.get_purity() * 100)}%', True, (255, 255, 0))
         elif shown_mine is not None:
             title = label_font.render(f'Content: {int(shown_mine.content)} Kg Ore', True, ACCENT)
+        elif asteroid is not None:
+            title = label_font.render(asteroid.name, True, ACCENT)
         else:
             title = label_font.render('SCANNER', True, ACCENT)
         title_rect = title.get_rect(midtop=(rect.centerx, title_top))
@@ -96,10 +106,76 @@ class Scanner:
                     f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock)
                 )
                 surface.blit(temperature_text, temperature_text.get_rect(center=rect.center))
+        elif asteroid is not None:
+            Scanner._draw_asteroid_scan(surface, label_font, rect, ship, asteroid)
         elif mine is not None:
             Scanner._draw_scanned_mine(surface, rect, mine)
             field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
             surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
+
+    @staticmethod
+    def _draw_asteroid_scan(surface: pygame.Surface, font: pygame.font.Font, rect: pygame.Rect, ship: Ship,
+                            asteroid: Asteroid) -> None:
+        """The asteroid, then the share scanned as a number in the middle and a bar under it, and what the beam
+        needs."""
+        scanner = ship.scanner
+        Scanner._draw_asteroid(surface, rect, ship, asteroid)
+        percentage = Scanner._outlined(font, f'{int(asteroid.scan_progress * 100)}%', ACCENT)
+        surface.blit(percentage, percentage.get_rect(center=rect.center))
+
+        pad = max(6, rect.width // 12)
+        track = pygame.Rect(rect.left + pad, rect.centery + percentage.get_height(), rect.width - 2 * pad,
+                            max(6, font.get_height() // 2))
+        pygame.draw.rect(surface, ACCENT_LABEL, track, 1)
+        filled = int((track.width - 4) * asteroid.scan_progress)
+        pygame.draw.rect(surface, ACCENT, (track.left + 2, track.top + 2, filled, track.height - 4))
+
+        if scanner.scan_problem is not None:
+            colour, text = AMBER, scanner.scan_problem
+        elif ship.laser.firing:
+            colour, text = ACCENT, 'Scanning...'
+        else:
+            colour, text = ACCENT, 'Hold SPACE to scan'
+        for index, line in enumerate(text.split(': ')):  # "Out of range: 12 Km, 5 Km at most" on two lines
+            rendered = Scanner._outlined(font, line, colour)
+            top = track.bottom + 6 + index * font.get_linesize()
+            surface.blit(rendered, rendered.get_rect(midtop=(rect.centerx, top)))
+
+    @staticmethod
+    def _outlined(font: pygame.font.Font, text: str, colour: Tuple[int, int, int]) -> pygame.Surface:
+        """The text with a dark outline, to be read over the asteroid."""
+        text_surface = font.render(text, True, colour)
+        outline = font.render(text, True, (0, 0, 0))
+        result = pygame.Surface((text_surface.get_width() + 2, text_surface.get_height() + 2), pygame.SRCALPHA)
+        for dx, dy in ((0, 1), (2, 1), (1, 0), (1, 2)):
+            result.blit(outline, (dx, dy))
+        result.blit(text_surface, (1, 1))
+        return result
+
+    @staticmethod
+    def _draw_asteroid(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, asteroid: Asteroid) -> None:
+        """The asteroid's mesh (graphics/asteroids.py) seen from the ship, filling the square: each face in the colour
+        the star gives it, the ones turned away from the ship left out, the farthest first."""
+        import game_environment as gem
+        from ..asteroids import Asteroids
+        model = Asteroids.model(asteroid.seed, 2.0 * asteroid.radius)
+        date = gem.current_environment.date_time
+        centre = np.array(tuple(asteroid.calculate_stellar_position(date)))
+        to_ship = np.array(tuple(ship.position.as_vector())) - centre
+        to_ship /= max(float(np.linalg.norm(to_ship)), 1.0)
+        sun = -centre / max(float(np.linalg.norm(centre)), 1.0)
+
+        faces = model.positions.reshape(-1, 3, 3).astype(np.float64)
+        colours = model.colours(sun).reshape(-1, 3, 3).mean(axis=1)
+        attitude = ship.attitude
+        right, up, forward = (np.array(tuple(axis)) for axis in (attitude.right, attitude.up, attitude.forward))
+        visible = np.flatnonzero(faces.mean(axis=1) @ to_ship > 0.0)
+        depth = (faces[visible] @ forward).mean(axis=1)
+        scale = (min(rect.width, rect.height) * 0.8) / (2.0 * asteroid.radius * 1.15)
+        for i in visible[np.argsort(-depth)]:
+            points = [(int(rect.centerx + float(corner @ right) * scale),
+                       int(rect.centery - float(corner @ up) * scale)) for corner in faces[i]]
+            pygame.draw.polygon(surface, tuple(int(value) for value in colours[i]), points)
 
     @staticmethod
     def _board_sign(size: int) -> Optional[pygame.Surface]:

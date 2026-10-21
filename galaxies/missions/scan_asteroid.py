@@ -5,8 +5,9 @@ for the most part, a cosmetic asteroid of that belt (an `AsteroidKey`: see aster
 the pilot's taking the mission promotes it (`accept`), so an offer nobody takes leaves the belt as it was. For
 FREE_LIVING_CHANCE of the offers, and always in a system without a belt, it is a free-living asteroid
 (`Asteroid.free_living`), rebuilt from the system and the mission's seed; taking the mission keeps it in the system
-(`StellarSystem.promote_free_asteroid`), which saves its seed. The texts name only the asteroid. How an asteroid is
-scanned is not defined yet, so the mission cannot be completed.
+(`StellarSystem.promote_free_asteroid`), which saves its seed. The texts name only the asteroid. The pilot scans it
+with the scanner beam (see `Scanner`): the scan is kept by the asteroid (`Asteroid.scan_progress`), and the mission can
+be completed, back at the outpost, when it is done.
 """
 
 from __future__ import annotations
@@ -45,7 +46,6 @@ class ScanAsteroid(Mission):
 
     def __init__(
             self, asteroid_site: dict | None = None,
-            was_scanned: bool = False,
             **common: Any) -> None:
         super().__init__(**common)
 
@@ -60,7 +60,6 @@ class ScanAsteroid(Mission):
             )
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
-        self.was_scanned: bool = was_scanned
 
         # Only drawn for a new offer; a loaded mission keeps what it was given.
         self.asteroid_site: dict | None = asteroid_site
@@ -148,9 +147,9 @@ class ScanAsteroid(Mission):
     def progress(self) -> str:
         if self.accepted_at is None:
             return ''
-        if self.was_scanned:
+        if self.asteroid().scan_progress >= 1.0:
             return f"The asteroid {self.asteroid().name} is scanned: bring the results to {self.issuer_outpost.name}."
-        return f"The asteroid {self.asteroid().name} is not scanned yet."
+        return f"The asteroid {self.asteroid().name} is scanned {self.asteroid().scan_progress:.0%}."
 
     def target_body(self) -> Asteroid:
         return self.asteroid()
@@ -167,7 +166,7 @@ class ScanAsteroid(Mission):
             )
 
     def can_complete(self, player: Player) -> bool:
-        return self.was_scanned
+        return self.asteroid().scan_progress >= 1.0
 
     def complete(self, player: Player) -> None:
         """Nothing is taken from the player: the scan is what was asked."""
@@ -198,9 +197,9 @@ class ScanAsteroid(Mission):
 
     # region Persistence
     def serialize(self) -> dict:
-        return {**super().serialize(), 'asteroid_site': self.asteroid_site, 'was_scanned': self.was_scanned}
+        return {**super().serialize(), 'asteroid_site': self.asteroid_site}
 
     @classmethod
     def _deserialize(cls, source: dict) -> ScanAsteroid:
-        return ScanAsteroid(source['asteroid_site'], source['was_scanned'], **Mission._common(source))
+        return ScanAsteroid(source['asteroid_site'], **Mission._common(source))
     # endregion

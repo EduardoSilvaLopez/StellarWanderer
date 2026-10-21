@@ -175,6 +175,7 @@ def main() -> None:
     save('game_over', [sweep(400, 70, 1.0, 0.6), tone(55, 0.7, 0.6, decay=3.0)])
     save('laser', [machinery(0.6)])
     save('thrust', [hum([(55, 1.0), (82, 0.6), (110, 0.4), (165, 0.15)], tremolo=3, loudness=0.5)])
+    save('scan', [hum([(38, 1.0), (57, 0.5), (76, 0.3)], tremolo=5, loudness=0.35)])  # low, soft: a passive beam
 
 
 if __name__ == '__main__':

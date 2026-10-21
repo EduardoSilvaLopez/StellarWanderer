@@ -3,7 +3,7 @@ its parent's, so a given galaxy seed always gives the same universe whatever the
 
     seed = derive(parent.seed, kind, *keys)
 
-where `keys` place the child in its parent. The chain, from the galaxy seed given by the user (the only float):
+where `keys` place the child in its parent. The chain, from the galaxy seed given by the user:
 
     galaxy -> quadrant -> district -> sector -> star -> stellar system -> orbit -> planet -> moon
                                                                   \\-> (planet) -> outpost -> staff member
@@ -27,6 +27,6 @@ def of_text(text: str) -> int:
     return int.from_bytes(hashlib.sha256(text.encode('utf-8')).digest()[:8], 'big')
 
 
-def derive(parent_seed: int | float, kind: str, *keys: int | float | str) -> int:
+def derive(parent_seed: int, kind: str, *keys: int | float | str) -> int:
     """The seed of a child: its parent's seed, its kind and the keys that place it in its parent."""
     return of_text('|'.join([repr(parent_seed), kind, *(repr(key) for key in keys)]))

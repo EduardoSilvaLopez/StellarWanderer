@@ -7,7 +7,6 @@ import logging
 import math
 import os
 import pygame
-import re
 from datetime import datetime
 
 from common import audio
@@ -24,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 ICON_PATH = resource_path('presentation', 'game_icon.png')
 DOUBLE_CLICK_MS = 400
-# A save's name, as Savefile.default_name starts it: the seed, the time, then the name typed (possibly empty)
-SAVE_NAME_PATTERN = re.compile(r'(\S+) (\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2})(?: (.*))?$')
+CARET_BLINK_MS = 500
 
 
 def _blit_centred_on_ink(surface: pygame.Surface, text: pygame.Surface, x: int, rect: pygame.Rect) -> None:
@@ -55,7 +53,7 @@ class StartingDialog(Dialog):
     Shown when the program starts and again on Esc while playing (game_running=True, where Esc
     resumes the game). Results: ('new', seed), ('load', path), ('save', name), ('exit', None), ('resume', None).
     The Instructions button shows the instructions screen (see InstructionsDialog) in its place until Back.
-    The name box starts with the default name (Savefile.default_name: the seed and the game's time), which the player
+    The name box starts with the default name (Savefile.default_name: the seed and the game's date), which the player
     may go on writing after. ('save', '') means the default name too, when the box has been emptied.
 
     Esc opens it from the game and does not quit; the Exit game button (or closing the window) does. A right-click
@@ -144,23 +142,12 @@ class StartingDialog(Dialog):
             for filepath in sorted(files, key=os.path.getmtime, reverse=True):
                 filename = os.path.basename(filepath)
                 name = os.path.splitext(filename)[0]
-                real_time = datetime.fromtimestamp(os.path.getmtime(filepath))
-                real_time_formatted = real_time.strftime('%Y-%m-%d %H:%M:%S')
-
-                match = SAVE_NAME_PATTERN.match(name)
-                if match:
-                    seed, game_time_str, typed = match.group(1), match.group(2), match.group(3) or ''
-                    game_time_formatted = game_time_str.replace('T', ' ').replace('_', ':')
-                    display_name = f"Seed {seed}   -   Time: {game_time_formatted}   -   Saved at {real_time_formatted}"
-                    if typed:
-                        display_name = f"{typed}   -   {display_name}"
-                else:
-                    display_name = f"{name}   -   Saved at {real_time_formatted}"
+                created_at = datetime.fromtimestamp(os.path.getctime(filepath)).isoformat(timespec='seconds')
 
                 self.savefiles.append({
                     'path': filepath,
                     'filename': filename,
-                    'display_name': display_name,
+                    'display_name': f"{name}   -   Saved at {created_at}",
                 })
 
     def _savefile_rect(self, index: int) -> pygame.Rect:
@@ -226,7 +213,7 @@ class StartingDialog(Dialog):
         pygame.draw.rect(surface, (80, 80, 120), self.instructions_rect, 2)
         _draw_gear(surface, self.instructions_rect.inflate(-6, -6), (40, 40, 60))
 
-        # Save row: the file name (grey default, recalculated from the game's date and time), and Save
+        # Save row: the file name (grey default, recalculated from the game's seed and date), and Save
         if self.game_running:
             name_label = self.font_normal.render("File name:", True, (150, 200, 255))
             surface.blit(name_label, name_label.get_rect(midleft=(self.MARGIN, self.name_rect.centery)))
@@ -261,13 +248,19 @@ class StartingDialog(Dialog):
         self._draw_button(surface, self.exit_rect, "Exit game", (110, 50, 50), (190, 110, 110), self.font_normal)
 
     def _draw_input(self, surface: pygame.Surface, rect: pygame.Rect, text: str, active: bool) -> None:
-        """A text box, lit while `active`. Text wider than the box is cut at its start, so the end being typed shows."""
+        """A text box, lit while `active`, with a blinking caret after the text while active. Text wider than the box is
+        cut at its start, so the end being typed shows."""
         pygame.draw.rect(surface, (50, 50, 80) if active else (40, 40, 60), rect)
         pygame.draw.rect(surface, (100, 150, 255) if active else (80, 80, 120), rect, 2)
         text_surface = self.font_small.render(text, True, (200, 200, 200))
         x = min(rect.x + 8, rect.right - 8 - text_surface.get_width())
         surface.set_clip(rect.inflate(-4, -4))
         _blit_centred_on_ink(surface, text_surface, x, rect)
+        if active and (pygame.time.get_ticks() // CARET_BLINK_MS) % 2 == 0:
+            caret_x = x + text_surface.get_width() + 1
+            caret_height = self.font_small.get_height() - 6
+            pygame.draw.line(surface, (200, 200, 200), (caret_x, rect.centery - caret_height // 2),
+                             (caret_x, rect.centery + caret_height // 2), 2)
         surface.set_clip(None)
 
     @staticmethod
@@ -322,7 +315,7 @@ class StartingDialog(Dialog):
 
     def _new_game_result(self) -> Optional[DialogResult]:
         try:
-            return ('new', float(self.seed_input) if self.seed_input else 1.0)
+            return ('new', int(self.seed_input) if self.seed_input else 1)
         except ValueError:
             self.seed_input = "1"
             return None

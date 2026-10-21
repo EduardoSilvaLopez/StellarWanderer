@@ -188,7 +188,7 @@ class Asteroids:
         return [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
 
     @staticmethod
-    def _model(seed: int, diameter: float) -> AsteroidModel:
+    def model(seed: int, diameter: float) -> AsteroidModel:
         key = (seed, diameter)
         model = Asteroids._models.get(key)
         if model is None:
@@ -211,7 +211,7 @@ class Asteroids:
 
     @staticmethod
     def _draw_mesh(ship: Ship, sighting: Sighting, relative: np.ndarray, distance: float, aspect: float) -> None:
-        model = Asteroids._model(sighting.seed, sighting.diameter)
+        model = Asteroids.model(sighting.seed, sighting.diameter)
         margin = Asteroids.BOUND_MARGIN * model.radius
         Asteroids._camera(ship, max(0.05, distance - margin), distance + margin, aspect)
         GL.glTranslatef(float(relative[0]), float(relative[1]), float(relative[2]))

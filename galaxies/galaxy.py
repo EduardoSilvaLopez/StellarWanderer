@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 class Galaxy:
 
-    def __init__(self, user_given_seed: float, saved_alterations: dict) -> None:
-        self.seed: float = user_given_seed
+    def __init__(self, user_given_seed: int, saved_alterations: dict) -> None:
+        self.seed: int = user_given_seed
         # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
         self.fixed_stars: dict[tuple[int, int, int], Star] = {
             cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)

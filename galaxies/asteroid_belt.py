@@ -24,8 +24,9 @@ size.
 
 Relevant asteroids. The ones the player follows are promoted (`promote`): the cosmetic one leaves the results and an
 `Asteroid` takes its place, on a full elliptical orbit. They are kept in `relevant` and saved as the belt's alterations:
-only their keys, as the rest is derived from them. `build` makes the `Asteroid` of a key without promoting it (a mission
-can name it in an offer), and `random_key` draws the key of a cosmetic asteroid from the belt's density.
+only their keys and scans, as the rest is derived from the keys. `build` makes the `Asteroid` of a key without
+promoting it (a mission can name it in an offer), and `random_key` draws the key of a cosmetic asteroid from the
+belt's density.
 """
 
 from __future__ import annotations
@@ -163,9 +164,9 @@ class AsteroidBelt(Orbit):
 
         self._sectors: OrderedDict[tuple[int, int, int, int, int], SectorRows] = OrderedDict()
         self.relevant: dict[AsteroidKey, Asteroid] = {}
-        for text in (self.saved_alterations or {}).get('asteroids', {}):
+        for text, saved in (self.saved_alterations or {}).get('asteroids', {}).items():
             key = AsteroidKey.from_ints(text.split())
-            self.relevant[key] = self.build(key)
+            self.relevant[key] = self.build(key).apply_alterations(saved)
 
         logger.info(
             f"Asteroid belt {self.number}: {self.count:.3g} asteroids of {MIN_DIAMETER:.0f} m or more, richness "
@@ -420,5 +421,5 @@ class AsteroidBelt(Orbit):
     def get_alterations(self) -> dict | None:
         if not self.relevant:
             return None
-        return {'asteroids': {str(key): {} for key in self.relevant}}
+        return {'asteroids': {str(key): asteroid.get_alterations() for key, asteroid in self.relevant.items()}}
     # endregion

@@ -15,8 +15,12 @@ from the state of the ship, so it follows the target as it moves and corrects wh
    function of the date. The motion is worked out in the frame that moves with the target's velocity on arrival, so
    that arriving at rest in it is arriving at rest with respect to the target. In that frame the ship starts with the
    velocity `u` that it has relative to the target: its part along the line to the aim point is `u_r` (positive:
-   coming closer) and the part across it is `u_perp` (the drift). The plan covers the distance `d` to the target's
-   surface.
+   coming closer) and the part across it is `u_perp` (the drift). The plan ends where the advice does, at rest with
+   respect to the target and `FAR_DISTANCE` from its surface, so that the braking is finished while the advice is
+   still given: it covers the distance `d` to that point. The advice ends there too: when the ship is within
+   `END_TOLERANCE` of the point, at no more than `END_SPEED` with respect to the target (the braking may start a
+   little late or end a little short: the point is soft). The last leg, from there to the target, is the pilot's:
+   the plan keeps back what a leg of `FAR_DISTANCE` from rest costs (`_final_leg`) in energy and in time.
 
 2. The constraints, for a peak speed `v` (acceleration `a`, the ship's forward and backward one, and braking `b`,
    its brake's, which is never less):
@@ -25,12 +29,14 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      For a trip that starts at rest, with `a` = `b`, this is `v <= sqrt(a * D / 2)`, `D` being the whole distance. As
      the plan is worked out again at every frame, `D` is that of the trip as if it had started at rest here:
      `d + u_r^2 / (2 * a)`.
-   - Keep the energy on arrival at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum, `RESERVE_WITH_OUTPOST` (20 %) if
-     the target has an outpost. A change of speed costs `Navigation.ENERGY_PER_SPEED` per m/s, whatever its
-     direction: changing the velocity to `v` along the line (the drift cancelled on the way) and then stopping costs
-     `hypot(v - u_r, u_perp) + v`, which cannot be more than the energy above the reserve divided by that cost.
-   - Keep the supplies (air, water and food, a day of each per day) on arrival at the same shares of their maxima:
-     the time left of the plan, `eta`, cannot exceed the days that the supply with the least above its reserve has.
+   - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
+     `RESERVE_WITH_OUTPOST` (20 %) if the target has an outpost. A change of speed costs
+     `Navigation.ENERGY_PER_SPEED` per m/s, whatever its direction: changing the velocity to `v` along the line (the
+     drift cancelled on the way) and then stopping costs `hypot(v - u_r, u_perp) + v`, which cannot be more than the
+     energy above the reserve divided by that cost.
+   - Keep the supplies (air, water and food, a day of each per day) at the end at the same shares of their maxima:
+     the time left of the plan, `eta`, and of the last leg, cannot exceed the days that the supply with the least above
+     its reserve has.
    - "Too far" if no plan keeps them: the energy above the reserve does not even stop the ship (`hypot(u_r,
      u_perp)`, with `ENERGY_SLACK`: a plan that spends its whole budget leaves just that at its peak), or the
      supplies do not last the time left.
@@ -107,12 +113,15 @@ class Advice(Enum):
 class Advisory:
     """What the advisor says now: the advice (None for "Too far"), the time left of the plan in seconds (None if
     there is no plan), where the target will be, from the ship (the stellar frame), and the unit vector to thrust in
-    (None while staying, or too far)."""
+    (None while staying, or too far). `phase_time` is the time left of the current piece of advice, in seconds: the
+    thrust that gets the ship to the plan's speed (or cancels the drift), the coast until it has to brake, the braking
+    to rest with respect to the target."""
     advice: Advice | None
     eta: float | None
     lead: np.ndarray
     thrust: np.ndarray | None = None
     arrival: datetime | None = None  # when the plan arrives: the next frame starts its search from it
+    phase_time: float | None = None
 
 
 @dataclass(frozen=True)
@@ -143,9 +152,9 @@ def coast_limit(distance: float, start_speed: float, acceleration: float, brake:
 
 def make_plan(distance: float, radial: float, drift: float, acceleration: float, brake: float, budget: float,
               coast_share: float) -> Plan | None:
-    """The plan for a trip of `distance` m (to the surface) by a ship that comes closer at `radial` m/s (negative:
-    moves away) and drifts across at `drift`, with `budget` m/s of change of speed (the energy above the reserve);
-    None if the budget does not even stop the ship."""
+    """The plan for a trip of `distance` m (to the point where the advice ends) by a ship that comes closer at
+    `radial` m/s (negative: moves away) and drifts across at `drift`, with `budget` m/s of change of speed (the energy
+    above the reserve); None if the budget does not even stop the ship."""
     stop_cost = math.hypot(radial, drift)
     if budget < stop_cost * (1.0 - ENERGY_SLACK):
         return None
@@ -171,7 +180,9 @@ class LongDistanceAdvisor:
     COAST_SHARE = 1.0 / 3.0
     RESERVE_WITHOUT_OUTPOST = 0.60
     RESERVE_WITH_OUTPOST = 0.20
-    BRAKE_MARGIN = 1.01
+    BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft
+    END_TOLERANCE = 2.0e7  # m: the plan has reached its end when the ship is this near it...
+    END_SPEED = 100.0  # m/s: ...and moves slower than this with respect to the target
     DRIFT_TOLERANCE = 0.05  # of the closing speed: the drift beyond which a stay turns into thrust (about 3 degrees)
     DRIFT_FLOOR = 100.0  # m/s: the drift that is never worth advice
     DRIFT_RELEASE = 0.2  # of the tolerance: the thrust that cancels the drift goes on until it is this low
@@ -230,7 +241,8 @@ class LongDistanceAdvisor:
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         reserve = advisor.RESERVE_WITH_OUTPOST if getattr(body, 'outposts', None) else advisor.RESERVE_WITHOUT_OUTPOST
         spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
-        budget = spare_energy / Navigation.ENERGY_PER_SPEED
+        leg_speed_change, leg_time = advisor._final_leg(accelerations)
+        budget = spare_energy / Navigation.ENERGY_PER_SPEED - leg_speed_change
         hold = ship.cargo_hold
         spare_days = min(hold.air - reserve * hold.air_max, hold.water - reserve * hold.water_max,
                          hold.food - reserve * hold.food_max)
@@ -239,22 +251,37 @@ class LongDistanceAdvisor:
         plan, target, direction, distance, relative, radial, drift = advisor._trip(
             position, velocity, body, date, accelerations, budget, trip_time, 1 if braked else None)
         lead = target - position
+        if distance <= advisor.END_TOLERANCE and float(np.linalg.norm(relative)) <= advisor.END_SPEED:
+            return None  # the plan is done
 
-        too_far = plan is None or (plan.eta is not None and plan.eta / SECONDS_PER_DAY > spare_days)
+        too_far = plan is None or (plan.eta is not None and (plan.eta + leg_time) / SECONDS_PER_DAY > spare_days)
         if too_far:
             return Advisory(None, None, lead)
         advice = advisor._choose(plan, radial, drift, distance, accelerations[1], previous)
         change = {Advice.ACCELERATE: plan.peak_speed * direction - relative, Advice.DECELERATE: -relative}.get(advice)
         size = 0.0 if change is None else float(np.linalg.norm(change))
         when = None if plan.eta is None else date + timedelta(seconds=min(plan.eta, advisor.MAX_LEAD_SECONDS))
-        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when)
+        if advice is Advice.STAY:
+            phase_time = max(0.0, (distance - radial * radial / (2.0 * accelerations[1])) / max(radial, 1.0))
+        else:
+            phase_time = size / (accelerations[0] if advice is Advice.ACCELERATE else accelerations[1])
+        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time)
+
+    @staticmethod
+    def _final_leg(accelerations: tuple[float, float]) -> tuple[float, float]:
+        """What the pilot's last leg costs, kept back by the plan: a trip of FAR_DISTANCE from rest, with a coast of
+        COAST_SHARE of it. The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
+        leg = make_plan(LongDistanceAdvisor.FAR_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12,
+                        LongDistanceAdvisor.COAST_SHARE)
+        return 2.0 * leg.peak_speed, leg.eta
 
     @staticmethod
     def _trip(position: np.ndarray, velocity: np.ndarray, body: Body, date: datetime,
               accelerations: tuple[float, float], budget: float, trip_time: float,
               iterations: int | None = None) -> tuple:
         """The plan of the trip from `position` at `velocity` to the body, and what it was made from: the target's
-        position, the unit direction to the aim point, the distance to the surface from there, the velocity relative to
+        position, the unit direction to the aim point, the distance from there to where the advice ends (FAR_DISTANCE
+        short of the surface), the velocity relative to
         the target on arrival and its parts along and across the direction. `trip_time` is where the search for the
         arrival starts; a few `iterations` (INTERCEPT_ITERATIONS by default) refine it."""
         advisor = LongDistanceAdvisor
@@ -268,7 +295,7 @@ class LongDistanceAdvisor:
             offset = aim - position
             centre_distance = float(np.linalg.norm(offset))
             direction = offset / max(centre_distance, 1.0)
-            distance = max(centre_distance - body.radius, 1.0)
+            distance = max(centre_distance - body.radius - advisor.FAR_DISTANCE, 1.0)
             relative = velocity - target_velocity
             radial = float(relative @ direction)
             drift = float(np.linalg.norm(relative - radial * direction))
@@ -289,13 +316,15 @@ class LongDistanceAdvisor:
         if float(np.linalg.norm(centre - position)) - body.radius <= advisor.FAR_DISTANCE:
             return None
         reserve = advisor.RESERVE_WITH_OUTPOST if getattr(body, 'outposts', None) else advisor.RESERVE_WITHOUT_OUTPOST
-        budget = (1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / Navigation.ENERGY_PER_SPEED
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
+        leg_speed_change, leg_time = advisor._final_leg(accelerations)
+        budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / Navigation.ENERGY_PER_SPEED
+                  - leg_speed_change)
         plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0)[0]
         if plan is None:
             return 'energy'
         hold = ship.cargo_hold
-        days = plan.eta / SECONDS_PER_DAY if plan.eta is not None else 0.0
+        days = (plan.eta or 0.0) / SECONDS_PER_DAY + leg_time / SECONDS_PER_DAY
         stores = {'air': hold.air_max, 'water': hold.water_max, 'food': hold.food_max}
         return next((name for name, most in stores.items() if days > (1.0 - reserve) * most), None)
 

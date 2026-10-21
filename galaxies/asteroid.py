@@ -79,6 +79,21 @@ class Asteroid(Body):
     # The tier of the size is drawn with these weights.
     FREE_TIERS = ((AsteroidTier.MEDIUM, 3.0), (AsteroidTier.BIG, 1.0))
 
+    # Scanning (see Scanner): the beam works within SCAN_RANGE_DIAMETERS diameters of the surface (and never farther
+    # than SCAN_MAX_RANGE), while the ship moves at most SCAN_MAX_SPEED relative to the asteroid and has it in the
+    # crosshair.
+    # A scan takes SCAN_SECONDS_PER_SQRT_KM game seconds for an asteroid of a kilometre, and the square root of its
+    # diameter in kilometres times that for any other. What the knowledge base shows of it depends on the share of the
+    # scan done (`markdown`): the orbit from the start, then each of these at its share.
+    SCAN_SECONDS_PER_SQRT_KM = 30.0
+    SCAN_RANGE_DIAMETERS = 5.0
+    SCAN_MAX_RANGE = 100.0e3  # m
+    SCAN_MAX_SPEED = 50.0  # m/s
+    SCAN_DIAMETER = 0.25
+    SCAN_CLASS = 0.5  # and the temperature, which depends on it
+    SCAN_MASS = 0.75  # and the gravity at the surface
+    SCAN_STRUCTURE = 1.0
+
     def __init__(self, stellar_system: StellarSystem, seed: int, my_random: random.Random, semi_major_axis: float,
                  diameter: float, eccentricity: float, inclination: float,
                  parent_belt: AsteroidBelt | None = None, key: AsteroidKey | None = None,
@@ -105,6 +120,7 @@ class Asteroid(Body):
         self.mean_motion: float = math.sqrt(
             World.GRAVITATIONAL_CONSTANT * stellar_system.star.mass / semi_major_axis ** 3)
         self.name: str = self._generate_name(my_random)
+        self.scan_progress: float = 0.0  # 0 to 1, the share of the scan done; saved with the asteroid (get_alterations)
 
     @property
     def stellar_system(self) -> StellarSystem:
@@ -149,6 +165,22 @@ class Asteroid(Body):
         if self.parent_belt is not None:
             return {'belt': int(self.parent_belt.number), 'key': str(self.key), 'seed': None}
         return {'belt': None, 'key': None, 'seed': self.offer_seed}
+
+    def advance_scan(self, game_seconds: float) -> bool:
+        """The beam has worked for `game_seconds` on it: the scan advances, never back. True when it has just
+        finished."""
+        was_scanned = self.scan_progress >= 1.0
+        duration = Asteroid.SCAN_SECONDS_PER_SQRT_KM * math.sqrt(2.0 * self.radius / 1000.0)
+        self.scan_progress = min(1.0, self.scan_progress + game_seconds / duration)
+        return self.scan_progress >= 1.0 and not was_scanned
+
+    def get_alterations(self) -> dict:
+        """What the savefile holds of the asteroid besides its key: the scan, once begun."""
+        return {'scan': self.scan_progress} if self.scan_progress > 0.0 else {}
+
+    def apply_alterations(self, saved: dict) -> Asteroid:
+        self.scan_progress = float(saved.get('scan', 0.0))
+        return self
 
     def _generate_name(self, my_random: random.Random) -> str:
         """The asteroid's name, derived from its discoverer, usually a scientist."""
@@ -205,16 +237,15 @@ class Asteroid(Body):
         return x[:, None] * np.array(self._periapsis_axis) + y[:, None] * np.array(self._quarter_axis)
 
     def markdown(self) -> str:
-        """The asteroid's entry in the knowledge base: what the game works out about it, in the friendly units of the
-        almanack (AU, Earth years, Km/s), like the planets' entries."""
+        """The asteroid's entry in the knowledge base: what the game has worked out about it, in the friendly units of
+        the almanack (AU, Earth years, Km/s), like the planets' entries. The orbit is known as soon as the asteroid is
+        followed, the rest as the scan advances (SCAN_DIAMETER and the other shares)."""
         AU: float = 1.496e11
         star = self.stellar_system.star
         asteroid_class = class_of(self.seed)
         diameter = 2.0 * self.radius
-        tier = next((tier for tier in AsteroidTier if tier.lower <= diameter < tier.upper), AsteroidTier.HUGE)
         mass = asteroid_class.density * 4.0 / 3.0 * math.pi * self.radius ** 3
         gravity = World.GRAVITATIONAL_CONSTANT * mass / self.radius ** 2
-        escape_speed = math.sqrt(2.0 * World.GRAVITATIONAL_CONSTANT * mass / self.radius)
         a, e = self.semi_major_axis, self.eccentricity
         periapsis, apoapsis = a * (1.0 - e), a * (1.0 + e)
         gm = World.GRAVITATIONAL_CONSTANT * star.mass
@@ -227,27 +258,38 @@ class Asteroid(Body):
 
         place = (f"belt {int(self.parent_belt.number)}, at {self.parent_belt.distance_from_star / AU:.2f} AU"
                  if self.parent_belt is not None else "free-living, in no belt")
-        return (
+        year = math.tau / self.mean_motion / (365.2425 * 24 * 60 * 60)
+        # The rows come in the order they are learnt: what the orbit gives, from the start, then each group at its
+        # share of the scan, so that scanning only adds rows at the end.
+        text = (
             f"### Asteroid {self.name}\n"
             f"* Place: {place}\n"
-            f"* Class: {asteroid_class.name} (it reflects {100.0 * asteroid_class.reflectance:.0f} % of the light)\n"
-            f"* Size: {tier.name.lower()}, {format_compact_distance(diameter)} across\n"
-            f"* Mass: {mass:.2e} Kg (a bulk density of {asteroid_class.density:.0f} Kg/m3)\n"
-            f"* Surface gravity: {gravity:.2e} m/s2, escape speed {escape_speed:.3g} m/s\n"
-            f"* Distance from the star: {a / AU:.2f} AU on average, {periapsis / AU:.2f} AU at the closest, "
-            f"{apoapsis / AU:.2f} AU at the farthest\n"
-            f"* Year: {math.tau / self.mean_motion / (365.2425 * 24 * 60 * 60):.2f} Earth years\n"
-            f"* Orbital speed: {speed_at_periapsis / 1000:.1f} Km/s at the closest, "
-            f"{speed_at_apoapsis / 1000:.1f} Km/s at the farthest\n"
             f"* Eccentricity: {e:.3f}\n"
+            f"* Distance from the star:\n"
+            f"  * Average: {a / AU:.2f} AU\n"
+            f"  * Periapsis: {periapsis / AU:.2f} AU - Orbital speed {speed_at_periapsis / 1000:.1f} Km/s\n"
+            f"  * Apoapsis: {apoapsis / AU:.2f} AU - Orbital speed {speed_at_apoapsis / 1000:.1f} Km/s\n"
+            f"* Year: {year:.2f} Earth years\n"
             f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
             f"* Longitude of the ascending node: {math.degrees(self.node_longitude):.1f}°\n"
             f"* Argument of periapsis: {math.degrees(self.periapsis_argument):.1f}°\n"
-            f"* Position in its orbit at the start of the game: {math.degrees(self.mean_anomaly_at_epoch):.1f}°\n"
-            f"* Temperature: {temperature(apoapsis) - 273.15:.0f} °C at the farthest, "
-            f"{temperature(periapsis) - 273.15:.0f} °C at the closest\n"
-            f"\n"
         )
+        if self.scan_progress >= Asteroid.SCAN_DIAMETER:
+            text += f"* Diameter: {format_compact_distance(diameter)} across\n"
+        if self.scan_progress >= Asteroid.SCAN_CLASS:
+            text += (
+                f"* Class: {asteroid_class.name}\n"
+                f"* Temperature: {temperature(apoapsis) - 273.15:.0f} °C at the farthest, "
+                f"{temperature(periapsis) - 273.15:.0f} °C at the closest\n"
+            )
+        if self.scan_progress >= Asteroid.SCAN_MASS:
+            text += (
+                f"* Mass: {mass:.2e} Kg (density {asteroid_class.density:.0f} Kg/m3)\n"
+                f"* Surface gravity: {gravity:.2e} m/s2\n"
+            )
+        if self.scan_progress >= Asteroid.SCAN_STRUCTURE:
+            text += "\nDetailed structure / composition data saved for scientific analysis.\n"
+        return text + "\n"
 
     def _mean_anomaly(self, current_datetime: datetime) -> float:
         # Local: as World does, the game environment needs the galaxy to load.

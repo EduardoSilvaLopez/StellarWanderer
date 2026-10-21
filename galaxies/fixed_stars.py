@@ -45,7 +45,7 @@ def _sector_origin(sector: tuple[int, int, int]) -> tuple[float, float, float]:
     return (float(sector[0] * SECTOR_SIZE), float(sector[1] * SECTOR_SIZE), float(sector[2] * SECTOR_SIZE))
 
 
-def _sector_seed(galaxy_seed: float, sector: tuple[int, int, int]) -> int:
+def _sector_seed(galaxy_seed: int, sector: tuple[int, int, int]) -> int:
     """The seed of a sector, through the quadrant and the district that contain it."""
     origin: tuple[float, float, float] = _sector_origin(sector)
     quadrant_seed: int = seeds.derive(galaxy_seed, 'quadrant', *region_of(origin, QUADRANT_SIZE))
@@ -64,7 +64,7 @@ def _poisson(my_random: random.Random, mean: float) -> int:
     return count
 
 
-def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int],
+def _generate_sector(galaxy_seed: int, sector: tuple[int, int, int],
                      used_cells: set[tuple[int, int, int]]) -> tuple[list[Star], int]:
     """The random stars of one sector, and the number skipped because their cell was taken. `used_cells` holds the
     cells taken so far, in the whole region; it is updated."""
@@ -91,7 +91,7 @@ def stellar_position(position: tuple[float, float, float]) -> tuple[float, float
     return (dy * LIGHT_YEAR_M, dz * LIGHT_YEAR_M, dx * LIGHT_YEAR_M)
 
 
-def generate_region(galaxy_seed: float) -> list[Star]:
+def generate_region(galaxy_seed: int) -> list[Star]:
     """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs
     aggregate results."""
     centre: tuple[int, int, int] = region_of(INITIAL_STAR_POSITION, SECTOR_SIZE)
@@ -113,7 +113,7 @@ def generate_region(galaxy_seed: float) -> list[Star]:
     return stars
 
 
-def _log_summary(galaxy_seed: float, stars: list[Star], per_sector_counts: list[int], skipped: int) -> None:
+def _log_summary(galaxy_seed: int, stars: list[Star], per_sector_counts: list[int], skipped: int) -> None:
     within: int = sum(1 for star in stars if math.dist(star.position, INITIAL_STAR_POSITION) <= REPORT_RADIUS)
     types: Counter = Counter(star.type.name for star in stars)
     side: int = 2 * SECTOR_RADIUS + 1

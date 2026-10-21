@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class GameEnvironment:
     EPOCH = datetime.datetime(700, 1, 1)
 
-    def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict],
+    def __init__(self, galactic_seed: int, date_time: datetime.datetime, galaxy_alterations: Optional[dict],
                  people_alterations: Optional[dict]) -> None:
         self.date_time = date_time
         if galaxy_alterations:

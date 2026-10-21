@@ -51,8 +51,8 @@ class StellarSystem:
         # The free-living asteroids that matter (a mission's target), by the seed of the offer they come from. Saved by
         # that seed alone: each is rebuilt from it (see Asteroid.free_living).
         self.free_asteroids: dict[int, Asteroid] = {}
-        for offer_seed in (self.saved_alterations or {}).get('free_asteroids', {}):
-            self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed))
+        for offer_seed, saved in (self.saved_alterations or {}).get('free_asteroids', {}).items():
+            self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed)).apply_alterations(saved)
 
     def promote_free_asteroid(self, offer_seed: int) -> Asteroid:
         """The free-living asteroid of the offer's seed as a kept one (made if it was not); the system is marked as
@@ -169,7 +169,8 @@ class StellarSystem:
                     if orbit_alterations:
                         alterations[orbit.get_alterations_key()] = orbit_alterations
             if self.free_asteroids:
-                alterations['free_asteroids'] = {str(offer_seed): {} for offer_seed in self.free_asteroids}
+                alterations['free_asteroids'] = {str(offer_seed): asteroid.get_alterations()
+                                                 for offer_seed, asteroid in self.free_asteroids.items()}
         if not alterations:
             return None
         return alterations

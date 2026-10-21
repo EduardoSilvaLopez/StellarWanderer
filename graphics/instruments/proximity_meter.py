@@ -28,7 +28,8 @@ class ProximityMeter:
     is in the fixed zone, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each value sits on
     its label's row, after the label. Below them, while `LongDistanceAdvisor.current` holds advice, "Long distance
     advice:" in the advice colour, after a free row, and under it ACCELERATE, STAY or DECELERATE, each in its own
-    colour, with the time left of the plan; "Too far" when no plan keeps the reserves.
+    colour, with the time left of that phase (`Advisory.phase_time`), and under it the ETA, the date and time of
+    arrival as the clock shows them; "Too far" when no plan keeps the reserves.
 
     The "Approaching" readout is the signed rate of change of the distance to the targeted body
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
@@ -103,5 +104,10 @@ class ProximityMeter:
             else:
                 word_colour = {Advice.ACCELERATE: ADVICE_ACCELERATE_COLOR, Advice.STAY: ADVICE_STAY_COLOR,
                                Advice.DECELERATE: ADVICE_DECELERATE_COLOR}[advisory.advice]
-                eta = '' if advisory.eta is None else format_compact_duration(advisory.eta)
-                draw_pair(6, advisory.advice.name, word_colour, eta, ACCENT)
+                phase = '' if advisory.phase_time is None else format_compact_duration(advisory.phase_time)
+                draw_pair(6, advisory.advice.name, word_colour, phase, ACCENT)
+                if advisory.arrival is not None:
+                    arrival = advisory.arrival
+                    stamp = (f'{arrival.year}-{arrival.month:02d}-{arrival.day:02d} '
+                             f'{arrival.hour:02d}:{arrival.minute:02d}')
+                    draw_pair(7, 'ETA:', ACCENT_LABEL, stamp, ACCENT)
