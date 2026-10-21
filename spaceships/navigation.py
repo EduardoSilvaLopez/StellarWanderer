@@ -8,7 +8,6 @@ import logging
 import math
 
 from common.vector3 import Vector3, rotate_2d
-from galaxies.km2 import Km2
 from galaxies.world import World
 import game_environment as gem
 
@@ -83,15 +82,16 @@ class Navigation:
             return point - self.ship.position.as_vector()
         world = gem.current_environment.fixed_world
         relative = point - self.stellar_position(current_datetime)
-        relative = Vector3(relative.x, -relative.y, relative.z)  # the surface basis has Y opposite to the orbital motion
+        # the surface basis has Y opposite to the orbital motion
+        relative = Vector3(relative.x, -relative.y, relative.z)
         east_hat, up_hat, north_hat = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         return Vector3(relative.dot(east_hat), relative.dot(up_hat), relative.dot(north_hat))
 
     def sky_rotation(self, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
-        """Where the stellar frame's x, y and z axes point in the active frame: what turns a direction to something so far away
-        that the ship's position does not matter (the sky behind everything) into the active frame. Unbound it is the same
-        frame, and the axes are their own; bound, they go through the surface basis, as in `direction_to_point`, so the sky
-        turns with the world's spin."""
+        """Where the stellar frame's x, y and z axes point in the active frame: what turns a direction to something so
+        far away that the ship's position does not matter (the sky behind everything) into the active frame. Unbound it
+        is the same frame, and the axes are their own; bound, they go through the surface basis, as in
+        `direction_to_point`, so the sky turns with the world's spin."""
         if not self.ship.is_bound:
             return Vector3(1.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0), Vector3(0.0, 0.0, 1.0)
         world = gem.current_environment.fixed_world
@@ -146,14 +146,16 @@ class Navigation:
             ship.position.km2 = km2
         return self
 
-    def _update_velocity(self, delta_time: float, longitude_accel_input: float, altitude_accel_input: float, latitude_accel_input: float, braking: bool) -> None:
+    def _update_velocity(self, delta_time: float, longitude_accel_input: float, altitude_accel_input: float,
+                         latitude_accel_input: float, braking: bool) -> None:
         ship = self.ship
         attitude = ship.attitude
         if braking:
             self._brake(delta_time)
             return
         if ship.is_bound:
-            world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input, math.radians(attitude.yaw))
+            world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input,
+                                                     math.radians(attitude.yaw))
             accel = Vector3(
                 world_accel_x * ship.RIGHT_LEFT_ACC,
                 altitude_accel_input * ship.UP_DOWN_ACC,
@@ -176,11 +178,11 @@ class Navigation:
         return relative.length() > Navigation.BRAKED or any(abs(rate) > Navigation.BRAKED for rate in rates)
 
     def _brake(self, delta_time: float) -> None:
-        """Brakes against the velocity of the reference frame (`velocity_reference_frame`) with three independent engines,
-        one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right and forward
-        are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component, whatever the others do:
-        a small component stops as fast as a large one, and the ship is at rest relative to the frame when the slowest
-        engine is done. Each engine's change of speed costs 5e4 energy per m/s."""
+        """Brakes against the velocity of the reference frame (`velocity_reference_frame`) with three independent
+        engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
+        and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
+        whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
+        frame when the slowest engine is done. Each engine's change of speed costs 5e4 energy per m/s."""
         ship = self.ship
         reference = self.velocity_reference_frame()
         relative = ship.velocity.as_vector() - reference
@@ -213,7 +215,8 @@ class Navigation:
             ship.position.x -= half_turn * 2
         ship.position.y = max(ship.HEIGHT, ship.position.y)
         ship.position.z = max(-half_turn / 2, min(half_turn / 2, ship.position.z))  # between the poles
-        ship.velocity.y = max(-(ship.position.y - ship.HEIGHT), ship.velocity.y)  # no descent faster than the altitude left
+        # no descent faster than the altitude left
+        ship.velocity.y = max(-(ship.position.y - ship.HEIGHT), ship.velocity.y)
     # endregion
 
     # region Binding to a world
@@ -290,13 +293,15 @@ class Navigation:
         ship.is_bound = False
         return self
 
-    def _stellar_position_from_surface(self, world: World, world_pos: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
+    def _stellar_position_from_surface(self, world: World, world_pos: Vector3,
+                                       basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
         _, up_hat, _ = basis
         offset = up_hat * (world.radius + self.ship.position.y)
         # The star-centred basis has Y opposite to the orbital motion, so Y is negated here.
         return Vector3(world_pos.x + offset.x, world_pos.y - offset.y, world_pos.z + offset.z)
 
-    def _stellar_velocity_from_surface(self, world: World, world_vel: Vector3, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
+    def _stellar_velocity_from_surface(self, world: World, world_vel: Vector3,
+                                       basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
         east_hat, up_hat, north_hat = basis
         position = self.ship.position
         velocity = self.ship.velocity
@@ -310,7 +315,8 @@ class Navigation:
 
     # region Distances, braking and collision
     def distance_to_body_centre(self, body: Body) -> float:
-        return math.dist(self.ship.position.as_vector(), body.calculate_stellar_position(gem.current_environment.date_time))
+        return math.dist(self.ship.position.as_vector(),
+                         body.calculate_stellar_position(gem.current_environment.date_time))
 
     def altitude_above_surface(self, body: Body) -> float:
         if self.ship.is_bound:
@@ -318,7 +324,8 @@ class Navigation:
         return self.distance_to_body_centre(body) - body.radius
 
     def in_fixed_zone(self, body: Body) -> bool:
-        return not self.ship.is_bound and self.distance_to_body_centre(body) < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius
+        return (not self.ship.is_bound
+                and self.distance_to_body_centre(body) < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius)
 
     def velocity_reference_frame(self) -> Vector3:
         """The velocity that braking (S) and the prograde/retrograde markers are measured against: the fixed body's
@@ -377,6 +384,7 @@ class Navigation:
         COLLISION_BRAKE_FRACTION of BRAKE_ACC (the same judgement as collision_warning, on the vertical)."""
         if not self.ship.is_bound or self.ship.velocity.y >= 0.0:
             return False
-        stopping_distance = self.ship.velocity.y ** 2 / (2.0 * self.ship.BRAKE_ACC * Navigation.COLLISION_BRAKE_FRACTION)
+        stopping_distance = self.ship.velocity.y ** 2 / (2.0 * self.ship.BRAKE_ACC
+                                                         * Navigation.COLLISION_BRAKE_FRACTION)
         return self.ship.position.y <= stopping_distance
     # endregion

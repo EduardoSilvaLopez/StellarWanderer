@@ -6,12 +6,12 @@ system cell -> orbit number -> planet index -> moon indices:
     {"26010 10 10": {"3": {"0": ["0"]}}}
 
 A system key present means its star and orbit layout are known (both regenerate from the seed); an orbit without worlds
-(a belt, a jovian orbit) has no key. A planet without moons holds an empty list. Knowledge only grows, and adding what is
-already there changes nothing, so it does not matter whether the saved knowledge or the generation comes first.
+(a belt, a jovian orbit) has no key. A planet without moons holds an empty list. Knowledge only grows, and adding what
+is already there changes nothing, so it does not matter whether the saved knowledge or the generation comes first.
 
 The bodies add themselves as they are generated (StellarSystem and World constructors). The savefile holds it at its
-root, next to the environment and the player: it is loaded before the environment, so the systems it generates add to it.
-The people are not here: `GameEnvironment.persons` holds those the player has talked to."""
+root, next to the environment and the player: it is loaded before the environment, so the systems it generates add to
+it. The people are not here: `GameEnvironment.persons` holds those the player has talked to."""
 
 from __future__ import annotations
 import copy

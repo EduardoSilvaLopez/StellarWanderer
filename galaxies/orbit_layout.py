@@ -1,7 +1,7 @@
 """The layout of a stellar system's orbits: how many there are, of which kind, and how far from the star.
 
-Three kinds of orbit (`OrbitKind`): earthlike (terrestrial) planets, asteroid belts and jovian planets. Jovian planets are
-only laid out, not created yet: `Orbit` gives them no planets. An asteroid belt is created as an `AsteroidBelt`
+Three kinds of orbit (`OrbitKind`): earthlike (terrestrial) planets, asteroid belts and jovian planets. Jovian planets
+are only laid out, not created yet: `Orbit` gives them no planets. An asteroid belt is created as an `AsteroidBelt`
 (asteroid_belt.py), which generates its asteroids. The layout is a pure function of the star and of the
 system's random generator, so the same seed always gives the same system. Orbits are numbered 1.0, 2.0, ... from the
 star, every kind together. Stars of type O have no orbits (their discs do not last long enough to form planets), except
@@ -92,7 +92,8 @@ class SystemScales:
 
 
 class OrbitLayout:
-    """The orbits of one stellar system: `plans`, nearest first, and how they were reached (see the module docstring)."""
+    """The orbits of one stellar system: `plans`, nearest first, and how they were reached (see the module
+    docstring)."""
 
     # Temperatures (K) that set the zones: see the module docstring.
     INNER_EDGE_TEMPERATURE = 1500.0
@@ -134,7 +135,8 @@ class OrbitLayout:
 
     MIN_SPACING = 1.25  # two orbits are never closer than this ratio
 
-    # The initial system: orbit INITIAL_ORBIT_NUMBER is an earthlike planet outside the star's heat radius, with room for its moon.
+    # The initial system: orbit INITIAL_ORBIT_NUMBER is an earthlike planet outside the star's heat radius, with room
+    # for its moon.
     INITIAL_ORBIT_NUMBER = 3
     MAX_ATTEMPTS = 500
     FALLBACK_RATIOS = (0.5, 0.72, 1.0, 1.5)  # the fixed layout used when no draw fits: distances, in the third orbit's
@@ -154,8 +156,9 @@ class OrbitLayout:
     @staticmethod
     def generate(star: Star, my_random: random.Random, is_initial_system: bool) -> OrbitLayout:
         """The orbits of the star's system: none for a star of type O, unless it is the initial one. For the initial
-        system, layouts are drawn until its orbit INITIAL_ORBIT_NUMBER is an earthlike planet that meets `_can_start`; if
-        MAX_ATTEMPTS are not enough (a star whose zones leave no room), a fixed layout of four earthlike planets is used."""
+        system, layouts are drawn until its orbit INITIAL_ORBIT_NUMBER is an earthlike planet that meets `_can_start`;
+        if MAX_ATTEMPTS are not enough (a star whose zones leave no room), a fixed layout of four earthlike planets is
+        used."""
         scales = SystemScales.of(star)
         if star.type is Star.Type.O and not is_initial_system:
             return OrbitLayout([], scales, 0, False)
@@ -221,7 +224,8 @@ class OrbitLayout:
     @staticmethod
     def _draw_rocky_outer_limit(my_random: random.Random, scales: SystemScales,
                                 giants: List[float], inner_belt: Optional[float]) -> float:
-        """The distance of the outermost terrestrial planet: inside the belt or the first giant, and inside the snow line."""
+        """The distance of the outermost terrestrial planet: inside the belt or the first giant, and inside the snow
+        line."""
         if inner_belt is not None:
             limit = inner_belt / my_random.uniform(*OrbitLayout.ROCKY_OUTSIDE_BELT)
         elif giants:
@@ -233,8 +237,8 @@ class OrbitLayout:
 
     @staticmethod
     def _draw_rocky_zone(my_random: random.Random, scales: SystemScales, outer_limit: float) -> List[Entry]:
-        """The terrestrial places, from the outer limit inwards, each closer by a spacing ratio, until their count or the
-        inner edge. Some places hold a belt instead of a planet. The first (the outermost) is always a planet."""
+        """The terrestrial places, from the outer limit inwards, each closer by a spacing ratio, until their count or
+        the inner edge. Some places hold a belt instead of a planet. The first (the outermost) is always a planet."""
         count = max(1, min(OrbitLayout.ROCKY_COUNT_MAX,
                            round(my_random.gauss(OrbitLayout.ROCKY_COUNT_MEAN, OrbitLayout.ROCKY_COUNT_SIGMA))))
         distances = [outer_limit]

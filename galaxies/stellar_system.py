@@ -124,8 +124,9 @@ class StellarSystem:
                 and mission.asteroid_site['system'] == key]
 
     def asteroid_from_site(self, site: dict) -> Asteroid:
-        """The asteroid that `Asteroid.site` describes, in this system: the kept one if it is kept (a belt's relevant one, or
-        a free-living one of `free_asteroids`), else one made from the site. The same asteroid as before the save."""
+        """The asteroid that `Asteroid.site` describes, in this system: the kept one if it is kept (a belt's relevant
+        one, or a free-living one of `free_asteroids`), else one made from the site. The same asteroid as before the
+        save."""
         if site['belt'] is None:
             return self.free_asteroids.get(site['seed']) or Asteroid.free_living(self, site['seed'])
         belt = self.get_orbit(float(site['belt']))

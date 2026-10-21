@@ -36,13 +36,14 @@ class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
     The sun is drawn in OpenGL, under the sky: the sky (the fixed stars, the worlds farther than the sun, a hole
-    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha, transparent
-    where nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the sun, straight on
-    the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See graphics/star_gl.py. The
-    SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed down to the renderers.
-    Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()` (`_upload_texture`; 32-bit
-    BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at about 14 ms per frame,
-    so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame `image.tostring`."""
+    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha,
+    transparent where nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
+    sun, straight on the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See
+    graphics/star_gl.py. The SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed
+    down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
+    (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at
+    about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame
+    `image.tostring`."""
 
     def __init__(self) -> None:
         self.world_surface: Optional[pygame.Surface] = None
@@ -57,8 +58,8 @@ class OpenGLGui:
              top_layer: Optional[pygame.Surface] = None) -> None:
         """Render one complete frame into the active OpenGL window.
 
-        top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay, or the pause veil) drawn
-        above everything else."""
+        top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay, or the pause veil)
+        drawn above everything else."""
         # The real window size, not screen.get_size(): for an OpenGL window pygame can keep returning
         # a surface of the size first requested, which then differs from the window's client area
         # (the window frame takes part of it), cropping the frame and shifting mouse positions.

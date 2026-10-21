@@ -19,8 +19,8 @@ class OutpostMarkers:
 
     @staticmethod
     def in_fixed_zone(environment: GameEnvironment, ship: Ship) -> List[tuple]:
-        """(outpost, stellar position, visible) for every outpost of a planet within the fixed zone. Bound to a world, only
-        that world's outposts are listed (a moon has none): the outposts of the planet it orbits are not.
+        """(outpost, stellar position, visible) for every outpost of a planet within the fixed zone. Bound to a world,
+        only that world's outposts are listed (a moon has none): the outposts of the planet it orbits are not.
 
         `visible` is False when the outpost is on the far side of its planet (its surface normal points
         away from the ship). Such outposts still get a label, but no dot."""
@@ -55,6 +55,8 @@ class OutpostMarkers:
         for _, point, visible in OutpostMarkers.in_fixed_zone(environment, ship):
             if not visible:
                 continue
-            projected = project_to_camera(ship, ship.navigation.direction_to_point(point, environment.date_time), w, horizon_y, focal_length_px)
+            projected = project_to_camera(ship, ship.navigation.direction_to_point(point, environment.date_time), w,
+                                          horizon_y, focal_length_px)
             if projected is not None:
-                pygame.draw.circle(surface, OUTPOST_DOT_COLOR, (int(projected[0]), int(projected[1])), OUTPOST_DOT_RADIUS_PX)
+                pygame.draw.circle(surface, OUTPOST_DOT_COLOR, (int(projected[0]), int(projected[1])),
+                                   OUTPOST_DOT_RADIUS_PX)

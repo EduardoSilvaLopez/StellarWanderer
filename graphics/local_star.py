@@ -116,7 +116,8 @@ def sun_visibility(environment: GameEnvironment, ship: Ship, view: StarView) -> 
     if ship.is_bound:
         ground = environment.fixed_world
         altitude = ship.navigation.altitude_above_surface(ground)
-        discs.append((math.asin(ground.radius / (ground.radius + altitude)), ship.navigation.direction_down(ground, date_time)))
+        discs.append((math.asin(ground.radius / (ground.radius + altitude)),
+                      ship.navigation.direction_down(ground, date_time)))
     for world in environment.nearest_system.get_all_worlds():
         if ship.is_bound and world is environment.fixed_world:
             continue

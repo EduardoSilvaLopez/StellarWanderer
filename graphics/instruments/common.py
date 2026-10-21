@@ -35,7 +35,8 @@ def view_geometry(h: int) -> Tuple[int, int, float]:
     return view_h, horizon_y, focal_length_px
 
 
-def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int, focal_length_px: float) -> Optional[Tuple[float, float]]:
+def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int,
+                      focal_length_px: float) -> Optional[Tuple[float, float]]:
     """Pinhole-project a direction (in the frame consumed by ship.attitude.camera_components)
     onto the screen. Returns None if the direction is behind the near-clip plane, or
     grazing it at a wide angle: an object can be just past NEAR_CLIP in front of the
@@ -60,7 +61,7 @@ def get_cockpit_background(w: int, h: int) -> pygame.Surface:
 
     Left side gradually darkened, right side normal brightness.
     """
-    global _cockpit_background
+    global _cockpit_background  # noqa: PLW0603 - a module-level cache, like the other textures
     if _cockpit_background is None:
         texture_path = resource_path('textures', 'cockpit_background.png')
         try:
@@ -91,7 +92,7 @@ def get_console_background(w: int, h: int, console_height: int) -> pygame.Surfac
     It is converted to per-pixel alpha, the format of the overlay it is blitted onto every frame:
     blitting an opaque surface onto a per-pixel-alpha one takes a much slower path (about 13 ms
     versus 1.3 ms for a full console)."""
-    global _console_background
+    global _console_background  # noqa: PLW0603 - a module-level cache, like the other textures
     background = get_cockpit_background(w, h)
     cached = _console_background
     if cached is None or cached[:3] != (w, h, console_height) or cached[3] is not background:
@@ -105,7 +106,7 @@ def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
     (top rail, A-pillars, struts) only — the glass panes between them
     stay transparent so the 3D scene keeps showing through.
     """
-    global _windshield_frame_texture
+    global _windshield_frame_texture  # noqa: PLW0603 - a module-level cache, like the other textures
     if _windshield_frame_texture is None:
         top = int(h * CANOPY_TOP)
         bottom = int(h * CONSOLE_TOP)
@@ -151,7 +152,8 @@ def panel_box_top(font: pygame.font.Font, title_top: int) -> int:
     return title_top + font.get_linesize() + PANEL_TITLE_GAP
 
 
-def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int, colour: Tuple[int, int, int] = ACCENT) -> None:
+def draw_panel_title(surface: pygame.Surface, font: pygame.font.Font, text: str, centre_x: int, top: int,
+                     colour: Tuple[int, int, int] = ACCENT) -> None:
     """A panel's title, centred on centre_x with its top at `top`, in ACCENT unless another colour is given."""
     label = font.render(text, True, colour)
     surface.blit(label, label.get_rect(midtop=(centre_x, top)))
@@ -168,8 +170,10 @@ def draw_beveled_panel(surface: pygame.Surface, rect: pygame.Rect, depth: int) -
     # Bezel: raised, so light catches top/left and shadow falls bottom/right.
     pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.right - 1, outer.top), depth)
     pygame.draw.line(surface, HULL_EDGE_COLOR, outer.topleft, (outer.left, outer.bottom - 1), depth)
-    pygame.draw.line(surface, HULL_DARK, (outer.left, outer.bottom - depth), (outer.right - 1, outer.bottom - depth), depth)
-    pygame.draw.line(surface, HULL_DARK, (outer.right - depth, outer.top), (outer.right - depth, outer.bottom - 1), depth)
+    pygame.draw.line(surface, HULL_DARK, (outer.left, outer.bottom - depth), (outer.right - 1, outer.bottom - depth),
+                     depth)
+    pygame.draw.line(surface, HULL_DARK, (outer.right - depth, outer.top), (outer.right - depth, outer.bottom - 1),
+                     depth)
 
     # Screen: sunken, so the shading is reversed — shadow top/left, a thin lit ridge bottom/right.
     pygame.draw.rect(surface, READOUT_BG, rect)

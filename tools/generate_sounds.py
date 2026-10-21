@@ -2,8 +2,9 @@
 
 Run from the project root:  python tools/generate_sounds.py
 
-Simple electronic tones (metal clanks for the ore, a roar of air for arriving and leaving a world), made with numpy and written as 16-bit mono WAV files: the sounds of a
-cockpit in vacuum, never of space. They are placeholders: any WAV of the same name in that folder replaces one.
+Simple electronic tones (metal clanks for the ore, a roar of air for arriving and leaving a world), made with numpy and
+written as 16-bit mono WAV files: the sounds of a cockpit in vacuum, never of space. They are placeholders: any WAV of
+the same name in that folder replaces one.
 """
 
 import os
@@ -38,11 +39,13 @@ def crackle(seconds: float, loudness: float = 0.35) -> np.ndarray:
 
 
 def clank(freq: float, seconds: float, loudness: float = 0.7) -> np.ndarray:
-    """Metal struck hard by metal: a crack of bright noise, a dull thunk at about `freq`, and a few inharmonic partials that die
-    in a few hundredths of a second. Nothing rings: a ring that lasts, or high pitched partials, sound like a bell."""
+    """Metal struck hard by metal: a crack of bright noise, a dull thunk at about `freq`, and a few inharmonic partials
+    that die in a few hundredths of a second. Nothing rings: a ring that lasts, or high pitched partials, sound like a
+    bell."""
     t = np.arange(int(RATE * seconds)) / RATE
     noise = np.random.default_rng(int(freq)).uniform(-1.0, 1.0, len(t))
-    crack = (np.convolve(noise, np.ones(3) / 3, mode='same') - np.convolve(noise, np.ones(14) / 14, mode='same')) * np.exp(-t * 110.0)
+    crack = (np.convolve(noise, np.ones(3) / 3, mode='same') - np.convolve(noise, np.ones(14) / 14,
+                                                                           mode='same')) * np.exp(-t * 110.0)
     thunk = np.sin(2 * np.pi * freq * t) * np.exp(-t * 38.0)
     clang = sum(strength * np.sin(2 * np.pi * freq * ratio * t + phase) * np.exp(-t * 70.0)
                 for ratio, strength, phase in ((1.53, 0.5, 0.7), (2.31, 0.35, 2.1), (3.07, 0.25, 4.0)))
@@ -64,8 +67,8 @@ def scrape(seconds: float, loudness: float = 0.35) -> np.ndarray:
 
 
 def metal_doors() -> List[np.ndarray]:
-    """Ore loaded into the hold, about two seconds of heavy industry: the hatch rumbles and scrapes, a door slams, and the
-    load falls in as metal hitting metal, in clusters of uneven gaps and wandering pitch."""
+    """Ore loaded into the hold, about two seconds of heavy industry: the hatch rumbles and scrapes, a door slams, and
+    the load falls in as metal hitting metal, in clusters of uneven gaps and wandering pitch."""
     return [
         rumble(0.3), scrape(0.15), clank(190, 0.15, 0.8), silence(0.1), clank(255, 0.15, 0.7), silence(0.2),
         clank(235, 0.12, 0.65), silence(0.04), clank(180, 0.15, 0.75), silence(0.1), clank(130, 0.25, 0.9),
@@ -86,28 +89,30 @@ def impact(seconds: float, loudness: float) -> np.ndarray:
     """A heavy metal impact: a low thud and a ring of inharmonic partials, over a short burst of noise."""
     t = np.arange(int(RATE * seconds)) / RATE
     thud = np.sin(2 * np.pi * (90 + 110 * np.exp(-t * 40)) * t) * np.exp(-t * 9)
-    ring = sum(np.sin(2 * np.pi * freq * t) * np.exp(-t * decay) for freq, decay in ((310, 12), (487, 16), (851, 22), (1290, 30), (1830, 40)))
+    ring = sum(np.sin(2 * np.pi * freq * t) * np.exp(-t * decay) for freq, decay in ((310, 12), (487, 16), (851, 22),
+                                                                                     (1290, 30), (1830, 40)))
     burst = np.random.default_rng(5).uniform(-1.0, 1.0, len(t)) * np.exp(-t * 90)
     return loudness * np.clip(0.8 * thud + 0.45 * ring + 0.9 * burst, -1.0, 1.0)
 
 
 def machinery(loudness: float) -> np.ndarray:
-    """One second of dark industrial drone, made to loop without a click: a 50 Hz transformer buzz and its harmonics, and a
-    band of grit (random-phase partials, every one a whole number of Hz) that thins out upwards. Slow irregular wobbles
-    (whole Hz again) keep it from sounding electronic."""
+    """One second of dark industrial drone, made to loop without a click: a 50 Hz transformer buzz and its harmonics,
+    and a band of grit (random-phase partials, every one a whole number of Hz) that thins out upwards. Slow irregular
+    wobbles (whole Hz again) keep it from sounding electronic."""
     rng = np.random.default_rng(11)
     t = np.arange(RATE) / RATE
     buzz = sum(np.sin(2 * np.pi * 50 * n * t + rng.uniform(0, 6.28)) / n ** 0.8 for n in range(1, 9))
     freqs = np.arange(90, 1800, 7)
     grit = sum(np.sin(2 * np.pi * f * t + rng.uniform(0, 6.28)) * (150 / f) ** 1.2 for f in freqs)
-    wobble = 1 + 0.25 * np.sin(2 * np.pi * 3 * t + 1) + 0.15 * np.sin(2 * np.pi * 7 * t + 4) + 0.1 * np.sin(2 * np.pi * 11 * t)
+    wobble = 1 + 0.25 * np.sin(2 * np.pi * 3 * t + 1) + 0.15 * np.sin(2 * np.pi * 7 * t
+                                                                      + 4) + 0.1 * np.sin(2 * np.pi * 11 * t)
     wave_ = (buzz / 2.5 + grit / 6) * wobble
     return loudness * wave_ / np.max(np.abs(wave_))
 
 
 def hum(partials: List[Tuple[int, float]], tremolo: int, loudness: float) -> np.ndarray:
-    """One second of a steady hum, made to loop without a click: every frequency is a whole number of Hz, so the sound ends
-    where it began. `partials` are (Hz, strength); `tremolo` is the wobble in Hz."""
+    """One second of a steady hum, made to loop without a click: every frequency is a whole number of Hz, so the sound
+    ends where it began. `partials` are (Hz, strength); `tremolo` is the wobble in Hz."""
     t = np.arange(RATE) / RATE
     wave_ = sum(strength * np.sin(2 * np.pi * freq * t) for freq, strength in partials)
     wave_ = wave_ / sum(strength for _, strength in partials)
@@ -115,8 +120,9 @@ def hum(partials: List[Tuple[int, float]], tremolo: int, loudness: float) -> np.
 
 
 def atmosphere(seconds: float, peak: float, loudness: float, seed: int) -> np.ndarray:
-    """Air torn by a hull at speed: a deep rumble under a hiss of turbulent noise, with a fast flutter, swelling to its loudest
-    at `peak` (0 to 1 of the duration) and fading out. The hiss is brighter the louder it gets, as the air thickens."""
+    """Air torn by a hull at speed: a deep rumble under a hiss of turbulent noise, with a fast flutter, swelling to its
+    loudest at `peak` (0 to 1 of the duration) and fading out. The hiss is brighter the louder it gets, as the air
+    thickens."""
     n = int(RATE * seconds)
     t = np.arange(n) / RATE
     noise = np.random.default_rng(seed).uniform(-1.0, 1.0, n)
@@ -153,7 +159,8 @@ def main() -> None:
     save('ui_click', [tone(1300, 0.035, 0.5, decay=7.0)])
     save('board_open', [sweep(400, 1200, 0.12, 0.45), silence(0.04), tone(900, 0.08, 0.45)])
     save('mission_taken', [tone(523.25, 0.09, 0.55), tone(659.25, 0.16, 0.55)])
-    save('mission_delivered', [tone(523.25, 0.08, 0.55), tone(659.25, 0.08, 0.55), tone(783.99, 0.08, 0.55), tone(1046.5, 0.3, 0.55)])
+    save('mission_delivered', [tone(523.25, 0.08, 0.55), tone(659.25, 0.08, 0.55), tone(783.99, 0.08, 0.55),
+                               tone(1046.5, 0.3, 0.55)])
     save('mission_failed', [sweep(330, 200, 0.32, 0.55), silence(0.05), tone(180, 0.2, 0.6, decay=4.0)])
     save('notify', [tone(1000, 0.14, 0.45, decay=6.0)])
     save('alert', [tone(880, 0.1, 0.6), tone(660, 0.1, 0.6), tone(880, 0.1, 0.6), tone(660, 0.14, 0.6)])

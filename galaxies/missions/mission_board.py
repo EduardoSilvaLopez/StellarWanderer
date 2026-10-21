@@ -5,12 +5,13 @@ reputation is MIN_REPUTATION or more (the others talk to the com officer with SP
 Opening it counts as a visit to the outpost (`Outpost.last_visited`), not as speaking with the com officer
 (`Person.last_communication_at`): the ship is not restocked or repaired here, that takes talking to the com officer.
 
-The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the outpost is in
-memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most `Mission.DAYS_MAX` days,
-so `update_missions` finds every offer that can still be alive by looking back that far, however the board was visited, saved
-or loaded. Each offer can be taken, and each mission the player has taken can be delivered.
-An offer's deadline is fixed when the offer is made, so taking it late does not give more time. An offer can also be taken by
-somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the board."""
+The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the
+outpost is in memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most
+`Mission.DAYS_MAX` days, so `update_missions` finds every offer that can still be alive by looking back that far,
+however the board was visited, saved or loaded. Each offer can be taken, and each mission the player has taken can be
+delivered. An offer's deadline is fixed when the offer is made, so taking it late does not give more time. An offer can
+also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
+board."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -60,9 +61,10 @@ class MissionBoard:
         logger.debug(f"Updating offers. {len(self.offers)} in the beginning.")
         self.offers = [offer for offer in self.offers if offer.deadline > now and not offer.is_taken_by_others(now)]
 
-        # Insert the offers, day by day from LOOK_BACK_DAYS ago (or the last update, if it is later) to today: each day asks
-        # each kind. The day of the last update is asked again, as it was not over. An offer already on the board, one the
-        # player has taken (or done or failed), or one that has expired or has been taken by somebody else, is not added.
+        # Insert the offers, day by day from LOOK_BACK_DAYS ago (or the last update, if it is later) to today: each day
+        # asks each kind. The day of the last update is asked again, as it was not over. An offer already on the board,
+        # one the player has taken (or done or failed), or one that has expired or has been taken by somebody else, is
+        # not added.
         known: set = {offer.seed for offer in self.offers} | {mission.seed for mission in self.player.missions}
         first_day = now - timedelta(days=LOOK_BACK_DAYS)
         if self.updated_at is not None:
@@ -71,7 +73,8 @@ class MissionBoard:
         while day < now:
             for kind in KINDS:
                 offer = kind.offered_on(day, self.outpost)
-                if offer is not None and offer.deadline > now and not offer.is_taken_by_others(now) and offer.seed not in known:
+                if (offer is not None and offer.deadline > now and not offer.is_taken_by_others(now)
+                        and offer.seed not in known):
                     self.offers.append(offer)
                     known.add(offer.seed)
             day += timedelta(days=1)

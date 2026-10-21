@@ -1,9 +1,9 @@
 """A vertical scroll bar for the dialogs: it draws the thumb, and the mouse can drag it or click the track to page.
 
-The dialog keeps its own scroll value, in its own unit (pixels, or rows of a list); the bar only works out the thumb from
-it, and says what the scroll becomes when the mouse acts on it. `max_scroll` is the largest scroll, and `visible` how much
-of the content is in view, in the same unit. Nothing is drawn, and the mouse is not answered, while max_scroll is 0 or less
-(the content fits)."""
+The dialog keeps its own scroll value, in its own unit (pixels, or rows of a list); the bar only works out the thumb
+from it, and says what the scroll becomes when the mouse acts on it. `max_scroll` is the largest scroll, and `visible`
+how much of the content is in view, in the same unit. Nothing is drawn, and the mouse is not answered, while max_scroll
+is 0 or less (the content fits)."""
 
 from __future__ import annotations
 from typing import Optional, Tuple
@@ -15,9 +15,9 @@ Colour = Tuple[int, int, int]
 class ScrollBar:
     """The track is the column that holds the thumb and answers the mouse; it is drawn only if it has a colour.
 
-    Mouse (positions in dialog coordinates, see Dialog.localize_event): a press on the thumb grabs it, and it follows the
-    mouse until the button is released, wherever the mouse goes; a press on the track above or below the thumb moves the
-    scroll a page (`visible`) that way."""
+    Mouse (positions in dialog coordinates, see Dialog.localize_event): a press on the thumb grabs it, and it follows
+    the mouse until the button is released, wherever the mouse goes; a press on the track above or below the thumb moves
+    the scroll a page (`visible`) that way."""
 
     MIN_WIDTH = 8  # pixels: a thinner bar is hard to hit with the mouse
 
@@ -31,7 +31,8 @@ class ScrollBar:
         self._grab: Optional[int] = None  # while dragging: how far below the thumb's top the mouse took hold of it
 
     def thumb_rect(self, scroll: int, max_scroll: int, visible: int) -> pygame.Rect:
-        """The thumb: as long as the share of the content in view, and where the scroll has reached. max_scroll must be above 0."""
+        """The thumb: as long as the share of the content in view, and where the scroll has reached. max_scroll must be
+        above 0."""
         height = max(self.min_thumb, self.track.height * visible // (visible + max_scroll))
         top = self.track.top + (self.track.height - height) * scroll // max_scroll
         return pygame.Rect(self.track.left, top, self.track.width, height)
@@ -44,9 +45,9 @@ class ScrollBar:
         pygame.draw.rect(surface, self.thumb_colour, self.thumb_rect(scroll, max_scroll, visible))
 
     def handle_event(self, event: pygame.event.Event, scroll: int, max_scroll: int, visible: int) -> Optional[int]:
-        """The scroll that this event sets, when it is the bar's: a press on the thumb or the track, the motion of a drag, its
-        release. None for any other event. A press on the thumb and a release leave the scroll as it is, and still return
-        it: the event is the bar's all the same, and the dialog must not use it for anything else."""
+        """The scroll that this event sets, when it is the bar's: a press on the thumb or the track, the motion of a
+        drag, its release. None for any other event. A press on the thumb and a release leave the scroll as it is, and
+        still return it: the event is the bar's all the same, and the dialog must not use it for anything else."""
         if max_scroll <= 0:
             self._grab = None
             return None

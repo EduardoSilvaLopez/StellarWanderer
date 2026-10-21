@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 class GameEnvironment:
     EPOCH = datetime.datetime(700, 1, 1)
 
-    def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict], people_alterations: Optional[dict]) -> None:
+    def __init__(self, galactic_seed: float, date_time: datetime.datetime, galaxy_alterations: Optional[dict],
+                 people_alterations: Optional[dict]) -> None:
         self.date_time = date_time
         if galaxy_alterations:
             galaxy_alterations['date_time'] = date_time
@@ -44,9 +45,9 @@ class GameEnvironment:
         return self.fixed_body if self.fixed_body is not None and self.fixed_body.is_world else None
 
     def refresh_fixed_body(self, player_position: Vector3) -> None:
-        """Pick fixed_body for this frame: the body nearest to the ship (distance from its centre) whose fixed zone holds
-        it, or None when no fixed zone does. While fixed, targeted_body follows it, and last_fixed_body records it.
-        Call only while unbound, see Navigation.update_position_and_velocity."""
+        """Pick fixed_body for this frame: the body nearest to the ship (distance from its centre) whose fixed zone
+        holds it, or None when no fixed zone does. While fixed, targeted_body follows it, and last_fixed_body records
+        it. Call only while unbound, see Navigation.update_position_and_velocity."""
         from spaceships.navigation import Navigation  # local: navigation imports this module
 
         fixed: Optional[Body] = None
@@ -61,8 +62,9 @@ class GameEnvironment:
             self.last_fixed_body = fixed
 
     def cycle_targeted_body(self, step: int, player_position: Vector3) -> None:
-        """Moves targeted_body `step` places (+1 or -1) through the bodies of nearest_system, sorted by distance from the
-        ship, the star included, wrapping around. Only outside every fixed zone: while fixed, the target is the fixed body."""
+        """Moves targeted_body `step` places (+1 or -1) through the bodies of nearest_system, sorted by distance from
+        the ship, the star included, wrapping around. Only outside every fixed zone: while fixed, the target is the
+        fixed body."""
         if self.fixed_body is not None:
             return
         bodies = sorted(

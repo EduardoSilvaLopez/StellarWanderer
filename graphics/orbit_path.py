@@ -1,4 +1,6 @@
-"""The orbit of the targeted body, a thin line in the sky while unbound: where a moving target is going."""
+"""The orbit of the targeted body, a thin line in the sky while unbound: where a moving target is going.
+
+A world or an asteroid of a mission has one; the star does not."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -13,8 +15,9 @@ if TYPE_CHECKING:
 
 
 class OrbitPath:
-    """The line is round the star for a planet, and round the planet for a moon (it moves with the planet). Each piece is
-    clipped to the view first: near the target, the pieces are far longer than the distance to them."""
+    """The line is round the star for a planet or an asteroid, and round the planet for a moon (it moves with the
+    planet). Each piece
+    is clipped to the view first: near the target, the pieces are far longer than the distance to them."""
 
     STEPS = 180
     MARGIN = 1.05  # the clip is this much wider than the view, so lines reach its border
@@ -22,19 +25,23 @@ class OrbitPath:
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
+        from galaxies.asteroid import Asteroid
         from galaxies.world import World
         body = environment.targeted_body
-        if not OrbitPath.shown or ship.is_bound or not isinstance(body, World):  # the star has no orbit
+        if not OrbitPath.shown or ship.is_bound or not isinstance(body, (World, Asteroid)):  # the star has no orbit
             return
         from .instruments.common import view_geometry
         _, horizon_y, focal = view_geometry(h)
         date_time = environment.date_time
 
-        centre = body.parent_planet.calculate_stellar_position(date_time) if body.parent_planet else (0.0, 0.0, 0.0)
-        points = body.orbit_points(date_time, OrbitPath.STEPS) + np.array(centre) - np.array(ship.navigation.stellar_position(date_time))
+        centre = (body.parent_planet.calculate_stellar_position(date_time)
+                  if isinstance(body, World) and body.parent_planet else (0.0, 0.0, 0.0))
+        points = (body.orbit_points(date_time, OrbitPath.STEPS) + np.array(centre)
+                  - np.array(ship.navigation.stellar_position(date_time)))
         axes = np.array([ship.attitude.right, ship.attitude.up, ship.attitude.forward])
         start = points @ axes.T  # (right, up, forward) of every point
-        end = np.concatenate([start[1:], start[:1]])  # each piece runs to the next point, and the last back to the first
+        # Each piece runs to the next point, and the last back to the first.
+        end = np.concatenate([start[1:], start[:1]])
 
         # Liang-Barsky against the view's pyramid: the part of each piece, from t_in to t_out, that is inside it.
         tan_x, tan_y = OrbitPath.MARGIN * (w / 2) / focal, OrbitPath.MARGIN * horizon_y / focal

@@ -1,11 +1,11 @@
 """The base of every mission: what an outpost asks of the pilot (shown by mission_board.py).
 
-An outpost makes its offers on its board (`MissionBoard.update_missions`), which are kept while the outpost is in memory and
-not saved. The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE or FAILED): that list is
-the only place missions are saved.
+An outpost makes its offers on its board (`MissionBoard.update_missions`), which are kept while the outpost is in memory
+and not saved. The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE
+or FAILED): that list is the only place missions are saved.
 
-Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission knows
-whether the player can complete it (`can_complete`), what that takes from them (`complete`) and what it gives them
+Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission
+knows whether the player can complete it (`can_complete`), what that takes from them (`complete`) and what it gives them
 (`give_reward`, `reward_text`). The effects of failing (`fail`) are decided later, per kind.
 
 An OPEN mission is in the `update_queue` for its deadline (it is an Updatable): when the deadline passes it becomes
@@ -35,19 +35,21 @@ _KINDS: Dict[str, Type[Mission]] = {}
 
 
 def register[Kind: 'Mission'](kind: Type[Kind]) -> Type[Kind]:
-    """Makes a kind of mission known by its KIND, for Mission.deserialize. It returns the class unchanged, and says so in its
-    type: a class decorated with it keeps its own members for the editor (`DeliverOre.generate`, references, rename)."""
+    """Makes a kind of mission known by its KIND, for Mission.deserialize. It returns the class unchanged, and says so
+    in its type: a class decorated with it keeps its own members for the editor (`DeliverOre.generate`, references,
+    rename)."""
     _KINDS[kind.KIND] = kind
     return kind
 
 
 class Mission(Updatable):
-    """What every mission has: who asked for it, how long the player has once they take it, when they did and its status.
-    Subclasses add the objective."""
+    """What every mission has: who asked for it, how long the player has once they take it, when they did and its
+    status. Subclasses add the objective."""
 
     KIND: str = ''
     CHANCES_PER_DAY: float = 0.0  # the chance a kind makes an offer on a given day; a kind that makes none keeps 0
-    DAYS_MAX: int = 0  # the most days an offer of the kind lasts (its deadline): how far back the board looks for its offers
+    # the most days an offer of the kind lasts (its deadline): how far back the board looks for its offers
+    DAYS_MAX: int = 0
 
     def __init__(self,
                  seed: int,
@@ -67,15 +69,15 @@ class Mission(Updatable):
         self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
         self.status: str = status
-        # Set by the derived class at creation, like the deadline: when somebody else takes the offer, None if nobody does.
-        # It only matters while the mission is an offer on a board; it is not saved.
+        # Set by the derived class at creation, like the deadline: when somebody else takes the offer, None if nobody
+        # does. It only matters while the mission is an offer on a board; it is not saved.
         self.taken_by_others_at: Optional[datetime] = None
 
     # region Offers
     @classmethod
     def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
-        """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost and the
-        day only, so it is the same however the board was visited."""
+        """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost
+        and the day only, so it is the same however the board was visited."""
         chance = random.Random(of_text(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
         if chance.random() >= cls.CHANCES_PER_DAY:
             return None
@@ -84,7 +86,8 @@ class Mission(Updatable):
     @classmethod
     @abstractmethod
     def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[Mission]:
-        """The offer itself, once the day's chance has come up: its kind decides what it asks, with `chance` if it needs more."""
+        """The offer itself, once the day's chance has come up: its kind decides what it asks, with `chance` if it needs
+        more."""
 
     def is_taken_by_others(self, now: datetime) -> bool:
         """Somebody else has taken this offer by `now`, so it is no longer on the board."""

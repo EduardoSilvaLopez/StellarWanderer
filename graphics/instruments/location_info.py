@@ -15,22 +15,24 @@ if TYPE_CHECKING:
 class LocationInfo:
     """The name of the reference body, and the readouts of the ship.
 
-    The name is the reference body and its system: the fixed body while the ship is fixed, else the star. Its name is the
-    system's alone when it is the star. It is drawn large and centred in the top bar, above the windshield. The readouts
-    are the position of the ship (bound: altitude, longitude, latitude; unbound: x, y, z, each with its rate Δ), the
-    attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of the velocity vector over all three
-    axes, shown without a sign. The target is not shown here (see ProximityMeter)."""
+    The name is the reference body and its system: the fixed body while the ship is fixed, else the star. Its name is
+    the system's alone when it is the star. It is drawn large and centred in the top bar, above the windshield. The
+    readouts are the position of the ship (bound: altitude, longitude, latitude; unbound: x, y, z, each with its rate
+    Δ), the attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of the velocity vector over all
+    three axes, shown without a sign. The target is not shown here (see ProximityMeter)."""
 
     @staticmethod
     def _reference_body() -> Body:
         """The fixed body while the ship is fixed, else the targeted body's star."""
         import game_environment as gem
         environment = gem.current_environment
-        return environment.fixed_body if environment.fixed_body is not None else environment.targeted_body.stellar_system.star
+        return (environment.fixed_body if environment.fixed_body is not None
+                else environment.targeted_body.stellar_system.star)
 
     @staticmethod
     def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> None:
-        """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's height."""
+        """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's
+        height."""
         reference = LocationInfo._reference_body()
         stellar_system = reference.stellar_system
         stellar_label = reference.name + ", " + stellar_system.name \
@@ -43,7 +45,8 @@ class LocationInfo:
         surface.blit(name_text, (w // 2 - ink.centerx, bar_height // 2 - ink.centery))
 
     @staticmethod
-    def draw_readouts(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int, line_spacing: int) -> None:
+    def draw_readouts(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int,
+                      line_spacing: int) -> None:
         """Draw the position and attitude readouts, one per line from (left, top), `line_spacing` pixels apart."""
         label_font = fonts.get(max(9, int(h * 0.017)))
 

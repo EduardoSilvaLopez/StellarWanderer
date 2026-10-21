@@ -23,11 +23,13 @@ class LitWorlds:
 
     Every world drawn in the sky (planets and moons) is lit this way. Worlds too small to see are drawn as a small
     lit disc (WORLD_MIN_RADIUS_PX). While unbound, all worlds are lit this way, the targeted one too, in
-    distance order (`OtherWorlds.draw`). While bound, every world except the targeted one is lit; the targeted one is the disc below the horizon,
-    lit by the sun like the ground (`FixedWorld.draw_surface`, given `SurfaceLight.ground_colour()`)."""
+    distance order (`OtherWorlds.draw`). While bound, every world except the targeted one is lit; the targeted one is
+    the disc below the horizon, lit by the sun like the ground (`FixedWorld.draw_surface`, given
+    `SurfaceLight.ground_colour()`)."""
 
     @staticmethod
-    def light_tint(star_color: Tuple[int, int, int], surface_colour: Tuple[int, int, int]) -> Tuple[float, float, float]:
+    def light_tint(star_color: Tuple[int, int, int], surface_colour: Tuple[int, int,
+                                                                           int]) -> Tuple[float, float, float]:
         """The world's surface colour (`World.surface_colour`) times the star's colour (mixed towards white), as a
         0..255 multiplier per channel."""
         return tuple(
@@ -102,7 +104,8 @@ class LitWorlds:
             return
 
         # Big discs are shaded on a coarser grid and scaled up (the shade is smooth).
-        step = 1 if box_w * box_h <= LIT_WORLD_PIXEL_BUDGET else math.ceil(math.sqrt(box_w * box_h / LIT_WORLD_PIXEL_BUDGET))
+        step = 1 if box_w * box_h <= LIT_WORLD_PIXEL_BUDGET else math.ceil(math.sqrt(box_w * box_h
+                                                                                     / LIT_WORLD_PIXEL_BUDGET))
         grid_w, grid_h = -(-box_w // step), -(-box_h // step)
         xs = ((x0 + (np.arange(grid_w, dtype=np.float32) + 0.5) * step - w / 2) / focal).astype(np.float32)
         ys = ((horizon_y - (y0 + (np.arange(grid_h, dtype=np.float32) + 0.5) * step)) / focal).astype(np.float32)

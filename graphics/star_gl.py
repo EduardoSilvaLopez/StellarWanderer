@@ -1,4 +1,5 @@
-"""The sun in the OpenGL pass: its disc and corona as one textured quad, its sunspots and flares, and the glare around it.
+"""The sun in the OpenGL pass: its disc and corona as one textured quad, its sunspots and flares, and the glare around
+it.
 
 The quad is a texture made once per star colour (local_star.star_rgba), so the GPU does the scaling and the sun costs
 little at any distance. OpenGLGui draws it under the sky: the sky is transparent where the sun is (local_star.erase), so
@@ -22,7 +23,8 @@ from .star_flares import flares_active
 if TYPE_CHECKING:
     from galaxies.star import Star
 
-STAR_TEXTURE_DISC = 192  # the disc's radius in the star's texture, in texels; its corona reaches STAR_CORONA_EXTENT times that
+# the disc's radius in the star's texture, in texels; its corona reaches STAR_CORONA_EXTENT times that
+STAR_TEXTURE_DISC = 192
 PROMINENCE_TEXTURE_SIZE = 64
 PROMINENCE_COLOUR = (1.0, 0.55, 0.25)
 FLARE_COLOUR = (1.0, 0.85, 0.6)
@@ -148,10 +150,10 @@ class StarGl:
 
     @staticmethod
     def draw_glare(width: int, height: int, view: StarView, star: Star, visibility: float) -> None:
-        """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Its size
-        is a multiple of the corona, so it follows the sun's apparent size (and shrinks as the sun gets farther away).
-        Added to what is drawn (additive), so it brightens the sky and the worlds, and is under the cockpit. `visibility`
-        (see sun_visibility) scales it: a world that hides the sun leaves no glare."""
+        """Light spilling from the sun over the view, stronger the nearer the sun is to the middle of the screen. Its
+        size is a multiple of the corona, so it follows the sun's apparent size (and shrinks as the sun gets farther
+        away). Added to what is drawn (additive), so it brightens the sky and the worlds, and is under the cockpit.
+        `visibility` (see sun_visibility) scales it: a world that hides the sun leaves no glare."""
         distance = math.hypot(view.x - width / 2, view.y - height / 2)
         reach = GLARE_RADIUS_SHARE * height
         strength = visibility * GLARE_MAX * max(0.0, 1.0 - distance / reach) ** 2
@@ -160,7 +162,8 @@ class StarGl:
         half = GLARE_SIZE_OF_CORONA * view.corona_px  # the glare's half-size, in pixels
         _begin_2d(width, height)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive
-        GL.glColor4f(star.color[0] / 255 * strength, star.color[1] / 255 * strength, star.color[2] / 255 * strength, 1.0)
+        GL.glColor4f(star.color[0] / 255 * strength, star.color[1] / 255 * strength, star.color[2] / 255 * strength,
+                     1.0)
         GL.glBindTexture(GL.GL_TEXTURE_2D, _star_texture(star.color, star.seed, detailed=False))
         _quad(view.x - half, view.y - half, view.x + half, view.y + half)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)  # back to the blending the rest of the frame uses

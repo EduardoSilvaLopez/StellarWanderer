@@ -1,6 +1,6 @@
-"""The veil over a paused game (see Player.is_paused): a translucent layer over the whole window, with the word PAUSED and
-how to resume. The main loop draws it above the frame while the game is paused and no dialog is open (a dialog has its own
-backdrop, drawn instead of it)."""
+"""The veil over a paused game (see Player.is_paused): a translucent layer over the whole window, with the word PAUSED
+and how to resume. The main loop draws it above the frame while the game is paused and no dialog is open (a dialog has
+its own backdrop, drawn instead of it)."""
 
 from typing import Any, Dict, Tuple
 import pygame

@@ -1,11 +1,11 @@
 """The fixed stars: the stars of the sectors around the initial star, generated from the galaxy seed and kept in memory.
 
-Galactic space is cut into cubes of SECTOR_SIZE ly, aligned to multiples of it. Sectors sit in districts (DISTRICT_SIZE ly)
-and districts in quadrants (QUADRANT_SIZE ly); those two levels only feed the seeds for now (see seeds.py). The sectors
-within SECTOR_RADIUS of the initial star's sector (a block of 2 * SECTOR_RADIUS + 1 sectors on each side, 5 x 5 x 5 for a
-radius of 2) are generated. Each sector draws its stars from a seed derived from its quadrant, its district and its
-index, so the same galaxy always gives the same stars. A star has a float position inside its sector and occupies the
-integer cell (1 ly) that contains it; no two stars share a cell, and its seed comes from that cell.
+Galactic space is cut into cubes of SECTOR_SIZE ly, aligned to multiples of it. Sectors sit in districts (DISTRICT_SIZE
+ly) and districts in quadrants (QUADRANT_SIZE ly); those two levels only feed the seeds for now (see seeds.py). The
+sectors within SECTOR_RADIUS of the initial star's sector (a block of 2 * SECTOR_RADIUS + 1 sectors on each side, 5 x 5
+x 5 for a radius of 2) are generated. Each sector draws its stars from a seed derived from its quadrant, its district
+and its index, so the same galaxy always gives the same stars. A star has a float position inside its sector and
+occupies the integer cell (1 ly) that contains it; no two stars share a cell, and its seed comes from that cell.
 
 A fixed star is only its seed and position, plus the properties Star derives from its seed: no orbits, planets or moons.
 Its StellarSystem takes its seed from the star's, so the system and the fixed star describe the same star.
@@ -64,7 +64,8 @@ def _poisson(my_random: random.Random, mean: float) -> int:
     return count
 
 
-def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int], used_cells: set[tuple[int, int, int]]) -> tuple[list[Star], int]:
+def _generate_sector(galaxy_seed: float, sector: tuple[int, int, int],
+                     used_cells: set[tuple[int, int, int]]) -> tuple[list[Star], int]:
     """The random stars of one sector, and the number skipped because their cell was taken. `used_cells` holds the
     cells taken so far, in the whole region; it is updated."""
     sector_seed: int = _sector_seed(galaxy_seed, sector)
@@ -91,7 +92,8 @@ def stellar_position(position: tuple[float, float, float]) -> tuple[float, float
 
 
 def generate_region(galaxy_seed: float) -> list[Star]:
-    """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs aggregate results."""
+    """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs
+    aggregate results."""
     centre: tuple[int, int, int] = region_of(INITIAL_STAR_POSITION, SECTOR_SIZE)
     initial_star_seed: int = seeds.derive(_sector_seed(galaxy_seed, centre), 'star', *cell_of(INITIAL_STAR_POSITION))
     initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION, Star.Type.G)
@@ -117,7 +119,8 @@ def _log_summary(galaxy_seed: float, stars: list[Star], per_sector_counts: list[
     side: int = 2 * SECTOR_RADIUS + 1
     logger.info(
         f"Fixed stars of galaxy {galaxy_seed}: {len(stars)} stars (the initial one included) in {side ** 3} sectors of "
-        f"{SECTOR_SIZE} ly; per sector min {min(per_sector_counts)}, mean {sum(per_sector_counts) / len(per_sector_counts):.1f}, "
+        f"{SECTOR_SIZE} ly; per sector min {min(per_sector_counts)}, "
+        f"mean {sum(per_sector_counts) / len(per_sector_counts):.1f}, "
         f"max {max(per_sector_counts)}."
     )
     logger.info(f"Fixed stars skipped because their cell was taken: {skipped}.")

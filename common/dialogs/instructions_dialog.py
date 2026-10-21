@@ -1,5 +1,5 @@
-"""The instructions screen: the controls and how the game works, read-only and scrollable (wheel, keys, or dragging the scroll
-bar, see ScrollBar).
+"""The instructions screen: the controls and how the game works, read-only and scrollable (wheel, keys, or dragging the
+scroll bar, see ScrollBar).
 
 The text is INSTRUCTIONS below: a list of sections, each a heading and its paragraphs. Each paragraph is wrapped to the
 box. A section can also have a drawing, listed in FIGURES by its heading (the Flying section is drawn, not written).
@@ -19,10 +19,13 @@ from .scroll_bar import ScrollBar
 INSTRUCTIONS: List[Tuple[str, List[str]]] = [
     ("Worlds", [
         "Fly close to a planet or moon to 'bind' to its surface. Fly away from it to 'unbind'.",
-        "When the proximity meter's title is green (FIXED) - the coordinates change. Use brake to align with the body's movement.",
-        "Outside every fixed zone, the meter reads TARGET: Tab and Shift+Tab move the target through the bodies in order of distance.",
+        "When the proximity meter's title is green (FIXED) - the coordinates change. Use brake to align with the "
+        "body's movement.",
+        "Outside every fixed zone, the meter reads TARGET: Tab and Shift+Tab move the target through the bodies in "
+        "order of distance.",
         "O: show or hide the orbit of the targeted body, a thin line in the sky while unbound.",
-        "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look around.",
+        "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look "
+        "around.",
         "The scanner shows what is in the crosshair. Hold Space to activate it (whichever that means in context).",
     ]),
     ("Flying", [  # drawn above the text: see _flying_figure
@@ -37,7 +40,8 @@ INSTRUCTIONS: List[Tuple[str, List[str]]] = [
         "Outposts restore them. Watch the bars and the cargo: a critical warning means go to an outpost now.",
     ]),
     ("Game", [
-        "Esc: open the menu, where you can resume, start a new game, load or save. F5: save now, under the default name. F6: load the last save.",
+        "Esc: open the menu, where you can resume, start a new game, load or save. F5: save now, under the default "
+        "name. F6: load the last save.",
     ]),
 ]
 
@@ -212,7 +216,8 @@ class InstructionsDialog(Dialog):
         self.back_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.BACK_HEIGHT + 12, 200, 32)
         self.scroll: int = 0  # pixels the text is moved up
         self.scroll_bar = ScrollBar(
-            pygame.Rect(self.box_rect.right - 16, self.box_rect.top + 6, ScrollBar.MIN_WIDTH, self.box_rect.height - 12),
+            pygame.Rect(self.box_rect.right - 16, self.box_rect.top + 6, ScrollBar.MIN_WIDTH, self.box_rect.height
+                        - 12),
             (100, 150, 200), (60, 60, 80), min_thumb=20,
         )
         self._lines: List[Tuple[str, pygame.Surface]] = []  # (kind, rendered line)

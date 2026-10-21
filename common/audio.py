@@ -1,15 +1,16 @@
 """Sound effects (not music). Game code names an event with `play(name)`; this module does the rest.
 
-The game is in vacuum: only what the pilot hears inside the ship exists here (the cockpit and its dialogs, the ship's systems,
-the radio and the alarms), never a sound from space itself. A sound is a WAV in `common/resources/sounds`, made by
-`tools/generate_sounds.py` (a file of the same name can replace any of them). SOUNDS gives each one's volume, and whether it
-keeps silent while time is compressed above x1: the interface and the alerts do not, the one-shots of the game will.
+The game is in vacuum: only what the pilot hears inside the ship exists here (the cockpit and its dialogs, the ship's
+systems, the radio and the alarms), never a sound from space itself. A sound is a WAV in `common/resources/sounds`, made
+by `tools/generate_sounds.py` (a file of the same name can replace any of them). SOUNDS gives each one's volume, and
+whether it keeps silent while time is compressed above x1: the interface and the alerts do not, the one-shots of the
+game will.
 
-The same sound is not repeated within MIN_GAP_MS (scrolling or a held key would machine-gun it). Without a sound device, or
-without the file, `play` does nothing: sound must never disturb the game.
+The same sound is not repeated within MIN_GAP_MS (scrolling or a held key would machine-gun it). Without a sound device,
+or without the file, `play` does nothing: sound must never disturb the game.
 
-A loop (the laser, the thrust, the attitude) is switched with `set_loop(name, on)`, which may be called every frame; `stop_loops` ends them all
-(a new game, a load, a dialog opening)."""
+A loop (the laser, the thrust, the attitude) is switched with `set_loop(name, on)`, which may be called every frame;
+`stop_loops` ends them all (a new game, a load, a dialog opening)."""
 
 from __future__ import annotations
 from typing import Dict, NamedTuple, Optional
@@ -77,8 +78,8 @@ def _sound(name: str) -> Optional[pygame.mixer.Sound]:
 
 
 def play(name: str) -> None:
-    """Plays the sound `name` (a key of SOUNDS), unless there is no mixer, it was played less than MIN_GAP_MS ago, or it keeps
-    silent while time is compressed and it is."""
+    """Plays the sound `name` (a key of SOUNDS), unless there is no mixer, it was played less than MIN_GAP_MS ago, or it
+    keeps silent while time is compressed and it is."""
     spec = SOUNDS[name]
     if not pygame.mixer.get_init():
         return
@@ -95,11 +96,11 @@ def play(name: str) -> None:
 
 
 def set_loop(name: str, on: bool) -> None:
-    """Starts (on) or stops the loop `name`; starting a loop that plays, or stopping one that does not, changes nothing. A loop
-    that keeps silent while time is compressed does not start then.
+    """Starts (on) or stops the loop `name`; starting a loop that plays, or stopping one that does not, changes nothing.
+    A loop that keeps silent while time is compressed does not start then.
 
-    A loop is stopped through its Sound, never through a remembered Channel: the mixer reuses channels, and a stale one may
-    already carry another sound."""
+    A loop is stopped through its Sound, never through a remembered Channel: the mixer reuses channels, and a stale one
+    may already carry another sound."""
     if not pygame.mixer.get_init():
         return
     if on and SOUNDS[name].silent_when_fast and _is_fast():

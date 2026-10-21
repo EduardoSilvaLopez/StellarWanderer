@@ -37,15 +37,17 @@ class World(Body):
     are drawn after the other values in the constructor, so adding them changed no earlier value. Every world starts
     `initial_degrees_in_orbit` from the periapsis direction at EPOCH, as a mean anomaly (the true angle for a circular
     orbit). The spin axis stays on the reference z axis, so the inclination of a planet's orbit is its axial tilt
-    (seasons); a moon's inclination is relative to its planet's equator. A planet's moons orbit inside the stable part of
-    its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. A world whose
-    spin the tides have tied to its orbit (`is_tidally_locked`: every moon, and the close planets) either turns once per orbit
-    and keeps the same side to its parent, or, if `is_resonant`, turns three times for two orbits. `local_day_fraction` is the solar day at longitude 0 (0 = noon); the game's date and time
-    always start at EPOCH 00:00:00.
+    (seasons); a moon's inclination is relative to its planet's equator. A planet's moons orbit inside the stable part
+    of its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has none. A world
+    whose spin the tides have tied to its orbit (`is_tidally_locked`: every moon, and the close planets) either turns
+    once per orbit and keeps the same side to its parent, or, if `is_resonant`, turns three times for two orbits.
+    `local_day_fraction` is the solar day at longitude 0 (0 = noon); the game's date and time always start at EPOCH
+    00:00:00.
 
-    Surface: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and `surface_colour`
-    from it and the seed (see world_surface.py); they are drawn last, after the orbit's values. The colour is what the
-    graphics light (LitWorlds, SurfaceLight); the type and the temperature are in the knowledge base (`markdown`).
+    Surface: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and
+    `surface_colour` from it and the seed (see world_surface.py); they are drawn last, after the orbit's values. The
+    colour is what the graphics light (LitWorlds, SurfaceLight); the type and the temperature are in the knowledge base
+    (`markdown`).
 
     A world's position and velocity are pure functions of the date, memoised for the date of the last call only (one
     entry each), so everything drawn or computed in a frame shares one evaluation per world.
@@ -69,8 +71,8 @@ class World(Body):
 
     # Moons: the closest is MOON_MIN_DISTANCE_RADII planet radii away (outside the Roche limit, 2.44 radii for worlds of
     # one density, and clear of the planet's bind zone). The farthest is inside the planet's Hill sphere: the region
-    # around it, of radius a (m / 3M)^(1/3) (a: its distance to its star, m: its mass, M: the star's), where its pull wins
-    # over the star's. A prograde moon orbit stays stable out to about half of it (Domingos et al. 2006).
+    # around it, of radius a (m / 3M)^(1/3) (a: its distance to its star, m: its mass, M: the star's), where its pull
+    # wins over the star's. A prograde moon orbit stays stable out to about half of it (Domingos et al. 2006).
     MOON_MIN_DISTANCE_RADII = 3.0
     MOON_STABLE_HILL_FRACTION = 0.5
     # A planet has moons only if their stable region reaches at least this far, planet radii: a band wider than the
@@ -90,7 +92,8 @@ class World(Body):
     RESONANCE_CHANCE = 0.5  # of a planet at least this eccentric being caught in the 3:2 resonance rather than the lock
     RESONANCE_TURNS_PER_ORBIT = 1.5  # the 3:2 resonance: three turns for two orbits
 
-    # Eccentric anomalies, in radians, either side of the world's own: where orbit_points adds points to follow the curve closely.
+    # Eccentric anomalies, in radians, either side of the world's own: where orbit_points adds points to follow the
+    # curve closely.
     ORBIT_NEAR_ANOMALIES = (1e-4, 2.5e-4, 6e-4, 1.5e-3, 4e-3, 1e-2, 2.5e-2, 6e-2)
 
     # region Generation
@@ -100,7 +103,8 @@ class World(Body):
         `distance_to_star` metres from a star of `star_mass` kilograms: MOON_STABLE_HILL_FRACTION of its Hill sphere.
         The sphere is taken at the planet's periapsis and the moon's apoapsis at the largest eccentricities
         (MAX_ECCENTRICITY), as neither is known yet. Every world has EARTH_DENSITY, so a planet's mass grows with
-        its radius cubed, and the Hill sphere in planet radii does not depend on its size: the limit is linear in the distance."""
+        its radius cubed, and the Hill sphere in planet radii does not depend on its size: the limit is linear in the
+        distance."""
         hill_in_radii = distance_to_star * (1.0 - World.MAX_ECCENTRICITY) \
             * (4.0 * math.pi * World.EARTH_DENSITY / (9.0 * star_mass)) ** (1.0 / 3.0)
         return World.MOON_STABLE_HILL_FRACTION * hill_in_radii / (1.0 + World.MAX_ECCENTRICITY)
@@ -150,7 +154,8 @@ class World(Body):
         # The farthest a moon's orbit can be from this planet: inside its Hill sphere (see moon_limit_in_radii).
         self.moon_limit: float = 0.0
         if not self.parent_planet:
-            self.moon_limit = World.moon_limit_in_radii(self.distance_to_parent, self.stellar_system.star.mass) * self.radius
+            self.moon_limit = World.moon_limit_in_radii(self.distance_to_parent,
+                                                        self.stellar_system.star.mass) * self.radius
 
         self.rotation_period: float = self._generate_rotation_period(my_random)
         self.is_tidally_locked: bool = self._is_tidally_locked(parent_mass)
@@ -221,13 +226,15 @@ class World(Body):
             if not self._is_initial_planet() and self.moon_limit < World.MOON_MIN_ROOM_RADII * self.radius:
                 moons_count = 0
             for _ in range(moons_count):
-                self.moons.append(World(parent_orbit=None, parent_planet=self, saved_alterations=self.saved_alterations))
+                self.moons.append(World(parent_orbit=None, parent_planet=self,
+                                        saved_alterations=self.saved_alterations))
 
         self._generate_orbit_orientation(my_random)  # no value drawn above depends on it
 
         # Drawn after the orbit, so adding them changed no earlier value. A moon is as far from the star as its planet.
         planet = self.parent_planet if self.parent_planet else self
-        self.equilibrium_temperature: float = equilibrium_temperature(self.stellar_system.star, planet.distance_to_parent)
+        self.equilibrium_temperature: float = equilibrium_temperature(self.stellar_system.star,
+                                                                      planet.distance_to_parent)
         self.surface_type: SurfaceType
         self.surface_colour: Tuple[int, int, int]
         self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
@@ -246,18 +253,21 @@ class World(Body):
         return self.parent_orbit.parent_stellar_system
 
     def _learn(self) -> None:
-        """Adds this world to the player's knowledge (see knowledge.py): a planet with its (so far empty) moons, a moon in its planet."""
+        """Adds this world to the player's knowledge (see knowledge.py): a planet with its (so far empty) moons, a moon
+        in its planet."""
         system_key: str = self.stellar_system.get_alterations_key()
         orbit_key: str = self.parent_orbit.get_alterations_key()
         if self.parent_planet:
-            knowledge.current_knowledge.learn_moon(system_key, orbit_key, self.parent_planet.get_alterations_key(), self.get_alterations_key())
+            knowledge.current_knowledge.learn_moon(system_key, orbit_key, self.parent_planet.get_alterations_key(),
+                                                   self.get_alterations_key())
         else:
             knowledge.current_knowledge.learn_planet(system_key, orbit_key, self.get_alterations_key())
 
     def _is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
-            and (self.stellar_system.x, self.stellar_system.y, self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
+            and (self.stellar_system.x, self.stellar_system.y,
+                 self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
 
     def _generate_planet_name(self, my_random: random.Random) -> str:
         """Generate a random name for the world."""
@@ -286,10 +296,10 @@ class World(Body):
         return int(result)
 
     def _generate_moon_distance(self, my_random: random.Random) -> int:
-        """The moon's distance to its planet: a draw of a few hundred moon radii, never under MOON_MIN_DISTANCE_RADII planet
-        radii and never beyond the planet's moon_limit (its Hill sphere). A draw beyond the limit is placed inside the
-        stable region with the fractional part of the same draw, so no draw is added and every later value of the
-        moon stays what it was, and moons do not pile up at the limit."""
+        """The moon's distance to its planet: a draw of a few hundred moon radii, never under MOON_MIN_DISTANCE_RADII
+        planet radii and never beyond the planet's moon_limit (its Hill sphere). A draw beyond the limit is placed
+        inside the stable region with the fractional part of the same draw, so no draw is added and every later value of
+        the moon stays what it was, and moons do not pile up at the limit."""
         lowest = World.MOON_MIN_DISTANCE_RADII * self.parent_planet.radius
         highest = self.parent_planet.moon_limit
         result = 0.0
@@ -298,7 +308,8 @@ class World(Body):
             draw = my_random.gauss(3, 1)
             result = int(draw * 250.0 * self.radius)
         if result > highest:
-            # (If the stable region is narrower than the minimum, only the initial planet gets here: it gets the minimum.)
+            # (If the stable region is narrower than the minimum, only the initial planet gets here: it gets the
+            # minimum.)
             share = draw - math.floor(draw)
             result = int(lowest + max(0.0, highest - lowest) * (0.3 + 0.7 * share))
         return result
@@ -326,8 +337,9 @@ class World(Body):
         return lock_time < World.TIDAL_LOCK_TIME_LIMIT
 
     def _is_resonant(self, my_random: random.Random) -> bool:
-        """True if a tied planet is caught in the 3:2 resonance rather than the 1:1 lock: only a planet (not a moon) of an
-        eccentric enough orbit (RESONANCE_MIN_ECCENTRICITY), and then with RESONANCE_CHANCE. Drawn only in those cases."""
+        """True if a tied planet is caught in the 3:2 resonance rather than the 1:1 lock: only a planet (not a moon) of
+        an eccentric enough orbit (RESONANCE_MIN_ECCENTRICITY), and then with RESONANCE_CHANCE. Drawn only in those
+        cases."""
         if not self.is_tidally_locked or self.parent_planet or self.eccentricity < World.RESONANCE_MIN_ECCENTRICITY:
             return False
         return my_random.random() < World.RESONANCE_CHANCE
@@ -424,7 +436,8 @@ class World(Body):
             None
             )
 
-    def update_surroundings(self, center_alt: float, center_lon: float, center_lat: float, game_date_time: datetime) -> None:
+    def update_surroundings(self, center_alt: float, center_lon: float, center_lat: float,
+                            game_date_time: datetime) -> None:
         """
         1. Ensure the surroundings of a point exist and are updated.
         2. Ensure everything else loaded is *not longer* updated.
@@ -515,9 +528,10 @@ class World(Body):
         return result
 
     def orbit_points(self, current_datetime: datetime, steps: int) -> np.ndarray:
-        """The orbit as an (n, 3) array of points in order round the ellipse, relative to what it orbits (the star, or the planet
-        of a moon), in the frame of calculate_stellar_position: `steps` evenly spread, plus some close to the world's own place
-        at the date, which is one of them, so that a line through them passes exactly through the world."""
+        """The orbit as an (n, 3) array of points in order round the ellipse, relative to what it orbits (the star, or
+        the planet of a moon), in the frame of calculate_stellar_position: `steps` evenly spread, plus some close to the
+        world's own place at the date, which is one of them, so that a line through them passes exactly through the
+        world."""
         own = self._eccentric_anomaly(self._mean_anomaly_rad(current_datetime))
         near = np.array([0.0, *World.ORBIT_NEAR_ANOMALIES, *(-a for a in World.ORBIT_NEAR_ANOMALIES)]) + own
         anomalies = np.sort(np.mod(np.concatenate([math.tau * np.arange(steps) / steps, near]), math.tau))
@@ -549,7 +563,8 @@ class World(Body):
     # endregion
 
     # region Surface frame
-    def surface_basis(self, longitude: float, latitude: float, current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
+    def surface_basis(self, longitude: float, latitude: float,
+                      current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
         """East, up and north unit vectors at a surface point, in the star-centered basis."""
         total_azimuth = self._spin_angle_rad(current_datetime) + longitude / self.radius
         latitude_angle = latitude / self.radius
@@ -587,7 +602,8 @@ class World(Body):
         return Vector3(star_basis.dot(east_hat), star_basis.dot(up_hat), star_basis.dot(north_hat))
 
     def stellar_to_surface_position(self, stellar_pos: Vector3, current_datetime: datetime) -> Vector3:
-        """Inverse of Navigation._stellar_position_from_surface: (longitude, altitude, latitude) for a stellar position."""
+        """Inverse of Navigation._stellar_position_from_surface: (longitude, altitude, latitude) for a stellar
+        position."""
         stellar_x, stellar_y, stellar_z = self.calculate_stellar_position(current_datetime)
         relative = Vector3(stellar_pos[0] - stellar_x, -stellar_pos[1] + stellar_y, stellar_pos[2] - stellar_z)
 
@@ -603,8 +619,8 @@ class World(Body):
     def stellar_to_surface_velocity(
             self, stellar_vel: Vector3, altitude: float, latitude: float,
             current_datetime: datetime, basis: Tuple[Vector3, Vector3, Vector3]) -> Vector3:
-        """Inverse of Navigation._stellar_velocity_from_surface: (east, up, north) velocity for a stellar velocity. `basis`
-        is the surface_basis of the point."""
+        """Inverse of Navigation._stellar_velocity_from_surface: (east, up, north) velocity for a stellar velocity.
+        `basis` is the surface_basis of the point."""
         east_hat, up_hat, north_hat = basis
         world_vel = self.calculate_stellar_velocity(current_datetime)
         relative = Vector3(stellar_vel[0] - world_vel.x, -stellar_vel[1] + world_vel.y, stellar_vel[2] - world_vel.z)
@@ -719,9 +735,11 @@ class World(Body):
         if not self.parent_planet:
             logger.info(f" - Farthest stable moon orbit (Hill sphere): {f'{int(self.moon_limit):,}'}")
         logger.info(f" - Radius: {f'{int(self.radius):,}'}")
-        spin_state: str = "3:2 resonance" if self.is_resonant else ("1:1 tidal lock" if self.is_tidally_locked else "free")
+        spin_state: str = "3:2 resonance" if self.is_resonant \
+            else ("1:1 tidal lock" if self.is_tidally_locked else "free")
         logger.info(f" - Spin: {spin_state}, rotation period {self.rotation_period:.3g} s")
-        logger.info(f" - Surface: {self.surface_type.label} {self.surface_colour}, {self.equilibrium_temperature:.0f} K")
+        logger.info(f" - Surface: {self.surface_type.label} {self.surface_colour}, {self.equilibrium_temperature:.0f} "
+        f"K")
         logger.info(f" - Ore Prevalence: {self.ore_prevalence}")
         return self
     # endregion

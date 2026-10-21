@@ -1,5 +1,5 @@
-"""The seeds: every generated object draws its values from its own `random.Random(seed)`, and its seed is derived from its
-parent's, so a given galaxy seed always gives the same universe whatever the order the player visits it in.
+"""The seeds: every generated object draws its values from its own `random.Random(seed)`, and its seed is derived from
+its parent's, so a given galaxy seed always gives the same universe whatever the order the player visits it in.
 
     seed = derive(parent.seed, kind, *keys)
 
@@ -22,7 +22,8 @@ import hashlib
 
 
 def of_text(text: str) -> int:
-    """A seed for a text: the first 8 bytes of its sha256. The same text gives the same seed in every run (unlike hash())."""
+    """A seed for a text: the first 8 bytes of its sha256. The same text gives the same seed in every run (unlike
+    hash())."""
     return int.from_bytes(hashlib.sha256(text.encode('utf-8')).digest()[:8], 'big')
 
 

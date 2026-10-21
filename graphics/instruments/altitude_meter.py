@@ -16,7 +16,8 @@ class AltitudeMeter:
     (UNBIND_RADIUS_MULTIPLE - 1.0) × radius above the surface."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_left: int, cluster_top: int, cluster_height: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_left: int, cluster_top: int,
+             cluster_height: int) -> None:
         bar_w = int(w * 0.028)
         bar_h = cluster_height
         bar_rect = pygame.Rect(cluster_left, cluster_top, bar_w, bar_h)

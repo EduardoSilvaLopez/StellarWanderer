@@ -21,7 +21,8 @@ class Conversation(ABC):
 
     @staticmethod
     def generate(interlocutor: Person) -> Optional[Conversation]:
-        """Starts the conversation that fits the interlocutor's residency, and returns it (None if there is none yet)."""
+        """Starts the conversation that fits the interlocutor's residency, and returns it (None if there is none
+        yet)."""
         if isinstance(interlocutor.residency, Outpost):
             from .conversations.reporting_in_outpost import ReportingInOutpost
             conversation = ReportingInOutpost(interlocutor, interlocutor.residency)

@@ -52,7 +52,8 @@ class OreMines:
             OreMines._draw_mine_caps(mine, player_x, player_z, light)
 
     @staticmethod
-    def _mine_circle_points(mine: OreMine, y: float, player_x: float, player_z: float) -> List[Tuple[float, float, float, float]]:
+    def _mine_circle_points(mine: OreMine, y: float, player_x: float,
+                            player_z: float) -> List[Tuple[float, float, float, float]]:
         """Camera-relative (x, y, z, u) points around a mine's circumference.
 
         Rotated by the mine's orientation using the same convention as

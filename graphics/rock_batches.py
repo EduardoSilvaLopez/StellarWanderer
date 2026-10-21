@@ -10,9 +10,9 @@ Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatche
 
 A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rocks change: when one melts, or is given an
 adjective. A Km2 has two batches: the ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals,
-see special_rocks.py). Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still glows
-on the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top would be
-hidden is raised to show (VISIBLE_TOP_SHARE).
+see special_rocks.py). Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still
+glows on the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top
+would be hidden is raised to show (VISIBLE_TOP_SHARE).
 """
 
 from __future__ import annotations
@@ -48,10 +48,10 @@ DOWNWARD_DARKENING = 0.18
 
 
 def settle(centre: np.ndarray, points: np.ndarray, size: np.ndarray) -> None:
-    """Puts rocks on the ground, changing `centre` (rocks, 1, 3) in place. `points` (rocks, points, 3) are relative to it. A rock
-    never floats: if its lowest point is above the ground, it is lowered onto it (a rock that is partly buried stays buried). A
-    rock always shows: if its top is below VISIBLE_TOP_SHARE of its `size`, it is raised until it does (only flattened shapes
-    get there, see Rock.CENTRE_MIN)."""
+    """Puts rocks on the ground, changing `centre` (rocks, 1, 3) in place. `points` (rocks, points, 3) are relative to
+    it. A rock never floats: if its lowest point is above the ground, it is lowered onto it (a rock that is partly
+    buried stays buried). A rock always shows: if its top is below VISIBLE_TOP_SHARE of its `size`, it is raised until
+    it does (only flattened shapes get there, see Rock.CENTRE_MIN)."""
     lowest = centre[:, 0, 1] + points[..., 1].min(axis=1) if len(centre) else np.zeros(0)
     centre[:, 0, 1] -= np.maximum(0.0, lowest)
     top = centre[:, 0, 1] + points[..., 1].max(axis=1) if len(centre) else np.zeros(0)
@@ -59,8 +59,8 @@ def settle(centre: np.ndarray, points: np.ndarray, size: np.ndarray) -> None:
 
 
 class RockBatch:
-    """The rocks of one Km2 as arrays, those with an adjective or those without. Valid while that list of rocks is unchanged
-    (see `is_current`)."""
+    """The rocks of one Km2 as arrays, those with an adjective or those without. Valid while that list of rocks is
+    unchanged (see `is_current`)."""
 
     def __init__(self, km2: Km2, special: bool = False) -> None:
         self.special: bool = special
@@ -83,7 +83,8 @@ class RockBatch:
             colours = np.array([mesh[2] for mesh in meshes]).reshape(count, faces, 3)
         else:
             triangles, normals, tones = rock_meshes([rock.shape_seed for rock in self.rocks])
-            colours = np.array([rock.initial_color for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3) * tones[..., None]
+            colours = np.array([rock.initial_color for rock in self.rocks],
+                               dtype=np.float64).reshape(count, 1, 3) * tones[..., None]
         faces = triangles.shape[1]
         points = rotate(triangles.reshape(count, faces * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
         # The scanner's box is not lowered with the rock, which is close enough for aiming.
@@ -165,12 +166,13 @@ class RockBatches:
     """One RockBatch per Km2, built on first use and rebuilt when its rock list changes. A Km2 that leaves memory
     takes its batch with it (weak keys)."""
 
-    _batches: "weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, RockBatch]]" = weakref.WeakKeyDictionary()  # ordinary, special
+    # ordinary, special
+    _batches: weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, RockBatch]] = weakref.WeakKeyDictionary()
 
     @staticmethod
     def visible_km2s(world: World, player_x: float, player_z: float) -> List[Km2]:
-        """The Km2s whose rocks are drawn, those within two Km2s of the player. OpenGLGui.draw also draws their ore fields
-        and mines."""
+        """The Km2s whose rocks are drawn, those within two Km2s of the player. OpenGLGui.draw also draws their ore
+        fields and mines."""
         return [km2 for km2 in world.km2s
                 if km2.longitude - km2.SIZE * 2 <= player_x < km2.longitude + km2.SIZE * 2
                 and km2.latitude - km2.SIZE * 2 <= player_z < km2.latitude + km2.SIZE * 2]

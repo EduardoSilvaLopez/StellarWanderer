@@ -57,7 +57,8 @@ WINDOW_SIZE = (1920, 1080)
 MIN_SIZE = (640, 400)
 FPS = 60
 
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()  # datetime tops out at year 9999
+# datetime tops out at year 9999
+MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()
 EPOCH = gem.GameEnvironment.EPOCH
 
 
@@ -312,7 +313,8 @@ def main() -> None:
                     player_module.current_player.increase_time_scale()
                 elif event.key == pygame.K_KP_MINUS:
                     player_module.current_player.decrease_time_scale()
-                elif event.key == pygame.K_SPACE:  # the message board of the outpost in the scanner, for a pilot who may use it
+                # the message board of the outpost in the scanner, for a pilot who may use it
+                elif event.key == pygame.K_SPACE:
                     outpost = player_module.current_player.ship.scanner.targeted_outpost
                     if outpost is not None and MissionBoard.is_available(player_module.current_player):
                         running, screen = visit_mission_board(outpost, screen, gui, fonts, clock)
@@ -324,16 +326,19 @@ def main() -> None:
                     audio.stop_loops()
                     Savefile.load_last()
                     elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
-                elif event.key == pygame.K_TAB:  # cycles the target (only outside every fixed zone); Shift+Tab goes back
+                # cycles the target (only outside every fixed zone); Shift+Tab goes back
+                elif event.key == pygame.K_TAB:
                     step = -1 if event.mod & pygame.KMOD_SHIFT else 1
-                    gem.current_environment.cycle_targeted_body(step, player_module.current_player.ship.position.as_vector())
+                    gem.current_environment.cycle_targeted_body(step,
+                                                                player_module.current_player.ship.position.as_vector())
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
                     player_module.current_player.ship.place_mine()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 if pressed == MISSIONS:
-                    dialog = PendingMissionsDialog([m for m in player_module.current_player.missions if m.status == OPEN])
+                    dialog = PendingMissionsDialog([m for m in player_module.current_player.missions
+                                                    if m.status == OPEN])
                 else:
                     dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
                 result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
@@ -384,7 +389,8 @@ def main() -> None:
                 1 if keys[pygame.K_q] else 0,
                 keys[pygame.K_s]
             )
-        else:  # reducing them automatically, only the rates that are not zero (a brake costs energy only while it acts).
+        # reducing them automatically, only the rates that are not zero (a brake costs energy only while it acts).
+        else:
             if ship.attitude.yaw_rate:
                 ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
             if ship.attitude.pitch_rate:
@@ -408,11 +414,13 @@ def main() -> None:
             keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
             or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
             or (keys[pygame.K_s] and ship.navigation.has_motion_to_brake()))
-        audio.set_loop('thrust', thrusting)  # the hull's hum: a thrust key held, or the brake while there is motion to brake
+        # the hull's hum: a thrust key held, or the brake while there is motion to brake
+        audio.set_loop('thrust', thrusting)
         rotating = player.time_scale == 1 and (
             keys[pygame.K_KP_4] or keys[pygame.K_KP_6] or keys[pygame.K_e] or keys[pygame.K_q]
             or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
-        audio.set_loop('attitude', rotating)  # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
+        # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
+        audio.set_loop('attitude', rotating)
         if player.is_paused:
             ship.scanner.deactivate()  # frozen: nothing is aimed or fired
         else:

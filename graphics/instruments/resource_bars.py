@@ -1,5 +1,6 @@
-"""Resource bars: the ship's resources, one row each, top to bottom: credits (a value), maintenance and energy (bars) and
-temperature (a bar from 25 to its value, on its scale). Each row has its label on the left, and the rows line up with each other."""
+"""Resource bars: the ship's resources, one row each, top to bottom: credits (a value), maintenance and energy (bars)
+and temperature (a bar from 25 to its value, on its scale). Each row has its label on the left, and the rows line up
+with each other."""
 
 from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
@@ -29,7 +30,8 @@ def level_colour(fraction: float) -> Tuple[int, int, int]:
 
 
 def format_credits(value: float) -> str:
-    """Commas for thousands, a dot for decimals, at most three decimals and only the ones needed: 1234.5 -> '1,234.5 Ȼ'."""
+    """Commas for thousands, a dot for decimals, at most three decimals and only the ones needed: 1234.5 -> '1,234.5
+    Ȼ'."""
     text = f'{value:,.3f}'.rstrip('0').rstrip('.')
     return f'{text} {CREDIT_SYMBOL}'
 
@@ -65,14 +67,15 @@ def _draw_bar(surface: pygame.Surface, track: pygame.Rect, fraction: float, warn
 
 
 def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship) -> None:
-    """The scale from Ship.TEMP_MIN to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the ship's temperature, coloured
-    by its stress. Equal values give a single line of TEMPERATURE_MIN_WIDTH pixels."""
+    """The scale from Ship.TEMP_MIN to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the ship's temperature,
+    coloured by its stress. Equal values give a single line of TEMPERATURE_MIN_WIDTH pixels."""
     temperature = ship.temperature
     pygame.draw.rect(surface, ACCENT_DIM, track, 1)
     inner = track.inflate(-4, -4)
 
     def x_of(value: float) -> int:
-        return inner.left + int(inner.width * max(0.0, min(1.0, (value - ship.TEMP_MIN) / (ship.TEMP_MAX - ship.TEMP_MIN))))
+        return inner.left + int(inner.width * max(0.0, min(1.0, (value - ship.TEMP_MIN)
+                                                           / (ship.TEMP_MAX - ship.TEMP_MIN))))
 
     x_ideal, x_now = x_of(TEMPERATURE_IDEAL), x_of(temperature)
     left, right = min(x_ideal, x_now), max(x_ideal, x_now)

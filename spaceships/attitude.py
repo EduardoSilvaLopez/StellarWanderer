@@ -44,7 +44,8 @@ class Attitude:
     def update_yaw(self, delta_time: float, counterclockwise: int, clockwise: int, braking: bool = False) -> Attitude:
         if delta_time == 0.0:
             return self
-        self.yaw_rate, angle = self._turn(self.yaw_rate, clockwise - counterclockwise, counterclockwise + clockwise != 0,
+        self.yaw_rate, angle = self._turn(self.yaw_rate, clockwise - counterclockwise, counterclockwise
+                                          + clockwise != 0,
                                           delta_time, braking)
         self.forward, self.right = Vector3.rotate_pair(self.forward, self.right, angle)
         return self
@@ -65,10 +66,11 @@ class Attitude:
         self.right, self.up = Vector3.rotate_pair(self.right, self.up, angle)
         return self
 
-    def _turn(self, rate: float, direction: int, key_held: bool, delta_time: float, braking: bool) -> Tuple[float, float]:
-        """One axis over `delta_time`: the new rate, accelerated in `direction` or braked, within MAX_ANGULAR_SPEED, and the
-        angle turned, in radians. Costs energy: the thrusters 5e4 per second while a key is held, the brake 1e5 per second
-        only for the time it took to remove the rate (so nothing when there is no rate to brake)."""
+    def _turn(self, rate: float, direction: int, key_held: bool, delta_time: float,
+              braking: bool) -> Tuple[float, float]:
+        """One axis over `delta_time`: the new rate, accelerated in `direction` or braked, within MAX_ANGULAR_SPEED, and
+        the angle turned, in radians. Costs energy: the thrusters 5e4 per second while a key is held, the brake 1e5 per
+        second only for the time it took to remove the rate (so nothing when there is no rate to brake)."""
         if braking:
             decel = min(self.ship.ANGULAR_BRAKE * delta_time, abs(rate))
             rate -= math.copysign(decel, rate)

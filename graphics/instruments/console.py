@@ -29,9 +29,9 @@ class Console:
     The left cluster shows one of two meters, chosen by `Ship.is_bound`: the AltitudeMeter while bound (ALT), the
     ProximityMeter while unbound (FIXED or TARGET), whose bar and indicators are columns the height of the map's screen.
     The readouts (coordinates, attitude, speed) are beside the meter: bound beside the altitude bar, unbound between the
-    proximity bar and the map. The name of the reference body is drawn in the top bar by Cockpit (LocationInfo.draw_name).
-    Pitch and roll use the same body as the position box, which is the fixed body while fixed, else the star. Yaw, pitch
-    and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
+    proximity bar and the map. The name of the reference body is drawn in the top bar by Cockpit
+    (LocationInfo.draw_name). Pitch and roll use the same body as the position box, which is the fixed body while fixed,
+    else the star. Yaw, pitch and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, date_time: datetime) -> None:
@@ -81,7 +81,8 @@ class Console:
         # target's indicators, then the proximity bar, then the readouts between the bar and the map.
         if ship.is_bound:
             AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
-            LocationInfo.draw_readouts(surface, fonts, h, ship, cluster_left + bar_w + int(w * 0.03), cluster_top - 10, line_spacing)
+            LocationInfo.draw_readouts(surface, fonts, h, ship, cluster_left + bar_w + int(w * 0.03), cluster_top - 10,
+                                       line_spacing)
         else:
             indicators_w = int(w * 0.115)
             indicators_rect = pygame.Rect(cluster_left, screen.top, indicators_w, screen.height)

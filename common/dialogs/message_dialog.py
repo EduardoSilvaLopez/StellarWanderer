@@ -28,11 +28,11 @@ class MessageDialog(Dialog):
     and the mouse moves it too.
 
     Look: a textured panel (common/resources/textures/dialog_background.png), Orbitron title and Oxanium body at size 20
-    (common/resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or dialog_fonts,
-    not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines when they
-    are long. The buttons are stacked, one above the other, each as wide as the text area: the first at the top. A scroll
-    bar (a thumb only, no box) sits in the right margin beside the text when the text does not fit; the mouse drags it,
-    and a click above or below it pages (see ScrollBar)."""
+    (common/resources/fonts/, SIL OFL, licence files next to them). Every label must go through FontCache or
+    dialog_fonts, not pygame.font directly. Button labels use the body font, like the text, and wrap onto several lines
+    when they are long. The buttons are stacked, one above the other, each as wide as the text area: the first at the
+    top. A scroll bar (a thumb only, no box) sits in the right margin beside the text when the text does not fit; the
+    mouse drags it, and a click above or below it pages (see ScrollBar)."""
 
     WIDTH = 800
     HEIGHT = 600
@@ -71,7 +71,8 @@ class MessageDialog(Dialog):
         self._layout_text()
         self.scroll: int = 0  # pixels scrolled down
         self.scroll_bar = ScrollBar(
-            pygame.Rect(self.text_rect.right + self.SCROLLBAR_GAP, self.text_rect.top, self.SCROLLBAR_WIDTH, self.text_rect.height),
+            pygame.Rect(self.text_rect.right + self.SCROLLBAR_GAP, self.text_rect.top, self.SCROLLBAR_WIDTH,
+                        self.text_rect.height),
             ACCENT, min_thumb=self.SCROLLBAR_MIN_THUMB,
         )
 
@@ -125,13 +126,14 @@ class MessageDialog(Dialog):
             if current:
                 lines.append(current)
             current = ''
-            while font.size(word)[0] > max_width:  # an over-long word: split it by characters
-                cut = len(word)
-                while cut > 1 and font.size(word[:cut])[0] > max_width:
+            rest = word
+            while font.size(rest)[0] > max_width:  # an over-long word: split it by characters
+                cut = len(rest)
+                while cut > 1 and font.size(rest[:cut])[0] > max_width:
                     cut -= 1
-                lines.append(word[:cut])
-                word = word[cut:]
-            current = word
+                lines.append(rest[:cut])
+                rest = rest[cut:]
+            current = rest
         if current:
             lines.append(current)
         return lines
@@ -187,7 +189,8 @@ class MessageDialog(Dialog):
 
         surface.blit(self._title_surface, (self.MARGIN, self.MARGIN - 4))
         pygame.draw.line(surface, ACCENT, (self.MARGIN, self.divider_y), (self.WIDTH - self.MARGIN, self.divider_y), 2)
-        pygame.draw.line(surface, ACCENT_DIM, (self.MARGIN, self.divider_y + 3), (self.WIDTH - self.MARGIN, self.divider_y + 3), 1)
+        pygame.draw.line(surface, ACCENT_DIM, (self.MARGIN, self.divider_y + 3), (self.WIDTH - self.MARGIN,
+                                                                                  self.divider_y + 3), 1)
 
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)

@@ -18,8 +18,8 @@ class Notification(Updatable):
         self.next_update_at: Optional[datetime] = None
 
     def set(self, message: str, sound: Optional[str] = None) -> Notification:
-        """Shows `message` and plays one sound for it: `sound` if given (an event with a sound of its own), else the alert for a
-        CRITICAL text and the soft ping for the rest."""
+        """Shows `message` and plays one sound for it: `sound` if given (an event with a sound of its own), else the
+        alert for a CRITICAL text and the soft ping for the rest."""
         if not message:
             return self
 

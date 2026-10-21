@@ -23,7 +23,8 @@ class DeliverPackage(Mission):
     CHANCES_PER_DAY = 0.05
     DAYS_MIN = 5
     DAYS_MAX = 25
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02  # each day of an offer's life, from the day it is made: the chance somebody takes it
+    # each day of an offer's life, from the day it is made: the chance somebody takes it
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02
 
     def __init__(
             self, sender_seed: Optional[int] = None,
@@ -33,16 +34,17 @@ class DeliverPackage(Mission):
 
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline).
         days = self.my_random.randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)
-        # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a moment
-        # in that day. The same draws every time, whatever the outcome.
+        # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
+        # moment in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
-        taken_day = next((index for index, roll in enumerate(rolls) if roll < DeliverPackage.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+        taken_day = next((index for index, roll in enumerate(rolls)
+                          if roll < DeliverPackage.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
-        # The sender and the recipient are any of the staff of each outpost, which is generated here, so that nothing that
-        # reads them later (the description, drawn every frame) has to create anybody. A new offer draws them from its seed;
-        # a loaded mission is given the seeds of its own.
+        # The sender and the recipient are any of the staff of each outpost, which is generated here, so that nothing
+        # that reads them later (the description, drawn every frame) has to create anybody. A new offer draws them from
+        # its seed; a loaded mission is given the seeds of its own.
         self.issuer_outpost.generate_staff()
         self.destination_outpost.generate_staff()
         staff_size = self.issuer_outpost.STAFF_SIZE
@@ -73,7 +75,8 @@ class DeliverPackage(Mission):
     def generate(created_at: datetime, destination_outpost: Outpost, outpost: Outpost) -> DeliverPackage:
         """The offer made on the day of `created_at`, from `outpost` to `destination_outpost`."""
         seed = of_text(f"{outpost.full_keys()} {DeliverPackage.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)  # the first draw of the seed, as in __init__
+        # the first draw of the seed, as in __init__
+        days = random.Random(seed).randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)
         return DeliverPackage(
             seed=seed,
             issuer=outpost.full_keys(),
@@ -119,7 +122,8 @@ class DeliverPackage(Mission):
 
         reputation_change: float = 2.0 * speed_factor
         player.those_who_share.reputation += reputation_change
-        logger.info(f"MISSION COMPLETE: Package delivered at %{100*speed_factor:.0f} of time ahead of deadline. Reputation +{reputation_change} = {player.those_who_share.reputation}")
+        logger.info(f"MISSION COMPLETE: Package delivered at %{100*speed_factor:.0f} of time ahead of deadline. "
+        f"Reputation +{reputation_change} = {player.those_who_share.reputation}")
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
         # The main people involved are very happy.

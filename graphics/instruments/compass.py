@@ -14,7 +14,8 @@ class Compass:
     """Draw a north-up compass dial with a needle showing the player's heading."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_top: int, cluster_height: int, left_bound: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, cluster_top: int, cluster_height: int,
+             left_bound: int) -> None:
         """Draw the compass dial.
 
         The dial stays fixed with 'N' at the top; the needle rotates to point

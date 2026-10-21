@@ -59,11 +59,13 @@ class VelocityMarkers:
     @staticmethod
     def _draw_retrograde(surface: pygame.Surface, fonts: Any, center: Tuple[float, float]) -> None:
         pos = (int(center[0]), int(center[1]))
-        pygame.draw.circle(surface, RETROGRADE_COLOR, pos, VelocityMarkers.RETROGRADE_RADIUS, VelocityMarkers.RETROGRADE_THICKNESS)
+        pygame.draw.circle(surface, RETROGRADE_COLOR, pos, VelocityMarkers.RETROGRADE_RADIUS,
+                           VelocityMarkers.RETROGRADE_THICKNESS)
         VelocityMarkers._draw_label(surface, fonts, 'RETRO', RETROGRADE_COLOR, pos)
 
     @staticmethod
-    def _draw_label(surface: pygame.Surface, fonts: Any, text: str, color: Tuple[int, int, int], center: Tuple[int, int]) -> None:
+    def _draw_label(surface: pygame.Surface, fonts: Any, text: str, color: Tuple[int, int, int],
+                    center: Tuple[int, int]) -> None:
         font = fonts.get(10)
         label_surf = font.render(text, True, color)
         rect = label_surf.get_rect(center=(center[0], center[1] + VelocityMarkers.LABEL_OFFSET_Y))

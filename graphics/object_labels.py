@@ -26,9 +26,9 @@ class ObjectLabels:
     """Render name and distance labels for visible objects (star and all worlds in the stellar system).
 
     Outposts of planets within FIXED_ZONE_RADIUS_MULTIPLE radii of the ship get a label with name and distance, unbound.
-    Bound, only the outposts of the world the ship is bound to get one (see OutpostMarkers.in_fixed_zone). The sky dot for an outpost (OutpostMarkers) is drawn in the sky while unbound, and while bound on the
-    surface in this overlay, so the 3D ground does not hide it. Outposts on the far side of their planet get no dot,
-    but keep their label.
+    Bound, only the outposts of the world the ship is bound to get one (see OutpostMarkers.in_fixed_zone). The sky dot
+    for an outpost (OutpostMarkers) is drawn in the sky while unbound, and while bound on the surface in this overlay,
+    so the 3D ground does not hide it. Outposts on the far side of their planet get no dot, but keep their label.
 
     Where the label sits depends on the frame. Unbound, it is the sphere geometry (`Navigation.direction_to_point`).
     Bound, it is the flat offsets (longitude - player.x, latitude - player.z) that the ship moves in, that the world
@@ -52,7 +52,8 @@ class ObjectLabels:
     LABEL_OFFSET_Y = -4  # pixels from object center to the top of the label (negative = up)
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: FontCache, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
+    def draw(surface: pygame.Surface, fonts: FontCache, w: int, h: int, environment: GameEnvironment,
+             ship: Ship) -> None:
         """Draw labels: outposts in the fixed zone (bound and unbound), and the star and all worlds
         while unbound.
 
@@ -81,7 +82,8 @@ class ObjectLabels:
             # Bound, the dot sits on the surface, in the overlay so the ground drawn in 3D does not hide it.
             # Only outposts in front of the planet get one; labels stay for all of them.
             if visible and ship.is_bound:
-                pygame.draw.circle(surface, OUTPOST_DOT_COLOR, (int(projected[0]), int(projected[1])), OUTPOST_DOT_RADIUS_PX)
+                pygame.draw.circle(surface, OUTPOST_DOT_COLOR, (int(projected[0]), int(projected[1])),
+                                   OUTPOST_DOT_RADIUS_PX)
             label_surf, rect = ObjectLabels._render_label(
                 label_font, outpost.name, format_compact_distance(distance),
                 int(projected[0]), int(projected[1])
@@ -141,10 +143,10 @@ class ObjectLabels:
 
     @staticmethod
     def _bound_view_of_outpost(outpost: Outpost, ship: Ship) -> Tuple[Vector3, float]:
-        """The direction from the ship to the foot of the outpost's building, in the bound frame (east, up, north), and the
-        distance to show. The azimuth and the distance are the flat offsets the 3D view draws with. How far down the direction
-        points is the sphere's: the outpost is `ground / radius` of arc away, at most the arc to the horizon, so one beyond
-        the horizon sits on the horizon line (see the class docstring)."""
+        """The direction from the ship to the foot of the outpost's building, in the bound frame (east, up, north), and
+        the distance to show. The azimuth and the distance are the flat offsets the 3D view draws with. How far down the
+        direction points is the sphere's: the outpost is `ground / radius` of arc away, at most the arc to the horizon,
+        so one beyond the horizon sits on the horizon line (see the class docstring)."""
         radius = outpost.planet.radius
         half_world = math.pi * radius  # the ship wraps at the anti-meridian, half the equator away
         east = (outpost.longitude - ship.position.x + half_world) % (2.0 * half_world) - half_world
@@ -173,7 +175,8 @@ class ObjectLabels:
         return left_pillar <= x <= w - left_pillar
 
     @staticmethod
-    def _render_label(font: FallbackFont, name: str, distance: str, center_x: int, center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:
+    def _render_label(font: FallbackFont, name: str, distance: str, center_x: int,
+                      center_y: int) -> Tuple[pygame.Surface, pygame.Rect]:
         """Render a single object label; returns its surface and its screen rectangle."""
         text = f'{name} {distance}'
         label_surf = font.render(text, True, ACCENT)

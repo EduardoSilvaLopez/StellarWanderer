@@ -71,7 +71,7 @@ class Player:
         if gem.current_environment.nearest_system.political_entity == political_entity.THOSE_WHO_SHARE:
             return political_entity.THOSE_WHO_SHARE.title_for(self.those_who_share.reputation)
         logger.warning("Unknown political entity.")
-        return str()
+        return ''
 
     def game_over(self, reason: str) -> None:
         """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
@@ -94,10 +94,12 @@ class Player:
 
     # region Persistence
     def serialize(self) -> dict:
-        body = gem.current_environment.last_fixed_body  # the body the ship is around, even when it is outside every fixed zone
+        # the body the ship is around, even when it is outside every fixed zone
+        body = gem.current_environment.last_fixed_body
         system = body.stellar_system
         asteroid_site = None
-        if isinstance(body, Asteroid):  # a mission's asteroid: saved by its own identity, see StellarSystem.asteroid_from_site
+        # a mission's asteroid: saved by its own identity, see StellarSystem.asteroid_from_site
+        if isinstance(body, Asteroid):
             asteroid_site = body.site()
             orbit_number = planet_index = moon_index = None
         elif not body.is_world:  # the star: it has no orbit, planet or moon

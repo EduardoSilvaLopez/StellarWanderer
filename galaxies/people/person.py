@@ -120,7 +120,8 @@ class Person:
             self.log_description()
 
     def _load_icon(self, my_random: random.Random) -> None:
-        """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the seed."""
+        """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the
+        seed."""
         age_group: str = 'young' if self.age < 30\
             else 'adult' if self.age < 45\
             else 'mature' if self.age < 65\
@@ -130,7 +131,8 @@ class Person:
         occupation: str = 'outpost.com' if isinstance(self.residency, Outpost)\
             else 'generic'
 
-        filename_prefix: str = occupation + "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
+        filename_prefix: str = (occupation + "." + str(self.race.name).lower() + "." + age_group + "."
+                                + str(self.gender_group.name).lower())
         portraits_dir = resource_path('portraits')
         try:
             names = os.listdir(portraits_dir)
@@ -161,7 +163,8 @@ class Person:
         """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty
         for the gender and race, which are shown as a plain line."""
         last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
-        ltm_str = last_time_met.strftime('%Y-%m-%d') if last_time_met else "Not met yet" if self.first_met_at is None else "Don't remember."
+        ltm_str = (last_time_met.strftime('%Y-%m-%d') if last_time_met
+                   else "Not met yet" if self.first_met_at is None else "Don't remember.")
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
@@ -180,7 +183,8 @@ class Person:
 
     def log_description(self) -> Person:
         """Logs the person's characteristics, one ' - ' line each."""
-        description = ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label, value in self.description_fields())
+        description = ''.join(f" - {label}: {value}\n" if label else f" - {value}\n" for label,
+                              value in self.description_fields())
         logger.info(
             f"PERSON UPDATE: {self.get_full_name()}"
             f"\n{description}"
@@ -203,7 +207,8 @@ class Person:
     # region Record
     def serialize(self) -> dict:
         interactions_dict: dict = {
-            int_date_time.strftime("%Y-%m-%d %H:%M:%S"): int_lines for int_date_time, int_lines in self.interactions.items()
+            int_date_time.strftime("%Y-%m-%d %H:%M:%S"): int_lines for int_date_time,
+            int_lines in self.interactions.items()
         }
 
         result: dict = {'seed': self.seed, 'first_met_at': self.first_met_at}
@@ -218,8 +223,9 @@ class Person:
         return result
 
     def record(self) -> Person:
-        """Writes this person into `persons` as they are now: makes the record, or updates it. Call it after anything about
-        the person changes. A person the player has not met is kept too, with `first_met_at` None (`meet` fills it in)."""
+        """Writes this person into `persons` as they are now: makes the record, or updates it. Call it after anything
+        about the person changes. A person the player has not met is kept too, with `first_met_at` None (`meet` fills it
+        in)."""
         gem.current_environment.persons[self.seed] = self.serialize()
         return self
 
@@ -230,8 +236,8 @@ class Person:
 
     def meet(self) -> Person:
         """The player talks to this person (a Conversation starts): from now on they are in `persons`, with the place
-        they were first met at, which is written once. For now the residence is always an outpost (on a planet, or a moon
-        with its planet): a person with any other residence has no place yet."""
+        they were first met at, which is written once. For now the residence is always an outpost (on a planet, or a
+        moon with its planet): a person with any other residence has no place yet."""
         if self.first_met_at is None:
             from galaxies.outpost import Outpost
             self.first_met_at = self.residency.address() if isinstance(self.residency, Outpost) else ''

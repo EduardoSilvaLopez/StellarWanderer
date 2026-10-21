@@ -25,10 +25,8 @@ def blackbody_rgb(temperature: float) -> tuple:
     to the range the fit is good for. Plain colour: no vividness applied (see _vivid)."""
     t = min(max(temperature, 1000.0), 40000.0) / 100.0
     red = 255.0 if t <= 66 else 329.698727446 * (t - 60) ** -0.1332047592
-    if t <= 66:
-        green = 99.4708025861 * math.log(t) - 161.1195681661
-    else:
-        green = 288.1221695283 * (t - 60) ** -0.0755148492
+    green = (99.4708025861 * math.log(t) - 161.1195681661 if t <= 66
+             else 288.1221695283 * (t - 60) ** -0.0755148492)
     if t >= 66:
         blue = 255.0
     elif t <= 19:
@@ -51,8 +49,9 @@ class Star(Body):
     belongs to a stellar system once `attach_to` is called, which is what `stellar_system` returns.
 
     Its type sets the range of its mass. The mass sets the radius and the luminosity, by the main-sequence fits of
-    `_generate_radius` and `_generate_luminosity`, and the luminosity and the radius set the temperature (Stefan-Boltzmann),
-    so the four always agree. The heat distances are where the light has the fluxes HEAT_FLUX and DEATH_FLUX.
+    `_generate_radius` and `_generate_luminosity`, and the luminosity and the radius set the temperature
+    (Stefan-Boltzmann), so the four always agree. The heat distances are where the light has the fluxes HEAT_FLUX and
+    DEATH_FLUX.
     """
 
     BOLOMETRIC_ZERO_POINT = 3.0128e28  # W: the luminosity of magnitude 0 (IAU 2015 nominal zero point)
@@ -158,8 +157,8 @@ class Star(Body):
         return int(Star.REFERENCE_RADIUS * ratio ** exponent)
 
     def _generate_luminosity(self) -> float:
-        """The luminosity (W) of a main-sequence star of its mass: L = 0.23 M^2.3 for the faintest, M^4 up to 16 reference
-        masses, and M^2.5 beyond (the mass-luminosity fits)."""
+        """The luminosity (W) of a main-sequence star of its mass: L = 0.23 M^2.3 for the faintest, M^4 up to 16
+        reference masses, and M^2.5 beyond (the mass-luminosity fits)."""
         ratio: float = self.mass / Star.REFERENCE_MASS
         if ratio < 0.43:
             factor: float = 0.23 * ratio ** 2.3
@@ -265,7 +264,8 @@ class Star(Body):
             f"* Radius: {self.radius:.3e} m ({int(self.radius / 1000)} Km)\n"
             f"* Surface gravity: {gravity:.1f} m/s²\n"
             f"* Luminosity: {self.luminosity:.3e} W\n"
-            f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed {equatorial_speed / 1000:.1f} Km/s\n"
+            f"* Rotation period: {self.rotation_period / (60 * 60):.2f} hours, equatorial speed "
+            f"{equatorial_speed / 1000:.1f} Km/s\n"
             f"\n"
             )
     # endregion

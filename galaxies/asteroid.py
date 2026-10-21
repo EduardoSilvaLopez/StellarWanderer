@@ -190,6 +190,18 @@ class Asteroid(Body):
         self._velocity_cache = (current_datetime, result)
         return result
 
+    def orbit_points(self, current_datetime: datetime, steps: int) -> np.ndarray:
+        """The orbit as an (n, 3) array of points round the star, in the frame of calculate_stellar_position: `steps`
+        evenly spread, plus some close to the asteroid's own place at the date (one of them), so that a line through
+        them passes through it (as World.orbit_points does)."""
+        own = eccentric_anomaly(self.eccentricity, self._mean_anomaly(current_datetime))
+        near = np.array([0.0, *World.ORBIT_NEAR_ANOMALIES, *(-a for a in World.ORBIT_NEAR_ANOMALIES)]) + own
+        anomalies = np.sort(np.mod(np.concatenate([math.tau * np.arange(steps) / steps, near]), math.tau))
+        a, e = self.semi_major_axis, self.eccentricity
+        x = a * (np.cos(anomalies) - e)
+        y = a * math.sqrt(1.0 - e * e) * np.sin(anomalies)
+        return x[:, None] * np.array(self._periapsis_axis) + y[:, None] * np.array(self._quarter_axis)
+
     def _mean_anomaly(self, current_datetime: datetime) -> float:
         # Local: as World does, the game environment needs the galaxy to load.
         from game_environment import GameEnvironment

@@ -1,11 +1,12 @@
-"""What the pilot knows, from the cockpit buttons: the stellar systems (KnownSystemsDialog) and the people they have talked
-to (KnownPeopleDialog). Both have the look of the message dialogs, a scrollable list and one Close button.
+"""What the pilot knows, from the cockpit buttons: the stellar systems (KnownSystemsDialog) and the people they have
+talked to (KnownPeopleDialog). Both have the look of the message dialogs, a scrollable list and one Close button.
 
-The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`: its
-markdown headings and bullets are drawn as headings and 'label: value' lines. The people are those in
-`GameEnvironment.persons` (the ones the player has talked to, and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
-`Person.description_fields()`, and a comment box that the player can write in (saved with the person, see
-Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
+The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`:
+its markdown headings and bullets are drawn as headings and 'label: value' lines. The people are those in
+`GameEnvironment.persons` (the ones the player has talked to, and those of a mission they took, "Not met yet"): each is
+a card, with the portrait beside the fields of `Person.description_fields()`, and a comment box that the player can
+write in (saved with the person, see Person.set_comment). A system or a person that is not in memory is generated again
+from its key or seed."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -32,7 +33,8 @@ COMMENT_MIN_LINES = 2  # the box is at least this tall, even when empty
 COMMENT_FILL = (14, 24, 30)
 COMMENT_PLACEHOLDER = 'Comments'
 COMMENT_PLACEHOLDER_COLOUR = (110, 120, 120)
-# The keys that edit the comment being typed in. Letters and the space come as TEXTINPUT; Esc is left to close the dialog.
+# The keys that edit the comment being typed in. Letters and the space come as TEXTINPUT; Esc is left to close the
+# dialog.
 TYPING_KEYS = (pygame.K_BACKSPACE, pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
 
 
@@ -64,19 +66,21 @@ class _ListDialog(MessageDialog):
 
     @staticmethod
     def _field(label: str, value: str, width: int, indent: int = 0) -> List[pygame.Surface]:
-        """A 'label: value' line (or several, when it wraps): the label dim, the value bright. An empty label is a plain line."""
+        """A 'label: value' line (or several, when it wraps): the label dim, the value bright. An empty label is a plain
+        line."""
         font = body_font(FIELD_SIZE)
         lines = MessageDialog.wrap(f"{label}: {value}" if label else value, font, width - indent)
         result: List[pygame.Surface] = []
         for number, line in enumerate(lines):
             surface = pygame.Surface((width, font.get_linesize()), pygame.SRCALPHA)
             x = indent
+            text = line
             if number == 0 and label and line.startswith(label + ':'):
                 label_surface = font.render(label + ':', True, LABEL_COLOR)
                 surface.blit(label_surface, (x, 0))
                 x += label_surface.get_width()
-                line = line[len(label) + 1:]
-            surface.blit(font.render(line, True, TEXT_COLOR), (x, 0))
+                text = line[len(label) + 1:]
+            surface.blit(font.render(text, True, TEXT_COLOR), (x, 0))
             result.append(surface)
         return result
 
@@ -86,7 +90,8 @@ class _ListDialog(MessageDialog):
 
 
 class KnownSystemsDialog(_ListDialog):
-    """The stellar systems the pilot knows. Result: ('close', 0), ('close', None) on Esc or a right-click, ('exit', None) if the window closes."""
+    """The stellar systems the pilot knows. Result: ('close', 0), ('close', None) on Esc or a right-click, ('exit',
+    None) if the window closes."""
 
     def __init__(self) -> None:
         super().__init__('Known stellar systems')
@@ -136,14 +141,16 @@ class KnownSystemsDialog(_ListDialog):
 
 
 class KnownPeopleDialog(_ListDialog):
-    """The people the pilot has talked to, each with a comment box. A click in a box focuses it: the keys then write into it
-    (Enter starts a new line) until another box or the outside is clicked. Esc, a right-click, or the Close button, closes the dialog; the
-    comments are already saved as they are typed. Same results as KnownSystemsDialog. The box that has the focus stays focused
-    when the list is scrolled away (wheel, keys or scroll bar), and typing scrolls it back into view."""
+    """The people the pilot has talked to, each with a comment box. A click in a box focuses it: the keys then write
+    into it (Enter starts a new line) until another box or the outside is clicked. Esc, a right-click, or the Close
+    button, closes the dialog; the comments are already saved as they are typed. Same results as KnownSystemsDialog. The
+    box that has the focus stays focused when the list is scrolled away (wheel, keys or scroll bar), and typing scrolls
+    it back into view."""
 
     def __init__(self) -> None:
         self._people: dict = {}  # seed -> Person, for each card that could be found again
-        self._boxes: List[Tuple[float, int, pygame.Rect]] = []  # (seed, index of the card's block, box inside that block)
+        # (seed, index of the card's block, box inside that block)
+        self._boxes: List[Tuple[float, int, pygame.Rect]] = []
         self._focus: Optional[float] = None  # the seed of the person whose comment is being typed
         super().__init__('People')
 
@@ -151,7 +158,6 @@ class KnownPeopleDialog(_ListDialog):
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
         import knowledge
-        from galaxies.people.person import Person
 
         galaxy = gem.current_environment.galaxy
         outposts = [
@@ -181,12 +187,16 @@ class KnownPeopleDialog(_ListDialog):
         font = body_font(FIELD_SIZE)
         return [line for paragraph in text.split('\n') for line in (MessageDialog.wrap(paragraph, font, width) or [''])]
 
-    def _card(self, person: Optional[Person], seed: int, first_met_at: Optional[str], width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
-        """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when the
-        person could be found again). Returns the card and the box's rectangle inside it."""
+    def _card(self, person: Optional[Person], seed: int, first_met_at: Optional[str],
+              width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
+        """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when
+        the person could be found again). Returns the card and the box's rectangle inside it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
         name = person.get_full_name() if person is not None else 'Unknown person'
-        fields = person.description_fields() if person is not None else [('ID', f"{seed}."), ('First met at', "Not met yet" if first_met_at is None else first_met_at)]
+        fields = person.description_fields() if person is not None else [('ID', f"{seed}."),
+                                                                         ('First met at',
+                                                                          "Not met yet" if first_met_at is None
+                                                                          else first_met_at)]
 
         name_surface = title_font(20).render(name, True, ACCENT)
         lines: List[pygame.Surface] = []
@@ -198,7 +208,8 @@ class KnownPeopleDialog(_ListDialog):
         text_height = fields_bottom
         if person is not None:
             font = body_font(FIELD_SIZE)
-            comment_lines = self._comment_lines(person.comment, text_width - 2 * COMMENT_PADDING) if person.comment else []
+            comment_lines = self._comment_lines(person.comment, text_width - 2
+                                                * COMMENT_PADDING) if person.comment else []
             rows = max(COMMENT_MIN_LINES, len(comment_lines))
             box = pygame.Rect(PORTRAIT_SIZE[0] + PORTRAIT_GAP, fields_bottom + COMMENT_GAP, text_width,
                               2 * COMMENT_PADDING + rows * font.get_linesize())
@@ -212,7 +223,8 @@ class KnownPeopleDialog(_ListDialog):
             pygame.draw.rect(card, (16, 52, 56), portrait_rect)
         pygame.draw.rect(card, ACCENT, portrait_rect, 2)
         for corner, sx, sy in (((0, 0), 1, 1), ((portrait_rect.right - 1, 0), -1, 1),
-                               ((0, portrait_rect.bottom - 1), 1, -1), ((portrait_rect.right - 1, portrait_rect.bottom - 1), -1, -1)):
+                               ((0, portrait_rect.bottom - 1), 1, -1), ((portrait_rect.right - 1, portrait_rect.bottom
+                                                                         - 1), -1, -1)):
             pygame.draw.line(card, ACCENT, corner, (corner[0] + 12 * sx, corner[1]), 4)
             pygame.draw.line(card, ACCENT, corner, (corner[0], corner[1] + 12 * sy), 4)
 
@@ -255,7 +267,8 @@ class KnownPeopleDialog(_ListDialog):
         return None
 
     def _set_focus(self, seed: Optional[int]) -> None:
-        """Focuses the comment box of `seed` (None for none): the keys type into it. The text input is on only while focused."""
+        """Focuses the comment box of `seed` (None for none): the keys type into it. The text input is on only while
+        focused."""
         if seed == self._focus:
             return
         self._focus = seed
@@ -271,8 +284,8 @@ class KnownPeopleDialog(_ListDialog):
         self._reveal_focused_box()
 
     def _reveal_focused_box(self) -> None:
-        """Scrolls just enough to show the focused comment box, where the typing goes: one scrolled away with the wheel or
-        the scroll bar comes back when the player types. A box taller than the view shows its top."""
+        """Scrolls just enough to show the focused comment box, where the typing goes: one scrolled away with the wheel
+        or the scroll bar comes back when the player types. A box taller than the view shows its top."""
         for seed, index, box in self._boxes:
             if seed == self._focus:
                 top = self._blocks[index][1] + box.top

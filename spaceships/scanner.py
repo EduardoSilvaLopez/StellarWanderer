@@ -29,9 +29,9 @@ class Scanner:
     slope from the emitter (half of Ship.HEIGHT below the camera) down to the ground at
     MAX_LENGTH metres ahead (horizontally), so it hits the ground at full range when the ship is low. Rocks closer
     than the slope's height at their distance pass over the beam. A hit counts only within MAX_LENGTH metres of the
-    camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach. `targeted_rock` and `targeted_mine` are what the scanner panel
-    (graphics/instruments/scanner.py, a different class with the same name) shows, and what `activate` heats or
-    collects from.
+    camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach.
+    `targeted_rock` and `targeted_mine` are what the scanner panel (graphics/instruments/scanner.py, a different class
+    with the same name) shows, and what `activate` heats or collects from.
     """
 
     MAX_LENGTH = 200  # metres
@@ -39,7 +39,8 @@ class Scanner:
     def __init__(self, ship: Ship) -> None:
         self.ship = ship
         self.target: Optional[Target] = None
-        self._announced_rock: Optional[Rock] = None  # the rock with an adjective whose scan was announced since SPACE went down
+        # the rock with an adjective whose scan was announced since SPACE went down
+        self._announced_rock: Optional[Rock] = None
         self.start_x = 0.0
         self.start_y = 0.0
         self.start_z = 0.0
@@ -107,8 +108,8 @@ class Scanner:
         hit_y = self.start_y + t * (self.end_y - self.start_y)
         hit_z = self.start_z + t * (self.end_z - self.start_z)
 
-        # The beam is long when the ship is high (it runs down to the ground MAX_LENGTH metres ahead, horizontally), but a
-        # hit counts only within MAX_LENGTH of the camera: nothing is targeted, or heated, farther than that.
+        # The beam is long when the ship is high (it runs down to the ground MAX_LENGTH metres ahead, horizontally), but
+        # a hit counts only within MAX_LENGTH of the camera: nothing is targeted, or heated, farther than that.
         if math.dist(origin, (hit_x, hit_y, hit_z)) > self.MAX_LENGTH:
             return
         self.target = target
@@ -117,12 +118,12 @@ class Scanner:
 
     # region Actions
     def activate(self, time_passed: int) -> Scanner:
-        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost, talk to its
-        com officer, unless the pilot may use the mission board: for them the keypress opens the board instead (see main.py),
-        and holding the key does nothing here. On a rock with an adjective,
-        the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch the
-        beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so it does
-        not search again."""
+        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost,
+        talk to its com officer, unless the pilot may use the mission board: for them the keypress opens the board
+        instead (see main.py), and holding the key does nothing here. On a rock with an adjective,
+        the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch
+        the beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so
+        it does not search again."""
 
         if self.targeted_mine is not None:
             mine: OreMine = self.targeted_mine
@@ -143,14 +144,16 @@ class Scanner:
             return self
 
         if self.targeted_outpost is not None:
-            from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs this module's package
+            # local: the board needs the player, which needs this module's package
+            from galaxies.missions.mission_board import MissionBoard
             if not MissionBoard.is_available(self.ship.owner):
                 self.targeted_outpost.communicate()
             return self
 
         rock = self.targeted_rock
         if rock is not None and rock.adjective:
-            # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten. Announced once per press.
+            # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten. Announced
+            # once per press.
             self.ship.laser.cease_fire()
             if self._announced_rock is not rock:
                 self._announced_rock = rock
@@ -213,7 +216,8 @@ class Scanner:
 
     # region Beam geometry
     @staticmethod
-    def _clip_slab(start: float, delta: float, low: float, high: float, t_min: float, t_max: float) -> Optional[Tuple[float, float]]:
+    def _clip_slab(start: float, delta: float, low: float, high: float, t_min: float,
+                   t_max: float) -> Optional[Tuple[float, float]]:
         """Narrow [t_min, t_max] to the part of the beam between the planes low and high on one axis."""
         if abs(delta) <= 1e-9:  # parallel to the slab: all or nothing
             return (t_min, t_max) if low <= start <= high else None
@@ -221,7 +225,8 @@ class Scanner:
         t2 = (high - start) / delta
         return max(t_min, min(t1, t2)), min(t_max, max(t1, t2))
 
-    def _beam_enters_box(self, start: Tuple[float, float, float], end: Tuple[float, float, float], half_sizes: Tuple[float, float, float]) -> Optional[float]:
+    def _beam_enters_box(self, start: Tuple[float, float, float], end: Tuple[float, float, float],
+                         half_sizes: Tuple[float, float, float]) -> Optional[float]:
         """Slab test of the segment start -> end against an axis-aligned box centred on the origin.
         Returns the t-value where the beam enters, or None."""
         t_min, t_max = 0.0, 1.0
@@ -247,7 +252,8 @@ class Scanner:
         gz = pz - t * dz
         return gx * gx + gy * gy + gz * gz <= radius * radius
 
-    def _beam_enters_oriented_box(self, centre: Tuple[float, float, float], half_sizes: Tuple[float, float, float], tilt_degrees: float, orientation_degrees: float) -> Optional[float]:
+    def _beam_enters_oriented_box(self, centre: Tuple[float, float, float], half_sizes: Tuple[float, float, float],
+                                  tilt_degrees: float, orientation_degrees: float) -> Optional[float]:
         """t-value where the beam first enters a box centred on `centre`, or None. The box is tilted by tilt_degrees
         around its local Z axis, then turned by orientation_degrees around Y (0 = unrotated, positive = clockwise
         from north, the same convention as the ship's forward vector)."""

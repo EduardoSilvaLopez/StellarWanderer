@@ -79,7 +79,8 @@ def _uniforms(seeds: Sequence[int], count: int) -> np.ndarray:
     """(rocks, count) numbers in [0, 1): a counter-based hash (splitmix64) of each seed and the number's index, so a
     rock's numbers depend on its own seed only, and every rock is computed at once."""
     with np.errstate(over='ignore'):
-        x = np.asarray(seeds, dtype=np.uint64)[:, None] * _GOLDEN + (np.arange(count, dtype=np.uint64) + np.uint64(1))[None, :] * _MIX_1
+        x = np.asarray(seeds, dtype=np.uint64)[:, None] * _GOLDEN + (np.arange(count, dtype=np.uint64)
+                                                                     + np.uint64(1))[None, :] * _MIX_1
         x = (x ^ (x >> np.uint64(30))) * _MIX_1
         x = (x ^ (x >> np.uint64(27))) * _MIX_2
         x = x ^ (x >> np.uint64(31))
@@ -120,7 +121,8 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
     cut_radius = np.sqrt(1.0 - cut_height ** 2)
     cut_normals = np.stack((cut_radius * np.cos(cut_angle), cut_radius * np.sin(cut_angle), cut_height), axis=-1)
     cut_offsets = CUT_DISTANCE_MIN + (CUT_DISTANCE_MAX - CUT_DISTANCE_MIN) * cut_u[..., 2]
-    planes = CUT_PLANES_MIN + (uniform[:, cut_start + 3 * CUT_PLANES_MAX] * (CUT_PLANES_MAX - CUT_PLANES_MIN + 1)).astype(int)
+    planes = CUT_PLANES_MIN + (uniform[:, cut_start + 3 * CUT_PLANES_MAX] * (CUT_PLANES_MAX - CUT_PLANES_MIN
+                                                                             + 1)).astype(int)
     cut_offsets = np.where(np.arange(CUT_PLANES_MAX)[None, :] < planes[:, None], cut_offsets, np.inf)
     for k in range(CUT_PLANES_MAX):
         beyond = np.maximum(0.0, np.einsum('nvk,nk->nv', shaped, cut_normals[:, k]) - cut_offsets[:, k:k + 1])

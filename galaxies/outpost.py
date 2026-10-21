@@ -52,7 +52,8 @@ class Outpost(Updatable):
         self.longitude: int = \
             0 if self.index == 0 else \
             self.my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
-        self.latitude: int = self.my_random.randint(int(-self.planet.radius*math.pi/2), int(self.planet.radius*math.pi/2))
+        self.latitude: int = self.my_random.randint(int(-self.planet.radius*math.pi/2),
+                                                    int(self.planet.radius*math.pi/2))
 
         self.orientation: float = self.my_random.random() * 360
 
@@ -60,7 +61,8 @@ class Outpost(Updatable):
         self.free_days: float = 0.33
         self.com_officer: Optional[Person] = None
         self.last_visited: Optional[datetime] = None
-        from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs missions
+        # local: the board needs the player, which needs missions
+        from galaxies.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this outpost is in memory
 
         self.is_altered = False
@@ -72,7 +74,8 @@ class Outpost(Updatable):
                 # Read here, not in prepare: a save made before the ship goes near the outpost must keep it, and prepare
                 # runs again each time ground near the outpost is made, which would put the old value back.
                 if 'last_visited' in self.saved_alterations:
-                    self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], '%Y-%m-%d %H:%M:%S.%f')
+                    self.last_visited = datetime.strptime(self.saved_alterations['last_visited'],
+                                                          '%Y-%m-%d %H:%M:%S.%f')
                 self.set_altered()
         self._log_generation()
 
@@ -130,7 +133,8 @@ class Outpost(Updatable):
         return self
 
     def open_mission_board(self) -> MissionBoard:
-        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to show."""
+        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to
+        show."""
         now = gem.current_environment.date_time
         self.mission_board.update_missions(now)
         self._set_last_visited(now)

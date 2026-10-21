@@ -1,10 +1,10 @@
-"""How rocks with an adjective look: valuable minerals, such as a pilot could find in a collection (banded agate, lapis lazuli,
-malachite, amethyst, gold in quartz). Nothing glows or moves: the minerals only have colours and patterns.
+"""How rocks with an adjective look: valuable minerals, such as a pilot could find in a collection (banded agate, lapis
+lazuli, malachite, amethyst, gold in quartz). Nothing glows or moves: the minerals only have colours and patterns.
 
-Such a rock has the shape of any rock (graphics/rock_shape.py), but each of its faces is cut into SPLITS * SPLITS smaller
-ones, and each small face takes the colour of the mineral at its place, from a noise in the rock's own coordinates, so the
-pattern turns with the rock and no two rocks are alike. Every adjective has a `Look`; one the table does not know gets
-FALLBACK. Used by rock_batches.py (the 3D view) and by the scanner instrument.
+Such a rock has the shape of any rock (graphics/rock_shape.py), but each of its faces is cut into SPLITS * SPLITS
+smaller ones, and each small face takes the colour of the mineral at its place, from a noise in the rock's own
+coordinates, so the pattern turns with the rock and no two rocks are alike. Every adjective has a `Look`; one the table
+does not know gets FALLBACK. Used by rock_batches.py (the 3D view) and by the scanner instrument.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ FACET_JITTER = 0.04  # share by which a small face may differ in brightness: the
 
 @dataclass(frozen=True)
 class Look:
-    """The minerals of a rock. `gradient` is the body, which takes `bands` rings (concentric bands, as in agate) or, with
-    `bands` of 0, irregular clouds. Veins and flecks (one colour each, or None) lie on top."""
+    """The minerals of a rock. `gradient` is the body, which takes `bands` rings (concentric bands, as in agate) or,
+    with `bands` of 0, irregular clouds. Veins and flecks (one colour each, or None) lie on top."""
     gradient: Sequence[Colour]
     bands: int = 0
     veins: Optional[Colour] = None
@@ -50,7 +50,8 @@ LOOKS: Dict[str, Look] = {
                  vein_width=0.05, flecks=(222, 180, 60), fleck_share=0.04),
 }
 # Dark stone with white veins, like marble.
-FALLBACK = Look(gradient=((66, 66, 72), (98, 98, 104), (56, 56, 62)), veins=(226, 226, 226), vein_strength=0.85, vein_width=0.04)
+FALLBACK = Look(gradient=((66, 66, 72), (98, 98, 104), (56, 56, 62)), veins=(226, 226, 226), vein_strength=0.85,
+                vein_width=0.04)
 
 _cache: Dict[Tuple[int, str], Tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 

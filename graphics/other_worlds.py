@@ -21,10 +21,10 @@ class OtherWorlds:
         """Draw the other worlds at their true direction, bound or unbound, farthest first, each lit
         by the star (see LitWorlds).
 
-        Called twice per frame around the sun (its hole in the sky, see OpenGLGui.draw): first with behind_star=True (worlds
-        farther than the star, which the star then covers), then with behind_star=False
-        (worlds nearer than the star). Unbound, the targeted body is one of them, drawn in distance order like the others;
-        bound, it is the opaque disc below the horizon (LitWorlds.draw_targeted), so it is left out here.
+        Called twice per frame around the sun (its hole in the sky, see OpenGLGui.draw): first with behind_star=True
+        (worlds farther than the star, which the star then covers), then with behind_star=False
+        (worlds nearer than the star). Unbound, the targeted body is one of them, drawn in distance order like the
+        others; bound, it is the opaque disc below the horizon (LitWorlds.draw_targeted), so it is left out here.
         """
         to_star = ship.navigation.direction_to_star(environment.targeted_body, environment.date_time)
         star_distance = to_star.length()

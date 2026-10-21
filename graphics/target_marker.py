@@ -1,5 +1,5 @@
-"""The target marker: an X on the canopy where the targeted body is, or on the canopy's border in the direction to it when the
-body is out of view. Drawn while unbound only (while bound, the target is the world under the ship)."""
+"""The target marker: an X on the canopy where the targeted body is, or on the canopy's border in the direction to it
+when the body is out of view. Drawn while unbound only (while bound, the target is the world under the ship)."""
 
 from __future__ import annotations
 from typing import List, Optional, Tuple, TYPE_CHECKING
@@ -15,9 +15,10 @@ Point = Tuple[float, float]
 
 
 class TargetMarker:
-    """Draws an X at the targeted body. The window is the canopy's trapezoid: its top edge, its bottom edge at the console,
-    and the two pillars' inner edges. The X sits where the body projects if that is inside the trapezoid. Otherwise it
-    sits where the ray from the crosshair toward the body leaves the trapezoid, so it points the way to turn."""
+    """Draws an X at the targeted body. The window is the canopy's trapezoid: its top edge, its bottom edge at the
+    console, and the two pillars' inner edges. The X sits where the body projects if that is inside the trapezoid.
+    Otherwise it sits where the ray from the crosshair toward the body leaves the trapezoid, so it points the way to
+    turn."""
 
     ARM = 7  # length of each segment, from the outer end to the centre, in pixels
     GAP = 3  # the centre stays open: each segment starts this far from the centre
@@ -42,8 +43,8 @@ class TargetMarker:
             if TargetMarker._inside(on_screen, window):
                 TargetMarker._draw_x(surface, on_screen)
                 return
-        # Out of view (behind, or beyond the window): the ray from the crosshair in the same screen direction as the body
-        # leaves the window at this point.
+        # Out of view (behind, or beyond the window): the ray from the crosshair in the same screen direction as the
+        # body leaves the window at this point.
         ray = (right, -up)
         point = TargetMarker._exit_point(centre, ray, window)
         if point is not None:

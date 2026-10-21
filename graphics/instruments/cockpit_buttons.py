@@ -1,5 +1,5 @@
-"""The small buttons under the political entity's icon: what the pilot knows of the stellar systems and of the people, and,
-when there is a mission to see (see shows_missions), the pending missions, below the stellar systems."""
+"""The small buttons under the political entity's icon: what the pilot knows of the stellar systems and of the people,
+and, when there is a mission to see (see shows_missions), the pending missions, below the stellar systems."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -15,20 +15,22 @@ if TYPE_CHECKING:
 SYSTEMS = 'systems'  # the names the buttons are known by (see hit)
 PEOPLE = 'people'
 MISSIONS = 'missions'
-ICON_FILES: Dict[str, str] = {SYSTEMS: 'stellar_system.png', PEOPLE: 'head.png', MISSIONS: 'missions.png'}  # white, in resources/icons
+# white, in resources/icons
+ICON_FILES: Dict[str, str] = {SYSTEMS: 'stellar_system.png', PEOPLE: 'head.png', MISSIONS: 'missions.png'}
 
 
 def shows_missions(player: Player) -> bool:
-    """The missions button is there for a pilot the outposts trust (the mission board's rule) or with a mission to see."""
+    """The missions button is there for a pilot the outposts trust (the mission board's rule) or with a mission to
+    see."""
     from galaxies.missions import OPEN  # local: the missions import the player, which imports this package
     from galaxies.missions.mission_board import MissionBoard
     return MissionBoard.is_available(player) or any(m.status == OPEN for m in player.missions)
 
 
 class CockpitButtons:
-    """Square buttons under the political icon: a miniature stellar system and a head side by side, and the missions below
-    the stellar system. The cockpit only draws them; main opens the dialog when `hit` says one was pressed. Their places are
-    those of the last draw."""
+    """Square buttons under the political icon: a miniature stellar system and a head side by side, and the missions
+    below the stellar system. The cockpit only draws them; main opens the dialog when `hit` says one was pressed. Their
+    places are those of the last draw."""
 
     SIZE = 48
     MIN_SIZE = 28
@@ -44,7 +46,8 @@ class CockpitButtons:
     def _icon(name: str) -> Optional[pygame.Surface]:
         if name not in CockpitButtons._icons:
             try:
-                CockpitButtons._icons[name] = pygame.image.load(resource_path('icons', ICON_FILES[name])).convert_alpha()
+                CockpitButtons._icons[name] = pygame.image.load(resource_path('icons',
+                                                                              ICON_FILES[name])).convert_alpha()
             except (FileNotFoundError, pygame.error):
                 CockpitButtons._icons[name] = None  # the button is drawn without its icon
         return CockpitButtons._icons[name]
@@ -73,7 +76,8 @@ class CockpitButtons:
             available = PoliticalInfo.hull_edge_x(y + size, w, h) - x - PoliticalInfo.EDGE_MARGIN
             fits = 2 * size + CockpitButtons.BUTTON_GAP <= available
             if missions:
-                below = PoliticalInfo.hull_edge_x(y + 2 * size + CockpitButtons.BUTTON_GAP, w, h) - x - PoliticalInfo.EDGE_MARGIN
+                below = PoliticalInfo.hull_edge_x(y + 2 * size + CockpitButtons.BUTTON_GAP, w,
+                                                  h) - x - PoliticalInfo.EDGE_MARGIN
                 fits = fits and size <= below
             if fits:
                 break
@@ -81,7 +85,8 @@ class CockpitButtons:
 
         mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
         CockpitButtons.rects = {}
-        places = [(SYSTEMS, pygame.Rect(x, y, size, size)), (PEOPLE, pygame.Rect(x + size + CockpitButtons.BUTTON_GAP, y, size, size))]
+        places = [(SYSTEMS, pygame.Rect(x, y, size, size)), (PEOPLE, pygame.Rect(x + size + CockpitButtons.BUTTON_GAP,
+                                                                                 y, size, size))]
         if missions:
             places.append((MISSIONS, pygame.Rect(x, y + size + CockpitButtons.BUTTON_GAP, size, size)))
         for name, rect in places:
@@ -90,7 +95,8 @@ class CockpitButtons:
             colour = ACCENT if hovered else ACCENT_DIM
             pygame.draw.rect(surface, READOUT_BG, rect, border_radius=6)
             pygame.draw.rect(surface, colour, rect, 2, border_radius=6)
-            icon = CockpitButtons._tinted_icon(name, size - 2 * CockpitButtons.ICON_MARGIN, ACCENT if hovered else (150, 215, 205))
+            icon = CockpitButtons._tinted_icon(name, size - 2 * CockpitButtons.ICON_MARGIN, ACCENT if hovered
+                                               else (150, 215, 205))
             if icon is not None:
                 surface.blit(icon, icon.get_rect(center=rect.center))
 

@@ -95,7 +95,8 @@ class CargoHold(ABC):
 
     def used_capacity(self) -> float:
         cargo = [self.air, self.water, self.food, self.mines, self.ore]
-        weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.MINE_WEIGHT, CargoHold.ORE_WEIGHT]
+        weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.MINE_WEIGHT,
+                   CargoHold.ORE_WEIGHT]
         return sum(x*y for x, y in zip(cargo, weights))
 
     def free_capacity(self) -> float:

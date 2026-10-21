@@ -27,8 +27,8 @@ class Dialog:
     draw renders: alone in a window (run_in_window) or as an overlay above the frozen
     game (compose_overlay). While a dialog is open the host must not advance game time.
 
-    OPEN_SOUND and CLOSE_SOUND name the sounds (common/audio.py) the host plays when it shows the dialog and when the dialog
-    returns a result; a dialog with a sound of its own overrides them.
+    OPEN_SOUND and CLOSE_SOUND name the sounds (common/audio.py) the host plays when it shows the dialog and when the
+    dialog returns a result; a dialog with a sound of its own overrides them.
     """
 
     OPEN_SOUND = 'ui_open'

@@ -80,9 +80,9 @@ class FixedWorld:
                 return []
             clipped = []
             for lo, hi in spans:
-                lo, hi = max(lo, allowed[0]), min(hi, allowed[1])
-                if lo < hi:
-                    clipped.append((lo, hi))
+                start, end = max(lo, allowed[0]), min(hi, allowed[1])
+                if start < end:
+                    clipped.append((start, end))
             return clipped
 
         for y in range(view_h):

@@ -24,7 +24,8 @@ _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 # The message board's sign, by size in pixels (None for a size whose image could not be loaded).
 _board_signs: dict = {}
 
-# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of the rock's max_temperature (black, dark red, gray, cyan, blue).
+# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of the rock's max_temperature (black, dark red, gray,
+# cyan, blue).
 TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192), (32, 32, 255))
 
 
@@ -32,7 +33,8 @@ class Scanner:
     """Draw a square scanner readout showing targeted rock, ore mine or outpost."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, title_top: int, bottom: int, mfd_right: int) -> None:
+    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, title_top: int, bottom: int,
+             mfd_right: int) -> None:
         """Draw the scanner display.
 
         Mirrors whatever outpost, rock or ore mine is currently in the scanner's
@@ -40,8 +42,8 @@ class Scanner:
         fill the square but kept at the same relative orientation and color
         the player sees ahead. If somehow several are set, an outpost comes first, then a rock.
 
-        A scanned outpost is titled SCANNER, with the message board's sign drawn to the right of the title when the pilot
-        may use the board (see MissionBoard.is_available).
+        A scanned outpost is titled SCANNER, with the message board's sign drawn to the right of the title when the
+        pilot may use the board (see MissionBoard.is_available).
 
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
@@ -79,12 +81,14 @@ class Scanner:
         surface.blit(title, title_rect)
         if outpost is not None:
             Scanner._draw_scanned_outpost(surface, rect, outpost)
-            from galaxies.missions.mission_board import MissionBoard  # local: the board needs the player, which needs this module's package
+            # local: the board needs the player, which needs this module's package
+            from galaxies.missions.mission_board import MissionBoard
             sign = Scanner._board_sign(label_font.get_linesize()) if MissionBoard.is_available(ship.owner) else None
             if sign is not None:
                 # A little above the text's centre: the line box is taller below the letters than above them.
                 line = label_font.get_linesize()
-                surface.blit(sign, sign.get_rect(midleft=(title_rect.right + line // 4, title_rect.centery - line // 4)))
+                surface.blit(sign, sign.get_rect(midleft=(title_rect.right + line // 4, title_rect.centery
+                                                          - line // 4)))
         elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, ship, rock)
             if rock.temperature > 0.0:
@@ -113,7 +117,8 @@ class Scanner:
 
     @staticmethod
     def _temperature_color(rock: Rock) -> Tuple[int, int, int]:
-        """The colour for a rock's temperature above 0: one of TEMPERATURE_COLORS, by quarters of the rock's max_temperature."""
+        """The colour for a rock's temperature above 0: one of TEMPERATURE_COLORS, by quarters of the rock's
+        max_temperature."""
         quarter = int(rock.temperature / rock.max_temperature * len(TEMPERATURE_COLORS))
         return TEMPERATURE_COLORS[min(len(TEMPERATURE_COLORS) - 1, max(0, quarter))]
 
@@ -121,7 +126,7 @@ class Scanner:
     def _draw_scanned_outpost(surface: pygame.Surface, rect: pygame.Rect, outpost: Outpost) -> None:
         """Draw the outpost's com officer's portrait to fill `rect`: scaled to cover it, keeping its proportions,
         and cropped equally from the top and bottom (or sides) where it overflows. No padding."""
-        global _portrait_cache
+        global _portrait_cache  # noqa: PLW0603 - a module-level cache, like the other textures
         icon = outpost.com_officer.icon
         if icon is None:
             return
@@ -183,15 +188,18 @@ class Scanner:
 
         body_rect = pygame.Rect(body_left, body_top + cap_height // 2, body_width, body_height)
         pygame.draw.rect(surface, MINE_HULL_COLOR, body_rect)
-        pygame.draw.rect(surface, MINE_HULL_DARK, (body_rect.left, body_rect.top, body_rect.width // 3, body_rect.height))
-        pygame.draw.rect(surface, MINE_HULL_LIGHT, (body_rect.right - body_rect.width // 6, body_rect.top, body_rect.width // 6, body_rect.height))
+        pygame.draw.rect(surface, MINE_HULL_DARK, (body_rect.left, body_rect.top, body_rect.width // 3,
+                                                   body_rect.height))
+        pygame.draw.rect(surface, MINE_HULL_LIGHT, (body_rect.right - body_rect.width // 6, body_rect.top,
+                                                    body_rect.width // 6, body_rect.height))
 
         top_cap_rect = pygame.Rect(body_left, body_top, body_width, cap_height)
         pygame.draw.ellipse(surface, MINE_CAP_COLOR, top_cap_rect)
         pygame.draw.ellipse(surface, MINE_HULL_DARK, top_cap_rect, 1)
 
         band_y = body_rect.top + int(body_rect.height * 0.42)
-        pygame.draw.rect(surface, MINE_ACCENT, (body_rect.left, band_y, body_rect.width, max(2, body_rect.height // 20)))
+        pygame.draw.rect(surface, MINE_ACCENT, (body_rect.left, band_y, body_rect.width,
+                                                max(2, body_rect.height // 20)))
 
         stripe_h = max(3, body_rect.height // 14)
         stripe_y = body_rect.bottom - stripe_h - 4

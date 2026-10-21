@@ -2,10 +2,10 @@
 
 There will be different kinds of objects which can be scanned. At this point, only rocks.
 
-A rock mission asks for a rock with an adjective (weird, mysterious or strange). The rock is chosen when the offer is made, from
-the mission's seed, and its place is kept in the mission (the world, the Km2 and the rock's coordinates), so it is the same
-after a load. The adjective is given to the rock only when the pilot takes the mission (`accept`), so an offer nobody takes
-leaves the world as it was."""
+A rock mission asks for a rock with an adjective (weird, mysterious or strange). The rock is chosen when the offer is
+made, from the mission's seed, and its place is kept in the mission (the world, the Km2 and the rock's coordinates), so
+it is the same after a load. The adjective is given to the rock only when the pilot takes the mission (`accept`), so an
+offer nobody takes leaves the world as it was."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -34,7 +34,8 @@ class ScanRock(Mission):
     CHANCES_PER_DAY = 0.20
     DAYS_MIN = 10
     DAYS_MAX = 30
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1  # each day of an offer's life, from the day it is made: the chance somebody takes it
+    # each day of an offer's life, from the day it is made: the chance somebody takes it
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1
 
     def __init__(
             self, object_type: str = '',
@@ -47,18 +48,20 @@ class ScanRock(Mission):
         # Drawn in this order every time, from the seed.
         days = self.my_random.randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)
 
-        # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a moment
-        # in that day. The same draws every time, whatever the outcome.
+        # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
+        # moment in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
-        taken_day = next((index for index, roll in enumerate(rolls) if roll < ScanRock.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+        taken_day = next((index for index, roll in enumerate(rolls) if roll < ScanRock.TAKEN_BY_OTHERS_CHANCE_PER_DAY),
+                         None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
         self.was_scanned: bool = was_scanned
         self.object_type: str = object_type
-        # Where the rock is: 'world' is None for the planet or the index of a moon, 'km2' the longitude and latitude of its Km2,
-        # 'rock' the rock's own longitude and latitude. Only drawn for a new offer; a loaded mission keeps what it was given.
+        # Where the rock is: 'world' is None for the planet or the index of a moon, 'km2' the longitude and latitude of
+        # its Km2, 'rock' the rock's own longitude and latitude. Only drawn for a new offer; a loaded mission keeps what
+        # it was given.
         self.rock_site: Optional[dict] = rock_site
         self.adjective: str = adjective
         if self.object_type == 'rock' and self.rock_site is None:
@@ -69,8 +72,9 @@ class ScanRock(Mission):
 
     # region The rock's site
     def _choose_rock_site(self) -> Optional[dict]:
-        """A random rock that is not molten, on the planet or on one of its moons, from the mission's seed. One place is tried:
-        None if that place has no rock left, or has an outpost (the people there would have scanned it themselves)."""
+        """A random rock that is not molten, on the planet or on one of its moons, from the mission's seed. One place is
+        tried: None if that place has no rock left, or has an outpost (the people there would have scanned it
+        themselves)."""
         from galaxies.km2 import Km2
         planet = self.issuer_outpost.planet
         index = self.my_random.randrange(len(planet.moons) + 1) - 1  # -1 is the planet itself
@@ -131,7 +135,8 @@ class ScanRock(Mission):
     def generate(created_at: datetime, object_type: str, outpost: Outpost) -> ScanRock:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)  # the first draw of the seed, as in __init__
+        # the first draw of the seed, as in __init__
+        days = random.Random(seed).randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)
         return ScanRock(
             object_type=object_type,
             seed=seed,
@@ -165,7 +170,8 @@ class ScanRock(Mission):
         if self.accepted_at is None:
             return ''
         if self.was_scanned:
-            return f"The {self.adjective} {self.object_type} is scanned: bring the results to {self.issuer_outpost.name}."
+            return (f"The {self.adjective} {self.object_type} is scanned: "
+                    f"bring the results to {self.issuer_outpost.name}.")
         return f"The {self.adjective} {self.object_type} is not scanned yet."
 
     def title(self) -> str:
@@ -175,7 +181,8 @@ class ScanRock(Mission):
         world = self._world()
         longitude, latitude = self.rock_site['rock']
         return (
-            f"We have found an interesting {self.adjective} {self.object_type} in ({longitude}, {latitude}) on {world.name}."
+            f"We have found an interesting {self.adjective} {self.object_type} in ({longitude}, {latitude}) on "
+            f"{world.name}."
             f" Scan it, please, and bring the results to here, at {self.issuer_outpost.address()}."
         )
 
@@ -191,7 +198,8 @@ class ScanRock(Mission):
     def give_reward(self, player: Player) -> None:
         reputation_change: float = 0.5 # Later... depends on distance? When asteroids.
         player.those_who_share.reputation += reputation_change
-        logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = {player.those_who_share.reputation}")
+        logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
+        f"{player.those_who_share.reputation}")
 
     def reward_text(self, player: Player) -> str:
         return f"Thank you {player.get_title()}, knowledge about this {self.adjective} object will help the Community."
@@ -199,7 +207,8 @@ class ScanRock(Mission):
     def fail(self, player: Player) -> None:
         reputation_change: float = -5 # If you did not have the time don't accept the mission.
         player.those_who_share.reputation += reputation_change
-        logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = {player.those_who_share.reputation}")
+        logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = "
+        f"{player.those_who_share.reputation}")
     # endregion
 
     # region Persistence

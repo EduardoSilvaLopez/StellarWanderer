@@ -8,6 +8,7 @@ from .knowledge_dialogs import KnownSystemsDialog, KnownPeopleDialog
 from .mission_board_dialog import MissionBoardDialog, PendingMissionsDialog
 
 __all__ = [
-    "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog", "KnownPeopleDialog", "MissionBoardDialog", "PendingMissionsDialog",
+    "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog",
+    "KnownPeopleDialog", "MissionBoardDialog", "PendingMissionsDialog",
     "Message", "confirm", "show_message", "next_pending_message",
 ]

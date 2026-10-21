@@ -57,7 +57,8 @@ class Km2:
         for _ in range(int(rocks_count)):
             rock_lon = self.longitude + my_random.randint(0, 999)
             rock_lat = self.latitude + my_random.randint(0, 999)
-            if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat - outpost_center[1]) < Outpost.CLEARED_RADIUS:
+            if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat
+                                             - outpost_center[1]) < Outpost.CLEARED_RADIUS:
                 continue  # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
             rock_key = f"{rock_lon} {rock_lat}"
             if molten_rocks is not None and rock_key in molten_rocks:
@@ -79,7 +80,8 @@ class Km2:
             self.ore_fields = [OreField.deserialize(self, f) for f in ore_fields]
 
         if self.is_altered:
-            logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+            logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} "
+            f"ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
     # region Alterations
     def set_altered(self) -> Km2:

@@ -39,14 +39,16 @@ class Galaxy:
     def system_of_key(self, key: str) -> Optional[StellarSystem]:
         """The stellar system with that alterations key (its star's cell, "26010 10 10"), generated if it was not yet.
         None if no fixed star is there."""
-        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.get_alterations_key() == key), None)
+        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.get_alterations_key() == key),
+                                                 None)
         if existing is not None:
             return existing
         star: Optional[Star] = self.fixed_stars.get(tuple(int(c) for c in key.split()))
         return self.add_stellar_system(star) if star is not None else None
 
     def outpost_of(self, full_keys: str) -> Outpost:
-        """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then the outpost's own key."""
+        """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then the outpost's own
+        key."""
         system_key, orbit_key, planet_key, outpost_key = full_keys.split('|')
         system = self.system_of_key(system_key)
         if system is None:
@@ -61,7 +63,8 @@ class Galaxy:
         """The fixed star in the cell that contains the galactic position (in ly). Only the region has fixed stars."""
         star: Optional[Star] = self.fixed_stars.get(cell_of(position))
         if star is None:
-            raise ValueError(f"No fixed star at galactic position {position}: fixed stars exist only around the initial star.")
+            raise ValueError(f"No fixed star at galactic position {position}: fixed stars exist only around the "
+            f"initial star.")
         return star
 
     def fixed_star_positions(self) -> list[tuple[Star, tuple[float, float, float]]]:

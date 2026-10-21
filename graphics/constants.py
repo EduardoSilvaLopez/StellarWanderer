@@ -1,15 +1,19 @@
 """Shared graphics constants and palette for the cockpit view."""
 
+import math
+
 # The font of the cockpit instruments and of the message dialogs' body text: a file in common/resources/fonts (SIL OFL).
 # Change it here to change both. The dialogs' body size goes with it (common/dialogs/dialog_fonts.py).
 FONT_FILE = 'Oxanium.ttf'
 
 # Color palette
-SPACE_COLOR = (0, 0, 0)  # pitch black: in vacuum there is no sky glow. What light the sky has is the Milky Way and the stars
-# The Milky Way, Andromeda and the Magellanic Clouds (graphics/milky_way.py). The panorama (tools/generate_milky_way.py) keeps
-# the real ratios between the brightness of its regions, but the real sky is far too faint for a screen (the brightest
-# Milky Way is about 1e-3 cd/m2, under one 8-bit step), so it is shown at this share of its stored brightness: 0.2 puts the
-# bulge near code 50 and the band near 20 on black. 0 hides it, 1 is the stored brightness. Ratios stay the same.
+# pitch black: in vacuum there is no sky glow. What light the sky has is the Milky Way and the stars
+SPACE_COLOR = (0, 0, 0)
+# The Milky Way, Andromeda and the Magellanic Clouds (graphics/milky_way.py). The panorama (tools/generate_milky_way.py)
+# keeps the real ratios between the brightness of its regions, but the real sky is far too faint for a screen (the
+# brightest Milky Way is about 1e-3 cd/m2, under one 8-bit step), so it is shown at this share of its stored brightness:
+# 0.2 puts the bulge near code 50 and the band near 20 on black. 0 hides it, 1 is the stored brightness. Ratios stay the
+# same.
 MILKY_WAY_EXPOSURE = 0.2
 HULL_COLOR = (38, 42, 55)
 HULL_DARK = (23, 26, 36)
@@ -19,7 +23,8 @@ CONSOLE = (29, 32, 43)
 CONSOLE_EDGE_COLOR = (74, 82, 102)
 ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
-ACCENT_LABEL = tuple((a + b) // 2 for a, b in zip(ACCENT, ACCENT_DIM))  # readout labels: halfway between, legible on READOUT_BG
+# readout labels: halfway between, legible on READOUT_BG
+ACCENT_LABEL = tuple((a + b) // 2 for a, b in zip(ACCENT, ACCENT_DIM))
 AMBER = (240, 176, 92)
 BINDING_MARK_RED = (235, 64, 64)
 BINDING_NEAR_GREEN = (80, 230, 120)
@@ -61,7 +66,6 @@ CANOPY_BOTTOM_INSET = 0.02
 CONSOLE_TOP = 0.66
 
 # View and rendering
-import math
 VIEW_VERTICAL_FOV_RADIANS = math.radians(40)  # was 60; narrowed ~1/3 to better match real eye-to-screen viewing angle
 NEAR_CLIP = 0.5  # metres
 MAX_DEPTH = 2000  # metres
@@ -115,5 +119,6 @@ WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit
 OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky
 OUTPOST_DOT_RADIUS_PX = 2
 FIXED_STAR_DOT_RADIUS_PX = 1  # fixed stars are drawn in their own colour; they are far away, so tiny dots
-NAKED_EYE_LIMIT_MAGNITUDE = 6.0  # a fixed star is drawn only if its apparent magnitude is at most this (lower is brighter)
+# a fixed star is drawn only if its apparent magnitude is at most this (lower is brighter)
+NAKED_EYE_LIMIT_MAGNITUDE = 6.0
 LIT_WORLD_PIXEL_BUDGET = 80_000  # discs larger than this (in pixels) are shaded on a coarser grid

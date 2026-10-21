@@ -51,7 +51,8 @@ class PoliticalInfo:
         # Name: as large as fits the hull width at the top of the text (the pillar
         # only narrows slightly over the text's own height, so this is a safe bound).
         max_text_width = PoliticalInfo.hull_edge_x(y, w, h) - x - PoliticalInfo.EDGE_MARGIN
-        text_surface = fonts.render_to_fit(entity.name, entity.color, max(1, int(max_text_width)), PoliticalInfo.MAX_FONT_SIZE)
+        text_surface = fonts.render_to_fit(entity.name, entity.color, max(1, int(max_text_width)),
+                                           PoliticalInfo.MAX_FONT_SIZE)
         surface.blit(text_surface, (x, y))
 
         icon_y = y + text_surface.get_height() + PoliticalInfo.GAP

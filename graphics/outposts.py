@@ -107,22 +107,27 @@ class Outposts:
 
         # Door wall: long side on local +z (the door faces `orientation`).
         quad(FRONT, door_normal,
-             [corner(-width, 0, depth), corner(width, 0, depth), corner(width, height, depth), corner(-width, height, depth)],
+             [corner(-width, 0, depth), corner(width, 0, depth), corner(width, height, depth),
+              corner(-width, height, depth)],
              [(0, 1), (1, 1), (1, 0), (0, 0)])
         # Back wall: long side on local -z, seen from outside, so mirrored in u.
         quad(BACK, (-sin_a, 0.0, -cos_a),
-             [corner(width, 0, -depth), corner(-width, 0, -depth), corner(-width, height, -depth), corner(width, height, -depth)],
+             [corner(width, 0, -depth), corner(-width, 0, -depth), corner(-width, height, -depth),
+              corner(width, height, -depth)],
              [(0, 1), (1, 1), (1, 0), (0, 0)])
         # Short walls, 6 m each.
         quad(LEFT, (-side_normal[0], 0.0, -side_normal[2]),
-             [corner(-width, 0, depth), corner(-width, 0, -depth), corner(-width, height, -depth), corner(-width, height, depth)],
+             [corner(-width, 0, depth), corner(-width, 0, -depth), corner(-width, height, -depth),
+              corner(-width, height, depth)],
              [(0, 1), (1, 1), (1, 0), (0, 0)])
         quad(RIGHT, side_normal,
-             [corner(width, 0, -depth), corner(width, 0, depth), corner(width, height, depth), corner(width, height, -depth)],
+             [corner(width, 0, -depth), corner(width, 0, depth), corner(width, height, depth),
+              corner(width, height, -depth)],
              [(0, 1), (1, 1), (1, 0), (0, 0)])
         # Flat roof.
         quad(ROOF, (0.0, 1.0, 0.0),
-             [corner(-width, height, depth), corner(width, height, depth), corner(width, height, -depth), corner(-width, height, -depth)],
+             [corner(-width, height, depth), corner(width, height, depth), corner(width, height, -depth),
+              corner(-width, height, -depth)],
              [(0, 0), (1, 0), (1, 1), (0, 1)])
 
         # Flagpole on the front left corner of the roof, with its flag held out to the right of the door wall.

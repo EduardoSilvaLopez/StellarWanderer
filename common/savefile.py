@@ -96,7 +96,7 @@ class Savefile:
         update_queue.clear()
 
         logger.info(f"Loading savefile: {filepath}")
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding='utf-8') as f:
             load_object = json.load(f)
 
         # Before the environment: the systems it generates add to the knowledge.

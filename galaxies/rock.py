@@ -22,7 +22,8 @@ class Rock(Updatable):
     TEMP_MAX_MU = 7.57 # Gives around 2000
     TEMP_MAX_SIGMA = 0.2
     ORE_RICH_THRESHOLD = 0.9998
-    ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')  # the adjectives a rock can have (see _generate_adjective)
+    # the adjectives a rock can have (see _generate_adjective)
+    ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.
     CENTRE_MIN = -0.15  # Share of its size the centre may sink at most, so the top of the rock stays visible.
 
@@ -66,7 +67,8 @@ class Rock(Updatable):
                 if self.last_updated_at is not None:  # an adjective alone is saved without a time: nothing to update
                     self.next_update_at = self.last_updated_at + timedelta(seconds=1)
                     update_queue.add(self)
-                logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature {self.temperature}°. Queue size: {len(update_queue)}")
+                logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature "
+                f"{self.temperature}°. Queue size: {len(update_queue)}")
 
     def _generate_composition(self, my_random: random.Random) -> float:
         if my_random.random() < self.parent_km2.parent_world.ore_prevalence:
@@ -114,7 +116,8 @@ class Rock(Updatable):
 
     # region Heat
     def increase_temperature(self, delta_time: float) -> Rock:
-        delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)  # Assuming size is in meters, and temperature rise is proportional to volume
+        # Assuming size is in meters, and temperature rise is proportional to volume
+        delta_temp = Rock.TEMP_RISE_RATE * delta_time / (self.size ** 3)
         self.temperature += delta_temp
 
         if self.temperature >= self.max_temperature:
@@ -190,7 +193,8 @@ class Rock(Updatable):
 
         self.next_update_at = None
         update_queue.remove(self)
-        logger.info(f"Rock won't be updated anymore, at ({self.longitude}, {self.latitude}). Queue size: {len(update_queue)}")
+        logger.info(f"Rock won't be updated anymore, at ({self.longitude}, {self.latitude}). Queue size: "
+        f"{len(update_queue)}")
     # endregion
 
     # region Alterations

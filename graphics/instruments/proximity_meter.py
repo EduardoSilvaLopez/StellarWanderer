@@ -17,26 +17,28 @@ Colour = Tuple[int, int, int]
 class ProximityMeter:
     """Proximity meter showing the vicinity of the targeted body (`GameEnvironment.targeted_body`).
 
-    The bar is a column of the full height of the map. Its fill is the scale of the fixed zone, drawn only while the ship is
-    in that body's fixed zone, from the surface (bottom) to the fixed zone's edge (top): 1.0x radius distance from centre at
-    the bottom, FIXED_ZONE_RADIUS_MULTIPLE x radius at the top. Outside the fixed zone the bar stays empty.
+    The bar is a column of the full height of the map. Its fill is the scale of the fixed zone, drawn only while the
+    ship is in that body's fixed zone, from the surface (bottom) to the fixed zone's edge (top): 1.0x radius distance
+    from centre at the bottom, FIXED_ZONE_RADIUS_MULTIPLE x radius at the top. Outside the fixed zone the bar stays
+    empty.
 
-    The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the ship is in
-    the fixed zone, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each value sits on its
-    label's row, after the label.
+    The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the ship
+    is in the fixed zone, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each value sits on
+    its label's row, after the label.
 
     The "Approaching" readout is the signed rate of change of the distance to the targeted body
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
-    `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the "Distance"
-    and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds: keeping its
-    direction relative to the body, the ship reaches the surface even braking with only
+    `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the
+    "Distance" and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds:
+    keeping its direction relative to the body, the ship reaches the surface even braking with only
     `Navigation.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
     """
 
     @staticmethod
     def draw_bar(surface: pygame.Surface, h: int, ship: Ship, bar_rect: pygame.Rect) -> None:
-        """The fixed zone's scale in `bar_rect`: a beveled panel, filled from the bottom while the ship is in the fixed zone."""
+        """The fixed zone's scale in `bar_rect`: a beveled panel, filled from the bottom while the ship is in the fixed
+        zone."""
         import game_environment as gem
         from spaceships.navigation import Navigation
         body = gem.current_environment.targeted_body
@@ -82,7 +84,9 @@ class ProximityMeter:
             surface.blit(label_font.render(value, True, value_col), (left + label_surf.get_width() + gap, row_y))
 
         centre_dist = format_compact_distance(ship.navigation.distance_to_body_centre(body))
-        draw_pair(0, 'FIXED' if in_fixed_zone else 'TARGET', BINDING_NEAR_GREEN if in_fixed_zone else ACCENT, body.name, ACCENT)
+        draw_pair(0, 'FIXED' if in_fixed_zone else 'TARGET', BINDING_NEAR_GREEN if in_fixed_zone else ACCENT, body.name,
+                  ACCENT)
         draw_pair(1, 'Distance:', label_colour, centre_dist, ACCENT)
-        draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)), approach_colour)
+        draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
+                  approach_colour)
         draw_pair(3, 'Drift:', ACCENT_LABEL, f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)

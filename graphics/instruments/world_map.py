@@ -64,7 +64,8 @@ class WorldMap:
             WorldMap.drag_position = None
             return
         if not was_pressed:
-            over_zoomed_map = WorldMap.area is not None and WorldMap.area.collidepoint(position) and WorldMap.zoom_index > 0
+            over_zoomed_map = (WorldMap.area is not None and WorldMap.area.collidepoint(position)
+                               and WorldMap.zoom_index > 0)
             WorldMap.dragging = over_zoomed_map
             WorldMap.drag_position = position if WorldMap.dragging else None
         elif WorldMap.dragging and WorldMap.drag_position is not None:
@@ -158,7 +159,8 @@ class WorldMap:
         right = centre_x + (half_world - centre_lon) / scale
         top = centre_y - (half_world / 2 - centre_lat) / scale
         bottom = centre_y - (-half_world / 2 - centre_lat) / scale
-        pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left), round(bottom - top)), 1)
+        pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left),
+                                                          round(bottom - top)), 1)
         WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area)
         surface.set_clip(previous_clip)
 
@@ -169,7 +171,8 @@ class WorldMap:
         day."""
         header_text = world_name_text
         if WorldMap.hovered:
-            header_text = fonts.render_to_fit(f'1 px = {WorldMap._format_scale(scale)}', ACCENT, mfd.width - 12, title_size)
+            header_text = fonts.render_to_fit(f'1 px = {WorldMap._format_scale(scale)}', ACCENT, mfd.width - 12,
+                                              title_size)
         header_rect = header_text.get_rect(midtop=(mfd.centerx, mfd.top + 5))
         surface.blit(header_text, header_rect)
 

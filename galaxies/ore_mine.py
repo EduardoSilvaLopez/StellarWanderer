@@ -105,8 +105,8 @@ class OreMine(Updatable):
         logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, content {self.content}.")
 
     def _extract_completed_periods(self, game_date_time: datetime) -> float:
-        """Extracts the whole extraction periods since last_updated_at, and returns how many there were (0 if under one).
-        The part of a period still running is left for later."""
+        """Extracts the whole extraction periods since last_updated_at, and returns how many there were (0 if under
+        one). The part of a period still running is left for later."""
         periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
         if periods_passed < 1.0:
             return 0

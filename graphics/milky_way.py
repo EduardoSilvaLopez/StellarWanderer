@@ -1,15 +1,15 @@
 """The far background of the sky: the Milky Way, Andromeda and the Magellanic Clouds, where they really are.
 
-The picture is a panorama made by tools/generate_milky_way.py: equirectangular, in galactic coordinates (the centre of the picture
-is galactic longitude 0, the top is the north galactic pole). It is drawn in OpenGL, as a textured sphere around the camera,
-before the sun and under the sky layer (`OpenGLGui.draw`), which is transparent where there is nothing: the GPU does the work,
-and a frame costs one display list.
+The picture is a panorama made by tools/generate_milky_way.py: equirectangular, in galactic coordinates (the centre of
+the picture is galactic longitude 0, the top is the north galactic pole). It is drawn in OpenGL, as a textured sphere
+around the camera, before the sun and under the sky layer (`OpenGLGui.draw`), which is transparent where there is
+nothing: the GPU does the work, and a frame costs one display list.
 
-Where things are: the stellar frame (x right, y up, z forward) is the galactic frame turned, with the initial star as origin
-(galaxies/fixed_stars.py): the galactic centre is straight to -z, the north galactic pole is +y, and a direction at galactic
-longitude l and latitude b is (cos b sin l, sin b, -cos b cos l). The sky is so far away that it is the same for every
-system of the region. Unbound, the sphere stays in the stellar frame; bound, it is turned into the surface frame by
-`Navigation.sky_rotation`, so it moves with the world's spin and the ship's place on it.
+Where things are: the stellar frame (x right, y up, z forward) is the galactic frame turned, with the initial star as
+origin (galaxies/fixed_stars.py): the galactic centre is straight to -z, the north galactic pole is +y, and a direction
+at galactic longitude l and latitude b is (cos b sin l, sin b, -cos b cos l). The sky is so far away that it is the same
+for every system of the region. Unbound, the sphere stays in the stellar frame; bound, it is turned into the surface
+frame by `Navigation.sky_rotation`, so it moves with the world's spin and the ship's place on it.
 
 The picture's brightness is the real one in ratios, not in absolute terms (see MILKY_WAY_EXPOSURE in constants.py).
 """
@@ -35,7 +35,8 @@ LATITUDE_STEPS = 64
 
 
 class MilkyWay:
-    """Draws the panorama on a sphere. The texture and the sphere are made on the first frame; with no picture, nothing is drawn."""
+    """Draws the panorama on a sphere. The texture and the sphere are made on the first frame; with no picture, nothing
+    is drawn."""
 
     _texture: Optional[int] = None
     _sphere: Optional[int] = None  # a display list
@@ -43,7 +44,8 @@ class MilkyWay:
 
     @staticmethod
     def draw(width: int, height: int, ship: Ship, date_time: datetime) -> None:
-        """Draw the sky's background into the canopy part of the window, in the colours that are already there (the clear colour)."""
+        """Draw the sky's background into the canopy part of the window, in the colours that are already there (the
+        clear colour)."""
         if MILKY_WAY_EXPOSURE <= 0.0 or not MilkyWay._ready():
             return
         view_height = int(height * CONSOLE_TOP)
@@ -69,7 +71,8 @@ class MilkyWay:
         GL.glDisable(GL.GL_BLEND)
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glBindTexture(GL.GL_TEXTURE_2D, MilkyWay._texture)
-        GL.glColor3f(MILKY_WAY_EXPOSURE, MILKY_WAY_EXPOSURE, MILKY_WAY_EXPOSURE)  # the texture is multiplied by the colour
+        # the texture is multiplied by the colour
+        GL.glColor3f(MILKY_WAY_EXPOSURE, MILKY_WAY_EXPOSURE, MILKY_WAY_EXPOSURE)
         GL.glCallList(MilkyWay._sphere)
         GL.glDisable(GL.GL_TEXTURE_2D)
         GL.glColor4f(1.0, 1.0, 1.0, 1.0)
@@ -81,7 +84,8 @@ class MilkyWay:
 
     @staticmethod
     def _ready() -> bool:
-        """True when the texture and the sphere exist, making them the first time. False (for good) if the picture is missing."""
+        """True when the texture and the sphere exist, making them the first time. False (for good) if the picture is
+        missing."""
         if MilkyWay._failed:
             return False
         if MilkyWay._texture is None:
@@ -100,7 +104,8 @@ class MilkyWay:
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
-        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT)  # the picture wraps round at the anticentre
+        # the picture wraps round at the anticentre
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT)
         GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
         GL.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1)
         width, height = image.get_size()
@@ -112,8 +117,8 @@ class MilkyWay:
 
     @staticmethod
     def _make_sphere() -> int:
-        """A display list: a sphere in the stellar frame, with the panorama's texture coordinates (u from the galactic longitude,
-        -180 to 180 degrees, v from the latitude, the north pole first)."""
+        """A display list: a sphere in the stellar frame, with the panorama's texture coordinates (u from the galactic
+        longitude, -180 to 180 degrees, v from the latitude, the north pole first)."""
         sphere = int(GL.glGenLists(1))
         GL.glNewList(sphere, GL.GL_COMPILE)
         for row in range(LATITUDE_STEPS):

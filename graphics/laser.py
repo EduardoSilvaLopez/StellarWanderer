@@ -19,8 +19,8 @@ class Laser:
     def draw(width: int, height: int, ship: Ship) -> None:
         """Draw the laser beam if the player is firing.
 
-        Laser is a straight segment from just below the camera to its end point (Scanner.update_target in spaceships/scanner.py):
-        while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
+        Laser is a straight segment from just below the camera to its end point (Scanner.update_target in
+        spaceships/scanner.py): while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
         MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground.
         """
         if not ship.laser.firing:

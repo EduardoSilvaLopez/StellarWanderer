@@ -1,13 +1,14 @@
 """The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules).
 
-The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail: the
-description, and the button that acts on it, if there is one. Esc (or a right-click) goes back from the detail to the list,
-and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar can be dragged (see ScrollBar).
+The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail:
+the description, and the button that acts on it, if there is one. Esc (or a right-click) goes back from the detail to
+the list, and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar
+can be dragged (see ScrollBar).
 
-MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there, the
-latest deadline first), with their deadlines. Under the list (not under a detail) it has two buttons, Leave and Communicate (see
-MissionBoardDialog). PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time
-left, and nothing to act on."""
+MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there,
+the latest deadline first), with their deadlines. Under the list (not under a detail) it has two buttons, Leave and
+Communicate (see MissionBoardDialog). PendingMissionsDialog is the view away from any outpost: the missions taken and
+not yet done, with the time left, and nothing to act on."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -60,7 +61,8 @@ class MissionListDialog(Dialog):
     def __init__(self, title: str, footer_height: int = 0) -> None:
         super().__init__(WIDTH, HEIGHT)
         self.open_mission: Optional[Mission] = None  # the mission whose detail is shown; None for the list
-        self.notice: Optional[Tuple[str, str]] = None  # (mission title, text) shown in place of the list, after a delivery
+        # (mission title, text) shown in place of the list, after a delivery
+        self.notice: Optional[Tuple[str, str]] = None
         self.scroll: int = 0
         self._list_scroll: int = 0  # the list's scroll while a detail is open, restored when the list is shown again
         self.content_height: int = 0
@@ -75,9 +77,11 @@ class MissionListDialog(Dialog):
             self._title = title_font(size).render(title, True, ACCENT)
         self._divider_y = MARGIN - 4 + self._title.get_height() + 12
         text_bottom = HEIGHT - MARGIN - footer_height
-        self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12 - (self._divider_y + 16))
+        self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12
+                                     - (self._divider_y + 16))
         self.scroll_bar = ScrollBar(
-            pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height), ACCENT
+            pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height),
+            ACCENT
         )
 
     # region What a subclass gives
@@ -85,7 +89,8 @@ class MissionListDialog(Dialog):
         raise NotImplementedError
 
     def _deadline_line(self, mission: Mission) -> str:
-        from galaxies.missions.mission_board import DATE_FORMAT  # local: the board's module imports the player, which imports this package
+        # local: the board's module imports the player, which imports this package
+        from galaxies.missions.mission_board import DATE_FORMAT
         return f"Deadline: {mission.deadline.strftime(DATE_FORMAT)}"
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
@@ -148,7 +153,8 @@ class MissionListDialog(Dialog):
         return items
 
     def _row(self, mission: Mission, width: int) -> Item:
-        """One mission in the list: its title, a line about time and, if it has one, its progress, in a box. A click opens its detail."""
+        """One mission in the list: its title, a line about time and, if it has one, its progress, in a box. A click
+        opens its detail."""
         lines: List[pygame.Surface] = [
             title_font(HEADING_SIZE).render(mission.title(), True, ACCENT),
             body_font(BODY_SIZE).render(self._deadline_line(mission), True, LABEL_COLOR),
@@ -256,7 +262,8 @@ class MissionListDialog(Dialog):
         pygame.draw.rect(surface, ACCENT_DIM, outer, 1)
         pygame.draw.rect(surface, ACCENT, outer.inflate(-10, -10), 1)
         bracket = 22
-        for (cx, cy, sx, sy) in ((5, 5, 1, 1), (WIDTH - 6, 5, -1, 1), (5, HEIGHT - 6, 1, -1), (WIDTH - 6, HEIGHT - 6, -1, -1)):
+        for (cx, cy, sx, sy) in ((5, 5, 1, 1), (WIDTH - 6, 5, -1, 1), (5, HEIGHT - 6, 1, -1),
+                                 (WIDTH - 6, HEIGHT - 6, -1, -1)):
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx + sx * bracket, cy), 3)
             pygame.draw.line(surface, ACCENT, (cx, cy), (cx, cy + sy * bracket), 3)
 
@@ -297,10 +304,10 @@ class MissionListDialog(Dialog):
 class MissionBoardDialog(MissionListDialog):
     """The board of an outpost: the player's missions to deliver here, and the offers to take.
 
-    Under the list (not under a detail or a notice) are two buttons: Leave, which does what Esc does there, and Communicate,
-    with the portrait of the outpost's com officer. Results: ('close', None) and ('communicate', None); the host talks to the
-    officer and opens the board again (see main.visit_mission_board). Tab, Left and Right move the focus between the buttons,
-    Enter presses the focused one, and the mouse moves the focus too."""
+    Under the list (not under a detail or a notice) are two buttons: Leave, which does what Esc does there, and
+    Communicate, with the portrait of the outpost's com officer. Results: ('close', None) and ('communicate', None); the
+    host talks to the officer and opens the board again (see main.visit_mission_board). Tab, Left and Right move the
+    focus between the buttons, Enter presses the focused one, and the mouse moves the focus too."""
 
     OPEN_SOUND = 'board_open'
 
@@ -314,7 +321,8 @@ class MissionBoardDialog(MissionListDialog):
             pygame.Rect(MARGIN + index * (width + FOOTER_BUTTON_GAP), top, width, FOOTER_BUTTON_HEIGHT)
             for index in range(len(FOOTER_LABELS))]
         icon = board.outpost.com_officer.icon  # no officer is an error: the outpost is prepared when its Km2 is made
-        self._portrait: Optional[pygame.Surface] = None if icon is None else pygame.transform.smoothscale(icon, PORTRAIT_SIZE)
+        self._portrait: Optional[pygame.Surface] = (
+            None if icon is None else pygame.transform.smoothscale(icon, PORTRAIT_SIZE))
 
     def _draw_footer(self, surface: pygame.Surface) -> None:
         font = body_font(20)
@@ -372,8 +380,8 @@ class MissionBoardDialog(MissionListDialog):
 
 
 class PendingMissionsDialog(MissionListDialog):
-    """The missions the player has taken and not yet done, with the time left. Nothing to act on here: delivery is at the
-    outpost's board."""
+    """The missions the player has taken and not yet done, with the time left. Nothing to act on here: delivery is at
+    the outpost's board."""
 
     def __init__(self, missions: List[Mission]) -> None:
         super().__init__('Pending missions')

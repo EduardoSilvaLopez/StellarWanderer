@@ -17,16 +17,17 @@ DEVELOPER'S DIARY
   Hierarchy of sectors. 'Relevant asteroids' are different.
   * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
 
-> Not committed yet but done:
+> Not committed yet but done: 
 
 > Not done yet but started:
 
   * Phase 3: Show the asteroid in radar and label.
 
-Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 
+Extra time: 88h00' + 11:00 - 12:45 + 14:30 - 15:15
 
 # NOT STARTED YET = BACKLOG
   * Phase 4: How they look like. How to scan. Land?
+  * Extra: button for ship specifications.
   * Hull integrity damages and events when in the asteroids.
   * Outpost gives coordinates as prize? Or very good ones.
   * Extra: Cooler laser.
@@ -38,6 +39,7 @@ Extra time: 88h00' + 11:00 - 12:45 + 14:30 -
 
 * OROGRAPHY
   * Extra: 120 chars in code.
+  * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
   * Extra: Retirement.
   * Craters

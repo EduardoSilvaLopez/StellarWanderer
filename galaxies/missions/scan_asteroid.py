@@ -33,8 +33,8 @@ class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
     CHANCES_PER_DAY = 0.50 # Testing
-    DAYS_MIN = 30
-    DAYS_MAX = 60
+    DAYS_MIN = 45
+    DAYS_MAX = 90
     # Each day of an offer's life, from the day it is made: the chance somebody takes it.
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02
     FREE_LIVING_CHANCE = 0.10  # of the offers in a system with a belt: the target belongs to no belt
@@ -173,7 +173,7 @@ class ScanAsteroid(Mission):
         return f"You have not scanned the asteroid {self.asteroid().name} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 20.0 * self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
+        reputation_change: float = 50.0 * self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: asteroid scanned. "
                     f"Reputation +{reputation_change} = {player.those_who_share.reputation}"

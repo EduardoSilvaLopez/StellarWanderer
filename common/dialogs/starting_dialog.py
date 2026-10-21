@@ -26,7 +26,8 @@ DOUBLE_CLICK_MS = 400
 
 
 def _blit_centred_on_ink(surface: pygame.Surface, text: pygame.Surface, x: int, rect: pygame.Rect) -> None:
-    """Blit `text` at x with its visible glyphs centred on the rect's height (the font's box has space above and below)."""
+    """Blit `text` at x with its visible glyphs centred on the rect's height (the font's box has space above and
+    below)."""
     ink = text.get_bounding_rect()
     surface.blit(text, (x, rect.centery - ink.centery))
 
@@ -53,8 +54,8 @@ class StartingDialog(Dialog):
     The Instructions button shows the instructions screen (see InstructionsDialog) in its place until Back.
     ('save', '') means the default name: the text box is empty, and its grey text shows that name.
 
-    Esc opens it from the game and does not quit; the Exit game button (or closing the window) does. A right-click outside
-    the saves does what Esc does; a right-click on a save asks to delete it.
+    Esc opens it from the game and does not quit; the Exit game button (or closing the window) does. A right-click
+    outside the saves does what Esc does; a right-click on a save asks to delete it.
     The save row is only offered while a game is running.
     """
 
@@ -97,7 +98,8 @@ class StartingDialog(Dialog):
         # right of both rows, and the free space between New Game and the icon is for further buttons.
         # The icon is a square: its top is the top of the title's letters, its bottom the bottom of the Save row.
         # The Save row, the Instructions button and the file box stop a gap short of the icon's left edge.
-        title_top = self.TITLE_TOP + title_font(self.TITLE_SIZE).render(self.TITLE, True, (0, 0, 0)).get_bounding_rect().top
+        title_top = self.TITLE_TOP + title_font(self.TITLE_SIZE).render(self.TITLE, True,
+                                                                        (0, 0, 0)).get_bounding_rect().top
         save_bottom = self.NAME_ROW_Y + 28
         icon_size = save_bottom - title_top
         self.icon_rect = pygame.Rect(self.WIDTH - self.MARGIN - icon_size, title_top, icon_size, icon_size)
@@ -111,7 +113,8 @@ class StartingDialog(Dialog):
                                      self.HEIGHT - self.LIST_TOP - self.EXIT_ROW_HEIGHT)
         # The list scrolls by rows: the bar's unit is a row, its content the saves, its view `_max_visible` of them.
         self.scroll_bar = ScrollBar(
-            pygame.Rect(self.list_rect.right - 20, self.list_rect.top + 5, 10, self.list_rect.height - 10),  # inside the list, clear of the entries
+            # inside the list, clear of the entries
+            pygame.Rect(self.list_rect.right - 20, self.list_rect.top + 5, 10, self.list_rect.height - 10),
             (100, 150, 200), (60, 60, 80), min_thumb=20,
         )
         self.exit_rect = pygame.Rect(self.WIDTH // 2 - 100, self.HEIGHT - self.EXIT_ROW_HEIGHT + 12, 200, 32)

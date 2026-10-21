@@ -136,7 +136,8 @@ def weather(surface: pygame.Surface, rng: np.random.Generator, strength: float =
         angle = float(rng.uniform(0.0, math.tau))
         length = int(rng.integers(5, 28))
         end = (x0 + int(math.cos(angle) * length), y0 + int(math.sin(angle) * length))
-        colour = (240, 240, 236, int(rng.integers(14, 34))) if rng.random() < 0.6 else (0, 0, 0, int(rng.integers(16, 36)))
+        colour = (240, 240, 236, int(rng.integers(14, 34))) if rng.random() < 0.6 else (0, 0, 0,
+                                                                                        int(rng.integers(16, 36)))
         pygame.draw.line(scratches, colour, (x0, y0), end, 1)
     result.blit(scratches, (0, 0))
     return result
@@ -265,8 +266,10 @@ def sensor_dome(surface: pygame.Surface, centre: Tuple[int, int], radius: int) -
     pygame.draw.circle(surface, FRAME_LIGHT, centre, radius + 5, 2)
     for r in range(radius, 0, -1):
         t = r / radius
-        pygame.draw.circle(surface, (int(20 + 90 * (1 - t)), int(28 + 100 * (1 - t)), int(40 + 120 * (1 - t))), centre, r)
-    pygame.draw.ellipse(surface, (190, 214, 236), (centre[0] - radius // 2, centre[1] - radius + 3, radius // 2, radius // 3))
+        pygame.draw.circle(surface, (int(20 + 90 * (1 - t)), int(28 + 100 * (1 - t)), int(40 + 120 * (1 - t))), centre,
+                           r)
+    pygame.draw.ellipse(surface, (190, 214, 236), (centre[0] - radius // 2, centre[1] - radius + 3, radius // 2,
+                                                   radius // 3))
 
 
 def thruster_cluster(surface: pygame.Surface, centre: Tuple[int, int]) -> None:
@@ -297,7 +300,8 @@ def airlock_door(surface: pygame.Surface, door: pygame.Rect, label: str) -> None
     pygame.draw.circle(surface, (16, 22, 28), (door.centerx, door.top + 28), 12)
     pygame.draw.rect(surface, (20, 22, 26), (door.right + 16, door.centery - 6, 12, 24))
     for k in range(6):
-        pygame.draw.rect(surface, (96, 102, 110), (door.right + 18 + (k % 2) * 5, door.centery - 3 + (k // 2) * 6, 3, 3))
+        pygame.draw.rect(surface, (96, 102, 110), (door.right + 18 + (k % 2) * 5, door.centery - 3 + (k // 2) * 6, 3,
+                                                   3))
     hazard(surface, pygame.Rect(door.left - 14, door.bottom - 12, door.width + 28, 12))
     stencil(surface, label, (door.centerx, door.top + 62), 8, (214, 214, 206))
 
@@ -339,7 +343,8 @@ def glass_fill(size: Tuple[int, int], lit: bool, tone: int, rng: np.random.Gener
         pygame.draw.rect(glass, (255, 255, 250, 200), (2, 1, w - 4, 2))  # the ceiling light strip
         for _ in range(max(1, w // 45)):  # consoles, as a few low dark shapes
             bx, bw = int(rng.integers(0, max(1, w - 10))), int(rng.integers(8, 20))
-            pygame.draw.rect(glass, (50, 62, 74, int(rng.integers(50, 100))), (bx, h - int(rng.integers(5, 10)), bw, 12))
+            pygame.draw.rect(glass, (50, 62, 74, int(rng.integers(50, 100))), (bx, h - int(rng.integers(5, 10)), bw,
+                                                                               12))
     else:
         pygame.draw.polygon(glass, (200, 220, 240, 34), [(w // 4, 0), (w // 2, 0), (w // 4, h), (0, h)])
     return glass
@@ -479,7 +484,8 @@ def paint_back(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]
     return surface, light
 
 
-def paint_side(rng: np.random.Generator, number: str, door_x: int, ports_x: int) -> Tuple[pygame.Surface, List[Emissive]]:
+def paint_side(rng: np.random.Generator, number: str, door_x: int, ports_x: int) -> Tuple[pygame.Surface,
+                                                                                          List[Emissive]]:
     w, h = 480, 240
     surface = base_wall(rng, w, h)
     light: List[Emissive] = []
@@ -528,14 +534,16 @@ def paint_roof(rng: np.random.Generator) -> Tuple[pygame.Surface, List[Emissive]
             for y in range(inner.top + 22, inner.bottom, 22):
                 pygame.draw.line(surface, (46, 66, 106), (inner.left, y), (inner.right, y))
             pygame.draw.polygon(surface, (80, 110, 160), [
-                (inner.left, inner.bottom), (inner.left + 24, inner.top), (inner.left + 40, inner.top), (inner.left + 16, inner.bottom)])
+                (inner.left, inner.bottom), (inner.left + 24, inner.top), (inner.left + 40, inner.top),
+                (inner.left + 16, inner.bottom)])
 
     # Radiators, a sensor dome, the comms dish, a sealed hatch.
     radiator(surface, pygame.Rect(650, 50, 110, 96), 'THERMAL')
     radiator(surface, pygame.Rect(790, 50, 110, 96), 'THERMAL')
     sensor_dome(surface, (710, 214), 22)
     dish = (800, 330)
-    for radius, colour in ((74, FRAME_LIGHT), (68, (186, 190, 196)), (48, (164, 168, 174)), (28, (140, 144, 150)), (8, FRAME_DARK)):
+    for radius, colour in ((74, FRAME_LIGHT), (68, (186, 190, 196)), (48, (164, 168, 174)), (28, (140, 144, 150)),
+                           (8, FRAME_DARK)):
         pygame.draw.circle(surface, colour, dish, radius)
     pygame.draw.line(surface, FRAME_DARK, dish, (dish[0] + 58, dish[1] - 34), 6)
     hatch = pygame.Rect(610, 290, 96, 70)
@@ -576,7 +584,8 @@ def paint_metal(rng: np.random.Generator) -> pygame.Surface:
 # endregion
 
 
-def finish(painted: Tuple[pygame.Surface, List[Emissive]], rng: np.random.Generator, strength: float = 1.0) -> pygame.Surface:
+def finish(painted: Tuple[pygame.Surface, List[Emissive]], rng: np.random.Generator,
+           strength: float = 1.0) -> pygame.Surface:
     surface, light = painted
     surface = weather(surface, rng, strength)
     for paint in light:
