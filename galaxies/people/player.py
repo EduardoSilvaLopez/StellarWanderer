@@ -48,6 +48,8 @@ class Player:
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Outpost] = None  # the outpost the pilot is in, if any (not the cockpit)
+        # The conversation tags of the chat (see outpost_chat.py): one set for the pilot, not per person, saved sorted.
+        self.conversation_tags: set[str] = {'<present yourself>'}
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -154,6 +156,7 @@ class Player:
             'credits': self.credits,
             'inside_outpost': self.inside.full_keys() if self.inside is not None else None,
             'missions': [mission.serialize() for mission in self.missions],
+            'conversation_tags': sorted(self.conversation_tags),
             'political_status': {
                 'Those-Who-Share': self.those_who_share.serialize()
             }
@@ -173,6 +176,7 @@ class Player:
         for mission in result.missions:
             mission.watch_deadline()
         result.ship = Ship.deserialize(result, loaded_attributes['ship'])
+        result.conversation_tags = set(loaded_attributes['conversation_tags'])
 
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == political_entity.THOSE_WHO_SHARE.name:

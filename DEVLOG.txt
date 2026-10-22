@@ -27,7 +27,7 @@ DEVELOPER'S DIARY
   * Extra: No more PAUSED mode.
   * Extra: 120 chars in code.
 
-### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30 + 11:30 - 13:00 + 14:45 -
+### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30 + 11:30 - 13:00 + 14:45 -19:30
 
 * INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
   * Entering and leaving spends time.
@@ -40,19 +40,15 @@ DEVELOPER'S DIARY
   * "Ship" button behaviour.
   * "Missions" button behaviour.
   * Installing "Blender" via Claude for its use.
+  * "Chat" button behaviour
 
 > STARTED:
-  
-  * "Chat" button behaviour
-In the center, a set (not list) of "conversation tags" appears in alphabetical order. This set is saved and loaded for the user (I will migrate the save files) and is unique, not per NPC. This list is initialised with "<present yourself>" as only item. On clicking, a new conversation "outpost_chat" is started, a stub which I will fill up later, derived from "Conversation".
-The texts produced by this conversation should not be presented as separated dialogs, but piled in the right side in the style of a real life chat application (one horizontal and color per interlocutor, one color per interlocutor). There, the button texts will be presented as possible replies from the player (the one chosen remains after selection) and the texts from the NPC as the answers. If the conversation dies out (no more buttons for the player to select) he can click a conversation tag and so start the next one inside the same chat.
-The texts by the NPC include some mark (I propose [] but feel free to present a different proposal). If an expression is written with these marks, it becomes a new conversation tag the player can use.
-For example: if I write in the code that the NPC says "I came with my [family]", from the point this text is presented, the player has the conversation tag "family".
-You must present in outpost_chat a method I can use to write these texts and offer buttons and callback methods, but which do not create dialog windows but write in the chat.
-  * Time costs of actions: Move cargo, chat with people (30 per person)
+  * Check the whole thing with a new game, also to save tokens.  
  
 # NOT STARTED YET = BACKLOG
 
+  * Time costs of actions: Move cargo, chat with people.
+  * Remove the old dialog.
   * Refine it all, when I have enough tokens.
   * Different backgrounds for different points of the menu.
   * Extra: Retirement.

@@ -9,9 +9,8 @@ On the left, the name of the outpost, and under it, smaller, the world, star and
 group of five buttons (Report, Cargo, Missions, Chat, Leave): one is always selected, and Report is the one selected
 when the screen opens. The selected one is filled with the accent colour. What it does is what the right side shows:
 Report starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's missions (OutpostMissions,
-drawn over the picture), and Chat the people of the outpost who can be chatted with now (StaffList, one card each,
-on the right of three areas; the other two are reserved, nothing is drawn in them yet). On the right, the
-picture of the outpost
+drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
+middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the outpost
 (common/resources/backgrounds, the files named outpost*), chosen from the outpost's seed, so the same outpost always
 shows the same picture; faded dark. At the top left of the right side, the dockmaster on duty: the portrait, the full
 name with its title beside it, and under the name the age and the role.
@@ -36,6 +35,8 @@ from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
 from .messages import Message, ResultCallback
+from galaxies.people.chat_log import ChatLog
+from .chat_view import ChatTags, ChatView
 from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
 from .scroll_bar import ScrollBar
 from .staff_list import StaffList
@@ -43,6 +44,7 @@ from .staff_list import StaffList
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.conversation import Conversation
+    from galaxies.people.conversations.outpost_chat import OutpostChat
     from galaxies.people.person import Person
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
@@ -65,6 +67,7 @@ CARGO_PICTURE_FRACTION = 0.36  # the ship's picture in the cargo view, as a shar
 ANSWER_SHADE = (0, 0, 0, 110)  # an answer is a translucent rectangle over the picture...
 ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour while the mouse is over it
 CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of the window's height
+CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the people (the chat takes the rest)
 TIME_DISPLAY_BOTTOM = 0.115  # the ship time display's bottom (graphics/instruments/clock.py), of the window's height
 
 
@@ -114,6 +117,17 @@ def _wrap(text: str, font: pygame.font.Font, width: int) -> List[str]:
 
 def _margin(height: int) -> int:
     return max(10, height // 50)
+
+
+def _list_in_panel(surface: pygame.Surface, panel: pygame.Rect, margin: int) -> pygame.Rect:
+    """Draws `panel` as a dark panel (MESSAGE_PANEL_SHADE, ACCENT_DIM border), and returns where a list in it goes:
+    inside the margin, with the room of its scroll bar on the right (see _ScrolledList.place)."""
+    shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+    shade.fill(MESSAGE_PANEL_SHADE)
+    surface.blit(shade, panel)
+    pygame.draw.rect(surface, ACCENT_DIM, panel, 1)
+    inner = panel.inflate(-2 * margin, -2 * margin)
+    return pygame.Rect(inner.left, inner.top, inner.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH, inner.height)
 
 
 def _button_size(height: int) -> Tuple[int, int]:
@@ -176,8 +190,11 @@ class OutpostScreenDialog(Dialog):
     select options.
 
     Chat (selected): the people listed now (Outpost.available_staff, see StaffList), in a dark panel on the right of
-    the block. A click selects a card; Tab goes over the cards and Enter or Space selects the focused one. The middle
-    and the right areas are reserved, nothing is drawn in them yet."""
+    the block. A click selects a card; Tab goes over the cards and Enter or Space selects the focused one. The
+    conversation tags are on the left, the chat log in the middle (ChatView): a click on a tag starts an OutpostChat
+    with the selected person, in the same log, and a click on an open reply chooses it. Tags and replies are also
+    reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
+    and starts an empty log. Leaving the option ends the conversation."""
 
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
@@ -222,7 +239,11 @@ class OutpostScreenDialog(Dialog):
         self._ship_image_size: Optional[Tuple[int, int]] = None
         self._missions: Optional[OutpostMissions] = None  # the list of the Missions option, made when it is selected
         self._chat: Optional[StaffList] = None  # the people of the Chat option, made when it is selected
-        self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat, where they were last drawn
+        self._chat_tags: Optional[ChatTags] = None  # the conversation tags, on the left of Chat
+        self._chat_view: Optional[ChatView] = None  # the chat log, in the middle of Chat
+        self._chat_log: Optional[ChatLog] = None  # the chat with the person selected (see _sync_chat_log)
+        self._chat_conversation: Optional[OutpostChat] = None  # the conversation the last tag started
+        self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat (tags, log, people), where last drawn
         self._focus_visible: bool = False
         self._asking_to_leave: bool = False  # the question of leaving with the repair going is in the panel
         self._leaving: bool = False  # it was answered Yes: the next event ends the screen
@@ -362,28 +383,78 @@ class OutpostScreenDialog(Dialog):
             y += row_height + gap
 
     def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
-        """Chat: three areas in the block, inside its margin and under the ship time display. The people are drawn in a
-        dark panel on the right, CHAT_PEOPLE_FRACTION of the height wide (StaffList); tags and conversation share the
-        left and are only reserved for now."""
+        """Chat: three areas in the block, inside its margin and under the ship time display: the tags and the chat log
+        share the left, in dark panels, and the people are on the right, CHAT_PEOPLE_FRACTION of the height wide."""
         margin = _margin(height)
         top = max(right.top + margin, int(height * TIME_DISPLAY_BOTTOM) + margin)
         area = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
         people_width = min(int(height * CHAT_PEOPLE_FRACTION), area.width - 2 * margin)
         people = pygame.Rect(area.right - people_width, area.top, people_width, area.height)
         left_width = people.left - margin - area.left
-        tags_width = (left_width - margin) // 2
+        tags_width = int((left_width - margin) * CHAT_TAGS_SHARE)
         tags = pygame.Rect(area.left, area.top, tags_width, area.height)
         conversation = pygame.Rect(tags.right + margin, area.top, left_width - tags_width - margin, area.height)
         self._chat_areas = [tags, conversation, people]
+        self._sync_chat_log()
+        focus_kind = self._focus[0] if self._focus_visible else None
 
-        shade = pygame.Surface(people.size, pygame.SRCALPHA)
-        shade.fill(MESSAGE_PANEL_SHADE)
-        surface.blit(shade, people)
-        pygame.draw.rect(surface, ACCENT_DIM, people, 1)
-        inner = people.inflate(-2 * margin, -2 * margin)
-        self._chat.place(pygame.Rect(inner.left, inner.top, inner.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH,
-                                     inner.height))
-        self._chat.draw(surface, self._focus[1] if self._focus_visible and self._focus[0] == 'person' else None)
+        names = self._chat_tags_now()
+        tags_focus = names.index(self._focus[1]) if focus_kind == 'tag' and self._focus[1] in names else None
+        self._chat_tags.place(_list_in_panel(surface, tags, margin))
+        self._chat_tags.draw(surface, names, self._chat_active(), tags_focus)
+
+        reply_focus = self._focus[1] if focus_kind == 'reply' else None
+        self._chat_view.place(_list_in_panel(surface, conversation, margin))
+        self._chat_view.draw(surface, self._chat_log, reply_focus)
+
+        person_focus = self._focus[1] if focus_kind == 'person' else None
+        self._chat.place(_list_in_panel(surface, people, margin))
+        self._chat.draw(surface, person_focus)
+
+    def _sync_chat_log(self) -> None:
+        """The chat log is the chat with the person selected: another person, or none, ends the conversation and
+        starts a new log, so each person has their own chat."""
+        person = self._chat.selected
+        if self._chat_log is not None and self._chat_log.person is person:
+            return
+        self._end_chat()
+        self._chat_log = ChatLog(person) if person is not None else None
+
+    def _end_chat(self) -> None:
+        """Ends the conversation of the chat, if one is going, and the log with it."""
+        if self._chat_conversation is not None:
+            self._chat_conversation.close()
+            self._chat_conversation = None
+        self._chat_log = None
+
+    def _chat_tags_now(self) -> List[str]:
+        """The pilot's conversation tags, alphabetical: '<present yourself>' comes first."""
+        from galaxies.people.player import current_player  # local: the player needs the dialogs
+        return sorted(current_player.conversation_tags)
+
+    def _chat_active(self) -> bool:
+        """Tags start a conversation while a person is selected and no reply is open (the conversation is not over)."""
+        return self._chat.selected is not None and (self._chat_log is None or self._chat_log.replies is None)
+
+    def _start_tag(self, tag: str) -> None:
+        """A tag starts its conversation with the person selected, in the same log as the chat before (see
+        OutpostChat). Nothing happens while the chat is not active (see _chat_active)."""
+        from galaxies.people.conversations.outpost_chat import OutpostChat  # local: the conversations need the dialogs
+        from galaxies.people.player import current_player
+        self._sync_chat_log()
+        if not self._chat_active():
+            return
+        if self._chat_conversation is not None:
+            self._chat_conversation.close()
+        self._chat_conversation = OutpostChat(current_player, self._chat_log.person, self._chat_log, tag)
+        self._chat_conversation.start()
+
+    def _choose_reply(self, index: int) -> None:
+        """The player chooses a reply of the chat: the log keeps it, and the conversation that offered it is
+        answered."""
+        self._sync_chat_log()
+        if self._chat_log is not None:
+            self._chat_log.choose(index)
 
     def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The missions of the outpost (OutpostMissions) in a dark panel over the block, its scroll bar at the right,
@@ -583,7 +654,15 @@ class OutpostScreenDialog(Dialog):
         elif BUTTON_LABELS[self.selected] == 'Missions':
             self._open_missions()
         elif BUTTON_LABELS[self.selected] == 'Chat':
-            self._chat = StaffList(self.outpost)
+            self._open_chat()
+
+    def _open_chat(self) -> None:
+        """Chat: the people listed now, the tags and an empty chat log. The log is made when a person is selected."""
+        self._chat = StaffList(self.outpost)
+        self._chat_tags = ChatTags(self._start_tag)
+        self._chat_view = ChatView(self._choose_reply)
+        self._chat_log = None
+        self._chat_conversation = None
 
     def _open_missions(self) -> None:
         """Missions: the board's offers are brought up to date, and their list is made (see OutpostMissions). The list
@@ -600,10 +679,12 @@ class OutpostScreenDialog(Dialog):
             self._select(BUTTON_LABELS.index('Cargo'))
 
     def _close_option(self) -> None:
-        """Ends the conversation of the option, if one is going, and clears the messages of the panel."""
+        """Ends the conversation of the option, if one is going, and clears the messages of the panel. The chat's
+        conversation ends too, and its log is cleared."""
         if self.conversation is not None:
             self.conversation.close()
             self.conversation = None
+        self._end_chat()
         self._queue.clear()
         self._shown = None
         self._asking_to_leave = False
@@ -706,11 +787,19 @@ class OutpostScreenDialog(Dialog):
         return BUTTON_LABELS[self.selected] == 'Chat' and self._shown is None
 
     def _chat_event(self, event: pygame.event.Event) -> bool:
-        """The events the people's list takes: its clicks (a card is selected), its scroll (the wheel, the scroll bar,
-        Page Up and Page Down). The arrow keys stay with the options. True if it took the event."""
+        """The events of Chat's three lists: the tags, the log (its replies) and the people. A click goes to the list it
+        is in, the wheel to the list under the mouse, and Page Up and Page Down to all of them; the scroll bars drag on
+        their own. The arrow keys stay with the options. True if a list took the event."""
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
             return False
-        return self._chat.handle_event(event)
+        self._sync_chat_log()
+        lists = (self._chat_tags, self._chat_view, self._chat)
+        if event.type == pygame.MOUSEWHEEL:
+            mouse = pygame.mouse.get_pos()
+            return any(widget.handle_event(event) for area, widget in zip(self._chat_areas, lists)
+                       if area.collidepoint(mouse))
+        results = [widget.handle_event(event) for widget in lists]  # every list gets its turn: a drag, a page
+        return any(results)
 
     def _focus_targets(self) -> List[tuple]:
         """What Tab goes over, in order: the options (Leave among them), the −, + and ++ of each cargo row while Cargo
@@ -722,7 +811,11 @@ class OutpostScreenDialog(Dialog):
             for k in range(len(SUPPLIES)):
                 targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
         if self._shows_chat():
+            self._sync_chat_log()
+            targets += [('tag', tag) for tag in self._chat_tags_now()]
             targets += [('person', index) for index in range(len(self._chat.available()))]
+            if self._chat_log is not None and self._chat_log.replies:
+                targets += [('reply', j) for j in range(len(self._chat_log.replies))]
         if self._shown is not None:
             targets += [('answer', j) for j in range(len(self._shown[0].buttons))]
         return targets
@@ -749,6 +842,10 @@ class OutpostScreenDialog(Dialog):
             self._fill_cargo(token[1])
         elif token[0] == 'person':
             self._chat.select_at(token[1])
+        elif token[0] == 'tag':
+            self._start_tag(token[1])
+        elif token[0] == 'reply':
+            self._choose_reply(token[1])
         elif BUTTON_LABELS[token[1]] == 'Leave' or token[1] != self.selected:
             self._select(token[1])
         elif self._shown is not None:
