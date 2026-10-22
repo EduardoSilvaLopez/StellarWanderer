@@ -5,10 +5,13 @@ the description, and the button that acts on it, if there is one. Esc (or a righ
 the list, and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar
 can be dragged (see ScrollBar).
 
+MissionList is the list and the detail themselves, drawn in a rectangle its owner gives it (`place`), with no frame and
+no keys of its own: the owner feeds it the events. MissionListDialog is a window over one MissionList.
 MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there,
 the latest deadline first), with their deadlines. Under the list (not under a detail) it has two buttons, Leave and
 Communicate (see MissionBoardDialog). PendingMissionsDialog is the view away from any outpost: the missions taken and
-not yet done, with the time left, and nothing to act on."""
+not yet done, with the time left, and nothing to act on. OutpostMissions is the Missions of the outpost's screen
+(outpost_screen.py): "Available" and "Taken" (the open missions taken here), both the latest deadline first."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -42,6 +45,7 @@ ROW_GAP = 12
 BUTTON_WIDTH = 150
 BUTTON_HEIGHT = 36
 SCROLL_STEP = 40
+SCROLL_BAR_GAP = 10  # between the text and the scroll bar to its right
 PAGE_KEYS = {pygame.K_PAGEUP: -1, pygame.K_PAGEDOWN: 1}
 FOOTER_HEIGHT = 70  # the band under the text that MissionBoardDialog keeps for its two buttons
 FOOTER_BUTTON_HEIGHT = 64
@@ -54,12 +58,14 @@ Item = Tuple[pygame.Surface, int, Optional[pygame.Rect], Optional[Callable[[], N
 Section = Tuple[str, List['Mission'], str]
 
 
-class MissionListDialog(Dialog):
-    """The list and the detail of missions. A subclass gives the sections, the line about time, and the action, if any.
-    `footer_height` is the band under the text that a subclass keeps for its own buttons."""
+class MissionList:
+    """The list and the detail of missions, in the rectangle `place` gives (the text, with the scroll bar a gap to its
+    right). A subclass gives the sections, the line about time, and the action, if any. The owner draws its frame and
+    passes it the events: draw_content, handle_content_event and back."""
 
-    def __init__(self, title: str, footer_height: int = 0) -> None:
-        super().__init__(WIDTH, HEIGHT)
+    def __init__(self) -> None:
+        self.text_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # set by place
+        self.scroll_bar: ScrollBar = ScrollBar(pygame.Rect(0, 0, ScrollBar.MIN_WIDTH, 0), ACCENT)
         self.open_mission: Optional[Mission] = None  # the mission whose detail is shown; None for the list
         # (mission title, text) shown in place of the list, after a delivery
         self.notice: Optional[Tuple[str, str]] = None
@@ -68,22 +74,11 @@ class MissionListDialog(Dialog):
         self.outcome: Optional[DialogResult] = None  # set by an action that ends the dialog (see _act)
         self.content_height: int = 0
         self._clickable: List[Tuple[pygame.Rect, Callable[[], None]]] = []  # where the clickable lines were last drawn
-        self._texture: Optional[pygame.Surface] = None
-        self._texture_loaded: bool = False
 
-        size = TITLE_SIZE
-        self._title = title_font(size).render(title, True, ACCENT)
-        while self._title.get_width() > WIDTH - 2 * MARGIN and size > 12:
-            size -= 1
-            self._title = title_font(size).render(title, True, ACCENT)
-        self._divider_y = MARGIN - 4 + self._title.get_height() + 12
-        text_bottom = HEIGHT - MARGIN - footer_height
-        self.text_rect = pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12
-                                     - (self._divider_y + 16))
-        self.scroll_bar = ScrollBar(
-            pygame.Rect(self.text_rect.right + 10, self.text_rect.top, ScrollBar.MIN_WIDTH, self.text_rect.height),
-            ACCENT
-        )
+    def place(self, rect: pygame.Rect) -> None:
+        """Puts the text in `rect`, and the scroll bar SCROLL_BAR_GAP to its right: the rect must leave room for it."""
+        self.text_rect = rect
+        self.scroll_bar.track = pygame.Rect(rect.right + SCROLL_BAR_GAP, rect.top, ScrollBar.MIN_WIDTH, rect.height)
 
     # region What a subclass gives
     def _sections(self) -> List[Section]:
@@ -207,6 +202,14 @@ class MissionListDialog(Dialog):
         self.scroll = self._list_scroll
         self._clickable = []
 
+    def back(self) -> bool:
+        """Back from a detail or a notice to the list, with its sound. False, and nothing done, if the list is shown."""
+        if self.open_mission is None and self.notice is None:
+            return False
+        audio.play('ui_close')
+        self._show_list()
+        return True
+
     def _act(self, action: Callable[[Mission], Optional[str]], mission: Mission) -> None:
         """The board changes, so the list is shown again at its scroll. An action that answers with a text (a delivery's
         reward) shows it first, from the top: Esc (or a right-click) then goes back to the list."""
@@ -217,6 +220,82 @@ class MissionListDialog(Dialog):
             self.scroll = 0
 
     # endregion
+
+    # region Drawing
+    def draw_content(self, surface: pygame.Surface) -> None:
+        """The lines of the list, detail or notice in text_rect, clipped to it, and the scroll bar beside it."""
+        self._clickable = []
+        previous_clip = surface.get_clip()
+        surface.set_clip(self.text_rect)
+        items = self._items(self.text_rect.width)
+        self.content_height = sum(gap + block.get_height() for block, gap, _, _ in items)
+        self.scroll = min(self.scroll, self._max_scroll())  # the list may have become shorter since it was scrolled
+        y = 0
+        for block, gap, rect, action in items:
+            y += gap
+            top = self.text_rect.top + y - self.scroll
+            if top + block.get_height() >= self.text_rect.top and top <= self.text_rect.bottom:
+                surface.blit(block, (self.text_rect.left, top))
+            if rect is not None and action is not None:
+                self._clickable.append((rect.move(self.text_rect.left, top), action))
+            y += block.get_height()
+        surface.set_clip(previous_clip)
+
+        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
+
+    # endregion
+
+    # region Events
+    def handle_content_event(self, event: pygame.event.Event) -> bool:
+        """The scroll bar, the wheel, the arrow and page keys, and a click on a line of the list. True if the event was
+        the list's, and was used; the arrow keys are the list's too, so an owner that gives them to something else must
+        not pass them here."""
+        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self.text_rect.height)
+        if moved is not None:
+            self.scroll = moved
+            return True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self._scroll_by(-SCROLL_STEP)
+            elif event.key == pygame.K_DOWN:
+                self._scroll_by(SCROLL_STEP)
+            elif event.key in PAGE_KEYS:
+                self._scroll_by(PAGE_KEYS[event.key] * self.text_rect.height)
+            else:
+                return False
+            return True
+        if event.type == pygame.MOUSEWHEEL:
+            self._scroll_by(-event.y * SCROLL_STEP)
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.text_rect.collidepoint(event.pos):
+            for rect, action in self._clickable:
+                if rect.collidepoint(event.pos):
+                    audio.play('ui_click')
+                    action()
+                    return True
+        return False
+    # endregion
+
+
+class MissionListDialog(Dialog, MissionList):
+    """The list and the detail of missions in a window. A subclass gives the sections, the line about time, and the
+    action, if any. `footer_height` is the band under the text that a subclass keeps for its own buttons."""
+
+    def __init__(self, title: str, footer_height: int = 0) -> None:
+        Dialog.__init__(self, WIDTH, HEIGHT)
+        MissionList.__init__(self)
+        self._texture: Optional[pygame.Surface] = None
+        self._texture_loaded: bool = False
+
+        size = TITLE_SIZE
+        self._title = title_font(size).render(title, True, ACCENT)
+        while self._title.get_width() > WIDTH - 2 * MARGIN and size > 12:
+            size -= 1
+            self._title = title_font(size).render(title, True, ACCENT)
+        self._divider_y = MARGIN - 4 + self._title.get_height() + 12
+        text_bottom = HEIGHT - MARGIN - footer_height
+        self.place(pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12
+                               - (self._divider_y + 16)))
 
     # region Drawing
     def _background(self) -> Optional[pygame.Surface]:
@@ -243,25 +322,7 @@ class MissionListDialog(Dialog):
 
         surface.blit(self._title, (MARGIN, MARGIN - 4))
         pygame.draw.line(surface, ACCENT, (MARGIN, self._divider_y), (WIDTH - MARGIN, self._divider_y), 2)
-
-        self._clickable = []
-        previous_clip = surface.get_clip()
-        surface.set_clip(self.text_rect)
-        items = self._items(self.text_rect.width)
-        self.content_height = sum(gap + block.get_height() for block, gap, _, _ in items)
-        self.scroll = min(self.scroll, self._max_scroll())  # the list may have become shorter since it was scrolled
-        y = 0
-        for block, gap, rect, action in items:
-            y += gap
-            top = self.text_rect.top + y - self.scroll
-            if top + block.get_height() >= self.text_rect.top and top <= self.text_rect.bottom:
-                surface.blit(block, (self.text_rect.left, top))
-            if rect is not None and action is not None:
-                self._clickable.append((rect.move(self.text_rect.left, top), action))
-            y += block.get_height()
-        surface.set_clip(previous_clip)
-
-        self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
+        self.draw_content(surface)
 
     def _draw_frame(self, surface: pygame.Surface) -> None:
         outer = pygame.Rect(0, 0, WIDTH, HEIGHT)
@@ -279,30 +340,10 @@ class MissionListDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
-        moved = self.scroll_bar.handle_event(event, self.scroll, self._max_scroll(), self.text_rect.height)
-        if moved is not None:
-            self.scroll = moved
-            return None
         if is_cancel(event):
-            if self.open_mission is None and self.notice is None:
-                return ('close', None)
-            audio.play('ui_close')
-            self._show_list()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                self._scroll_by(-SCROLL_STEP)
-            elif event.key == pygame.K_DOWN:
-                self._scroll_by(SCROLL_STEP)
-            elif event.key in PAGE_KEYS:
-                self._scroll_by(PAGE_KEYS[event.key] * self.text_rect.height)
-        elif event.type == pygame.MOUSEWHEEL:
-            self._scroll_by(-event.y * SCROLL_STEP)
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.text_rect.collidepoint(event.pos):
-            for rect, action in self._clickable:
-                if rect.collidepoint(event.pos):
-                    audio.play('ui_click')
-                    action()
-                    return self.outcome
+            return None if self.back() else ('close', None)
+        if self.handle_content_event(event):
+            return self.outcome
         return None
     # endregion
 
@@ -407,3 +448,26 @@ class PendingMissionsDialog(MissionListDialog):
             return 'Time left: expired'
         hours, remainder = divmod(int(left.total_seconds()), 3600)
         return f"Time left: {left.days} days {hours - 24 * left.days:02d} h {remainder // 60:02d} min"
+
+
+class OutpostMissions(MissionList):
+    """The missions of an outpost's screen (outpost_screen.py), from its board: "Available", the offers the board has
+    (none below the reputation the board needs), and "Taken", the open missions the player took from this outpost, to
+    deliver here. Both are sorted with the latest deadline first. An offer is accepted, a taken mission delivered, from
+    its detail, as on the board."""
+
+    def __init__(self, board: MissionBoard) -> None:
+        super().__init__()
+        self.board: MissionBoard = board
+
+    def _sections(self) -> List[Section]:
+        from galaxies.missions.mission_board import MissionBoard  # local: the board's module imports the player
+        offers = self.board.offers if MissionBoard.is_available(self.board.player) else []
+        available = sorted(offers, key=lambda offer: offer.deadline, reverse=True)
+        taken = sorted(self.board.mine(), key=lambda mission: mission.deadline, reverse=True)
+        return [('Available', available, 'Nothing new.'), ('Taken', taken, 'None.')]
+
+    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
+        if mission in self.board.mine():
+            return 'Deliver', lambda: self._act(self.board.deliver, mission)
+        return 'Accept', lambda: self._act(self.board.accept, mission)

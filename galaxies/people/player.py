@@ -44,7 +44,7 @@ class Player:
         self.time_scale: int = 1  # Default time scale
         self.ship: Ship = ShabbyThsMiner(self)
         self.credits: int = 0
-        self.those_who_share: PersonalStatus = PersonalStatus()
+        self.those_who_share: PersonalStatus = PersonalStatus(political_entity.THOSE_WHO_SHARE)
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Outpost] = None  # the outpost the pilot is in, if any (not the cockpit)
@@ -176,7 +176,7 @@ class Player:
 
         for entity_name, values in loaded_attributes['political_status'].items():
             if entity_name == political_entity.THOSE_WHO_SHARE.name:
-                result.those_who_share = PersonalStatus.deserialize(values)
+                result.those_who_share = PersonalStatus.deserialize(values, political_entity.THOSE_WHO_SHARE.name)
 
         return result
     # endregion

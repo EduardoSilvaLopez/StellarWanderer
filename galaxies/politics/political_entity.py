@@ -1,12 +1,24 @@
 from __future__ import annotations
+from typing import Optional
+
 import random
 import pygame
-from typing import Optional
-from common.paths import resource_path
 
+from common.paths import resource_path
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PoliticalEntity:
-    def __init__(self, name: str, color: tuple, icon_filename: str, titles: dict, names_1: dict, names_2: dict) -> None:
+    def __init__(
+            self, name: str,
+            color: tuple,
+            icon_filename: str,
+            titles: dict,
+            names_1: dict,
+            names_2: dict,
+            exchange_reputation_changes: dict
+            ) -> None:
         self.name: str = name
         self.color: tuple = color
         self.icon: Optional[pygame.Surface] = None
@@ -14,6 +26,7 @@ class PoliticalEntity:
         self.titles = titles
         self.settlement_names_1 = names_1
         self.settlement_names_2 = names_2
+        self.exchange_reputation_changes: dict = exchange_reputation_changes
 
     def title_for(self, reputation: float) -> Optional[str]:
         return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
@@ -29,7 +42,6 @@ class PoliticalEntity:
     def generate_outpost_name(self, my_random: random.Random) -> str:
         return self.settlement_names_1[my_random.randint(0, len(self.settlement_names_1) - 1)]\
             + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
-
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         "Those-Who-Share",
@@ -99,5 +111,15 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "Task",
             "Undertaking",
             "Work"
-        ]
+        ],
+        {
+            "maintenance": 24.0,
+            "energy": 5e-13,
+            "credits": 100.0,
+            "air": 0.0006,
+            "water": 0.0003,
+            "food": 0.0006,
+            "mines": 5.0,
+            "ore": 0.005,
+        }
     )

@@ -1,6 +1,8 @@
 from __future__ import annotations
+import math
 from abc import ABC
-from typing import TYPE_CHECKING, Any, ClassVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 
 if TYPE_CHECKING:
@@ -22,6 +24,7 @@ class CargoHold(ABC):
     MINE_WEIGHT = 200.0
 
     INITIAL_MINES = 2
+    MINES_MAX = 5  # the most mines the hold takes from an outpost
 
     # Set by each configuration, never here.
     CAPACITY: ClassVar[int]
@@ -101,3 +104,49 @@ class CargoHold(ABC):
 
     def free_capacity(self) -> float:
         return self.capacity - self.used_capacity()
+
+    def load(self, supply: Supply, units: float) -> float:
+        """Takes up to `units` of `supply` from the outpost into the hold: up to the supply's maximum and the room left.
+        Whole units only for a supply that comes in whole units. Returns the units taken."""
+        stock = getattr(self, supply.key)
+        room = min(supply.maximum(self) - stock, self.free_capacity() / supply.weight)
+        taken = min(units, room)
+        if taken <= 0:
+            return 0
+        if supply.whole:
+            taken = math.floor(taken)
+        setattr(self, supply.key, stock + taken)
+        return taken
+
+    def unload(self, supply: Supply, units: float) -> float:
+        """Gives up to `units` of `supply` from the hold back: down to none. Returns the units given."""
+        stock = getattr(self, supply.key)
+        given = min(units, stock)
+        if given <= 0:
+            return 0
+        if supply.whole:
+            given = math.floor(given)
+        setattr(self, supply.key, stock - given)
+        return given
+
+
+@dataclass(frozen=True)
+class Supply:
+    """What an outpost gives a hold, in the cargo list: `key` is the hold's attribute that holds the stock, `weight` the
+    room one unit takes, `maximum` the most the hold takes (from the hold itself), and `whole` says the units are whole
+    (mines). The list SUPPLIES is what the outpost's cargo view shows, one row each."""
+
+    key: str
+    label: str
+    unit: str
+    weight: float
+    maximum: Callable[[CargoHold], float]
+    whole: bool = False
+
+
+SUPPLIES: tuple[Supply, ...] = (
+    Supply('air', 'Air', 'days', CargoHold.AIR_WEIGHT, lambda hold: hold.air_max),
+    Supply('water', 'Water', 'days', CargoHold.WATER_WEIGHT, lambda hold: hold.water_max),
+    Supply('food', 'Food', 'days', CargoHold.FOOD_WEIGHT, lambda hold: hold.food_max),
+    Supply('mines', 'Mines', 'mines', CargoHold.MINE_WEIGHT, lambda hold: CargoHold.MINES_MAX, whole=True),
+)
