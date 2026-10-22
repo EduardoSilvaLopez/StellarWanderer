@@ -9,7 +9,9 @@ On the left, the name of the outpost, and under it, smaller, the world, star and
 group of five buttons (Report, Cargo, Missions, Chat, Leave): one is always selected, and Report is the one selected
 when the screen opens. The selected one is filled with the accent colour. What it does is what the right side shows:
 Report starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's missions (OutpostMissions,
-drawn over the picture), and Chat does nothing yet. On the right, the picture of the outpost
+drawn over the picture), and Chat the people of the outpost who can be chatted with now (StaffList, one card each,
+on the right of three areas; the other two are reserved, nothing is drawn in them yet). On the right, the
+picture of the outpost
 (common/resources/backgrounds, the files named outpost*), chosen from the outpost's seed, so the same outpost always
 shows the same picture; faded dark. At the top left of the right side, the dockmaster on duty: the portrait, the full
 name with its title beside it, and under the name the age and the role.
@@ -34,7 +36,9 @@ from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
 from .messages import Message, ResultCallback
-from .mission_board_dialog import OutpostMissions, PAGE_KEYS
+from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
+from .scroll_bar import ScrollBar
+from .staff_list import StaffList
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -60,6 +64,8 @@ ANSWER_HEIGHT_FRACTION = 0.034  # of the window's height
 CARGO_PICTURE_FRACTION = 0.36  # the ship's picture in the cargo view, as a share of the window's height
 ANSWER_SHADE = (0, 0, 0, 110)  # an answer is a translucent rectangle over the picture...
 ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour while the mouse is over it
+CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of the window's height
+TIME_DISPLAY_BOTTOM = 0.115  # the ship time display's bottom (graphics/instruments/clock.py), of the window's height
 
 
 def _pictures() -> List[str]:
@@ -167,7 +173,11 @@ class OutpostScreenDialog(Dialog):
     Missions (selected): the outpost's OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
     deadline first. A click opens a detail, where an offer is accepted or a taken mission delivered. Backspace or a
     right-click goes back from a detail; Page Up and Page Down and the wheel scroll the list. The arrow keys still
-    select options."""
+    select options.
+
+    Chat (selected): the people listed now (Outpost.available_staff, see StaffList), in a dark panel on the right of
+    the block. A click selects a card; Tab goes over the cards and Enter or Space selects the focused one. The middle
+    and the right areas are reserved, nothing is drawn in them yet."""
 
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
@@ -211,6 +221,8 @@ class OutpostScreenDialog(Dialog):
         self._ship_image: Optional[pygame.Surface] = None  # it, scaled for the cargo view, made for _ship_image_size
         self._ship_image_size: Optional[Tuple[int, int]] = None
         self._missions: Optional[OutpostMissions] = None  # the list of the Missions option, made when it is selected
+        self._chat: Optional[StaffList] = None  # the people of the Chat option, made when it is selected
+        self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat, where they were last drawn
         self._focus_visible: bool = False
         self._asking_to_leave: bool = False  # the question of leaving with the repair going is in the panel
         self._leaving: bool = False  # it was answered Yes: the next event ends the screen
@@ -271,6 +283,8 @@ class OutpostScreenDialog(Dialog):
             self._draw_cargo(surface, right, height)
         elif self._shows_missions():
             self._draw_missions(surface, right, height)
+        elif self._shows_chat():
+            self._draw_chat(surface, right, height)
         else:
             self._cargo_rects = []
             officer_bottom = self._draw_officer(surface, right, height)
@@ -347,12 +361,36 @@ class OutpostScreenDialog(Dialog):
             self._cargo_rects.append((minus, plus, fill, k))
             y += row_height + gap
 
-    def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
-        """The missions of the outpost (OutpostMissions) in a dark panel over the whole block, its scroll bar at the
-        right, inside the margin."""
+    def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
+        """Chat: three areas in the block, inside its margin and under the ship time display. The people are drawn in a
+        dark panel on the right, CHAT_PEOPLE_FRACTION of the height wide (StaffList); tags and conversation share the
+        left and are only reserved for now."""
         margin = _margin(height)
-        panel = pygame.Rect(right.left + margin, right.top + margin,
-                            right.width - 2 * margin, right.height - 2 * margin)
+        top = max(right.top + margin, int(height * TIME_DISPLAY_BOTTOM) + margin)
+        area = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
+        people_width = min(int(height * CHAT_PEOPLE_FRACTION), area.width - 2 * margin)
+        people = pygame.Rect(area.right - people_width, area.top, people_width, area.height)
+        left_width = people.left - margin - area.left
+        tags_width = (left_width - margin) // 2
+        tags = pygame.Rect(area.left, area.top, tags_width, area.height)
+        conversation = pygame.Rect(tags.right + margin, area.top, left_width - tags_width - margin, area.height)
+        self._chat_areas = [tags, conversation, people]
+
+        shade = pygame.Surface(people.size, pygame.SRCALPHA)
+        shade.fill(MESSAGE_PANEL_SHADE)
+        surface.blit(shade, people)
+        pygame.draw.rect(surface, ACCENT_DIM, people, 1)
+        inner = people.inflate(-2 * margin, -2 * margin)
+        self._chat.place(pygame.Rect(inner.left, inner.top, inner.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH,
+                                     inner.height))
+        self._chat.draw(surface, self._focus[1] if self._focus_visible and self._focus[0] == 'person' else None)
+
+    def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
+        """The missions of the outpost (OutpostMissions) in a dark panel over the block, its scroll bar at the right,
+        inside the margin. The panel starts under the ship time display (TIME_DISPLAY_BOTTOM), drawn over the block."""
+        margin = _margin(height)
+        top = max(right.top + margin, int(height * TIME_DISPLAY_BOTTOM) + margin)
+        panel = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
         shade = pygame.Surface(panel.size, pygame.SRCALPHA)
         shade.fill(MESSAGE_PANEL_SHADE)
         surface.blit(shade, panel)
@@ -544,6 +582,8 @@ class OutpostScreenDialog(Dialog):
             self.conversation.start()
         elif BUTTON_LABELS[self.selected] == 'Missions':
             self._open_missions()
+        elif BUTTON_LABELS[self.selected] == 'Chat':
+            self._chat = StaffList(self.outpost)
 
     def _open_missions(self) -> None:
         """Missions: the board's offers are brought up to date, and their list is made (see OutpostMissions). The list
@@ -661,14 +701,28 @@ class OutpostScreenDialog(Dialog):
             return self._missions.back(event.pos)
         return self._missions.handle_content_event(event)
 
+    def _shows_chat(self) -> bool:
+        """Chat is the view while it is selected and no message is shown (see _shows_cargo)."""
+        return BUTTON_LABELS[self.selected] == 'Chat' and self._shown is None
+
+    def _chat_event(self, event: pygame.event.Event) -> bool:
+        """The events the people's list takes: its clicks (a card is selected), its scroll (the wheel, the scroll bar,
+        Page Up and Page Down). The arrow keys stay with the options. True if it took the event."""
+        if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
+            return False
+        return self._chat.handle_event(event)
+
     def _focus_targets(self) -> List[tuple]:
         """What Tab goes over, in order: the options (Leave among them), the −, + and ++ of each cargo row while Cargo
-        is selected, and the answers of the shown message. Then round again."""
+        is selected, the people listed while Chat is selected, and the answers of the shown message. Then round
+        again."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         targets: List[tuple] = [('option', index) for index in range(len(BUTTON_LABELS))]
         if self._shows_cargo():
             for k in range(len(SUPPLIES)):
                 targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
+        if self._shows_chat():
+            targets += [('person', index) for index in range(len(self._chat.available()))]
         if self._shown is not None:
             targets += [('answer', j) for j in range(len(self._shown[0].buttons))]
         return targets
@@ -693,6 +747,8 @@ class OutpostScreenDialog(Dialog):
             self._press_cargo(token[1], token[2])
         elif token[0] == 'fill':
             self._fill_cargo(token[1])
+        elif token[0] == 'person':
+            self._chat.select_at(token[1])
         elif BUTTON_LABELS[token[1]] == 'Leave' or token[1] != self.selected:
             self._select(token[1])
         elif self._shown is not None:
@@ -715,6 +771,8 @@ class OutpostScreenDialog(Dialog):
         if self._shown is not None and self._answer_event(event):  # noqa: SIM114
             pass
         elif self._shows_missions() and self._missions_event(event):
+            pass
+        elif self._shows_chat() and self._chat_event(event):
             pass
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
             self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)

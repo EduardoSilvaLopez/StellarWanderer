@@ -22,6 +22,9 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'  # the dates the outpost saves
 SUBSTITUTE_AGE_DROP = 2  # the substitute's age range starts this much lower
 SUBSTITUTE_SOCIAL_FACTOR = 4
 STAFF_SOCIAL_FACTOR = 5
+SHIFT_HOURS = 8  # a shift of the staff, from the start of the day: shift 0 at 00:00, shift 1 at 08:00, shift 2 at 16:00
+FREE_HOURS_AFTER_SHIFT = 6  # after a shift, free for this long, then resting for REST_HOURS (see _is_free)
+REST_HOURS = 8
 
 logger = logging.getLogger(__name__)
 
@@ -133,17 +136,75 @@ class Outpost(Updatable):
                       SUBSTITUTE_SOCIAL_FACTOR if substitute else STAFF_SOCIAL_FACTOR, role,
                       age_min, STAFF_AGE_MAX + role.age_raise)
 
-    def _pick_on_duty(self, role: Role, shift: int) -> None:
-        """The member of `role` on duty in the 8-hour `shift`: its shift member, or the substitute on a vacation day."""
+    # endregion
+
+    # region Rota
+    @staticmethod
+    def _shift_start(now: datetime, shift: int) -> datetime:
+        """The latest start, at or before `now`, of the 8-hour `shift` of the day (0, 1 or 2)."""
+        start = now.replace(hour=SHIFT_HOURS * shift, minute=0, second=0, microsecond=0)
+        return start if start <= now else start - timedelta(days=1)
+
+    def _substitute_covers(self, role: Role, shift_start: datetime) -> bool:
+        """Whether the substitute of `role` is on duty in the shift that starts at `shift_start`. It is a draw from the
+        outpost's seed and that start, so a shift always has the same answer, whatever the visits."""
+        if role.vacation <= 0:
+            return False
+        draw = random.Random(seeds.derive(self.seed, 'vacation', role.seed_kind, shift_start.isoformat()))
+        return draw.random() < role.vacation
+
+    def _pick_on_duty(self, role: Role, shift_start: datetime) -> None:
+        """The member of `role` on duty in the shift that starts at `shift_start`: its shift member, or the substitute
+        when the substitute covers that shift (see _substitute_covers)."""
         members = self.roster(role)
-        if self.my_random.random() < role.vacation:
+        if self._substitute_covers(role, shift_start):
             self.on_duty[role] = members[role.shifts]
         else:
-            self.on_duty[role] = members[shift % role.shifts]
+            self.on_duty[role] = members[shift_start.hour // SHIFT_HOURS % role.shifts]
 
-    def _pick_all_on_duty(self, shift: int) -> None:
+    def _pick_all_on_duty(self, now: datetime) -> None:
+        shift_start = self._shift_start(now, now.hour // SHIFT_HOURS)
         for role in ROLES:
-            self._pick_on_duty(role, shift)
+            self._pick_on_duty(role, shift_start)
+
+    @staticmethod
+    def _is_free(elapsed: timedelta) -> bool:
+        """Whether someone is free `elapsed` after the start of their last shift: not working in its 8 hours, and not
+        resting in the REST_HOURS after the FREE_HOURS_AFTER_SHIFT that follow it. Free again after that."""
+        hours = elapsed.total_seconds() / 3600
+        rest_start = SHIFT_HOURS + FREE_HOURS_AFTER_SHIFT
+        return hours >= SHIFT_HOURS and not rest_start <= hours < rest_start + REST_HOURS
+
+    def _substitute_available(self, role: Role, now: datetime) -> bool:
+        """The substitute is not listed while covering the current shift; otherwise the rest after the latest shift he
+        covered among the last three (none: he is free)."""
+        current = self._shift_start(now, now.hour // SHIFT_HOURS)
+        if self._substitute_covers(role, current):
+            return False
+        for back in range(1, 4):
+            start = current - timedelta(hours=SHIFT_HOURS * back)
+            if self._substitute_covers(role, start):
+                return self._is_free(now - start)
+        return True
+
+    def is_available(self, person: Person, now: datetime) -> bool:
+        """Whether `person` is listed for a chat at `now`: not on vacation (the substitute covers their shift), not
+        working, and not resting (see _is_free). The one-shift role, on duty all the time, is always listed."""
+        role = person.role
+        if role.shifts == 1 and role.vacation == 0:
+            return True
+        index = self.roster(role).index(person)
+        if index == role.shifts:
+            return self._substitute_available(role, now)
+        start = self._shift_start(now, index)
+        if self._substitute_covers(role, start):
+            return False
+        return self._is_free(now - start)
+
+    def available_staff(self, now: datetime) -> List[Person]:
+        """The staff listed for a chat at `now`, in the order of `staff`."""
+        self.generate_staff()
+        return [person for person in self.staff if self.is_available(person, now)]
     # endregion
 
     # region Visits
@@ -151,7 +212,7 @@ class Outpost(Updatable):
         ''' Prepare for visit.'''
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
-        self._pick_all_on_duty(shift)
+        self._pick_all_on_duty(gem.current_environment.date_time)
         self.next_update_at: datetime = gem.current_environment.date_time
         self.next_update_at = self.next_update_at.replace(hour=8 * shift, minute=0, second=0, microsecond=0)
         self.next_update_at += timedelta(hours=8)
@@ -256,7 +317,7 @@ class Outpost(Updatable):
         if self.repair_due_at is not None and self.repair_due_at <= game_date_time:
             self._finish_repair()
         if self.next_update_at <= game_date_time:
-            self._pick_all_on_duty(game_date_time.hour // 8)
+            self._pick_all_on_duty(game_date_time)
             self.next_update_at += timedelta(hours=8)
         update_queue.add(self)
     # endregion

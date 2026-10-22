@@ -162,17 +162,21 @@ class Person:
         """Whole years since the date of birth, at the game's date."""
         return int((gem.current_environment.date_time - self.dob).total_seconds() / SECONDS_PER_YEAR)
 
+    def last_time_met_text(self) -> str:
+        """When the player last talked to this person: the date, else "Not met yet" or "Don't remember."."""
+        last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
+        if last_time_met:
+            return last_time_met.strftime('%Y-%m-%d')
+        return "Not met yet" if self.first_met_at is None else "Don't remember."
+
     def description_fields(self) -> list[tuple[str, str]]:
         """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty
         for the gender and race, which are shown as a plain line."""
-        last_time_met: Optional[datetime] = next(reversed(self.interactions.keys()), None)
-        ltm_str = (last_time_met.strftime('%Y-%m-%d') if last_time_met
-                   else "Not met yet" if self.first_met_at is None else "Don't remember.")
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
             ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({self.age} y.o.)"),
-            ('Last time met', f"{ltm_str}"),
+            ('Last time met', self.last_time_met_text()),
         ]
 
         from galaxies.outpost import Outpost
