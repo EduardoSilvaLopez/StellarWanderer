@@ -43,6 +43,10 @@ class Message:
 # message was dismissed with Esc or a right-click.
 ResultCallback = Callable[[Optional[int]], None]
 
+# Where a conversation shows its messages: show_message (a dialog over the cockpit) or, inside an outpost, the outpost
+# screen's own panel. Both take the message and the callback for the answer.
+ShowMessage = Callable[[Message, Optional[ResultCallback]], None]
+
 
 @dataclass
 class PendingMessage:

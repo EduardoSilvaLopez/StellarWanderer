@@ -1,18 +1,18 @@
-"""The report to the outpost's com officer (the Report button of the outpost screen). A stub: what is said is still to be
-written."""
+"""The report to the outpost's dockmaster (the Report button of the outpost screen, which shows its messages in its own
+panel). A stub: what is said is still to be written."""
 
 from __future__ import annotations
-from typing import Callable, List, Optional
+from typing import List, Optional
 
-from common.dialogs.messages import show_message
+from common.dialogs.messages import ShowMessage, show_message
 from galaxies.outpost import Outpost
 from ..person import Person
 from ..conversation import Conversation
 
 
 class OutpostReport(Conversation):
-    def __init__(self, interlocutor: Person, outpost: Outpost) -> None:
-        super().__init__(interlocutor)
+    def __init__(self, interlocutor: Person, outpost: Outpost, show: ShowMessage = show_message) -> None:
+        super().__init__(interlocutor, show)
         self.outpost: Outpost = outpost
         self.title: str = "Reporting"
         self.time_since_last_visit: Optional[float] = None if not self.outpost.last_visited\
@@ -34,14 +34,11 @@ class OutpostReport(Conversation):
                 }
             ]
 
-        self._ask(text, buttons, self.close)
+        self._ask(text, buttons, self._finish)
 
     def generate_outpost_introduction_text(self) -> str:
          return "This is an outpost"
 
-    def _ask(self, text: str, buttons: List[dict], then: Callable[[Optional[int], List[dict]], object]) -> None:
-        """Shows `text` with `buttons`; the answer goes to `then`, with the buttons."""
-        show_message(
-            self.prepare_message(self.title, text, buttons),
-            on_result=lambda button_index: then(button_index, buttons)
-            )
+    def _finish(self, chosen_button: Optional[int], consequences: List[dict]) -> OutpostReport:
+        self.close()
+        return self

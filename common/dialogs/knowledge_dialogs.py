@@ -96,7 +96,7 @@ class KnownSystemsDialog(_ListDialog):
     None) if the window closes."""
 
     def __init__(self) -> None:
-        super().__init__('Known stellar systems')
+        super().__init__('Known stellar bodies')
 
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem

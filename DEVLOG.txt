@@ -27,21 +27,23 @@ DEVELOPER'S DIARY
   * Extra: No more PAUSED mode.
   * Extra: 120 chars in code.
 
-### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-
+### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30
+
+* INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
+  * Entering and leaving spends time.
+  * Much bigger dialog, whole screen. You are inside the outpost. Menu points and background on the right side.
+  * The com. officer becomes the dockmaster. They appear in "Report", the first option.
 
 > DONE (not committed)
 
 > STARTED:
   
-* INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
-  * Much bigger dialog, whole screen. You are inside the outpost. Menu points and background on the right side.
-  * Entering and leaving spends time.
+  * "Ship" button behaviour. Maintenance and cargo.
+  * "Missions" button behaviour.
+  * "Chat" button behaviour?
 
 # NOT STARTED YET = BACKLOG
 
-  * The current dialog is substituted by a screen on which different things happen. Time passes there, so start
-  ordering maintenance and then do the rest.
-  * The com. officer becomes the dockmaster. They appear in "Report", the first option.
   * Missions get also a background pic.
   * Extra: Retirement.
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
