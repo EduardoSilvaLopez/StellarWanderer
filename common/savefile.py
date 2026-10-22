@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 import game_environment as gem
-import knowledge
+from galaxies.people import knowledge
 import galaxies.people.player as pem
 from common.paths import data_path, SAVEFILES_DIR
 

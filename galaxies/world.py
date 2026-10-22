@@ -11,7 +11,7 @@ import logging
 from common.units import format_compact_distance
 import galaxies.constants
 from galaxies import seeds
-import knowledge
+from galaxies.people import knowledge
 from galaxies.body import Body
 from galaxies.km2 import Km2
 from galaxies.rock import Rock

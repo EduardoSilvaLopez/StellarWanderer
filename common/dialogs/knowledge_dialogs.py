@@ -100,7 +100,7 @@ class KnownSystemsDialog(_ListDialog):
 
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
-        import knowledge
+        from galaxies.people import knowledge
 
         galaxy = gem.current_environment.galaxy
         systems = [galaxy.system_of_key(key) for key in knowledge.current_knowledge.bodies]
@@ -159,7 +159,7 @@ class KnownPeopleDialog(_ListDialog):
     # region Cards
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
-        import knowledge
+        from galaxies.people import knowledge
 
         galaxy = gem.current_environment.galaxy
         outposts = [

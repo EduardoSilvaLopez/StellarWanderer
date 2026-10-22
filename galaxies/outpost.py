@@ -4,7 +4,7 @@ import random
 import math
 import logging
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from galaxies.missions.mission_board import MissionBoard
 from galaxies.world import World
 from galaxies.people.person import Person
+from galaxies.people.role import COM_OFFICER, DOCKMASTER, ROLES, STAFF_AGE_MAX, STAFF_AGE_MIN, Role
+
+SUBSTITUTE_AGE_DROP = 2  # the substitute's age range starts this much lower
+SUBSTITUTE_SOCIAL_FACTOR = 4
+STAFF_SOCIAL_FACTOR = 5
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +45,6 @@ class Outpost(Updatable):
     TIME_TO_ENTER = 30 * 60  # seconds of game time that going into the outpost takes (half an hour)
     TIME_TO_LEAVE = 30 * 60  # seconds of game time that leaving it takes (half an hour)
 
-    STAFF_AGE_MIN = 25
-    STAFF_AGE_MAX = 60
-    STAFF_SIZE = 4  # three shifts and a substitute
-
     def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
@@ -60,9 +61,8 @@ class Outpost(Updatable):
 
         self.orientation: float = self.my_random.random() * 360
 
-        self.staff: List[Person] = []
-        self.free_days: float = 0.33
-        self.com_officer: Optional[Person] = None
+        self.staff: List[Person] = []  # every member of every role, in the order of ROLES
+        self.on_duty: Dict[Role, Person] = {}  # the member on duty of each role that has one, see _pick_on_duty
         self.last_visited: Optional[datetime] = None
         # local: the board needs the player, which needs missions
         from galaxies.missions.mission_board import MissionBoard
@@ -92,33 +92,46 @@ class Outpost(Updatable):
     def generate_staff(self) -> Outpost:
         """Creates the staff, once: later calls change nothing, so the same people are always returned."""
         if not self.staff:
-            self.staff = [self._generate_staff_member(index) for index in range(self.STAFF_SIZE)]
+            self.staff = [self._generate_member(role, index) for role in ROLES for index in range(role.headcount)]
         return self
+
+    def roster(self, role: Role) -> List[Person]:
+        """The members of `role` here: the shift members first, the substitute (if any) last."""
+        self.generate_staff()
+        return [person for person in self.staff if person.role is role]
+
+    @property
+    def com_officer(self) -> Optional[Person]:
+        return self.on_duty.get(COM_OFFICER)
+
+    @property
+    def dockmaster(self) -> Optional[Person]:
+        return self.on_duty.get(DOCKMASTER)
 
     def person_with_seed(self, seed: int) -> Optional[Person]:
         """The staff member of this outpost with that seed, or None if the seed is not one of its staff."""
         self.generate_staff()
-        for index in range(self.STAFF_SIZE):
-            if self._staff_seed(index) == seed:
-                return self.staff[index]
-        return None
+        return next((person for person in self.staff if person.seed == seed), None)
 
-    def _generate_staff_member(self, index: int) -> Person:
-        """The staff member `index` (0 to STAFF_SIZE - 1): the last one is the free-day substitute."""
-        last = index == self.STAFF_SIZE - 1
-        return Person(self._staff_seed(index), self, 4 if last else 5,
-                      self.STAFF_AGE_MIN - 2 if last else self.STAFF_AGE_MIN, self.STAFF_AGE_MAX)
+    def _generate_member(self, role: Role, index: int) -> Person:
+        """Member `index` of `role`. The one after the shifts is the substitute, if the role has any vacation."""
+        substitute = index == role.shifts and role.vacation > 0
+        age_min = STAFF_AGE_MIN + role.age_raise - (SUBSTITUTE_AGE_DROP if substitute else 0)
+        return Person(seeds.derive(self.seed, role.seed_kind, index), self,
+                      SUBSTITUTE_SOCIAL_FACTOR if substitute else STAFF_SOCIAL_FACTOR, role,
+                      age_min, STAFF_AGE_MAX + role.age_raise)
 
-    def _staff_seed(self, index: int) -> int:
-        """The seed of the staff member `index`."""
-        return seeds.derive(self.seed, 'person', index)
-
-    def _pick_com_officer(self, shift: int) -> None:
-        """The com officer of the 8-hour `shift`: its staff member, or the substitute on a free day."""
-        if self.my_random.random() < self.free_days:
-            self.com_officer = self.staff[self.STAFF_SIZE - 1]
+    def _pick_on_duty(self, role: Role, shift: int) -> None:
+        """The member of `role` on duty in the 8-hour `shift`: its shift member, or the substitute on a vacation day."""
+        members = self.roster(role)
+        if self.my_random.random() < role.vacation:
+            self.on_duty[role] = members[role.shifts]
         else:
-            self.com_officer = self.staff[shift]
+            self.on_duty[role] = members[shift % role.shifts]
+
+    def _pick_all_on_duty(self, shift: int) -> None:
+        for role in ROLES:
+            self._pick_on_duty(role, shift)
     # endregion
 
     # region Visits
@@ -126,7 +139,7 @@ class Outpost(Updatable):
         ''' Prepare for visit.'''
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
-        self._pick_com_officer(shift)
+        self._pick_all_on_duty(shift)
         self.next_update_at: datetime = gem.current_environment.date_time
         self.next_update_at = self.next_update_at.replace(hour=8 * shift, minute=0, second=0, microsecond=0)
         self.next_update_at += timedelta(hours=8)
@@ -161,7 +174,7 @@ class Outpost(Updatable):
 
     def update(self, game_date_time: datetime) -> None:
         ''' Next employee...'''
-        self._pick_com_officer(game_date_time.hour // 8)
+        self._pick_all_on_duty(game_date_time.hour // 8)
         self.next_update_at += timedelta(hours=8)
         update_queue.add(self)
     # endregion
@@ -174,9 +187,14 @@ class Outpost(Updatable):
         alterations: dict = {}
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime('%Y-%m-%d %H:%M:%S.%f')
-            # No com officer yet when the ship has not been near since the load: the saved one is kept.
-            alterations['com_officer_seed'] = self.com_officer.seed if self.com_officer is not None \
-                else self.saved_alterations.get('com_officer_seed')
+            # Nobody on duty yet when the ship has not been near since the load: the saved one is kept.
+            for role in ROLES:
+                if role.save_key is None:
+                    continue
+                person = self.on_duty.get(role)
+                seed = person.seed if person is not None else (self.saved_alterations or {}).get(role.save_key)
+                if seed is not None:
+                    alterations[role.save_key] = seed
         if not alterations:
             return None
         return alterations

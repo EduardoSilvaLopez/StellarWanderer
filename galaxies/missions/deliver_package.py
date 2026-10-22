@@ -48,10 +48,11 @@ class DeliverPackage(Mission):
         # its seed; a loaded mission is given the seeds of its own.
         self.issuer_outpost.generate_staff()
         self.destination_outpost.generate_staff()
-        staff_size = self.issuer_outpost.STAFF_SIZE
-        self.sender: Person = self.issuer_outpost.staff[self.my_random.randrange(staff_size)] \
+        issuer_staff = self.issuer_outpost.staff
+        destination_staff = self.destination_outpost.staff
+        self.sender: Person = issuer_staff[self.my_random.randrange(len(issuer_staff))] \
             if sender_seed is None else self._staff_member(self.issuer_outpost, sender_seed)
-        self.recipient: Person = self.destination_outpost.staff[self.my_random.randrange(staff_size)] \
+        self.recipient: Person = destination_staff[self.my_random.randrange(len(destination_staff))] \
             if recipient_seed is None else self._staff_member(self.destination_outpost, recipient_seed)
 
     @staticmethod

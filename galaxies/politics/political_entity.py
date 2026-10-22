@@ -44,10 +44,10 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             20: 'Comrade',
             50: 'Companion',
             100: 'Forebear',
-            200: 'Speaker',
-            500: 'Coordinator',
-            1000: 'Guardian',
-            2000: 'Steward',
+            200: 'Guardian',
+            500: 'Herald',
+            1000: 'Steward', # Xi
+            2000: 'Hero',
             5000: 'Champion',
             10000: 'Premier'
         },

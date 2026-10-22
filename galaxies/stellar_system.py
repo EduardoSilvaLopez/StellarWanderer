@@ -6,7 +6,7 @@ import random
 from typing import TYPE_CHECKING
 
 import galaxies.constants
-import knowledge
+from galaxies.people import knowledge
 from common.units import format_compact_distance
 from galaxies import seeds
 from galaxies.asteroid import Asteroid, AsteroidKey

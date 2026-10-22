@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 import pygame
 
 from galaxies.politics import political_entity
+from galaxies.people.role import Role
 import game_environment as gem
 from common.paths import resource_path
 
@@ -56,9 +57,11 @@ class Person:
         FEMALE = 2
 
     # region Generation
-    def __init__(self, seed: int, residency: Any, social_factor: float, age_min: int = 15, age_max: int = 70) -> None:
+    def __init__(self, seed: int, residency: Any, social_factor: float, role: Role, age_min: int = 15,
+                 age_max: int = 70) -> None:
         my_random = random.Random(seed)
         self.seed: int = seed
+        self.role: Role = role
 
         self.race: Person.Race = Person.Race.ASIAN
         rnd: float = my_random.random()
@@ -82,7 +85,7 @@ class Person:
 
         self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
         self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
-        self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3)
+        self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) + role.reputation_bonus
 
         self.empathy100: float = my_random.random() * 100
         self.sociability100: float = my_random.random() * 100
@@ -128,7 +131,7 @@ class Person:
             else 'old'
 
         from galaxies.outpost import Outpost
-        occupation: str = 'outpost.com' if isinstance(self.residency, Outpost)\
+        occupation: str = 'outpost' if isinstance(self.residency, Outpost)\
             else 'generic'
 
         filename_prefix: str = (occupation + "." + str(self.race.name).lower() + "." + age_group + "."

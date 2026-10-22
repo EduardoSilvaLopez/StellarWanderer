@@ -26,6 +26,8 @@ from typing import Optional, Tuple
 import os
 import sys
 
+from galaxies.politics.political_entity import PoliticalEntity
+
 # The compiled bytecode goes to temp/pycache, not next to each source file. Set before the project's imports.
 if not getattr(sys, 'frozen', False):
     sys.pycache_prefix = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp', 'pycache')
@@ -35,7 +37,7 @@ import logging
 from common.game_logging import configure_logging
 from graphics.font_cache import FontCache
 import game_environment as gem
-import knowledge
+from galaxies.people import knowledge
 from common import audio
 import galaxies.people.player as player_module
 from common.savefile import Savefile
@@ -214,10 +216,11 @@ def start_game(action: str, value: object) -> float:
         fixed_world = gem.current_environment.fixed_world
         planet = fixed_world.parent_planet.name
         moon = fixed_world.name
+        xis_title = PoliticalEntity.THOSE_WHO_SHARE.title_for(1500)
         show_message(Message(
             title=f"Welcome, {player.get_title()} Pilot!",
             text=(
-                "Coordinator Xi, the famous pilot trainer, has closed the communication with his last message."
+                f"{xis_title} Xi, the famous pilot trainer, has closed the communication with his last message."
                 " Happy New Year indeed. Now he will train other Pioneer Pilots. You are ready."
                 f"\n\n{moon} extends in front of you. Your main task is to find the best ore-rich rocks, melt them"
                 f" and install those precious mines on the resulting fields. Then wait, days if needed, and collect"
@@ -318,8 +321,11 @@ def main() -> None:
         if not running:
             break
 
+        # A new game or a load replaces the pilot (start_game), so it is read again each frame and after those.
+        player = player_module.current_player
+
         # A death: once its message is closed, the game is over and the starting dialog takes over.
-        if player_module.current_player.is_dead:
+        if player.is_dead:
             running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=False)
             continue
 
@@ -328,14 +334,15 @@ def main() -> None:
                 running = False
             # the time scale, the save and the load work in the outpost screen too
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_PLUS:
-                player_module.current_player.increase_time_scale()
+                player.increase_time_scale()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_MINUS:
-                player_module.current_player.decrease_time_scale()
+                player.decrease_time_scale()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                 Savefile.save()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F6:
                 audio.stop_loops()
                 Savefile.load_last()
+                player = player_module.current_player
                 elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
                 outpost_screen = None  # the loaded game has no outpost screen open
             # while the inside of an outpost is open, its screen takes the events, Esc leaves it
@@ -351,21 +358,22 @@ def main() -> None:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=True)
+                    player = player_module.current_player
                 # the inside of the outpost in the scanner, over the whole window (Esc leaves it)
                 elif event.key == pygame.K_SPACE:
-                    ship = player_module.current_player.ship
+                    ship = player.ship
                     outpost = ship.scanner.targeted_outpost
                     if outpost is not None and not ship.navigation.is_landed():
-                        ship.notification.set("Land the ship first")
+                        ship.notification.set(f"[Com. Officer] Land the ship first, {player.get_title()}.")
                     elif outpost is not None:
                         outpost_screen = OutpostScreenDialog(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                         audio.play(OutpostScreenDialog.OPEN_SOUND)
                 # the outpost in the scanner: its message board for a pilot who may use it, else its com officer
                 elif event.key == pygame.K_KP5:
-                    outpost = player_module.current_player.ship.scanner.targeted_outpost
+                    outpost = player.ship.scanner.targeted_outpost
                     if outpost is not None:
-                        if MissionBoard.is_available(player_module.current_player):
+                        if MissionBoard.is_available(player):
                             running, screen = visit_mission_board(outpost, screen, gui, fonts, clock)
                         else:
                             outpost.communicate()  # its messages are shown at the start of the next frame
@@ -374,36 +382,34 @@ def main() -> None:
                 # cycles the target (only outside every fixed zone); Shift+Tab goes back
                 elif event.key == pygame.K_TAB:
                     step = -1 if event.mod & pygame.KMOD_SHIFT else 1
-                    gem.current_environment.cycle_targeted_body(step,
-                                                                player_module.current_player.ship.position.as_vector())
+                    gem.current_environment.cycle_targeted_body(step, player.ship.position.as_vector())
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
-                    player_module.current_player.ship.place_mine()
+                    player.ship.place_mine()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 if pressed == MISSIONS:
                     running, screen = manage_missions(screen, gui, fonts, clock)
                     continue
                 if pressed == SHIP:
-                    dialog = ShipSpecificationsDialog(player_module.current_player.ship)
+                    dialog = ShipSpecificationsDialog(player.ship)
                 else:
                     dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
                 result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
                 running = result[0] != 'exit'
             elif event.type == pygame.MOUSEWHEEL:
-                if player_module.current_player.ship.is_bound:  # the world map is only shown while bound
+                if player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
             elif event.type == pygame.VIDEORESIZE:
                 screen = resize_window(event.w, event.h)
 
         # The world map zooms while the mouse is over it, and drags with the left button (polled once per frame).
         focused = pygame.mouse.get_focused()
-        left_pressed = focused and pygame.mouse.get_pressed()[0] and player_module.current_player.ship.is_bound
+        left_pressed = focused and pygame.mouse.get_pressed()[0] and player.ship.is_bound
         WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
         dt = clock.tick(FPS) / 1000.0
 
-        player = player_module.current_player
         ship = player.ship
         delta_game_seconds = dt * player.time_scale
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
@@ -479,7 +485,7 @@ def main() -> None:
         LongDistanceAdvisor.update(player, gem.current_environment)
 
         if outpost_screen is None:
-            gui.draw(screen, fonts, gem.current_environment, player_module.current_player)
+            gui.draw(screen, fonts, gem.current_environment, player)
         else:
             # the outpost screen takes the whole window; the clock is drawn where the cockpit draws it
             width, height = pygame.display.get_window_size()
