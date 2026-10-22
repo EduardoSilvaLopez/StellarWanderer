@@ -1,7 +1,7 @@
 """OpenGL-backed frame composition for the cockpit view."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List, Any
+from typing import TYPE_CHECKING, Callable, Optional, List, Any, Tuple
 import math
 import pygame
 from OpenGL import GL
@@ -53,6 +53,9 @@ class OpenGLGui:
         self.overlay_texture: Optional[int] = None
         self.dialog_texture: Optional[int] = None
         self._uploaded_textures: set = set()
+        # While the pilot is inside an outpost, what takes the whole window in place of the cockpit: it is given the
+        # window's size and returns the layer to show. Dialogs are drawn over it (see draw).
+        self.full_screen_source: Optional[Callable[[Tuple[int, int]], pygame.Surface]] = None
 
     # region Frame
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
@@ -60,7 +63,14 @@ class OpenGLGui:
         """Render one complete frame into the active OpenGL window.
 
         top_layer, if given, is a window-sized RGBA layer (a dialog, see Dialog.compose_overlay)
-        drawn above everything else."""
+        drawn above everything else. With a `full_screen_source`, that layer is all there is to draw, and top_layer goes
+        over it."""
+        if self.full_screen_source is not None:
+            layer = self.full_screen_source(pygame.display.get_window_size())
+            if top_layer is not None:
+                layer.blit(top_layer, (0, 0))
+            self.draw_full_screen(layer)
+            return
         # The real window size, not screen.get_size(): for an OpenGL window pygame can keep returning
         # a surface of the size first requested, which then differs from the window's client area
         # (the window frame takes part of it), cropping the frame and shifting mouse positions.

@@ -27,7 +27,7 @@ DEVELOPER'S DIARY
   * Extra: No more PAUSED mode.
   * Extra: 120 chars in code.
 
-### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30
+### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30 + 11:30 - 13:00 + 14:45 -
 
 * INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
   * Entering and leaving spends time.
@@ -36,12 +36,14 @@ DEVELOPER'S DIARY
 
 > DONE (not committed)
 
+  * "Report" button behavior.
+
 > STARTED:
   
+  * "Chat" button behaviour
   * "Ship" button behaviour. Maintenance and cargo.
   * "Missions" button behaviour.
-  * "Chat" button behaviour?
-
+  
 # NOT STARTED YET = BACKLOG
 
   * Missions get also a background pic.

@@ -103,6 +103,7 @@ class Ship(Updatable):
         self.laser: Laser = Laser(self)
         self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
+        self.is_docked: bool = False  # the pilot is inside an outpost: nothing is consumed (see dock). Not saved
         self.last_update_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
         self.update(gem.current_environment.date_time)
@@ -138,17 +139,42 @@ class Ship(Updatable):
         else:
             update_queue.add(self)
 
+    def dock(self) -> Ship:
+        """The pilot goes into an outpost: the time that has passed until now is lived through, and from now on nothing
+        is consumed (maintenance, energy, air, water, food) until `undock`."""
+        self._settle()
+        self.is_docked = True
+        return self
+
+    def undock(self) -> Ship:
+        """The pilot leaves the outpost: the time spent inside is lived through without consuming anything, and
+        everything is consumed again from now on."""
+        self._settle()
+        self.is_docked = False
+        return self
+
+    def _settle(self) -> Ship:
+        """Lives through the time since the last update, so that a change of state starts at this very moment."""
+        now = gem.current_environment.date_time
+        self._live_through((now - self.last_update_at).total_seconds() / (24 * 60 * 60))
+        self.last_update_at = now
+        return self
+
     def _live_through(self, days: float) -> Ship:
-        """`days` pass: maintenance, energy, air, water and food are spent, the temperature moves, the pilot is
-        warned when a level is crossed, and dies when one runs out."""
+        """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked), the
+        temperature moves, the pilot is warned when a level is crossed, and dies when one runs out."""
         old_maintenance: float = self.maintenance
         old_energy: float = self.energy
         old_temperature: float = self.temperature
         old_air: float = self.cargo_hold.air
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
-        self.maintenance -= 0.01 * self.precariousness * days
-        self.energy -= 1e5 * days
+        if not self.is_docked:  # nothing is consumed inside an outpost
+            self.maintenance -= 0.01 * self.precariousness * days
+            self.energy -= 1e5 * days
+            self.cargo_hold.air -= days
+            self.cargo_hold.water -= days
+            self.cargo_hold.food -= days
 
         if self.is_bound:
             hours = days * 24 # Duh
@@ -161,10 +187,6 @@ class Ship(Updatable):
                 default_death_radius = gem.current_environment.nearest_system.star.default_death_radius
                 self.temperature = Ship.TEMP_MAX \
                     - Ship.TEMP_DEFAULT * (dist - default_death_radius)/(default_heat_radius - default_death_radius)
-
-        self.cargo_hold.air -= days
-        self.cargo_hold.water -= days
-        self.cargo_hold.food -= days
 
         # Maintenance thresholds:
         if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:

@@ -1,12 +1,13 @@
 from __future__ import annotations
 import logging
 
-from typing import List
+from typing import TYPE_CHECKING, List, Optional
 
 from common import audio
 from common.dialogs.messages import Message, show_message
 from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
+from galaxies.people.person import Person
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue
@@ -14,11 +15,19 @@ from spaceships.ship import Ship
 from spaceships.ship_configurations import ShabbyThsMiner
 import game_environment as gem
 
+if TYPE_CHECKING:
+    from galaxies.outpost import Outpost
+
 logger = logging.getLogger(__name__)
 
 
 class Player:
-    """The pilot: the ship they fly, the time compression they choose and their standing with the political entities.
+    """The pilot: who they are (first name, surname, gender), the ship they fly, the time compression they choose and
+    their standing with the political entities. The identity is empty until the new-game dialog asks for it
+    (PilotIdentityDialog); a saved game always has it.
+
+    The game has two states, equally important: the pilot is in the cockpit, or inside an outpost (`inside`, see
+    `enter_outpost`). Both are saved, and a load puts the pilot back where they were.
 
     The ship holds where it is and how it moves (position, velocity, attitude); see Ship.
     """
@@ -29,12 +38,16 @@ class Player:
     TIME_SCALE_STEP = 10
 
     def __init__(self) -> None:
+        self.first_name: str = ''
+        self.surname: str = ''
+        self.gender: Person.GenderGroup = Person.GenderGroup.MALE
         self.time_scale: int = 1  # Default time scale
         self.ship: Ship = ShabbyThsMiner(self)
         self.credits: int = 0
         self.those_who_share: PersonalStatus = PersonalStatus()
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
+        self.inside: Optional[Outpost] = None  # the outpost the pilot is in, if any (not the cockpit)
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -57,6 +70,27 @@ class Player:
         self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         if self.time_scale != old_time_scale:
             audio.play('time_down')
+        return self
+    # endregion
+
+    # region Inside an outpost
+    def enter_outpost(self, outpost: Outpost) -> Player:
+        """The pilot goes into `outpost`: the game is in its other state, and the ship is docked (Ship.dock)."""
+        self.ship.dock()
+        self.inside = outpost
+        return self
+
+    def leave_outpost(self) -> Player:
+        """The pilot goes back to the cockpit, and the ship is undocked."""
+        self.ship.undock()
+        self.inside = None
+        return self
+
+    def resume_inside(self, outpost: Outpost) -> Player:
+        """A load puts the pilot back inside `outpost`. The saved ship was docked, and its time up to the save has been
+        lived through as such, so it is only marked docked again, without settling anything."""
+        self.inside = outpost
+        self.ship.is_docked = True
         return self
     # endregion
 
@@ -107,6 +141,9 @@ class Player:
             moon_index = None
 
         return {
+            'first_name': self.first_name,
+            'surname': self.surname,
+            'gender': self.gender.name,
             'time_scale': self.time_scale,
             'stellar_system': {'x': system.x, 'y': system.y, 'z': system.z},
             'orbit': orbit_number,
@@ -115,6 +152,7 @@ class Player:
             'asteroid': asteroid_site,
             'ship': self.ship.serialize(),
             'credits': self.credits,
+            'inside_outpost': self.inside.full_keys() if self.inside is not None else None,
             'missions': [mission.serialize() for mission in self.missions],
             'political_status': {
                 'Those-Who-Share': self.those_who_share.serialize()
@@ -125,6 +163,9 @@ class Player:
     def deserialize(loaded_attributes: dict) -> Player:
         result = Player()
         update_queue.remove(result.ship)  # the default ship made above; the saved one replaces it
+        result.first_name = loaded_attributes['first_name']
+        result.surname = loaded_attributes['surname']
+        result.gender = Person.GenderGroup[loaded_attributes['gender']]
         result.time_scale = loaded_attributes['time_scale']
         result.credits = loaded_attributes['credits']
 

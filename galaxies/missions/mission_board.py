@@ -1,6 +1,7 @@
 """The mission board of an outpost, opened with Numpad 5 while the scanner has the outpost, and only for a pilot whose
-reputation is MIN_REPUTATION or more (the others talk to the com officer with Numpad 5). It is shown by MissionBoardDialog
-(common/dialogs/mission_board_dialog.py), whose Communicate button talks to the com officer and comes back to the board.
+reputation is MIN_REPUTATION or more (the others talk to the com officer with Numpad 5). It is shown by
+MissionBoardDialog (common/dialogs/mission_board_dialog.py), whose Communicate button talks to the com officer and comes
+back to the board.
 
 Opening it counts as a visit to the outpost (`Outpost.last_visited`), not as speaking with the com officer
 (`Person.last_communication_at`): the ship is not restocked or repaired here, that takes talking to the com officer.

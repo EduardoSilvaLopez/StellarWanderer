@@ -1,7 +1,10 @@
-"""The inside of an outpost, as a screen that fills the whole window (SPACE with the outpost targeted, Esc leaves it).
+"""The inside of an outpost, as a screen that fills the whole window (SPACE with the outpost targeted; the Leave button
+leaves it).
 
 It is not a modal dialog: the host (main) draws it alone, without the cockpit behind it, and keeps the game running
-while it is open, so the time instrument, drawn over it by the host, shows time passing. The window is split in two.
+while it is open (the pilot is `inside` the outpost, the other state of the game: see Player), so the time instrument,
+drawn over it by the host, shows time passing. Esc is not for the screen: it opens the starting dialog, which is drawn
+over it, as it is over the cockpit. The window is split in two.
 On the left, the name of the outpost, and under it, smaller, the world, star and political entity it is in, then a radio
 group of four buttons (Report, Cargo, Missions, Leave): one is always selected, and Report is the one selected when the
 screen opens. The selected one is filled with the accent colour. What it does is what the right side shows: Report
@@ -11,9 +14,10 @@ shows the same picture; faded dark. At the top left of the right side, the dockm
 name with its title beside it, and under the name the age and the role.
 
 The conversation of the selected option shows its messages here, not in a dialog over the cockpit: the screen is the
-`show` of the conversation (see Conversation). The message, with its title, text and buttons, is drawn in a dark panel
-under the dockmaster; the buttons are answered with the mouse, the number keys or Enter. A message asked while another
-is shown waits its turn. Selecting another option, or leaving the screen, closes the conversation.
+`show` of the conversation (see Conversation). The title and the text of the message are drawn in a dark panel under
+the dockmaster. Its answers are translucent rectangles, the last at the bottom of the right side, tinted while the mouse
+is over one; they are answered with the mouse, the number keys or Enter. A message asked while another is shown waits
+its turn. Selecting another option, or leaving the screen, closes the conversation.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ import pygame
 from common import audio
 from common.paths import resource_path
 from graphics.fallback_font import FallbackFont
-from .dialog import Dialog, DialogResult, is_cancel
+from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
 from .messages import Message, ResultCallback
@@ -50,7 +54,9 @@ BEZEL_BORDER = 16  # the corner size of textures/bezel.png (made by tools/genera
 MESSAGE_PANEL_SHADE = (0, 0, 0, 175)  # the message's panel, over the picture
 MESSAGE_PANEL_FRACTION = 0.6  # the panel's share of the right block's width
 MESSAGE_PANEL_MIN_WIDTH = 420
-ANSWER_HEIGHT_FRACTION = 0.045  # of the window's height
+ANSWER_HEIGHT_FRACTION = 0.034  # of the window's height
+ANSWER_SHADE = (0, 0, 0, 110)  # an answer is a translucent rectangle over the picture...
+ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour while the mouse is over it
 
 
 def _pictures() -> List[str]:
@@ -142,8 +148,13 @@ def _draw_wrapped(surface: pygame.Surface, x: int, width: int, top: int, text: s
 class OutpostScreenDialog(Dialog):
     """The screen of `outpost` (galaxies/outpost.py): its name, then the world, star and political entity it is in,
     then the radio group. Its picture is chosen from its seed, so the same outpost always shows the same picture.
-    Esc (or a right-click) leaves it: the result is ('close', None). Up, Down and Tab, or a click, select a button of
-    the radio group."""
+    The Leave button leaves it: the result is ('close', None). If the outpost is still repairing the ship, it asks
+    first, in the panel, and Yes leaves with the repairs done so far (Outpost.stop_repair). While the pilot is inside,
+    the ship is docked (Ship.dock), so nothing of it is consumed.
+
+    Keyboard: Tab (Shift+Tab back) moves the focus over the radio group, Leave and the answers of the shown message,
+    and Enter or Space press the focused button: select an option, leave, or answer. The focus is drawn only while the
+    keyboard is in use. Up and Down select the options directly, and the number keys answer."""
 
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
@@ -176,7 +187,16 @@ class OutpostScreenDialog(Dialog):
         self._queue: List[Tuple[Message, Optional[ResultCallback]]] = []  # messages asked while another is shown
         self._shown: Optional[Tuple[Message, Optional[ResultCallback]]] = None  # the message in the panel
         self._answer_rects: List[pygame.Rect] = []  # where the answers of the shown message were last drawn
-        self._answer_focus: int = 0  # the answer that Enter presses
+        self._answer_hover: Optional[int] = None  # the answer under the mouse at the last draw, if any
+        # The button the keyboard is on (Tab): the options and Leave first (see BUTTON_LABELS), then the answers of the
+        # shown message. It is drawn only while the keyboard is the one in use: the mouse hides it.
+        self._focus: int = 0
+        self._focus_visible: bool = False
+        self._asking_to_leave: bool = False  # the question of leaving with the repair going is in the panel
+        self._leaving: bool = False  # it was answered Yes: the next event ends the screen
+        # local: the player needs the missions, which need the outposts, which need the dialogs
+        from galaxies.people.player import current_player
+        self.ship = current_player.ship  # docked by the player's enter_outpost, which comes before this screen
         self._open_option()
 
     def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
@@ -290,9 +310,11 @@ class OutpostScreenDialog(Dialog):
         return max(bottom, y)
 
     def _draw_message(self, surface: pygame.Surface, right: pygame.Rect, height: int, top: int) -> None:
-        """The message being shown, in a dark panel at the left of the right block, from `top`: its title, its text
-        in paragraphs, and an answer for each of its buttons, numbered. The panel has the height its content needs."""
+        """The message being shown, at the left of the right block. Its title and its text, in paragraphs, are in a dark
+        panel from `top`, with the height they need. Its answers, one for each button and numbered, are translucent
+        rectangles under each other, the last one at the bottom of the block (see _draw_answers)."""
         self._answer_rects = []
+        self._answer_hover = None
         if self._shown is None:
             return
         message = self._shown[0]
@@ -303,18 +325,14 @@ class OutpostScreenDialog(Dialog):
         inner_width = panel_width - 2 * pad
         heading = title_font(max(14, height // 36))
         body = body_font(max(14, height // 45))
-        answer_font = body_font(max(14, height // 48))
-        answer_height = max(26, int(height * ANSWER_HEIGHT_FRACTION))
         gap = _button_size(height)[1]
 
         title_lines = _wrap(message.title, heading, inner_width)
         paragraphs = [_wrap(paragraph, body, inner_width) for paragraph in message.paragraphs]
         text_height = sum(len(lines) * body.get_linesize() for lines in paragraphs)
         text_height += max(0, len(paragraphs) - 1) * (body.get_linesize() // 2)
-        answers_height = len(message.buttons) * answer_height + max(0, len(message.buttons) - 1) * gap
         panel = pygame.Rect(right.left + margin, top, panel_width,
-                            pad + len(title_lines) * heading.get_linesize() + gap + text_height + pad + answers_height
-                            + pad)
+                            pad + len(title_lines) * heading.get_linesize() + gap + text_height + pad)
 
         shade = pygame.Surface(panel.size, pygame.SRCALPHA)
         shade.fill(MESSAGE_PANEL_SHADE)
@@ -332,16 +350,31 @@ class OutpostScreenDialog(Dialog):
             for line in lines:
                 surface.blit(body.render(line, True, TEXT_COLOR), (panel.left + pad, y))
                 y += body.get_linesize()
-        y += pad
-        for index, label in enumerate(message.buttons):
-            rect = pygame.Rect(panel.left + pad, y, inner_width, answer_height)
+        self._draw_answers(surface, right, height, panel.left, panel_width)
+
+    def _draw_answers(self, surface: pygame.Surface, right: pygame.Rect, height: int, left: int, width: int) -> None:
+        """The answers of the shown message, numbered, `width` wide from `left`: translucent rectangles close to each
+        other, the last at the bottom of the block. The one under the mouse, or that has the keyboard focus, is tinted
+        with the accent colour, and its text turns dark."""
+        labels = self._shown[0].buttons
+        margin = _margin(height)
+        font = body_font(max(14, height // 48))
+        answer_height = max(22, int(height * ANSWER_HEIGHT_FRACTION))
+        gap = max(2, height // 400)
+        top = right.bottom - margin - (len(labels) * answer_height + (len(labels) - 1) * gap)
+        mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
+        for index, label in enumerate(labels):
+            rect = pygame.Rect(left, top + index * (answer_height + gap), width, answer_height)
             self._answer_rects.append(rect)
-            pygame.draw.rect(surface, BUTTON_FILL, rect)
-            focused = index == self._answer_focus
-            pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
-            caption = answer_font.render(f'{index + 1}. {label}', True, ACCENT if focused else TEXT_COLOR)
-            surface.blit(caption, caption.get_rect(midleft=(rect.left + pad, rect.centery)))
-            y += answer_height + gap
+            hovered = mouse is not None and rect.collidepoint(mouse)
+            if hovered:
+                self._answer_hover = index
+            lit = hovered or (self._focus_visible and len(BUTTON_LABELS) + index == self._focus)
+            shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+            shade.fill(ANSWER_HOVER_SHADE if lit else ANSWER_SHADE)
+            surface.blit(shade, rect)
+            caption = font.render(f'{index + 1}. {label}', True, SELECTED_TEXT_COLOR if lit else TEXT_COLOR)
+            surface.blit(caption, caption.get_rect(midleft=(rect.left + margin, rect.centery)))
 
     def _draw_buttons(self, surface: pygame.Surface, left: pygame.Rect, height: int, top: int) -> None:
         margin = _margin(height)
@@ -352,13 +385,16 @@ class OutpostScreenDialog(Dialog):
         for index, label in enumerate(BUTTON_LABELS):
             rect = pygame.Rect(left.left + margin, top, left.width - 2 * margin, button_height)
             self._button_rects.append(rect)
+            focused = self._focus_visible and index == self._focus
             if index == self.selected:
                 pygame.draw.rect(surface, ACCENT, rect)
                 caption = font.render(label, True, SELECTED_TEXT_COLOR)
+                if focused:  # a dark ring inside the accent fill
+                    pygame.draw.rect(surface, SELECTED_TEXT_COLOR, rect.inflate(-6, -6), 2)
             else:
                 pygame.draw.rect(surface, BUTTON_FILL, rect)
-                pygame.draw.rect(surface, ACCENT_DIM, rect, 1)
-                caption = font.render(label, True, TEXT_COLOR)
+                pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
+                caption = font.render(label, True, ACCENT if focused else TEXT_COLOR)
             surface.blit(caption, caption.get_rect(center=rect.center))
             top += button_height + gap
 
@@ -368,8 +404,16 @@ class OutpostScreenDialog(Dialog):
         if BUTTON_LABELS[self.selected] == 'Report' and self.officer is not None:
             # local: the conversation needs the outpost and the people, which need the dialogs
             from galaxies.people.conversations.outpost_report import OutpostReport
-            self.conversation = OutpostReport(self.officer, self.outpost, self._show)
+            from galaxies.people.player import current_player
+            self.conversation = OutpostReport(current_player, self.officer, self.outpost, self._show)
             self.conversation.start()
+
+    def _after_conversation(self) -> None:
+        """When the report is over (its conversation has closed, see OutpostReport._finish), Cargo is selected: the
+        pilot goes on to the cargo. Nothing is shown for it yet."""
+        if self.conversation is not None and self.conversation.is_closed:
+            self.conversation = None
+            self._select(BUTTON_LABELS.index('Cargo'))
 
     def _close_option(self) -> None:
         """Ends the conversation of the option, if one is going, and clears the messages of the panel."""
@@ -378,6 +422,7 @@ class OutpostScreenDialog(Dialog):
             self.conversation = None
         self._queue.clear()
         self._shown = None
+        self._asking_to_leave = False
 
     def _show(self, message: Message, on_result: Optional[ResultCallback] = None) -> None:
         """What the conversation of the option calls instead of show_message (Conversation.show): the message goes to
@@ -388,7 +433,7 @@ class OutpostScreenDialog(Dialog):
 
     def _next_message(self) -> None:
         self._shown = self._queue.pop(0) if self._queue else None
-        self._answer_focus = 0
+        self._answer_hover = None
 
     def _answer(self, index: int) -> None:
         """The answer `index` of the shown message: its callback is told, and the panel shows what the callback asked
@@ -397,11 +442,12 @@ class OutpostScreenDialog(Dialog):
         audio.play('ui_click')
         if shown is not None and shown[1] is not None:
             shown[1](index)
+        self._focus = self.selected
         if self._shown is None:
             self._next_message()
 
     def _answer_event(self, event: pygame.event.Event) -> bool:
-        """Answers the shown message with the number keys, Enter (the focused answer) or a click. True if it did."""
+        """Answers the shown message with the number keys or a click. True if it did."""
         count = len(self._shown[0].buttons)
         if event.type == pygame.KEYDOWN:
             number_keys = ((pygame.K_1, pygame.K_9), (pygame.K_KP1, pygame.K_KP9))
@@ -409,13 +455,6 @@ class OutpostScreenDialog(Dialog):
                 if first <= event.key <= last and event.key - first < count:
                     self._answer(event.key - first)
                     return True
-            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER) and self._answer_focus < count:
-                self._answer(self._answer_focus)
-                return True
-        elif event.type == pygame.MOUSEMOTION:
-            for index, rect in enumerate(self._answer_rects):
-                if rect.collidepoint(event.pos):
-                    self._answer_focus = index
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for index, rect in enumerate(self._answer_rects):
                 if rect.collidepoint(event.pos):
@@ -424,9 +463,66 @@ class OutpostScreenDialog(Dialog):
         return False
     # endregion
 
+    def _try_leave(self) -> None:
+        """The Leave button: the screen ends at once, or, if the outpost is still repairing the ship, the pilot is
+        asked first."""
+        if self._asking_to_leave:
+            return
+        if self.outpost.repair_due_at is not None:
+            self._ask_to_leave()
+        else:
+            self._leaving = True
+
+    def _ask_to_leave(self) -> None:
+        """The outpost is still repairing the ship: the conversation is set aside, and the pilot is asked if they leave
+        anyway, with only the repairs done so far."""
+        self._close_option()
+        self._asking_to_leave = True
+        self._show(Message(
+            title='Leaving',
+            text="Your ship is not ready yet. If you leave now, it keeps only the repairs done so far."
+                 "\n\nDo you want to leave anyway?",
+            buttons=['Yes', 'No'],
+        ), self._on_leave_answer)
+
+    def _on_leave_answer(self, index: Optional[int]) -> None:
+        """Yes: the repairs done so far are kept, and the screen ends. No: the option starts again."""
+        import game_environment as gem  # local: the game's environment, not needed by the rest of this module
+        self._asking_to_leave = False
+        if index == 0:
+            self.outpost.stop_repair(self.ship, gem.current_environment.date_time)
+            self._leaving = True
+        else:
+            self._open_option()
+
+    def _move_focus(self, step: int) -> None:
+        """Tab: the focus goes to the next button, over the options and Leave, then the answers of the shown message,
+        and round again. It only moves: Enter or Space press the button."""
+        total = len(BUTTON_LABELS) + (len(self._shown[0].buttons) if self._shown is not None else 0)
+        self._focus = (min(self._focus, total - 1) + step) % total
+        self._focus_visible = True
+
+    def _press_focus(self) -> None:
+        """Enter or Space: presses the button that has the focus. An answer answers, Leave leaves (see _try_leave), an
+        option is selected. On the option that is selected already, it answers the shown message as Enter always did:
+        the answer under the mouse, else the first."""
+        options = len(BUTTON_LABELS)
+        answers = len(self._shown[0].buttons) if self._shown is not None else 0
+        focus = self._focus if self._focus < options + answers else self.selected
+        if focus >= options:
+            self._answer(focus - options)
+        elif focus != self.selected or BUTTON_LABELS[focus] == 'Leave':
+            self._select(focus)
+        elif self._shown is not None:
+            self._answer(self._answer_hover or 0)
+
     def _select(self, index: int) -> None:
-        """Selects another option: the conversation of the old one is closed, and the new one starts."""
-        if index != self.selected:
+        """Selects another option: the conversation of the old one is closed, and the new one starts. Leave is not an
+        option that stays selected: it leaves (see _try_leave), and the selection is the same as before."""
+        self._focus = index
+        if BUTTON_LABELS[index] == 'Leave':
+            self._try_leave()
+        elif index != self.selected:
             self._close_option()
             self.selected = index
             self._open_option()
@@ -434,16 +530,29 @@ class OutpostScreenDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
-        if is_cancel(event):
-            self._close_option()
-            return ('close', None)
         if self._shown is not None and self._answer_event(event):
-            return None
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_TAB):
-            backwards = event.key == pygame.K_UP or (event.key == pygame.K_TAB and event.mod & pygame.KMOD_SHIFT)
-            self._select((self.selected + (-1 if backwards else 1)) % len(BUTTON_LABELS))
+            pass
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
+            self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+            self._press_focus()
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN):
+            self._focus_visible = True
+            index = self.selected
+            while True:  # Up and Down select the options: passing over Leave must not leave
+                index = (index + (-1 if event.key == pygame.K_UP else 1)) % len(BUTTON_LABELS)
+                if BUTTON_LABELS[index] != 'Leave':
+                    break
+            self._select(index)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self._focus_visible = False
             for index, rect in enumerate(self._button_rects):
                 if rect.collidepoint(event.pos):
                     self._select(index)
+        elif event.type == pygame.MOUSEMOTION:
+            self._focus_visible = False  # the mouse is the one in use
+        self._after_conversation()
+        if self._leaving:
+            self._close_option()
+            return ('close', None)
         return None

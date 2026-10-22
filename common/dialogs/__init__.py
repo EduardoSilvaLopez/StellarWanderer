@@ -7,8 +7,10 @@ from .starting_dialog import StartingDialog
 from .knowledge_dialogs import KnownSystemsDialog, KnownPeopleDialog, ShipSpecificationsDialog
 from .mission_board_dialog import MissionBoardDialog, PendingMissionsDialog
 from .outpost_screen import OutpostScreenDialog
+from .pilot_identity_dialog import PilotIdentityDialog
 
 __all__ = [
+    "PilotIdentityDialog",
     "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog",
     "KnownPeopleDialog", "ShipSpecificationsDialog", "MissionBoardDialog", "PendingMissionsDialog",
     "OutpostScreenDialog",

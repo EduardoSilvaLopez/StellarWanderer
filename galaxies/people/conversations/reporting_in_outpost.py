@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class ReportingInOutpost(Conversation):
-    def __init__(self, interlocutor: Person, outpost: Outpost) -> None:
-        super().__init__(interlocutor)
+    def __init__(self, player: Player, interlocutor: Person, outpost: Outpost) -> None:
+        super().__init__(player, interlocutor)
         self.outpost: Outpost = outpost
         self.title: str = f'Outpost "{outpost.name}", Communication Officer {interlocutor.name} {interlocutor.surname}'
         self.time_since_last_visit: Optional[float] = None if not self.outpost.last_visited\

@@ -6,6 +6,7 @@ from datetime import datetime
 import logging
 from common.dialogs.messages import Message, ShowMessage, show_message
 
+from galaxies.people.player import Player
 import game_environment as gem
 from galaxies.people.person import Person
 from galaxies.outpost import Outpost
@@ -17,7 +18,8 @@ class Conversation(ABC):
     """A conversation shows its messages through `show`: show_message, a dialog over the cockpit, unless the one who
     starts it gives another place, such as the panel of the outpost screen."""
 
-    def __init__(self, interlocutor: Person, show: ShowMessage = show_message) -> None:
+    def __init__(self, player: Player, interlocutor: Person, show: ShowMessage = show_message) -> None:
+        self.player: Player = player
         self.interlocutor: Person = interlocutor.meet()
         self.date_time: datetime = gem.current_environment.date_time
         self.interaction_lines: List[str] = []
@@ -26,12 +28,12 @@ class Conversation(ABC):
         self.is_closed: bool = False
 
     @staticmethod
-    def generate(interlocutor: Person) -> Optional[Conversation]:
+    def generate(player: Player, interlocutor: Person) -> Optional[Conversation]:
         """Starts the conversation that fits the interlocutor's residency, and returns it (None if there is none
         yet)."""
         if isinstance(interlocutor.residency, Outpost):
             from .conversations.reporting_in_outpost import ReportingInOutpost
-            conversation = ReportingInOutpost(interlocutor, interlocutor.residency)
+            conversation = ReportingInOutpost(player, interlocutor, interlocutor.residency)
             conversation.start()
             return conversation
         return None
