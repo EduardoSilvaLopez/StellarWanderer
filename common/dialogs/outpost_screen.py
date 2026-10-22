@@ -34,8 +34,7 @@ from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
 from .messages import Message, ResultCallback
-from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
-from .scroll_bar import ScrollBar
+from .mission_board_dialog import OutpostMissions, PAGE_KEYS
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -157,13 +156,13 @@ class OutpostScreenDialog(Dialog):
     the ship is docked (Ship.dock), so nothing of it is consumed.
 
     Keyboard: Tab (Shift+Tab back) moves the focus over the radio group, Leave, the answers of the shown message and,
-    while Cargo is selected, the − and + of its rows; Enter or Space press the focused button: select an option, leave,
-    answer, or give or take one unit. The focus is drawn only while the keyboard is in use. Up and Down select the
-    options directly, and the number keys answer.
+    while Cargo is selected, the −, + and ++ of its rows; Enter or Space press the focused button: select an option,
+    leave, answer, give or take one unit, or fill a supply. The focus is drawn only while the keyboard is in use. Up and
+    Down select the options directly, and the number keys answer.
 
     Cargo (selected, without a conversation): the ship's picture, the room left in the hold, and a row for each supply
-    (spaceships/cargo_hold.py SUPPLIES), with − and + to give and take one unit, within the hold's maxima. The outpost
-    has what it takes: its stock is not limited.
+    (spaceships/cargo_hold.py SUPPLIES), with − and + to give and take one unit, and ++ to fill it to its maximum in one
+    press, all within the hold's maxima. The outpost has what it takes: its stock is not limited.
 
     Missions (selected): the outpost's OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
     deadline first. A click opens a detail, where an offer is accepted or a taken mission delivered. Backspace or a
@@ -202,11 +201,12 @@ class OutpostScreenDialog(Dialog):
         self._shown: Optional[Tuple[Message, Optional[ResultCallback]]] = None  # the message in the panel
         self._answer_rects: List[pygame.Rect] = []  # where the answers of the shown message were last drawn
         self._answer_hover: Optional[int] = None  # the answer under the mouse at the last draw, if any
-        # The button the keyboard is on (Tab), as a token: ('option', index), ('cargo', row, -1 or 1) for a row's
-        # - or +,
-        # or ('answer', index). See _focus_targets. It is drawn only while the keyboard is the one in use.
+        # The button the keyboard is on (Tab), as a token: ('option', index), ('cargo', row, -1 or 1) for a row's − or
+        # +, ('fill', row) for its ++, or ('answer', index). See _focus_targets. It is drawn only while the keyboard is
+        # the one in use.
         self._focus: tuple = ('option', 0)
-        self._cargo_rects: List[Tuple[pygame.Rect, pygame.Rect, int]] = []  # the − and + of each cargo row, and the row
+        # the −, + and ++ of each cargo row, and the row
+        self._cargo_rects: List[Tuple[pygame.Rect, pygame.Rect, pygame.Rect, int]] = []
         self._ship_source: Optional[pygame.Surface] = None  # the ship's picture, loaded once
         self._ship_image: Optional[pygame.Surface] = None  # it, scaled for the cargo view, made for _ship_image_size
         self._ship_image_size: Optional[Tuple[int, int]] = None
@@ -292,7 +292,8 @@ class OutpostScreenDialog(Dialog):
 
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The cargo: the ship's picture, the room left in the hold, and a row for each supply (SUPPLIES, in the hold's
-        module), with − and + to give and take one unit. There is no conversation here."""
+        module), with − and + to give and take one unit, and ++ to fill it to its maximum. There is no conversation
+        here."""
         from spaceships.cargo_hold import SUPPLIES  # local: the ship's hold is the game's, not the dialogs'
         margin = _margin(height)
         font = body_font(max(14, height // 48))
@@ -327,10 +328,12 @@ class OutpostScreenDialog(Dialog):
             shade = pygame.Surface(row.size, pygame.SRCALPHA)
             shade.fill(ANSWER_SHADE)
             surface.blit(shade, row)
-            minus = pygame.Rect(row.right - 2 * button_width - gap, row.top, button_width, row_height)
-            plus = pygame.Rect(row.right - button_width, row.top, button_width, row_height)
-            for rect, delta, sign in ((minus, -1, '-'), (plus, 1, '+')):
-                focused = self._focus_visible and self._focus == ('cargo', k, delta)
+            fill = pygame.Rect(row.right - button_width, row.top, button_width, row_height)
+            plus = pygame.Rect(fill.left - gap - button_width, row.top, button_width, row_height)
+            minus = pygame.Rect(plus.left - gap - button_width, row.top, button_width, row_height)
+            buttons = ((minus, ('cargo', k, -1), '-'), (plus, ('cargo', k, 1), '+'), (fill, ('fill', k), '++'))
+            for rect, token, sign in buttons:
+                focused = self._focus_visible and self._focus == token
                 pygame.draw.rect(surface, BUTTON_FILL, rect)
                 pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
                 caption = font.render(sign, True, ACCENT if focused else TEXT_COLOR)
@@ -341,7 +344,7 @@ class OutpostScreenDialog(Dialog):
             value = f"{supply.label}   {amount} / {maximum:g} {supply.unit}"
             caption = font.render(value, True, TEXT_COLOR)
             surface.blit(caption, (row.left + margin, row.centery - caption.get_height() // 2))
-            self._cargo_rects.append((minus, plus, k))
+            self._cargo_rects.append((minus, plus, fill, k))
             y += row_height + gap
 
     def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
@@ -354,17 +357,28 @@ class OutpostScreenDialog(Dialog):
         shade.fill(MESSAGE_PANEL_SHADE)
         surface.blit(shade, panel)
         pygame.draw.rect(surface, ACCENT_DIM, panel, 1)
-        # the list's text stops short of the margin, where its scroll bar is drawn (see MissionList.place)
-        self._missions.place(pygame.Rect(panel.left + margin, panel.top + margin,
-                                         panel.width - 2 * margin - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH,
-                                         panel.height - 2 * margin))
+        self._missions.place(panel.inflate(-2 * margin, -2 * margin))  # the columns, each with its scroll bar inside
         self._missions.draw_content(surface)
 
     def _press_cargo(self, k: int, delta: int) -> None:
         """One unit of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits (CargoHold.load)."""
+        self._move_cargo(k, delta, 1)
+
+    def _fill_cargo(self, k: int) -> None:
+        """Supply `k` taken up to its maximum in one press: what the hold lacks of it, within its room
+        (CargoHold.load)."""
+        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        hold = self.ship.cargo_hold
+        supply = SUPPLIES[k]
+        self._move_cargo(k, 1, supply.maximum(hold) - getattr(hold, supply.key))
+
+    def _move_cargo(self, k: int, delta: int, units: float) -> None:
+        """`units` of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits; the reputation
+        follows what actually moved."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         supply = SUPPLIES[k]
-        quantity = self.ship.cargo_hold.load(supply, 1) if delta > 0 else self.ship.cargo_hold.unload(supply, 1)
+        hold = self.ship.cargo_hold
+        quantity = hold.load(supply, units) if delta > 0 else hold.unload(supply, units)
         self.ship.owner.those_who_share.adjust_reputation_by_supply(supply.key, -delta*quantity)
         audio.play('ui_click')
 
@@ -644,16 +658,17 @@ class OutpostScreenDialog(Dialog):
             if event.key not in PAGE_KEYS:
                 return False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-            return self._missions.back()
+            return self._missions.back(event.pos)
         return self._missions.handle_content_event(event)
 
     def _focus_targets(self) -> List[tuple]:
-        """What Tab goes over, in order: the options (Leave among them), the − and + of each cargo row while Cargo is
-        selected, and the answers of the shown message. Then round again."""
+        """What Tab goes over, in order: the options (Leave among them), the −, + and ++ of each cargo row while Cargo
+        is selected, and the answers of the shown message. Then round again."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         targets: List[tuple] = [('option', index) for index in range(len(BUTTON_LABELS))]
         if self._shows_cargo():
-            targets += [('cargo', k, delta) for k in range(len(SUPPLIES)) for delta in (-1, 1)]
+            for k in range(len(SUPPLIES)):
+                targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
         if self._shown is not None:
             targets += [('answer', j) for j in range(len(self._shown[0].buttons))]
         return targets
@@ -667,14 +682,17 @@ class OutpostScreenDialog(Dialog):
 
     def _press_focus(self) -> None:
         """Enter or Space: presses the target that has the focus. An answer answers, a cargo row's − or + gives or
-        takes one unit, Leave leaves (see _try_leave), an option is selected. On the option that is selected already,
-        it answers the shown message as Enter always did: the answer under the mouse, else the first."""
+        takes one unit, its ++ fills it, Leave leaves (see _try_leave), an option is selected. On the option that is
+        selected already, it answers the shown message as Enter always did: the answer under the mouse, else the
+        first."""
         targets = self._focus_targets()
         token = self._focus if self._focus in targets else ('option', self.selected)
         if token[0] == 'answer':
             self._answer(token[1])
         elif token[0] == 'cargo':
             self._press_cargo(token[1], token[2])
+        elif token[0] == 'fill':
+            self._fill_cargo(token[1])
         elif BUTTON_LABELS[token[1]] == 'Leave' or token[1] != self.selected:
             self._select(token[1])
         elif self._shown is not None:
@@ -712,9 +730,11 @@ class OutpostScreenDialog(Dialog):
             self._select(index)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._focus_visible = False
-            for minus, plus, k in self._cargo_rects:
+            for minus, plus, fill, k in self._cargo_rects:
                 if minus.collidepoint(event.pos) or plus.collidepoint(event.pos):
                     self._press_cargo(k, 1 if plus.collidepoint(event.pos) else -1)
+                elif fill.collidepoint(event.pos):
+                    self._fill_cargo(k)
             for index, rect in enumerate(self._button_rects):
                 if rect.collidepoint(event.pos):
                     self._select(index)

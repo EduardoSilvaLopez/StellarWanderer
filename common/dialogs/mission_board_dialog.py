@@ -11,7 +11,8 @@ MissionBoardDialog is the board of an outpost: "Your missions" (delivered there)
 the latest deadline first), with their deadlines. Under the list (not under a detail) it has two buttons, Leave and
 Communicate (see MissionBoardDialog). PendingMissionsDialog is the view away from any outpost: the missions taken and
 not yet done, with the time left, and nothing to act on. OutpostMissions is the Missions of the outpost's screen
-(outpost_screen.py): "Available" and "Taken" (the open missions taken here), both the latest deadline first."""
+(outpost_screen.py), two columns side by side: "Available" on the left (the offers) and "Taken" on the right (the open
+missions taken here), both the latest deadline first."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -46,6 +47,7 @@ BUTTON_WIDTH = 150
 BUTTON_HEIGHT = 36
 SCROLL_STEP = 40
 SCROLL_BAR_GAP = 10  # between the text and the scroll bar to its right
+COLUMN_GAP = 24  # between the two columns of OutpostMissions
 PAGE_KEYS = {pygame.K_PAGEUP: -1, pygame.K_PAGEDOWN: 1}
 FOOTER_HEIGHT = 70  # the band under the text that MissionBoardDialog keeps for its two buttons
 FOOTER_BUTTON_HEIGHT = 64
@@ -450,11 +452,9 @@ class PendingMissionsDialog(MissionListDialog):
         return f"Time left: {left.days} days {hours - 24 * left.days:02d} h {remainder // 60:02d} min"
 
 
-class OutpostMissions(MissionList):
-    """The missions of an outpost's screen (outpost_screen.py), from its board: "Available", the offers the board has
-    (none below the reputation the board needs), and "Taken", the open missions the player took from this outpost, to
-    deliver here. Both are sorted with the latest deadline first. An offer is accepted, a taken mission delivered, from
-    its detail, as on the board."""
+class AvailableColumn(MissionList):
+    """The offers of an outpost's board, the latest deadline first, for the "Available" column. None below the reputation
+    the board needs. An offer is accepted from its detail, as on the board."""
 
     def __init__(self, board: MissionBoard) -> None:
         super().__init__()
@@ -463,11 +463,70 @@ class OutpostMissions(MissionList):
     def _sections(self) -> List[Section]:
         from galaxies.missions.mission_board import MissionBoard  # local: the board's module imports the player
         offers = self.board.offers if MissionBoard.is_available(self.board.player) else []
-        available = sorted(offers, key=lambda offer: offer.deadline, reverse=True)
-        taken = sorted(self.board.mine(), key=lambda mission: mission.deadline, reverse=True)
-        return [('Available', available, 'Nothing new.'), ('Taken', taken, 'None.')]
+        return [('Available', sorted(offers, key=lambda offer: offer.deadline, reverse=True), 'Nothing new.')]
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
-        if mission in self.board.mine():
-            return 'Deliver', lambda: self._act(self.board.deliver, mission)
         return 'Accept', lambda: self._act(self.board.accept, mission)
+
+
+class TakenColumn(MissionList):
+    """The open missions the player took from this outpost, to deliver here, the latest deadline first, for the "Taken"
+    column. A taken mission is delivered from its detail, as on the board."""
+
+    def __init__(self, board: MissionBoard) -> None:
+        super().__init__()
+        self.board: MissionBoard = board
+
+    def _sections(self) -> List[Section]:
+        taken = sorted(self.board.mine(), key=lambda mission: mission.deadline, reverse=True)
+        return [('Taken', taken, 'None.')]
+
+    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
+        return 'Deliver', lambda: self._act(self.board.deliver, mission)
+
+
+class OutpostMissions:
+    """The missions of an outpost's screen (outpost_screen.py), side by side: "Available" on the left (AvailableColumn),
+    "Taken" on the right (TakenColumn). Each column scrolls and opens its own details, so a click or the wheel goes to
+    the column under the mouse. The keys go to both."""
+
+    def __init__(self, board: MissionBoard) -> None:
+        self.columns: Tuple[MissionList, MissionList] = (AvailableColumn(board), TakenColumn(board))
+        self.areas: List[pygame.Rect] = [pygame.Rect(0, 0, 0, 0), pygame.Rect(0, 0, 0, 0)]  # where each column is
+
+    def place(self, rect: pygame.Rect) -> None:
+        """Puts the two columns in `rect`, side by side with COLUMN_GAP between them. Each column's scroll bar is at the
+        right of its own area, so the text is narrower by the bar's place."""
+        column_width = (rect.width - COLUMN_GAP) // 2
+        self.areas = [pygame.Rect(rect.left, rect.top, column_width, rect.height),
+                      pygame.Rect(rect.left + column_width + COLUMN_GAP, rect.top,
+                                  rect.width - column_width - COLUMN_GAP, rect.height)]
+        for column, area in zip(self.columns, self.areas):
+            column.place(pygame.Rect(area.left, area.top, area.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH, area.height))
+
+    def draw_content(self, surface: pygame.Surface) -> None:
+        for column in self.columns:
+            column.draw_content(surface)
+
+    def _column_at(self, pos: Tuple[int, int]) -> Optional[MissionList]:
+        for column, area in zip(self.columns, self.areas):
+            if area.collidepoint(pos):
+                return column
+        return None
+
+    def back(self, pos: Optional[Tuple[int, int]] = None) -> bool:
+        """Back from a detail to the list, in the column at `pos` (else in both). True if one of them went back."""
+        targets = self.columns if pos is None else [self._column_at(pos)]
+        went_back = [column.back() for column in targets if column is not None]
+        return any(went_back)
+
+    def handle_content_event(self, event: pygame.event.Event) -> bool:
+        """Sends the event to the column it is for: a mouse press or the wheel to the column under the mouse, the keys
+        and the mouse motion (a scroll bar being dragged) to both. True if a column used it."""
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            column = self._column_at(event.pos)
+            return column is not None and column.handle_content_event(event)
+        if event.type == pygame.MOUSEWHEEL:
+            column = self._column_at(pygame.mouse.get_pos())
+            return column is not None and column.handle_content_event(event)
+        return any([column.handle_content_event(event) for column in self.columns])

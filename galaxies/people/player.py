@@ -52,7 +52,7 @@ class Player:
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
         self.ship.spawn_in_environment(environment)
-        self.those_who_share = PersonalStatus()
+        self.those_who_share = PersonalStatus(political_entity.THOSE_WHO_SHARE)
         return self
 
     # region Time scale
