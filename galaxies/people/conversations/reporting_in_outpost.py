@@ -552,7 +552,7 @@ class ReportingInOutpost(Conversation):
             text: str = (
                 "We have spoken" if self.interlocutor.loyalty100 > 10 else "\n\n\nThey have been talking"
                 " about you and think can trust you to do something more than collect ore."
-                "\n\nAnytime you want, check the mission board of any outpost [Space]."
+                "\n\nAnytime you want, check the mission board of any outpost [Numpad 5]."
                 "\n\nAnyway, ore is always welcome..."
                 " we" if self.interlocutor.loyalty100 > 10 else " they"
                 " increased your cargo hold as well."

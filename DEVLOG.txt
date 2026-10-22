@@ -33,8 +33,12 @@ DEVELOPER'S DIARY
 
 > STARTED:
   
-* OUTPOST REVAMP
+* INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
   * Much bigger dialog, whole screen. You are inside the outpost. Menu points and background on the right side.
+  * Entering and leaving spends time.
+
+# NOT STARTED YET = BACKLOG
+
   * The current dialog is substituted by a screen on which different things happen. Time passes there, so start
   ordering maintenance and then do the rest.
   * The com. officer becomes the dockmaster. They appear in "Report", the first option.
@@ -43,27 +47,24 @@ DEVELOPER'S DIARY
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
   * Extra: Gravity. Evaluate, at least... for realism's sake.
 
-
-# NOT STARTED YET = BACKLOG
-
   * Extra: Check Rodina one last time: https://elliptic-games.com/
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
+  
+* JOVIAN PLANETS (with forbidden area)
+  * Extra: Arabs.
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
+  * Extra: Improve the sounds for real.
+* INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+  * Directly? Try the current ship configurations.
+  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 * OROGRAPHY
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
-  * Extra: Arabs.
-  * Extra: Strange rocks can be collected proactively and brought to the outpost.
-  * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"? INITIAL_TEMP_SHIELD_REDUCTION
-  
-* JOVIAN PLANETS (with forbidden area)
-  * Extra: Improve the sounds for real.
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
-* INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
-  * Directly? Try the current ship configurations.
-  * Extra: Ȼ are marked as illegal cargo in Those-Who-Share, as cargo in Shining Throne and as essential resource in UniDiv.
 * INCIDENTS
   * Get sealing equipment in the outposts.
   * Randome events, particularly in the asteroid belts, damage the hull (maintenance).

@@ -172,6 +172,13 @@ class Navigation:
         ship.velocity.add_vector(accel * delta_time)
         ship.energy -= Navigation.ENERGY_PER_SPEED * abs(sum(accel)) * delta_time
 
+    def is_landed(self) -> bool:
+        """True when the ship rests on the surface of its world: bound, at the ground (the lowest altitude the ship can
+        have, Ship.HEIGHT), and at rest in the surface frame, which an outpost is fixed in too."""
+        ship = self.ship
+        return (ship.is_bound and ship.position.y <= ship.HEIGHT + Navigation.BRAKED
+                and ship.velocity.as_vector().length() <= Navigation.BRAKED)
+
     def has_motion_to_brake(self) -> bool:
         """True while the brake has something to do: speed relative to the frame it brakes against, or a rotation."""
         relative = self.ship.velocity.as_vector() - self.velocity_reference_frame()

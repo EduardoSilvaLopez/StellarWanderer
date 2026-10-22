@@ -14,8 +14,8 @@ class Clock:
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int) -> None:
         """Draw the ship time display."""
-        digit_font = fonts.get(max(14, int(h * 0.030)), bold=True)
-        label_font = fonts.get(max(9, int(h * 0.016)))
+        digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
+        label_font = fonts.get(max(8, int(h * 0.013)))
 
         # Format the time display
         text = Clock._format_ship_time(date_time)
@@ -27,23 +27,24 @@ class Clock:
         rate_color = ACCENT_DIM if time_scale == Player.TIME_SCALE_MIN else AMBER
         rate = label_font.render(Clock._format_time_scale(time_scale), True, rate_color)
 
-        pad = max(8, int(h * 0.014))
-        gap = max(10, int(w * 0.012))
+        pad = max(6, int(h * 0.011))  # beside the text
+        top_pad = max(2, int(h * 0.004))  # above and below the text: tight, the panel is short
+        gap = max(8, int(w * 0.009))
         header_w = label.get_width() + gap + rate.get_width()
         panel = pygame.Rect(
             0, 0,
             max(digits.get_width(), header_w) + pad * 2,
-            digits.get_height() + label.get_height() + pad * 2,
+            digits.get_height() + label.get_height() + top_pad * 2,
         )
-        panel.topright = (int(w * 0.975), int(h * 0.075))
+        panel.topright = (int(w * 0.985), int(h * 0.025))
 
         pygame.draw.rect(surface, HULL_DARK, panel.inflate(6, 6))
         pygame.draw.rect(surface, READOUT_BG, panel)
         pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, panel, 2)
 
-        surface.blit(label, (panel.left + pad, panel.top + pad))
-        surface.blit(rate, rate.get_rect(topright=(panel.right - pad, panel.top + pad)))
-        surface.blit(digits, (panel.left + pad, panel.top + pad + label.get_height()))
+        surface.blit(label, (panel.left + pad, panel.top + top_pad))
+        surface.blit(rate, rate.get_rect(topright=(panel.right - pad, panel.top + top_pad)))
+        surface.blit(digits, (panel.left + pad, panel.top + top_pad + label.get_height()))
 
     @staticmethod
     def _format_ship_time(moment: datetime) -> str:

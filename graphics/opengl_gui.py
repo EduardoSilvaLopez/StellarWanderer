@@ -120,6 +120,17 @@ class OpenGLGui:
         if top_layer is not None:
             self._draw_texture(top_layer, self.dialog_texture)
 
+    def draw_full_screen(self, layer: pygame.Surface) -> None:
+        """Renders `layer` alone over the whole window: no game frame and no cockpit (the host draws what it wants
+        over it, such as the clock)."""
+        width, height = pygame.display.get_window_size()
+        self._ensure_surfaces(width, height)
+        GL.glViewport(0, 0, width, height)
+        GL.glClearColor(SPACE_COLOR[0] / 255, SPACE_COLOR[1] / 255, SPACE_COLOR[2] / 255, 1.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
+        GL.glDisable(GL.GL_DEPTH_TEST)
+        self._draw_texture(layer, self.dialog_texture)
+
     def _outposts(self, environment: GameEnvironment, ship: Ship) -> List[Outpost]:
         """Outposts of the fixed world (planets only) within draw distance of the ship.
 

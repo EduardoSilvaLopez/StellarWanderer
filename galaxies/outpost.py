@@ -37,6 +37,9 @@ class Outpost(Updatable):
     DEPTH = 12.0
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
 
+    TIME_TO_ENTER = 30 * 60  # seconds of game time that going into the outpost takes (half an hour)
+    TIME_TO_LEAVE = 30 * 60  # seconds of game time that leaving it takes (half an hour)
+
     STAFF_AGE_MIN = 25
     STAFF_AGE_MAX = 60
     STAFF_SIZE = 4  # three shifts and a substitute

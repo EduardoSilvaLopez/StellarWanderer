@@ -6,9 +6,11 @@ from .messages import Message, confirm, show_message, next_pending_message
 from .starting_dialog import StartingDialog
 from .knowledge_dialogs import KnownSystemsDialog, KnownPeopleDialog, ShipSpecificationsDialog
 from .mission_board_dialog import MissionBoardDialog, PendingMissionsDialog
+from .outpost_screen import OutpostScreenDialog
 
 __all__ = [
     "Dialog", "DialogResult", "run_in_window", "StartingDialog", "MessageDialog", "KnownSystemsDialog",
     "KnownPeopleDialog", "ShipSpecificationsDialog", "MissionBoardDialog", "PendingMissionsDialog",
+    "OutpostScreenDialog",
     "Message", "confirm", "show_message", "next_pending_message",
 ]
