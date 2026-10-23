@@ -10,13 +10,14 @@ from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
 
 import game_environment as gem
+import galaxies.people.player as gpp
 from galaxies import seeds
 if TYPE_CHECKING:
     from galaxies.missions.mission_board import MissionBoard
     from spaceships.ship import Ship
 from galaxies.world import World
 from galaxies.people.person import Person
-from galaxies.people.role import COM_OFFICER, DOCKMASTER, ROLES, STAFF_AGE_MAX, STAFF_AGE_MIN, Role
+from galaxies.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, ROLES, STAFF_AGE_MAX, STAFF_AGE_MIN, Role
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'  # the dates the outpost saves
 SUBSTITUTE_AGE_DROP = 2  # the substitute's age range starts this much lower
@@ -73,6 +74,7 @@ class Outpost(Updatable):
         self.staff: List[Person] = []  # every member of every role, in the order of ROLES
         self.on_duty: Dict[Role, Person] = {}  # the member on duty of each role that has one, see _pick_on_duty
         self.last_visited: Optional[datetime] = None
+        self.player_reputation_on_entering: Optional[float] = None
         # While the outpost works on the pilot's ship: when it will be ready, last checked and if it includes ore
         # unloading. It gets saved / loaded to restart on load if needed.
         self.handling_due_at: Optional[datetime] = None
@@ -90,6 +92,8 @@ class Outpost(Updatable):
                 self.saved_alterations = copy.deepcopy(my_alterations)
                 # Read here, not in prepare: a save made before the ship goes near the outpost must keep it, and prepare
                 # runs again each time ground near the outpost is made, which would put the old value back.
+                if 'player_reputation_on_entering' in self.saved_alterations:
+                    self.player_reputation_on_entering = self.saved_alterations['player_reputation_on_entering']
                 if 'last_visited' in self.saved_alterations:
                     self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], DATE_FORMAT)
                 if 'handling_due_at' in self.saved_alterations:
@@ -125,6 +129,10 @@ class Outpost(Updatable):
     @property
     def dockmaster(self) -> Optional[Person]:
         return self.on_duty.get(DOCKMASTER)
+
+    @property
+    def coordinator(self) -> Optional[Person]:
+        return self.on_duty.get(COORDINATOR)
 
     def person_with_seed(self, seed: int) -> Optional[Person]:
         """The staff member of this outpost with that seed, or None if the seed is not one of its staff."""
@@ -234,8 +242,7 @@ class Outpost(Updatable):
 
     def communicate(self) -> Outpost:
         from galaxies.people.conversation import Conversation
-        from galaxies.people.player import current_player
-        Conversation.generate(current_player, self.com_officer)
+        Conversation.generate(gpp.current_player, self.com_officer)
         self._set_last_visited(gem.current_environment.date_time)
         return self
 
@@ -271,12 +278,10 @@ class Outpost(Updatable):
             return self
         until = min(now, self.handling_due_at)
         seconds = (until - self.handling_checked_at).total_seconds()
-        if seconds >= 0:
-            import galaxies.people.player as pm
-
+        if seconds > 0:
             energy_change = min(ship.energy_max - ship.energy, self.CHARGE_PER_SECOND * seconds)
-            ship.energy = ship.energy_max
-            pm.current_player.those_who_share.adjust_reputation_by_supply("energy", -energy_change)
+            ship.energy += energy_change
+            gpp.current_player.those_who_share.adjust_reputation_by_supply("energy", -energy_change)
 
             if ship.maintenance < self.MAX_MAINTENANCE:
                 if self.MAX_MAINTENANCE - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
@@ -286,12 +291,12 @@ class Outpost(Updatable):
                 else:
                     maintenance_change = self.MAINTENANCE_PER_SECOND * seconds
                     ship.maintenance += maintenance_change
-                pm.current_player.those_who_share.adjust_reputation_by_supply("maintenance", -maintenance_change)
+                gpp.current_player.those_who_share.adjust_reputation_by_supply("maintenance", -maintenance_change)
 
             if self.handling_includes_ore and ship.cargo_hold.ore > 0:
                 ore_change = min (ship.cargo_hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
                 ship.cargo_hold.ore -= ore_change
-                pm.current_player.those_who_share.adjust_reputation_by_supply("ore", ore_change)
+                gpp.current_player.those_who_share.adjust_reputation_by_supply("ore", ore_change)
 
             self.handling_checked_at = until
         return self
@@ -309,6 +314,7 @@ class Outpost(Updatable):
         adds to the game time."""
         self.stop_handle(ship, now)
         self._set_last_visited(now + timedelta(seconds=self.TIME_TO_LEAVE))
+        self.player_reputation_on_entering = None
         return self.TIME_TO_LEAVE
 
     def _finish_handling(self, ship: Ship, now: datetime) -> Outpost:
@@ -347,6 +353,8 @@ class Outpost(Updatable):
 
     def get_alterations(self) -> dict:
         alterations: dict = {}
+        if self.player_reputation_on_entering is not None:
+            alterations['player_reputation_on_entering'] = self.player_reputation_on_entering
         if self.handling_due_at is not None:
             alterations['handling_due_at'] = self.handling_due_at.strftime(DATE_FORMAT)
             alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)

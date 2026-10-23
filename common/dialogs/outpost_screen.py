@@ -12,22 +12,25 @@ the one selected when the screen opens. The selected one is filled with the acce
 right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
 missions (OutpostMissions,
 drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
-middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the outpost
-(common/resources/backgrounds, the files named outpost*), chosen from the outpost's seed, so the same outpost always
-shows the same picture; faded dark. At the top left of the right side, the dockmaster on duty: the portrait, the full
-name with its title beside it, and under the name the age and the role.
+middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the area on
+show: each area has its own picture, chosen from the outpost's seed among the files of common/resources/backgrounds
+named outpost.<area>.* (AREA_PICTURE_PREFIXES), so the same outpost always shows the same pictures; faded dark. The
+Leave, while it is being decided, has its own picture on the right side. At the top left of the right side, the
+dockmaster on duty: the portrait, the full name with its title beside it, and under the name the age and the role.
 
 The conversation of the selected option shows its messages here, not in a dialog over the cockpit: the screen is the
 `show` of the conversation (see Conversation). The title and the text of the message are drawn in a dark panel under
 the dockmaster. Its answers are translucent rectangles, the last at the bottom of the right side, tinted while the mouse
 is over one; they are answered with the mouse, the number keys or Enter. A message asked while another is shown waits
-its turn. Selecting another option, or leaving the screen, closes the conversation.
+its turn. While a message waits for its answer the options are not selectable (Esc still opens the starting dialog),
+so the conversation is answered and its effects happen. Selecting another option, or leaving the screen, closes the
+conversation.
 """
 
 from __future__ import annotations
 import os
 import random
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import pygame
 
 from common import audio
@@ -52,7 +55,14 @@ if TYPE_CHECKING:
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button
-PICTURE_PREFIX = 'outpost'
+FULL_HOLD_COLOUR = (240, 96, 96)  # the room left in the hold, while a load has found none
+AREA_PICTURE_PREFIXES = {  # the picture of each area: a file of common/resources/backgrounds named <prefix>*
+    'Dockmaster': 'outpost.dockmaster.',
+    'Cargo': 'outpost.cargo.',
+    'Missions': 'outpost.mission.',
+    'Chat': 'outpost.chat.',
+    'Leave': 'outpost.leave.',  # the Leave is being decided: its picture covers the right side
+}
 PICTURE_FADE = 0.7  # how much of the picture is covered by black: 0 is the picture as it is, 1 is black
 LEFT_FADE = 0.6  # the same for the cockpit texture behind the buttons, which the instruments show darkened too
 LEFT_FRACTION = 0.16  # the left block's share of the window's width
@@ -73,12 +83,12 @@ CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the pe
 NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
 
 
-def _pictures() -> List[str]:
-    """The files of common/resources/backgrounds whose names start with PICTURE_PREFIX, in a fixed order."""
+def _pictures(prefix: str) -> List[str]:
+    """The files of common/resources/backgrounds whose names start with `prefix`, in a fixed order."""
     folder = resource_path('backgrounds')
     return sorted(
         os.path.join(folder, name) for name in os.listdir(folder)
-        if name.startswith(PICTURE_PREFIX) and name.lower().endswith(('.jpg', '.jpeg', '.png'))
+        if name.startswith(prefix) and name.lower().endswith(('.jpg', '.jpeg', '.png'))
     )
 
 
@@ -173,8 +183,10 @@ def _draw_wrapped(surface: pygame.Surface, x: int, width: int, top: int, text: s
 class OutpostScreenDialog(Dialog):
     """The screen of `outpost` (galaxies/outpost.py): its name, then the world, star and political entity it is in,
     then the radio group. Its picture is chosen from its seed, so the same outpost always shows the same picture.
-    The Leave button leaves it: the result is ('close', None). If the outpost is still repairing the ship, it asks
-    first, in the panel, and Yes leaves with the repairs done so far (Outpost.stop_repair). While the pilot is inside,
+    The Leave button leaves it: the result is ('close', None). The decision is the coordinator's OutpostLeaving
+    conversation (the coordinator's portrait replaces the dockmaster's while it runs): if the outpost is still handling
+    the ship it asks first, in the panel, and Yes leaves with what is done so far; No goes back to the option. The
+    conversation reports its decision to `_on_leave_decided`. While the pilot is inside,
     the ship is docked (Ship.dock), so nothing of it is consumed.
 
     Keyboard: Tab (Shift+Tab back) moves the focus over the radio group, Leave, the answers of the shown message and,
@@ -184,7 +196,8 @@ class OutpostScreenDialog(Dialog):
 
     Cargo (selected, without a conversation): the ship's picture, the room left in the hold, and a row for each supply
     (spaceships/cargo_hold.py SUPPLIES), with − and + to give and take one unit, and ++ to fill it to its maximum in one
-    press, all within the hold's maxima. The outpost has what it takes: its stock is not limited.
+    press, all within the hold's maxima. The outpost has what it takes: its stock is not limited. A + or ++ that asks
+    for more than the room left turns the room line red, until a − is pressed or Cargo is left.
 
     Missions (selected, and shown only from the reputation the board needs, see _shows_option): the outpost's
     OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
@@ -219,10 +232,13 @@ class OutpostScreenDialog(Dialog):
         self._frame_key: Optional[Tuple[Tuple[int, int], int]] = None
         self.selected: int = 0  # the radio group: exactly one button is selected, Dockmaster at first
         self._button_rects: List[Tuple[int, pygame.Rect]] = []  # the options shown: index and where they were drawn
-        pictures = _pictures()
-        self._picture_file: Optional[str] = random.Random(outpost.seed).choice(pictures) if pictures else None
-        self._picture: Optional[pygame.Surface] = None  # the faded picture, made for _picture_size
-        self._picture_size: Optional[Tuple[int, int]] = None
+        # one picture per area, chosen from the outpost's seed among the files named outpost.<area>.*
+        self._area_pictures: Dict[str, Optional[str]] = {}
+        for area, prefix in AREA_PICTURE_PREFIXES.items():
+            pictures = _pictures(prefix)
+            self._area_pictures[area] = random.Random(outpost.seed).choice(pictures) if pictures else None
+        self._picture: Optional[pygame.Surface] = None  # the faded picture, made for _picture_key
+        self._picture_key: Optional[Tuple[str, Tuple[int, int]]] = None  # the file and the size it was made from
         self._left: Optional[pygame.Surface] = None  # the cockpit texture covering the left block, made for _left_size
         self._left_size: Optional[Tuple[int, int]] = None
 
@@ -237,6 +253,7 @@ class OutpostScreenDialog(Dialog):
         self._focus: tuple = ('option', 0)
         # the −, + and ++ of each cargo row, and the row
         self._cargo_rects: List[Tuple[pygame.Rect, pygame.Rect, pygame.Rect, int]] = []
+        self._hold_full: bool = False  # the last + or ++ asked for more than the room left: the room is drawn red
         self._ship_source: Optional[pygame.Surface] = None  # the ship's picture, loaded once
         self._ship_image: Optional[pygame.Surface] = None  # it, scaled for the cargo view, made for _ship_image_size
         self._ship_image_size: Optional[Tuple[int, int]] = None
@@ -248,15 +265,13 @@ class OutpostScreenDialog(Dialog):
         self._chat_conversation: Optional[OutpostChat] = None  # the conversation the last tag started
         self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat (tags, log, people), where last drawn
         self._focus_visible: bool = False
-        self._asking_to_leave: bool = False  # the question of leaving with the repair going is in the panel
+        self._leave_conversation: Optional[Conversation] = None  # the coordinator's, while the Leave is being decided
         self._leaving: bool = False  # it was answered Yes: the next event ends the screen
         # local: the player needs the missions, which need the outposts, which need the dialogs
         from galaxies.people.player import current_player
         self.ship = current_player.ship  # docked by the player's enter_outpost, which comes before this screen
         self._open_option(True)
-        # The ship's levels as they are when the screen opens (maintenance, and energy as a share): the cargo view shows
-        # them, and they are not updated while the screen is open.
-        self._levels: Tuple[float, float] = (self.ship.maintenance, self.ship.energy / self.ship.energy_max)
+        self.outpost.player_reputation_on_entering = current_player.those_who_share.reputation
 
     def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
         """The whole window, at its own scale: nothing is centred or scaled down."""
@@ -272,12 +287,15 @@ class OutpostScreenDialog(Dialog):
         return self.render_panel(window_size)[0]
 
     def _faded_picture(self, size: Tuple[int, int]) -> Optional[pygame.Surface]:
-        """The chosen picture covering `size`, darkened, made once per size."""
-        if self._picture_file is None or size[0] <= 0 or size[1] <= 0:
+        """The picture of the area on show (the Leave while it is being decided, else the selected option), covering
+        `size`, darkened, made once per file and size. An area with no picture file keeps the Dockmaster's."""
+        area = 'Leave' if self._leave_conversation is not None else BUTTON_LABELS[self.selected]
+        file = self._area_pictures[area] or self._area_pictures['Dockmaster']
+        if file is None or size[0] <= 0 or size[1] <= 0:
             return None
-        if self._picture is None or self._picture_size != size:
-            self._picture = _darken(_cover(pygame.image.load(self._picture_file).convert(), size), PICTURE_FADE)
-            self._picture_size = size
+        if self._picture is None or self._picture_key != (file, size):
+            self._picture = _darken(_cover(pygame.image.load(file).convert(), size), PICTURE_FADE)
+            self._picture_key = (file, size)
         return self._picture
 
     def _left_background(self, size: Tuple[int, int]) -> pygame.Surface:
@@ -346,7 +364,8 @@ class OutpostScreenDialog(Dialog):
         width = picture.get_width()
         y = top + picture.get_height() + margin
         bar_height = max(8, height // 90)
-        for label, fraction in (('Maintenance', self._levels[0]), ('Energy', self._levels[1])):
+        levels =(('Maintenance', self.ship.maintenance), ('Energy', self.ship.energy / self.ship.energy_max))
+        for label, fraction in levels:
             caption = font.render(f"{label}   {fraction:.0%}", True, TEXT_COLOR)
             surface.blit(caption, (left, y))
             y += font.get_linesize()
@@ -357,7 +376,7 @@ class OutpostScreenDialog(Dialog):
             y += bar_height + gap
         y += margin // 2
         room = f"Room in the hold: {hold.free_capacity():.0f} of {hold.capacity} kg"
-        surface.blit(font.render(room, True, TEXT_COLOR), (left, y))
+        surface.blit(font.render(room, True, FULL_HOLD_COLOUR if self._hold_full else TEXT_COLOR), (left, y))
         y += font.get_linesize() + gap
 
         self._cargo_rects = []
@@ -377,7 +396,7 @@ class OutpostScreenDialog(Dialog):
                 caption = font.render(sign, True, ACCENT if focused else TEXT_COLOR)
                 surface.blit(caption, caption.get_rect(center=rect.center))
             stock = getattr(hold, supply.key)
-            maximum = supply.maximum(hold)
+            maximum = self._supply_limit(k)
             amount = f"{int(stock)}" if supply.whole else f"{stock:.1f}"
             value = f"{supply.label}   {amount} / {maximum:g} {supply.unit}"
             caption = font.render(value, True, TEXT_COLOR)
@@ -472,27 +491,43 @@ class OutpostScreenDialog(Dialog):
         self._missions.place(panel.inflate(-2 * margin, -2 * margin))  # the columns, each with its scroll bar inside
         self._missions.draw_content(surface)
 
+    def _supply_limit(self, k: int) -> float:
+        """The most of supply `k` the pilot may have in the hold: the hold's maximum, and for mines the reputation's
+        share, as the outpost's cargo shows it (the mines are not trusted more than that)."""
+        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        hold = self.ship.cargo_hold
+        supply = SUPPLIES[k]
+        maximum = supply.maximum(hold)
+        if supply.key == "mines":  # They don't trust him more. Mines are *expensive*
+            maximum = min(maximum, self.outpost.player_reputation_on_entering // 5)
+        return maximum
+
     def _press_cargo(self, k: int, delta: int) -> None:
-        """One unit of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits (CargoHold.load)."""
+        """One unit of supply `k` given (delta < 0) or taken (delta > 0), within the limits (see _move_cargo)."""
         self._move_cargo(k, delta, 1)
 
     def _fill_cargo(self, k: int) -> None:
-        """Supply `k` taken up to its maximum in one press: what the hold lacks of it, within its room
+        """Supply `k` taken up to its limit in one press: what the hold lacks of it, within its room
         (CargoHold.load)."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         hold = self.ship.cargo_hold
-        supply = SUPPLIES[k]
-        self._move_cargo(k, 1, supply.maximum(hold) - getattr(hold, supply.key))
+        self._move_cargo(k, 1, self._supply_limit(k) - getattr(hold, SUPPLIES[k].key))
 
     def _move_cargo(self, k: int, delta: int, units: float) -> None:
-        """`units` of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits; the reputation
-        follows what actually moved."""
+        """`units` of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits and the supply's
+        limit (_supply_limit); the reputation follows what actually moved. A take that asked for more than the room
+        left turns the room red (_hold_full), until a give or leaving Cargo. A take of mines that gets none plays the
+        refused sound, the others the click."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         supply = SUPPLIES[k]
         hold = self.ship.cargo_hold
+        if delta > 0:
+            units = max(0, min(units, self._supply_limit(k) - getattr(hold, supply.key)))
         quantity = hold.load(supply, units) if delta > 0 else hold.unload(supply, units)
+        self._hold_full = delta > 0 and quantity < units and hold.free_capacity() < supply.weight
         self.ship.owner.those_who_share.adjust_reputation_by_supply(supply.key, -delta*quantity)
-        audio.play('ui_click')
+        refused = delta > 0 and supply.key == "mines" and quantity == 0  # no mine taken: the pilot is told so
+        audio.play('mine_refused' if refused else 'ui_click')
 
     def clock_topleft(self, window_size: Tuple[int, int]) -> Tuple[int, int]:
         """Where the ship time display goes: the top left of the left block, inside its margin, over the name (the host
@@ -513,9 +548,14 @@ class OutpostScreenDialog(Dialog):
             y = _draw_wrapped(surface, x, width, y, detail, body_font(max(16, height // 40)), TEXT_COLOR)
         return y + margin
 
+    @property
+    def speaker(self) -> Optional[Person]:
+        """Who is shown at the top: the coordinator while the Leave is being decided, else the dockmaster."""
+        return self._leave_conversation.interlocutor if self._leave_conversation is not None else self.officer
+
     def _scaled_portrait(self, box: int) -> Optional[pygame.Surface]:
-        """The com officer's portrait, fitted in a box x box square, made again when the officer or the box changes."""
-        icon = self.officer.icon if self.officer is not None else None
+        """The speaker's portrait, fitted in a box x box square, made again when the speaker or the box changes."""
+        icon = self.speaker.icon if self.speaker is not None else None
         if icon is None:
             return None
         if self._portrait is None or self._portrait_source is not icon or self._portrait_box != box:
@@ -536,12 +576,13 @@ class OutpostScreenDialog(Dialog):
         return self._frame_image
 
     def _draw_officer(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> int:
-        """The dockmaster, at the top left of the right block: the portrait, and beside it the full name (with its
-        title), and under the name the age and the role. Nothing is drawn while there is no dockmaster. Returns the y
+        """The speaker (see `speaker`), at the top left of the right block: the portrait, and beside it the full name
+        (with its title), and under the name the age and the role. Nothing is drawn while there is none. Returns the y
         under what was drawn."""
         margin = _margin(height)
         top = right.top + margin
-        if self.officer is None:
+        officer = self.speaker
+        if officer is None:
             return top
         box = int(height * OFFICER_PORTRAIT_FRACTION)
         x = right.left + margin
@@ -558,9 +599,9 @@ class OutpostScreenDialog(Dialog):
             bottom = outer.bottom
         width = right.right - margin - x
         name_font = title_font(max(12, height // 40))
-        y = _draw_wrapped(surface, x, width, top, self.officer.get_full_name(), name_font, ACCENT)
-        role = self.officer.role.name
-        y = _draw_wrapped(surface, x, width, y, f'{self.officer.age} years old, {role}',
+        y = _draw_wrapped(surface, x, width, top, officer.get_full_name(), name_font, ACCENT)
+        role = officer.role.name
+        y = _draw_wrapped(surface, x, width, y, f'{officer.age} years old, {role}',
                           body_font(max(16, height // 40)), TEXT_COLOR)
         return max(bottom, y)
 
@@ -657,8 +698,8 @@ class OutpostScreenDialog(Dialog):
 
     # region Conversations
     def _open_option(self, first_time: bool) -> None:
-        """Starts what the selected option shows:
-        Dockmaster starts the report conversation, the others show nothing yet."""
+        """Starts what the selected option shows: Dockmaster starts the report conversation, Cargo first brings the
+        handling up to date (so the levels are current), the others show nothing yet."""
         if BUTTON_LABELS[self.selected] == 'Dockmaster' and self.officer is not None:
             # local: the conversation needs the outpost and the people, which need the dialogs
             from galaxies.people.conversations.outpost_report_further import OutpostReportFurther
@@ -671,6 +712,9 @@ class OutpostScreenDialog(Dialog):
             self.conversation.start()
         elif BUTTON_LABELS[self.selected] == 'Missions':
             self._open_missions()
+        elif BUTTON_LABELS[self.selected] == 'Cargo':
+            import game_environment as gem  # local: as in _open_missions
+            self.outpost.update_handle(self.ship, gem.current_environment.date_time)
         elif BUTTON_LABELS[self.selected] == 'Chat':
             self._open_chat()
 
@@ -704,8 +748,11 @@ class OutpostScreenDialog(Dialog):
             self.conversation = None
         self._end_chat()
         self._queue.clear()
+        self._hold_full = False
         self._shown = None
-        self._asking_to_leave = False
+        if self._leave_conversation is not None:
+            self._leave_conversation.close()
+            self._leave_conversation = None
 
     def _show(self, message: Message, on_result: Optional[ResultCallback] = None) -> None:
         """What the conversation of the option calls instead of show_message (Conversation.show): the message goes to
@@ -747,32 +794,26 @@ class OutpostScreenDialog(Dialog):
     # endregion
 
     def _try_leave(self) -> None:
-        """The Leave button: the screen ends at once, or, if the outpost is still repairing the ship, the pilot is
-        asked first."""
-        if self._asking_to_leave:
+        """The Leave button: the option is set aside and the coordinator's OutpostLeaving conversation decides, asking
+        the pilot if the outpost is still handling the ship."""
+        if self._leave_conversation is not None:
             return
-        if self.outpost.handling_due_at is not None:
-            self._ask_to_leave()
-        else:
+        if self.outpost.coordinator is None:  # nobody to ask
             self._leaving = True
-
-    def _ask_to_leave(self) -> None:
-        """The outpost is still repairing the ship: the conversation is set aside, and the pilot is asked if they leave
-        anyway, with only the repairs done so far."""
+            return
+        # local: the conversation needs the outpost and the people, which need the dialogs
+        from galaxies.people.conversations.outpost_leaving import OutpostLeaving
+        from galaxies.people.player import current_player
         self._close_option()
-        self._asking_to_leave = True
-        self._show(Message(
-            title='Leaving',
-            text="Your ship is not ready yet. If you leave now, it keeps only the repairs done so far."
-                 "\n\nDo you want to leave anyway?",
-            buttons=['Yes', 'No'],
-        ), self._on_leave_answer)
+        self._leave_conversation = OutpostLeaving(current_player, self.outpost.coordinator, self.outpost,
+                                                  self._on_leave_decided, self._show)
+        self._leave_conversation.start()
 
-    def _on_leave_answer(self, index: Optional[int]) -> None:
-        """Yes: the screen ends, and the outpost stops the handling with what it has done (Outpost.leave, called by main
-        when the screen closes). No: the option starts again."""
-        self._asking_to_leave = False
-        if index == 0:
+    def _on_leave_decided(self, leaves: bool) -> None:
+        """What OutpostLeaving tells the screen. True: the screen ends, and the outpost stops the handling with what it
+        has done (Outpost.leave, called by main when the screen closes). False: the option starts again."""
+        self._leave_conversation = None
+        if leaves:
             self._leaving = True
         else:
             self._open_option(False)
@@ -830,11 +871,12 @@ class OutpostScreenDialog(Dialog):
         return any(results)
 
     def _focus_targets(self) -> List[tuple]:
-        """What Tab goes over, in order: the options (Leave among them), the −, + and ++ of each cargo row while Cargo
-        is selected, the people listed while Chat is selected, and the answers of the shown message. Then round
-        again."""
+        """What Tab goes over, in order: the options (Leave among them) unless a message waits for its answer, the −,
+        +, and ++ of each cargo row while Cargo is selected, the people listed while Chat is selected, and the answers
+        of the shown message. Then round again."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
-        targets: List[tuple] = [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
+        targets: List[tuple] = [] if self._shown is not None else \
+            [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
         if self._shows_cargo():
             for k in range(len(SUPPLIES)):
                 targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
@@ -903,7 +945,7 @@ class OutpostScreenDialog(Dialog):
             self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
             self._press_focus()
-        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN):
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and self._shown is None:
             self._focus_visible = True
             index = self.selected
             while True:  # Up and Down select the options: passing over Leave must not leave
@@ -918,8 +960,8 @@ class OutpostScreenDialog(Dialog):
                     self._press_cargo(k, 1 if plus.collidepoint(event.pos) else -1)
                 elif fill.collidepoint(event.pos):
                     self._fill_cargo(k)
-            for index, rect in self._button_rects:
-                if rect.collidepoint(event.pos):
+            for index, rect in self._button_rects:  # no option while a message waits for its answer
+                if self._shown is None and rect.collidepoint(event.pos):
                     self._select(index)
         elif event.type == pygame.MOUSEMOTION:
             self._focus_visible = False  # the mouse is the one in use

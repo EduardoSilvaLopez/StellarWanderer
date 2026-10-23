@@ -57,6 +57,14 @@ class Conversation(ABC):
         `then`, with the buttons."""
         self.show(self.prepare_message(self.title, text, buttons), lambda button_index: then(button_index, buttons))
 
+    def generate_introduction_text(self) -> str:
+         if self.interlocutor.last_communication_at is None:
+            return (
+                f"I am {self.interlocutor.name}, {self.interlocutor.role.name}."\
+                    if self.interlocutor.sociability100 > 20 else f"Name's {self.interlocutor.name}.\n\n"
+            )
+         return ''
+
     def close(self) -> None:
         """Ends the conversation: the interlocutor remembers it, with its interaction_lines. Closing it again does
         nothing, so whoever shows it can close it too when it is left half way."""

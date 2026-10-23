@@ -27,7 +27,7 @@ class OutpostReportFurther(Conversation):
         do_ask: bool = False
         time_str: str = self._time_as_string(int(time_to_handle))
         if time_to_handle > 0:
-            handle_info_or_question = f"Your ship will be ready in {time_str}."
+            handle_info_or_question = f"Your ship will be ready {time_str}."
         elif self.player.ship.cargo_hold.ore > 0:
             handle_info_or_question = f"Shall we start unloading the ore? It should be ready in {time_str}."
             do_ask = True
@@ -50,8 +50,8 @@ class OutpostReportFurther(Conversation):
         if time_in_secs < 2*60:
             return "very soon"
         if time_in_secs < 2*60*60:
-            return str(1 + (time_in_secs // 60)) + " minutes"
-        return str(1 + (time_in_secs // (60 * 60))) + " hours"
+            return "in " + str(1 + (time_in_secs // 60)) + " minutes"
+        return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
     def _unload_the_ore_answered(self, chosen_button: Optional[int]) -> OutpostReportFurther:
         if chosen_button == 0:

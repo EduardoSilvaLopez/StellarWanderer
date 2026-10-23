@@ -43,24 +43,21 @@ DEVELOPER'S DIARY
 
   * Report button -> Dockmaster
   * Time display moved to the left
+  * Ship and Missions buttons exchanged positions.
 
 > STARTED:
 
-### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-
-  * On leave, update the outpost last_visited
+### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-8:00 + 9:00-11:15 + 11:45-
 
-  * Check the whole thing with a new game, also to save tokens.  
+  * Check the whole thing with a new game, also to save tokens.
   * On Leave, check if the range changed and if so, offer better ship or missions. This is Coordinator's job.
-  * Ore made separatedly... does not trigger alarm, update was ... not changed?
-  * Dialog should make time scale = 1
-
 
 # NOT STARTED YET = BACKLOG
 
-  * The order of the three buttons: Ship goes left, missions goes right (invisible at start)
-  * Time costs of actions: Move cargo, chat with people.
+  * A simple chat, including time consumption.
+  * Dialogs are still very neutral. Make variations asking an AI.
   * Remove the old dialog.
-  * Refine it all, when I have enough tokens.
+  * Refine it all graphically.
   * Different backgrounds for different points of the menu.
   * Extra: Retirement.
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)

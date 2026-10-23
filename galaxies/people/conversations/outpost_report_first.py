@@ -27,12 +27,12 @@ class OutpostReportFirst(Conversation):
         oit: str = '' if self.introduction_to_outpost_given else self._generate_outpost_introduction_text()
         self.introduction_to_outpost_given = True
 
-        it: str = self._generate_introduction_text() if self.interlocutor.last_communication_at is None else ''
+        it: str = self.generate_introduction_text()
 
         time_to_handle: float = self.outpost.get_time_to_handle(self.player.ship)
 
         time_str: str = self._time_as_string(int(time_to_handle))
-        handle_info: str = f"We will start reparing and recharging up your ship. It should be ready in {time_str}."
+        handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
         do_ask: bool = self.player.ship.cargo_hold.ore > 0
         ore_question: str = f"\n\nShall we start unloading the ore, {self.player.get_title()}?" \
@@ -58,19 +58,13 @@ class OutpostReportFirst(Conversation):
             "We take care of your ship, you handle the cargo. Maintenance and recharge need some time, though.\n\n"
          )
 
-    def _generate_introduction_text(self) -> str:
-         return (
-             f"I am {self.interlocutor.name}, {self.interlocutor.role.name}.\n\n"\
-                if self.interlocutor.sociability100 > 20 else f"Name's {self.interlocutor.name}.\n\n"
-         )
-
     @staticmethod
     def _time_as_string(time_in_secs: int) -> str:
         if time_in_secs < 2*60:
             return "very soon"
         if time_in_secs < 2*60*60:
-            return str(1 + (time_in_secs // 60)) + " minutes"
-        return str(1 + (time_in_secs // (60 * 60))) + " hours"
+            return "in " + str(1 + (time_in_secs // 60)) + " minutes"
+        return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
     def _finish(self, chosen_button: Optional[int]) -> OutpostReportFirst:
         if chosen_button == 0:
