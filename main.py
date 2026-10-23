@@ -12,7 +12,7 @@ Controls:
     SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); on a targeted
                outpost, enter it (the ship must be landed): a screen over the whole window, the other state of the
                game, where it goes on; its Leave button leaves it
-    Numpad 5   on a targeted outpost, open its mission board (reputation 10 or more) or talk to its com officer
+    Numpad 5   on a targeted outpost, open its mission board (reputation 20 or more) or talk to its com officer
     M          place mine
     O          show or hide the orbit of the targeted body
     Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside an outpost; Esc
@@ -138,10 +138,11 @@ def run_modal_dialog(
 
 
 def draw_outpost_view(outpost_screen: OutpostScreenDialog, fonts: FontCache, size: Tuple[int, int]) -> pygame.Surface:
-    """What the window shows while the pilot is inside an outpost: its screen, with the clock where the cockpit draws
-    it. The gui draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
+    """What the window shows while the pilot is inside an outpost: its screen, with the clock over its name, on the left
+    (OutpostScreenDialog.clock_topleft). The gui draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
     layer = outpost_screen.compose_overlay(size)
-    Clock.draw(layer, fonts, gem.current_environment.date_time, player_module.current_player.time_scale, *size)
+    Clock.draw(layer, fonts, gem.current_environment.date_time, player_module.current_player.time_scale, *size,
+               topleft=outpost_screen.clock_topleft(size))
     return layer
 
 
@@ -392,9 +393,10 @@ def main() -> None:
                 elif (result := outpost_screen.handle_event(event)) is not None:
                     running = result[0] != 'exit'
                     if result[0] == 'close':  # the Leave button: the pilot is back in the cockpit, which takes time too
+                        leaving_seconds = outpost_screen.outpost.leave(player.ship, gem.current_environment.date_time)
                         player.leave_outpost()
                         audio.play(OutpostScreenDialog.CLOSE_SOUND)
-                        elapsed = min(elapsed + Outpost.TIME_TO_LEAVE, MAX_ELAPSED)
+                        elapsed = min(elapsed + leaving_seconds, MAX_ELAPSED)
             elif event.type == pygame.KEYDOWN:
                 # the inside of the outpost in the scanner: the other state of the game (see Player.inside)
                 if event.key == pygame.K_SPACE:

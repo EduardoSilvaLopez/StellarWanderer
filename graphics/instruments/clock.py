@@ -1,7 +1,7 @@
 """Ship time display."""
 
 from __future__ import annotations
-from typing import Any
+from typing import Any, Optional, Tuple
 from datetime import datetime
 import pygame
 from galaxies.people.player import Player
@@ -12,8 +12,10 @@ class Clock:
     """Draw clock panel mounted on the upper right of the cockpit."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int) -> None:
-        """Draw the ship time display."""
+    def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
+             topleft: Optional[Tuple[int, int]] = None) -> None:
+        """Draw the ship time display: at the upper right of a w x h window, or with its top left at `topleft` when given
+        (the outpost screen puts it over its name)."""
         digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
         label_font = fonts.get(max(8, int(h * 0.013)))
 
@@ -36,7 +38,10 @@ class Clock:
             max(digits.get_width(), header_w) + pad * 2,
             digits.get_height() + label.get_height() + top_pad * 2,
         )
-        panel.topright = (int(w * 0.985), int(h * 0.025))
+        if topleft is None:
+            panel.topright = (int(w * 0.985), int(h * 0.025))
+        else:
+            panel.topleft = topleft
 
         pygame.draw.rect(surface, HULL_DARK, panel.inflate(6, 6))
         pygame.draw.rect(surface, READOUT_BG, panel)

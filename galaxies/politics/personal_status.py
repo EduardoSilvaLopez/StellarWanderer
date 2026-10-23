@@ -28,12 +28,15 @@ class PersonalStatus:
         return {'reputation': self.reputation}
 
     def adjust_reputation_by_supply(self, key: str, quantity: float) -> None:
+        '''Positive quantities increase reputation ('giving'), negative ones decrease it ('taking').'''
         if key not in self.entity.exchange_reputation_changes:
             logger.warning(f"No reputation changes defined for '{key}' in {self.name}")
+            return
+        if quantity == 0.0:
             return
         old_rep: float = gpp.current_player.those_who_share.reputation
         change: float = self.entity.exchange_reputation_changes[key] * quantity
         new_rep: float = old_rep + change
-        logger.info(f"Reputation in {self.entity.name} changed: {old_rep} + {change} = {new_rep}.")
+        logger.info(f"Reputation in {self.entity.name} changed because of {key}: {old_rep} + {change} = {new_rep}.")
         gpp.current_player.those_who_share.reputation = new_rep
 

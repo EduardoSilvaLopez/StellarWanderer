@@ -51,6 +51,7 @@ class Outpost(Updatable):
     TIME_TO_LEAVE = 30 * 60  # seconds of game time that leaving it takes (half an hour)
     CHARGE_PER_SECOND = 5e7 # Wh.
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
+    UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
     MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
 
     def __init__(self, planet: World, saved_alterations: dict) -> None:
@@ -72,11 +73,11 @@ class Outpost(Updatable):
         self.staff: List[Person] = []  # every member of every role, in the order of ROLES
         self.on_duty: Dict[Role, Person] = {}  # the member on duty of each role that has one, see _pick_on_duty
         self.last_visited: Optional[datetime] = None
-        # While the outpost works on the pilot's ship (see start_repair): when it will be ready, and the moment up to
-        # which the ship has been given what has been done (see update_repair). Saved with the outpost; a load puts
-        # the pilot back inside (Player.resume_inside), so the repair goes on.
-        self.repair_due_at: Optional[datetime] = None
-        self.repair_checked_at: Optional[datetime] = None
+        # While the outpost works on the pilot's ship: when it will be ready, last checked and if it includes ore
+        # unloading. It gets saved / loaded to restart on load if needed.
+        self.handling_due_at: Optional[datetime] = None
+        self.handling_checked_at: Optional[datetime] = None
+        self.handling_includes_ore: bool = False
         # local: the board needs the player, which needs missions
         from galaxies.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this outpost is in memory
@@ -91,9 +92,11 @@ class Outpost(Updatable):
                 # runs again each time ground near the outpost is made, which would put the old value back.
                 if 'last_visited' in self.saved_alterations:
                     self.last_visited = datetime.strptime(self.saved_alterations['last_visited'], DATE_FORMAT)
-                if 'repair_due_at' in self.saved_alterations:
-                    self.repair_due_at = datetime.strptime(self.saved_alterations['repair_due_at'], DATE_FORMAT)
-                    self.repair_checked_at = datetime.strptime(self.saved_alterations['repair_checked_at'], DATE_FORMAT)
+                if 'handling_due_at' in self.saved_alterations:
+                    self.handling_due_at = datetime.strptime(self.saved_alterations['handling_due_at'], DATE_FORMAT)
+                    self.handling_checked_at = \
+                        datetime.strptime(self.saved_alterations['handling_checked_at'], DATE_FORMAT)
+                    self.handling_includes_ore = self.saved_alterations['handling_includes_ore']
                 self.set_altered()
         self._log_generation()
 
@@ -241,81 +244,97 @@ class Outpost(Updatable):
         self.set_altered()
         return self
 
-    @staticmethod
-    def get_time_to_repair(ship: Ship) -> int:
+    def get_time_to_handle(self, ship: Ship) -> int:
         time_to_charge = (ship.energy_max - ship.energy) / Outpost.CHARGE_PER_SECOND
         time_to_repair = (Outpost.MAX_MAINTENANCE - ship.maintenance) / Outpost.MAINTENANCE_PER_SECOND
-        return int(max(time_to_charge, time_to_repair))
+        if time_to_repair < 0:
+            time_to_repair = 0.0
+        time_to_unload = \
+            (ship.cargo_hold.ore) / Outpost.UNLOAD_ORE_PER_SECOND \
+            if self.handling_includes_ore else 0
+        return int(max(time_to_charge, time_to_repair + time_to_unload)) # Dockmaster is alone, repairs or unloads.
 
-    def start_repair(self, ship: Ship) -> Outpost:
+    def start_handle(self, ship: Ship) -> Outpost:
         """The outpost starts working on the pilot's `ship`, from the state it is in now: it will be ready after
-        get_time_to_repair. A repair already going is first brought up to date (update_repair), then restarted. The ship
-        is near, so `prepare` has put the outpost in the update queue, which wakes it when the repair is due. The dates
+        get_time_to_handle. A handle already going is first brought up to date, then restarted. The ship
+        is near, so `prepare` has put the outpost in the update queue, which wakes it when the handle is due. The dates
         are saved with the outpost."""
         now = gem.current_environment.date_time
-        self.update_repair(ship, now)
-        self.repair_due_at = now + timedelta(seconds=self.get_time_to_repair(ship))
-        self.repair_checked_at = now
+        self.update_handle(ship, now)
+        self.handling_due_at = now + timedelta(seconds=self.get_time_to_handle(ship))
+        self.handling_checked_at = now
         return self.set_altered()
 
-    def update_repair(self, ship: Ship, now: datetime) -> Outpost:
-        """Gives `ship` what the repair has done up to `now` (or up to its end): energy is charged at CHARGE_PER_SECOND,
-        and maintenance raised at MAINTENANCE_PER_SECOND up to MAX_MAINTENANCE, never lowering a better one. Nothing is
-        spent in the outpost (see Ship.dock), so this is all that changes the levels there. Call it before showing the
-        ship's levels. Does nothing when no repair is going."""
-        if self.repair_due_at is None:
+    def update_handle(self, ship: Ship, now: datetime) -> Outpost:
+        """Gives `ship` what the handling has done up to `now`. Call it before showing the ship's levels."""
+        if self.handling_due_at is None:
             return self
-        until = min(now, self.repair_due_at)
-        seconds = (until - self.repair_checked_at).total_seconds()
-        if seconds > 0:
-            ship.energy = min(ship.energy_max, ship.energy + self.CHARGE_PER_SECOND * seconds)
+        until = min(now, self.handling_due_at)
+        seconds = (until - self.handling_checked_at).total_seconds()
+        if seconds >= 0:
+            import galaxies.people.player as pm
+
+            energy_change = min(ship.energy_max - ship.energy, self.CHARGE_PER_SECOND * seconds)
+            ship.energy = ship.energy_max
+            pm.current_player.those_who_share.adjust_reputation_by_supply("energy", -energy_change)
+
             if ship.maintenance < self.MAX_MAINTENANCE:
-                ship.maintenance = min(self.MAX_MAINTENANCE, ship.maintenance + self.MAINTENANCE_PER_SECOND * seconds)
-            self.repair_checked_at = until
+                if self.MAX_MAINTENANCE - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
+                    # Avoid epsilon changes.
+                    maintenance_change = self.MAX_MAINTENANCE - ship.maintenance
+                    ship.maintenance = self.MAX_MAINTENANCE
+                else:
+                    maintenance_change = self.MAINTENANCE_PER_SECOND * seconds
+                    ship.maintenance += maintenance_change
+                pm.current_player.those_who_share.adjust_reputation_by_supply("maintenance", -maintenance_change)
+
+            if self.handling_includes_ore and ship.cargo_hold.ore > 0:
+                ore_change = min (ship.cargo_hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
+                ship.cargo_hold.ore -= ore_change
+                pm.current_player.those_who_share.adjust_reputation_by_supply("ore", ore_change)
+
+            self.handling_checked_at = until
         return self
 
-    def stop_repair(self, ship: Ship, now: datetime) -> Outpost:
-        """The pilot leaves before the repair is done: `ship` keeps what was done until `now`, and the repair ends."""
-        self.update_repair(ship, now)
-        self.repair_due_at = None
-        self.repair_checked_at = None
+    def stop_handle(self, ship: Ship, now: datetime) -> Outpost:
+        self.update_handle(ship, now)
+        self.handling_due_at = None
+        self.handling_checked_at = None
+        self.handling_includes_ore = False
         return self
 
-    def _finish_repair(self) -> Outpost:
-        """The repair is done: the ship the player has now has full energy and the maintenance this outpost can give
-        (MAX_MAINTENANCE, never lowering a better one), and a small dialog tells the pilot."""
-        # local: the player needs the missions, and the dialogs package the game
-        from galaxies.people.player import current_player
+    def leave(self, ship: Ship, now: datetime) -> int:
+        """The pilot leaves the outpost, after its question if a handling is going on (see OutpostScreenDialog): the
+        handling stops with what it has done so far. Returns the seconds leaving takes (TIME_TO_LEAVE), which the caller
+        adds to the game time."""
+        self.stop_handle(ship, now)
+        self._set_last_visited(now + timedelta(seconds=self.TIME_TO_LEAVE))
+        return self.TIME_TO_LEAVE
+
+    def _finish_handling(self, ship: Ship, now: datetime) -> Outpost:
+        """The handling is done: whatever had to be done, is done."""
         from common.dialogs.messages import Message, show_message
-        self.repair_due_at = None
-        self.repair_checked_at = None
-        ship = current_player.ship
-        raised = ship.maintenance < self.MAX_MAINTENANCE
-        ship.energy = ship.energy_max
-        ship.maintenance = max(ship.maintenance, self.MAX_MAINTENANCE)
-        if raised:
-            maintenance = f"has reached {ship.maintenance:.0%}, the most {self.name} can give"
-        else:
-            maintenance = f"is {ship.maintenance:.0%}, better than {self.name} could give"
+        self.stop_handle(ship, now)
+        ship.owner.time_scale = 1
         show_message(Message(
-            title='SHIP READY',
-            text=f"{current_player.get_title()} Pilot, your ship is ready at {self.name}: the energy is at its maximum"
-                 f" and the maintenance {maintenance}.",
+            title=f'MESSAGE FROM DOCKMASTER {self.dockmaster.surname}',
+            text="Pilot, your ship is ready.",
         ))
         return self
     # endregion
 
     # region Updating
     def get_next_update(self) -> datetime:
-        """The next shift change, or the end of the repair if it comes before."""
-        if self.repair_due_at is None:
+        """The next shift change, or the end of handling if it comes before."""
+        if self.handling_due_at is None:
             return self.next_update_at
-        return min(self.next_update_at, self.repair_due_at)
+        return min(self.next_update_at, self.handling_due_at)
 
     def update(self, game_date_time: datetime) -> None:
-        """What is due: the end of the repair, and the next employee on duty (the shifts are 8 hours)."""
-        if self.repair_due_at is not None and self.repair_due_at <= game_date_time:
-            self._finish_repair()
+        """What is due: the end of the handling, and the next employee on duty (the shifts are 8 hours)."""
+        if self.handling_due_at is not None and self.handling_due_at <= game_date_time:
+            import galaxies.people.player as gpp  # local: the game's environment, not needed by the rest of this module
+            self._finish_handling(gpp.current_player.ship, game_date_time)
         if self.next_update_at <= game_date_time:
             self._pick_all_on_duty(game_date_time)
             self.next_update_at += timedelta(hours=8)
@@ -328,9 +347,10 @@ class Outpost(Updatable):
 
     def get_alterations(self) -> dict:
         alterations: dict = {}
-        if self.repair_due_at is not None:
-            alterations['repair_due_at'] = self.repair_due_at.strftime(DATE_FORMAT)
-            alterations['repair_checked_at'] = self.repair_checked_at.strftime(DATE_FORMAT)
+        if self.handling_due_at is not None:
+            alterations['handling_due_at'] = self.handling_due_at.strftime(DATE_FORMAT)
+            alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)
+            alterations['handling_includes_ore'] = self.handling_includes_ore
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime(DATE_FORMAT)
             # Nobody on duty yet when the ship has not been near since the load: the saved one is kept.

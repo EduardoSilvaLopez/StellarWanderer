@@ -27,26 +27,37 @@ DEVELOPER'S DIARY
   * Extra: No more PAUSED mode.
   * Extra: 120 chars in code.
 
-### 2026-10-22 (1/11) Extra time: 94h45' + 5:15-8:30 + 11:30 - 13:00 + 14:45 -19:30
+### 2026-10-22 (1/11)
 
 * INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
   * Entering and leaving spends time.
   * Much bigger dialog, whole screen. You are inside the outpost. Menu points and background on the right side.
   * The com. officer becomes the dockmaster. They appear in "Report", the first option.
   * "Report" button behavior.
-
-> DONE (not committed)
-
   * "Ship" button behaviour.
   * "Missions" button behaviour.
   * Installing "Blender" via Claude for its use.
   * "Chat" button behaviour
 
+> DONE (not committed)
+
+  * Report button -> Dockmaster
+  * Time display moved to the left
+
 > STARTED:
+
+### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-
+  * On leave, update the outpost last_visited
+
   * Check the whole thing with a new game, also to save tokens.  
- 
+  * On Leave, check if the range changed and if so, offer better ship or missions. This is Coordinator's job.
+  * Ore made separatedly... does not trigger alarm, update was ... not changed?
+  * Dialog should make time scale = 1
+
+
 # NOT STARTED YET = BACKLOG
 
+  * The order of the three buttons: Ship goes left, missions goes right (invisible at start)
   * Time costs of actions: Move cargo, chat with people.
   * Remove the old dialog.
   * Refine it all, when I have enough tokens.

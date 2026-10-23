@@ -5,10 +5,12 @@ It is not a modal dialog: the host (main) draws it alone, without the cockpit be
 while it is open (the pilot is `inside` the outpost, the other state of the game: see Player), so the time instrument,
 drawn over it by the host, shows time passing. Esc is not for the screen: it opens the starting dialog, which is drawn
 over it, as it is over the cockpit. The window is split in two.
-On the left, the name of the outpost, and under it, smaller, the world, star and political entity it is in, then a radio
-group of five buttons (Report, Cargo, Missions, Chat, Leave): one is always selected, and Report is the one selected
-when the screen opens. The selected one is filled with the accent colour. What it does is what the right side shows:
-Report starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's missions (OutpostMissions,
+On the left, the ship time display (graphics/instruments/clock.py) at the top, then the name of the outpost, and under
+it, smaller, the world, star and political entity it is in, then a radio group of five buttons (Dockmaster, Cargo,
+Missions, Chat, Leave; Missions only from the reputation the board needs): one is always selected, and Dockmaster is
+the one selected when the screen opens. The selected one is filled with the accent colour. What it does is what the
+right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
+missions (OutpostMissions,
 drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
 middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the outpost
 (common/resources/backgrounds, the files named outpost*), chosen from the outpost's seed, so the same outpost always
@@ -48,7 +50,7 @@ if TYPE_CHECKING:
     from galaxies.people.person import Person
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
-BUTTON_LABELS = ('Report', 'Cargo', 'Missions', 'Chat', 'Leave')
+BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button
 PICTURE_PREFIX = 'outpost'
 PICTURE_FADE = 0.7  # how much of the picture is covered by black: 0 is the picture as it is, 1 is black
@@ -68,7 +70,7 @@ ANSWER_SHADE = (0, 0, 0, 110)  # an answer is a translucent rectangle over the p
 ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour while the mouse is over it
 CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of the window's height
 CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the people (the chat takes the rest)
-TIME_DISPLAY_BOTTOM = 0.115  # the ship time display's bottom (graphics/instruments/clock.py), of the window's height
+NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
 
 
 def _pictures() -> List[str]:
@@ -184,7 +186,8 @@ class OutpostScreenDialog(Dialog):
     (spaceships/cargo_hold.py SUPPLIES), with − and + to give and take one unit, and ++ to fill it to its maximum in one
     press, all within the hold's maxima. The outpost has what it takes: its stock is not limited.
 
-    Missions (selected): the outpost's OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
+    Missions (selected, and shown only from the reputation the board needs, see _shows_option): the outpost's
+    OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
     deadline first. A click opens a detail, where an offer is accepted or a taken mission delivered. Backspace or a
     right-click goes back from a detail; Page Up and Page Down and the wheel scroll the list. The arrow keys still
     select options.
@@ -214,8 +217,8 @@ class OutpostScreenDialog(Dialog):
         self._frame_texture: Optional[pygame.Surface] = None  # textures/bezel.png, loaded at the first draw
         self._frame_image: Optional[pygame.Surface] = None  # the frame made for _frame_key
         self._frame_key: Optional[Tuple[Tuple[int, int], int]] = None
-        self.selected: int = 0  # the radio group: exactly one button is selected, Report at first
-        self._button_rects: List[pygame.Rect] = []  # where the buttons were last drawn
+        self.selected: int = 0  # the radio group: exactly one button is selected, Dockmaster at first
+        self._button_rects: List[Tuple[int, pygame.Rect]] = []  # the options shown: index and where they were drawn
         pictures = _pictures()
         self._picture_file: Optional[str] = random.Random(outpost.seed).choice(pictures) if pictures else None
         self._picture: Optional[pygame.Surface] = None  # the faded picture, made for _picture_size
@@ -250,7 +253,7 @@ class OutpostScreenDialog(Dialog):
         # local: the player needs the missions, which need the outposts, which need the dialogs
         from galaxies.people.player import current_player
         self.ship = current_player.ship  # docked by the player's enter_outpost, which comes before this screen
-        self._open_option()
+        self._open_option(True)
         # The ship's levels as they are when the screen opens (maintenance, and energy as a share): the cargo view shows
         # them, and they are not updated while the screen is open.
         self._levels: Tuple[float, float] = (self.ship.maintenance, self.ship.energy / self.ship.energy_max)
@@ -383,10 +386,10 @@ class OutpostScreenDialog(Dialog):
             y += row_height + gap
 
     def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
-        """Chat: three areas in the block, inside its margin and under the ship time display: the tags and the chat log
-        share the left, in dark panels, and the people are on the right, CHAT_PEOPLE_FRACTION of the height wide."""
+        """Chat: three areas in the block, inside its margin: the tags and the chat log share the left, in dark panels,
+        and the people are on the right, CHAT_PEOPLE_FRACTION of the height wide."""
         margin = _margin(height)
-        top = max(right.top + margin, int(height * TIME_DISPLAY_BOTTOM) + margin)
+        top = right.top + margin
         area = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
         people_width = min(int(height * CHAT_PEOPLE_FRACTION), area.width - 2 * margin)
         people = pygame.Rect(area.right - people_width, area.top, people_width, area.height)
@@ -458,9 +461,9 @@ class OutpostScreenDialog(Dialog):
 
     def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The missions of the outpost (OutpostMissions) in a dark panel over the block, its scroll bar at the right,
-        inside the margin. The panel starts under the ship time display (TIME_DISPLAY_BOTTOM), drawn over the block."""
+        inside the margin."""
         margin = _margin(height)
-        top = max(right.top + margin, int(height * TIME_DISPLAY_BOTTOM) + margin)
+        top = right.top + margin
         panel = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
         shade = pygame.Surface(panel.size, pygame.SRCALPHA)
         shade.fill(MESSAGE_PANEL_SHADE)
@@ -491,12 +494,20 @@ class OutpostScreenDialog(Dialog):
         self.ship.owner.those_who_share.adjust_reputation_by_supply(supply.key, -delta*quantity)
         audio.play('ui_click')
 
+    def clock_topleft(self, window_size: Tuple[int, int]) -> Tuple[int, int]:
+        """Where the ship time display goes: the top left of the left block, inside its margin, over the name (the host
+        draws it, see main.draw_outpost_view)."""
+        margin = _margin(window_size[1])
+        return margin, margin
+
     def _draw_name(self, surface: pygame.Surface, left: pygame.Rect, height: int) -> int:
-        """The outpost's name, and under it, smaller, its world, star and political entity, all in the left block.
-        Returns the y where the buttons start: a margin under them."""
+        """The outpost's name, and under it, smaller, its world, star and political entity, all in the left block. The
+        name starts NAME_TOP_FRACTION of the height down, under the ship time display. Returns the y where the buttons
+        start: a margin under them."""
         margin = _margin(height)
         x, width = left.left + margin, left.width - 2 * margin
-        y = _draw_wrapped(surface, x, width, margin, self.outpost_name, title_font(max(12, height // 40)), ACCENT)
+        top = margin + int(height * NAME_TOP_FRACTION)
+        y = _draw_wrapped(surface, x, width, top, self.outpost_name, title_font(max(12, height // 40)), ACCENT)
         y += max(4, margin // 3)  # a little more room between the name and the details
         for detail in self.details:
             y = _draw_wrapped(surface, x, width, y, detail, body_font(max(16, height // 40)), TEXT_COLOR)
@@ -627,8 +638,10 @@ class OutpostScreenDialog(Dialog):
 
         self._button_rects = []
         for index, label in enumerate(BUTTON_LABELS):
+            if not self._shows_option(index):
+                continue
             rect = pygame.Rect(left.left + margin, top, left.width - 2 * margin, button_height)
-            self._button_rects.append(rect)
+            self._button_rects.append((index, rect))
             focused = self._focus_visible and self._focus == ('option', index)
             if index == self.selected:
                 pygame.draw.rect(surface, ACCENT, rect)
@@ -643,13 +656,18 @@ class OutpostScreenDialog(Dialog):
             top += button_height + gap
 
     # region Conversations
-    def _open_option(self) -> None:
-        """Starts what the selected option shows: Report starts the report conversation, the others show nothing yet."""
-        if BUTTON_LABELS[self.selected] == 'Report' and self.officer is not None:
+    def _open_option(self, first_time: bool) -> None:
+        """Starts what the selected option shows:
+        Dockmaster starts the report conversation, the others show nothing yet."""
+        if BUTTON_LABELS[self.selected] == 'Dockmaster' and self.officer is not None:
             # local: the conversation needs the outpost and the people, which need the dialogs
-            from galaxies.people.conversations.outpost_report import OutpostReport
+            from galaxies.people.conversations.outpost_report_further import OutpostReportFurther
+            from galaxies.people.conversations.outpost_report_first import OutpostReportFirst
             from galaxies.people.player import current_player
-            self.conversation = OutpostReport(current_player, self.officer, self.outpost, self._show)
+            if first_time:
+                self.conversation = OutpostReportFirst(current_player, self.officer, self.outpost, self._show)
+            else:
+                self.conversation = OutpostReportFurther(current_player, self.officer, self.outpost, self._show)
             self.conversation.start()
         elif BUTTON_LABELS[self.selected] == 'Missions':
             self._open_missions()
@@ -733,7 +751,7 @@ class OutpostScreenDialog(Dialog):
         asked first."""
         if self._asking_to_leave:
             return
-        if self.outpost.repair_due_at is not None:
+        if self.outpost.handling_due_at is not None:
             self._ask_to_leave()
         else:
             self._leaving = True
@@ -751,19 +769,29 @@ class OutpostScreenDialog(Dialog):
         ), self._on_leave_answer)
 
     def _on_leave_answer(self, index: Optional[int]) -> None:
-        """Yes: the repairs done so far are kept, and the screen ends. No: the option starts again."""
-        import game_environment as gem  # local: the game's environment, not needed by the rest of this module
+        """Yes: the screen ends, and the outpost stops the handling with what it has done (Outpost.leave, called by main
+        when the screen closes). No: the option starts again."""
         self._asking_to_leave = False
         if index == 0:
-            self.outpost.stop_repair(self.ship, gem.current_environment.date_time)
             self._leaving = True
         else:
-            self._open_option()
+            self._open_option(False)
 
     def _shows_cargo(self) -> bool:
         """Cargo is the view while it is selected and no message is shown: a message (the question of leaving, which
         any option can ask) takes the right side in its place."""
         return BUTTON_LABELS[self.selected] == 'Cargo' and self._shown is None
+
+    def _shows_option(self, index: int) -> bool:
+        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available): the
+        pilot cannot see the missions yet."""
+        from galaxies.missions.mission_board import MissionBoard  # local: as in AvailableColumn
+        return BUTTON_LABELS[index] != 'Missions' or MissionBoard.is_available(self.ship.owner)
+
+    def _leave_hidden_option(self) -> None:
+        """If the reputation fell below what Missions needs while it was selected, Dockmaster is selected instead."""
+        if not self._shows_option(self.selected):
+            self._select(BUTTON_LABELS.index('Dockmaster'))
 
     def _shows_missions(self) -> bool:
         """The missions' list is the view while Missions is selected and no message is shown (see _shows_cargo)."""
@@ -806,7 +834,7 @@ class OutpostScreenDialog(Dialog):
         is selected, the people listed while Chat is selected, and the answers of the shown message. Then round
         again."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
-        targets: List[tuple] = [('option', index) for index in range(len(BUTTON_LABELS))]
+        targets: List[tuple] = [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
         if self._shows_cargo():
             for k in range(len(SUPPLIES)):
                 targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
@@ -860,7 +888,7 @@ class OutpostScreenDialog(Dialog):
         elif index != self.selected:
             self._close_option()
             self.selected = index
-            self._open_option()
+            self._open_option(False)
 
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
@@ -880,7 +908,7 @@ class OutpostScreenDialog(Dialog):
             index = self.selected
             while True:  # Up and Down select the options: passing over Leave must not leave
                 index = (index + (-1 if event.key == pygame.K_UP else 1)) % len(BUTTON_LABELS)
-                if BUTTON_LABELS[index] != 'Leave':
+                if BUTTON_LABELS[index] != 'Leave' and self._shows_option(index):
                     break
             self._select(index)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -890,12 +918,13 @@ class OutpostScreenDialog(Dialog):
                     self._press_cargo(k, 1 if plus.collidepoint(event.pos) else -1)
                 elif fill.collidepoint(event.pos):
                     self._fill_cargo(k)
-            for index, rect in enumerate(self._button_rects):
+            for index, rect in self._button_rects:
                 if rect.collidepoint(event.pos):
                     self._select(index)
         elif event.type == pygame.MOUSEMOTION:
             self._focus_visible = False  # the mouse is the one in use
         self._after_conversation()
+        self._leave_hidden_option()
         if self._leaving:
             self._close_option()
             return ('close', None)

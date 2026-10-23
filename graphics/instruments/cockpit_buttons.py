@@ -1,6 +1,6 @@
 """The small buttons under the political entity's icon: what the pilot knows of the stellar systems and of the people,
-the specifications of the ship (below the people), and, when there is a mission to see (see shows_missions), the
-pending missions, below the stellar systems."""
+the specifications of the ship (below the stellar systems), and, when there is a mission to see (see shows_missions),
+the pending missions, below the people."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -32,7 +32,7 @@ def shows_missions(player: Player) -> bool:
 
 class CockpitButtons:
     """Square buttons under the political icon: a miniature stellar system and a head side by side, the ship under the
-    head, and the missions (when shown) under the stellar system. The cockpit only draws them; main opens the dialog
+    stellar system, and the missions (when shown) under the head. The cockpit only draws them; main opens the dialog
     when `hit` says one was pressed. Their places are those of the last draw."""
 
     SIZE = 48
@@ -90,9 +90,9 @@ class CockpitButtons:
         second_row = y + size + CockpitButtons.BUTTON_GAP
         right = x + size + CockpitButtons.BUTTON_GAP
         places = [(SYSTEMS, pygame.Rect(x, y, size, size)), (PEOPLE, pygame.Rect(right, y, size, size)),
-                  (SHIP, pygame.Rect(right, second_row, size, size))]
+                  (SHIP, pygame.Rect(x, second_row, size, size))]
         if missions:
-            places.append((MISSIONS, pygame.Rect(x, second_row, size, size)))
+            places.append((MISSIONS, pygame.Rect(right, second_row, size, size)))
         for name, rect in places:
             CockpitButtons.rects[name] = rect
             hovered = mouse is not None and rect.collidepoint(mouse)

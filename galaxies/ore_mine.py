@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class OreMine(Updatable):
+    EXTRACTION_POWER: int = 0.25 # To tune the game. Maybe later different kinds of mines.
     EXTRACTION_PERIOD: int = 3600
     MAX_CAPACITY: int = 20000
     # Geometry of a mine: a vertical cylinder standing on the ground. Graphics draws it with these and
@@ -110,9 +111,10 @@ class OreMine(Updatable):
         periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
         if periods_passed < 1.0:
             return 0
-        self.last_updated_at += 0.25 * timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
-            # Adjusted together with EXTRACTION_PERIOD to tune the extraction.
-        self.content += self.parent_field.extract(periods_passed, OreMine.MAX_CAPACITY - self.content)
+        self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
+        self.content += self.parent_field.extract(
+            self.EXTRACTION_POWER * periods_passed, OreMine.MAX_CAPACITY - self.content
+            )
         return periods_passed
 
     def stop_updating(self) -> None:
@@ -121,5 +123,4 @@ class OreMine(Updatable):
         if self.last_updated_at is not None:
             self._extract_completed_periods(gem.current_environment.date_time)  # the periods finished before stopping
         self.next_update_at = None
-        self.last_updated_at = None  # the time the mine is stopped is not work: the next start begins a fresh period
 
