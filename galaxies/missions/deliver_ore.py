@@ -90,7 +90,7 @@ class DeliverOre(Mission):
     def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
         mineral = rnd.choice(['platinum', 'palladium', 'rhodium', 'iridium', 'osmium', 'ruthenium'])
-        return f"Thank you {player.get_title()}, this {mineral}-rich ore will help the Community."
+        return f"Thank you Pilot {player.surname}, this {mineral}-rich ore will help the Community."
 
     def fail(self, player: Player) -> None:
         reputation_change: float = -5 # If you did not have the time don't accept the mission.

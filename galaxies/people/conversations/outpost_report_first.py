@@ -35,7 +35,7 @@ class OutpostReportFirst(Conversation):
         handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
         do_ask: bool = self.player.ship.cargo_hold.ore > 0
-        ore_question: str = f"\n\nShall we start unloading the ore, {self.player.get_title()}?" \
+        ore_question: str = f"\n\nShall we start unloading the ore, {self.interlocutor.get_player_title()}?" \
             if do_ask else ''
 
         text: str = oit + it + handle_info + ore_question
@@ -53,7 +53,7 @@ class OutpostReportFirst(Conversation):
 
     def _generate_outpost_introduction_text(self) -> str:
          return (
-             f"Welcome to {self.outpost.name}, {self.player.get_title()} {self.player.surname}."
+             f"Welcome to {self.outpost.name}, {self.interlocutor.get_player_title()} {self.player.surname}."
             " We are new but we can take care about you.\n\n" if self.interlocutor.sociability100 > 20 else '\n\n'
             "We take care of your ship, you handle the cargo. Maintenance and recharge need some time, though.\n\n"
          )

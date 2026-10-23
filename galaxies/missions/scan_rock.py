@@ -202,7 +202,10 @@ class ScanRock(Mission):
         f"{player.those_who_share.reputation}")
 
     def reward_text(self, player: Player) -> str:
-        return f"Thank you {player.get_title()}, knowledge about this {self.adjective} object will help the Community."
+        return (
+            f"Thank you Pilot {player.surname}, knowledge about"
+            f" this {self.adjective} object will help the Community."
+        )
 
     def fail(self, player: Player) -> None:
         reputation_change: float = -5 # If you did not have the time don't accept the mission.

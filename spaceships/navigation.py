@@ -271,7 +271,7 @@ class Navigation:
             "Ship (local)": surface_vel,
         })
 
-        ship.notification.set(f"Arriving to {world.name}, {ship.owner.get_title()} Pilot.", 'bind')
+        ship.notification.set(f"Arriving to {world.name}, Pilot {ship.owner.surname}.", 'bind')
         ship.is_bound = True
         return self
 
@@ -298,7 +298,7 @@ class Navigation:
         ship.position.set_vector(ship_pos)
         ship.velocity.set_vector(ship_vel)
 
-        ship.notification.set(f"Leaving {world.name}, {ship.owner.get_title()} Pilot.", 'unbind')
+        ship.notification.set(f"Leaving {world.name}, Pilot {ship.owner.surname}.", 'unbind')
         ship.is_bound = False
         return self
 

@@ -49,15 +49,23 @@ DEVELOPER'S DIARY
   * Extra: Rodina checked (in Steam) Checked. One system, lots of fight, few social.
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
 
+* JOVIAN PLANETS
+  * Extra: title from interlocutors in the outpost is relative, not absolute.
+
 > STARTED:
 
-### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-8:00 + 9:00-11:15 + 11:45-
+Extra time: 111h30' + 17:00
 
-* JOVIAN PLANETS (with forbidden area)
-  * Extra: Strange rocks can be collected proactively and brought to the outpost.
-  * Extra: Arabs.
+  * Make screenshots.
+
+> BACKLOG
+
+* JOVIAN PLANETS (current one)
+  * Forbitten area, apply first to star.
+  In order to arrive there, I need in my gameplay to advance quite more. So, some extras belong to that road.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
-    INITIAL_TEMP_SHIELD_REDUCTION
+    Use INITIAL_TEMP_SHIELD_REDUCTION
+  * Extra: Arabs.
   * Extra: Retirement.
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
@@ -74,6 +82,7 @@ THE TRAITOR MISSION
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
 * INCIDENTS
   * Get sealing equipment in the outposts.
   * Randome events, particularly in the asteroid belts, damage the hull (maintenance).

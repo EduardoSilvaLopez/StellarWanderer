@@ -200,6 +200,14 @@ class Person:
         # Find out where this person is... as for now, guess Those-Who-Share
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
 
+    def get_player_title(self) -> str:
+        # Subjective.
+        import galaxies.people.player as gpp
+        player_rep = gpp.current_player.those_who_share.reputation
+        mood_mod = random.gauss(0.5, 0.01)
+        final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
+        return political_entity.THOSE_WHO_SHARE.title_for(final_rep)
+
     def get_full_name(self) -> str:
         return f"{self.get_title()} {self.name} {self.surname}"  # No Chinese exception. Intentional.
     # endregion

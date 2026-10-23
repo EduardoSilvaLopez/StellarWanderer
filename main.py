@@ -222,7 +222,7 @@ def start_game(action: str, value: object) -> float:
         logger.debug("New game created.")
         elapsed = 0.0
     player = player_module.current_player
-    player.ship.notification.set(f"Welcome, {player.get_title()} Pilot.")
+    player.ship.notification.set(f"Welcome, Pilot {player.surname}.")
     return elapsed
 
 
@@ -233,13 +233,13 @@ def show_welcome(player: player_module.Player) -> None:
     moon = fixed_world.name
     xis_title = THOSE_WHO_SHARE.title_for(1500)
     show_message(Message(
-        title=f"Welcome, {player.get_title()} Pilot!",
+        title=f"Happy New Year, {player.get_title()} Pilot {player.surname}!",
         text=(
-            f"{xis_title} Xi, the famous pilot trainer, has closed the communication with his last message."
+            f"{xis_title} Xi, the famous Pilot trainer, has closed the communication with his last message."
             " Happy New Year indeed. Now he will train other Pioneer Pilots. You are ready."
             f"\n\n{moon} extends in front of you. Your main task is to find the best ore-rich rocks, melt them"
             f" and install those precious mines on the resulting fields. Then wait, days if needed, and collect"
-            f" the ore, bringing it to the outpost in the planet, {planet}. The better you work, the more your"
+            f" the ore, bringing it to the outpost in the planet {planet}. The better you work, the more your"
             " reputation will rise."
             "\n\nThe State of \"Those-Who-Share\" will provide everything you need there, as they provided"
             " you this ship, as long as you need it."
@@ -391,7 +391,9 @@ def main() -> None:
                     ship = player.ship
                     outpost = ship.scanner.targeted_outpost
                     if outpost is not None and not ship.navigation.is_landed():
-                        ship.notification.set(f"[Com. Officer] Land the ship first, {player.get_title()}.")
+                        ship.notification.set(
+                            f"[Com. Officer] Land the ship first, {outpost.com_officer.get_player_title()}."
+                            )
                     elif outpost is not None:
                         player.enter_outpost(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time

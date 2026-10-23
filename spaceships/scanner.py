@@ -167,7 +167,7 @@ class Scanner:
             return
         if asteroid.advance_scan(game_seconds):
             self.ship.notification.set(
-                f"Asteroid {asteroid.name} scanned, {player.get_title()} Pilot: the results are in the ship computer.",
+                f"Asteroid {asteroid.name} scanned, Pilot {player.surname}: the results are in the ship computer.",
                 'mission_delivered')
     # endregion
 

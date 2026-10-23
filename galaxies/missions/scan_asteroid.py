@@ -216,7 +216,7 @@ class ScanAsteroid(Mission):
 
     def reward_text(self, player: Player) -> str:
         return (
-            f"Thank you for taking the risk, {player.get_title()},"
+            f"Thank you for taking the risk, Pilot {player.surname},"
             f" knowledge about this asteroid will help the Community."
             )
 
