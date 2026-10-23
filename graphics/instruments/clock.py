@@ -7,26 +7,31 @@ import pygame
 from galaxies.people.player import Player
 from ..constants import ACCENT, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
 
+DANGER_BG = (190, 30, 34)  # the box when the time compression is clearly dangerous
+DANGER_INK = (255, 240, 240)
+
 
 class Clock:
     """Draw clock panel mounted on the upper right of the cockpit."""
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
-             topleft: Optional[Tuple[int, int]] = None) -> None:
+             topleft: Optional[Tuple[int, int]] = None, dangerous: bool = False) -> None:
         """Draw the ship time display: at the upper right of a w x h window, or with its top left at `topleft` when given
-        (the outpost screen puts it over its name)."""
+        (the outpost screen puts it over its name). `dangerous` (see Player.is_time_scale_dangerous) paints the whole box
+        red."""
         digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
         label_font = fonts.get(max(10, int(h * 0.018)))
 
         # Format the time display
         text = Clock._format_ship_time(date_time)
 
-        digits = Clock._ink(digit_font.render(text, True, ACCENT))
-        label = Clock._ink(label_font.render('PosDes', True, ACCENT))
+        ink = DANGER_INK if dangerous else ACCENT
+        digits = Clock._ink(digit_font.render(text, True, ink))
+        label = Clock._ink(label_font.render('PosDes', True, ink))
 
         # Highlight the rate whenever time is compressed; the normal rate is bright too, beside the label
-        rate_color = ACCENT if time_scale == Player.TIME_SCALE_MIN else AMBER
+        rate_color = ink if dangerous or time_scale == Player.TIME_SCALE_MIN else AMBER
         rate = Clock._ink(label_font.render(Clock._format_time_scale(time_scale), True, rate_color))
 
         pad = max(6, int(h * 0.011))  # beside the text
@@ -45,7 +50,7 @@ class Clock:
             panel.topleft = topleft
 
         pygame.draw.rect(surface, HULL_DARK, panel.inflate(6, 6))
-        pygame.draw.rect(surface, READOUT_BG, panel)
+        pygame.draw.rect(surface, DANGER_BG if dangerous else READOUT_BG, panel)
         pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, panel, 2)
 
         # The label on the left and the rate on the right of the top line, the digits centred under them

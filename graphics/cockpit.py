@@ -45,4 +45,5 @@ class Cockpit:
         CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h), player)
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         LocationInfo.draw_name(surface, fonts, w, h)
-        Clock.draw(surface, fonts, date_time, player.time_scale, w, h)
+        Clock.draw(surface, fonts, date_time, player.time_scale, w, h,
+                   dangerous=player.is_time_scale_dangerous())

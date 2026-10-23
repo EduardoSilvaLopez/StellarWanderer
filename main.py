@@ -141,8 +141,9 @@ def draw_outpost_view(outpost_screen: OutpostScreenDialog, fonts: FontCache, siz
     """What the window shows while the pilot is inside an outpost: its screen, with the clock over its name, on the left
     (OutpostScreenDialog.clock_topleft). The gui draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
     layer = outpost_screen.compose_overlay(size)
-    Clock.draw(layer, fonts, gem.current_environment.date_time, player_module.current_player.time_scale, *size,
-               topleft=outpost_screen.clock_topleft(size))
+    player = player_module.current_player
+    Clock.draw(layer, fonts, gem.current_environment.date_time, player.time_scale, *size,
+               topleft=outpost_screen.clock_topleft(size), dangerous=player.is_time_scale_dangerous())
     return layer
 
 
