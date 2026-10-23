@@ -273,12 +273,127 @@ class OutpostChat(Conversation):
             "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
             " you are simply travelling through. But one side is light years from the other side. Damn."
         )
+
     def talk_the_shining_throne(self) -> str:
-        return (
-            "The cute slavers, yes? Well, I know, they have laws against abuse and yadda yadda. But a slave is"
-            " a slave. And I don't buy that 'Knights-protect-the-weak' thing, that's the soap operas. But hey,"
-            " *they* are really good."
-        )
+        # Short names to make the rest more legible
+        loy: float = self.interlocutor.loyalty100
+        emp: float = self.interlocutor.empathy100
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+
+        # Political conversation: Loyalty is relevant.
+        # Empathy still somehow relevant, to judge the place.
+        # Sociability always relevant, makes the reply less or more verbose.
+        # Sympathy always relevant, rejection or approval of the player.
+
+        # Must simplify this, so a formula which combines two without changing the sigma too much.
+        likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
+
+        if sym < 20:
+            return "Just leave me."
+        elif sym < 80:
+            if soc < 20:  # Short replies first.
+                if likes_them < 20:
+                    return 'Disgusting people.'
+                elif likes_them < 80:
+                    return '<shrugs>'
+                else:
+                    return 'Beautiful.'
+            elif soc < 80:
+                if likes_them < 20:
+                    return (
+                        'They are mad. Some living in luxury while others are enslaved. And what do they actually'
+                        ' *want* anyway?'
+                    )
+                elif likes_them < 80:
+                    return (
+                        "Well, not that I'd like to *live* there, but the soap operas are really nice. Still..."
+                        " slaves. I mean literal slaves. Fuck."
+                    )
+                else:
+                    return (
+                        "They just aren't like us. For them it is all about 'honor' and 'beauty' and 'protect the"
+                        " weak'. Yes, they have slaves, but I've heard they treat them quite good, actually."
+                        "\n\nSo... who knows. Live and let live, yes?"
+                    )
+            else:  # noqa: PLR5501
+                if likes_them < 20:
+                    return (
+                        "Oh, by the [Founders]... horrible people. Luxury built on the back of the poor slaves,"
+                        " serfs, servants, henchmen, whatever. Corruption and filth. Hearts of stone, the lot of them."
+                    )
+                elif likes_them < 80:
+                    return (
+                        "Well, everyone loves a soap opera, but let's be honest, this is a horrible, horrible society."
+                        " Some toil and suffer, others sit on the top and fancy themselves artists and Counts and"
+                        " Dukes and whatnot. Ew."
+                    )
+                else:
+                    return (
+                        "Well, they are really completely different to us, aren't they? They look for the special"
+                        " people, the 'super-humans' and all that thing about ethics and aesthetics. They have slaves,"
+                        " that's pretty horrible, but I've heard they're not so many and people can free themselves..."
+                        "\n\nLook, no idea, ok? <looks embarrassed> Forget I said that. Everyone their own."
+                    )
+        else:  # noqa: PLR5501
+            if soc < 20: # Short replies first.
+                if likes_them < 20:
+                    return 'Fucking bastards. Not the way to go, friend.'
+                elif likes_them < 80:
+                    return 'Whatever. Who knows, yes? Maybe better than here.'
+                else:
+                    return "<Whispers> I've seen their gardens. Public gardens. Will never forget."
+            elif soc < 80:
+                if likes_them < 20:
+                    return (
+                        "I just... don't get them. How can a person own a house? Well, ok. Somehow I guess. But how can"
+                        " one people own ANOTHER HUMAN BEING? That's over me. Fuck them all. With a wrench."
+                    )
+                elif likes_them < 80:
+                    return (
+                        "In confidence <whispers> I never miss a chapter. <Louder> But you know what they say. Slaves"
+                        " and depravity. It may be fun to watch, and sure they can make gorgeous things. Even"
+                        " cutlery for the [Founders]' sake. But at the cost of the freedom of human beings? That"
+                        " makes no sense, friend."
+                    )
+                else:
+                    return (
+                        "I have heard... <whispers> things, you know. That the slaves have a lot of rights. That the"
+                        " Knights have lots of duties. Things are there not how people want them to be. Even the"
+                        " soap operas. Why there is so often a suffering serf or servant, an evil Baron... if they"
+                        " are such bastards, why would they critisize their own so hard? I think they have something,"
+                        " and we just don't get it."
+                    )
+            else:  # noqa: PLR5501
+                if likes_them < 20:
+                    return (
+                        "What do you want me to tell about them, my dear? I don't even watch that stupid propaganda"
+                        " they call TV shows! Horrible people. They don't give their poor a chance. You have for sure"
+                        " heard about slavery. But there is much more... serfs, and servants... nobody can really"
+                        " LIVE there if it's not an Aristo. Screw them."
+                        "\n\nI wish we had more confidence and we would make more of our own movies and shows. We have"
+                        " a lot to be grateful for. Here we have all the same 'stand'. We don't need stupid rules"
+                        " of 'honor' to share with each other, it is not pity, it is justice, community."
+                    )
+                elif likes_them < 80:
+                    return (
+                        "Hard to say, yes? Sometimes you are looking at those images... the parks, the boulevards, the"
+                        " houses, the clothes. And it's so GORGEOUS! But then you remember how this must be in reality,"
+                        " I mean outside the aristocracy. And that... well, I mean they can also go to the parks but..."
+                        " I bet they'd prefer to live here, as a community."
+                        "\n\nBut dreaming is normal, yes? Who has not dreamt in some moment to be a "
+                        f"{("prince" if self.interlocutor.gender_group == Person.GenderGroup.MALE else "princess")}"
+                        "?"
+                    )
+                else:
+                    return (
+                        "<Whispers> They live, you know. They live, and we don't. Parks. Fountains. Music. Clothes."
+                        " Dances. Poetry. And yes, even if we pretend otherwise, their 'slaves' have it better than"
+                        " many of us. And they are just a bunch, the rest are better off. A follower there lives"
+                        " better than a Hero here. They reward merit. We don't."
+                        "\n\nBut we should not talk so much about that here, yes? Let this be between you and me."
+                    )
+
     def talk_those_who_share(self) -> str:
         return (
             "Well, that's what we do, yes? We care about each other. Nobody tries to have a million stamps,"

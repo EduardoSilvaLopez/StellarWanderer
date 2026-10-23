@@ -309,7 +309,7 @@ class Outpost(Updatable):
         ship.owner.time_scale = 1
         show_message(Message(
             title=f'MESSAGE FROM DOCKMASTER {self.dockmaster.surname}',
-            text="Pilot, your ship is ready.",
+            text=f"{self.dockmaster.get_player_title()}, your ship is ready.",
         ))
         return self
     # endregion

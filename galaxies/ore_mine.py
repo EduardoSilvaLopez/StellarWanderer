@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class OreMine(Updatable):
-    EXTRACTION_POWER: int = 0.25 # To tune the game. Maybe later different kinds of mines.
+    EXTRACTION_POWER: int = 0.5 # To tune the game. Maybe later different kinds of mines.
     EXTRACTION_PERIOD: int = 3600
     MAX_CAPACITY: int = 20000
     # Geometry of a mine: a vertical cylinder standing on the ground. Graphics draws it with these and

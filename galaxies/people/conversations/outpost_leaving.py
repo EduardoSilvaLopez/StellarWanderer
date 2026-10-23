@@ -64,7 +64,7 @@ class OutpostLeaving(Conversation):
             self.player.ship.change_cargo_hold(ShabbyThsMiner.StandardHold)
             return (
                 f"You have proven you can do the job without wasting mines.\n\n"
-                f"We decided to repair your cargo hold.\n\n"
+                f"We decided to repair your cargo hold... {self.interlocutor.get_player_title()}.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
         elif old_rep < 20:
@@ -72,12 +72,13 @@ class OutpostLeaving(Conversation):
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
                 "Anytime you want, check the mission board of any outpost. But be careful you really can"
                 "do the thing.\n\n"
-                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+                f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
+                   if self.interlocutor.loyalty100 > 5 else ''
                 )
         elif old_rep < 50:
             self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
             return (
-                f"You are doing the best of your ship, really.\n\n"
+                f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
                 f"We found a cargo extention you could use.\n\n"
                 f"Keep doing the good job.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
@@ -86,7 +87,8 @@ class OutpostLeaving(Conversation):
             # Prepare the message:
             self.player.ship.upgrade_to(ThsMiner)
             return  (
-                "People were asking why you still have to go around with that piece of... no offense intended.\n\n"
+                "People were asking why you still have to go around with that piece of..."
+                f" no offense intended, {self.interlocutor.get_player_title()}.\n\n"
                 "We consulted and the community thinks you deserve a modern THS miner.\n\n"
                 "You should now be able to scan asteroids and so on. If you dare.\n\n"
                 "Take care of it, will you?\n\n"
