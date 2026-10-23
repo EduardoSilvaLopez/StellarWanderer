@@ -29,14 +29,15 @@ class Clock:
         rate_color = ACCENT if time_scale == Player.TIME_SCALE_MIN else AMBER
         rate = Clock._ink(label_font.render(Clock._format_time_scale(time_scale), True, rate_color))
 
-        pad = max(6, int(h * 0.011))  # beside the text, and equal above and below both lines
+        pad = max(6, int(h * 0.011))  # beside the text
+        top_pad = max(8, int(h * 0.014))  # above the top line and below the digits, equal so the lines sit centred
         gap = max(8, int(w * 0.009))  # between the label and the rate
-        line_gap = max(2, int(h * 0.004))  # between the two lines
+        line_gap = max(3, int(h * 0.006))  # between the two lines
         top_line = max(label.get_height(), rate.get_height())
         panel = pygame.Rect(
             0, 0,
             max(label.get_width() + gap + rate.get_width(), digits.get_width()) + pad * 2,
-            top_line + line_gap + digits.get_height() + pad * 2,
+            top_line + line_gap + digits.get_height() + top_pad * 2,
         )
         if topleft is None:
             panel.topright = (int(w * 0.985), int(h * 0.025))
@@ -48,15 +49,17 @@ class Clock:
         pygame.draw.rect(surface, CONSOLE_EDGE_COLOR, panel, 2)
 
         # The label on the left and the rate on the right of the top line, the digits centred under them
-        top_middle = panel.top + pad + top_line // 2
+        top_middle = panel.top + top_pad + top_line // 2
         surface.blit(label, label.get_rect(midleft=(panel.left + pad, top_middle)))
         surface.blit(rate, rate.get_rect(midright=(panel.right - pad, top_middle)))
-        surface.blit(digits, digits.get_rect(midtop=(panel.centerx, panel.top + pad + top_line + line_gap)))
+        surface.blit(digits, digits.get_rect(midtop=(panel.centerx, panel.top + top_pad + top_line + line_gap)))
 
     @staticmethod
     def _ink(text: pygame.Surface) -> pygame.Surface:
-        """The part of a rendered text that has ink, without the font's empty space above and below, so the lines centre."""
-        return text.subsurface(text.get_bounding_rect())
+        """The rendered text cut to its inked height, without the font's empty space above and below, so lines centre on
+        it. The width is kept: the ink width changes with the glyphs (a '1' is narrower), and the box must not."""
+        ink = text.get_bounding_rect()
+        return text.subsurface(pygame.Rect(0, ink.top, text.get_width(), ink.height))
 
     @staticmethod
     def _format_ship_time(moment: datetime) -> str:

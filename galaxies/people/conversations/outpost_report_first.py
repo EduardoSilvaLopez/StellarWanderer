@@ -69,7 +69,10 @@ class OutpostReportFirst(Conversation):
     def _finish(self, chosen_button: Optional[int]) -> OutpostReportFirst:
         if chosen_button == 0:
             self.outpost.handling_includes_ore = True
-        self.outpost.start_handle(self.player.ship)
+
+        if self.outpost.get_time_to_handle(self.player.ship): # Skip by absurd amounts.
+            self.outpost.start_handle(self.player.ship)
+
         self.interlocutor.last_communication_at = self.date_time
         self.close()
         return self
