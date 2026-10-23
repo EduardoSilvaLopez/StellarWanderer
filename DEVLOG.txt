@@ -47,14 +47,9 @@ DEVELOPER'S DIARY
   * A simple chat.
   * Different backgrounds for different points of the menu.
   * Extra: Rodina checked (in Steam) Checked. One system, lots of fight, few social.
-
-
-> DONE (not committed)
-
-> STARTED:
-
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
 
+> STARTED:
 
 ### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-8:00 + 9:00-11:15 + 11:45-
 
@@ -63,7 +58,6 @@ DEVELOPER'S DIARY
   * Extra: Arabs.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
     INITIAL_TEMP_SHIELD_REDUCTION
-  * Extra: Improve the sounds for real.
   * Extra: Retirement.
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
@@ -71,7 +65,7 @@ DEVELOPER'S DIARY
 THE TRAITOR MISSION
   * Dialogs are still very neutral. Make variations asking an AI.
   * Extra: Gravity. Evaluate, at least... for realism's sake.
-
+  * Extra: Improve the sounds for real.
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
   * Directly? Try the current ship configurations.
