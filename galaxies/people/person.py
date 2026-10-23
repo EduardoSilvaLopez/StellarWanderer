@@ -6,7 +6,7 @@ from functools import cache
 import logging
 import os
 import random
-from typing import TYPE_CHECKING, Any, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import pygame
 
@@ -14,9 +14,6 @@ from galaxies.politics import political_entity
 from galaxies.people.role import Role
 import game_environment as gem
 from common.paths import resource_path
-
-if TYPE_CHECKING:
-    from galaxies.people.player import Player
 
 PEOPLE_DIR = resource_path('people')
 SECONDS_PER_YEAR = 365.2425 * 24 * 60 * 60
@@ -198,10 +195,6 @@ class Person:
             f"\n - Sympathy: {self.sympathy100}" # Not told to player.
             )
         return self
-
-    def get_player_title(self, player: Player) -> str:
-        value_adjusted = player.those_who_share.reputation * (self.sympathy100 * 2) / 100
-        return political_entity.THOSE_WHO_SHARE.title_for(value_adjusted)
 
     def get_title(self) -> str:
         # Find out where this person is... as for now, guess Those-Who-Share

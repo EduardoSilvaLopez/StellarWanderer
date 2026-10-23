@@ -174,7 +174,7 @@ class Scanner:
     # region Actions
     def activate(self, time_passed: int) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost,
-        holding the key does nothing here: Numpad 5 opens its mission board or talks to its com officer (see main.py).
+        holding the key does nothing here: main.py enters it, once per press.
         On a rock with an adjective,
         the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch
         the beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so

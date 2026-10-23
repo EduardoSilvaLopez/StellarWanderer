@@ -2,10 +2,10 @@
 galaxies/people/chat_log.py for what it holds). Both are lists in the rectangle `place` gives, with a scroll bar beside
 them, scrolled with the wheel, Page Up and Page Down, and the scroll bar.
 
-ChatView draws the lines as bubbles, one colour per speaker: the pilot's on the right, the person's on the left, in the
+ChatView draws the lines as bubbles, one colour per speaker: the pilot's on the left, the person's on the right, in the
 person's colour (chat_log.py, speaker_colour). A marked word is in the accent colour. The replies are bubbles of the
-pilot's colour under the lines, without numbers; choosing one calls `on_reply` with its index. The view follows the
-newest line, until the player scrolls up.
+pilot's colour on the left, under the lines, without numbers; choosing one calls `on_reply` with its index. The view
+follows the newest line, until the player scrolls up.
 
 ChatTags draws the tags in the order given, one row each; a click on a tag calls `on_tag` with it, but only while the
 tags are `active` (a person is selected and no reply is open, see the outpost screen)."""
@@ -179,15 +179,15 @@ class ChatView(_ScrolledList):
             for line in log.lines:
                 if line.speaker == PLAYER:
                     bubble = self._bubble(line.words, PLAYER_COLOUR, width)
-                    x = width - bubble.get_width()
+                    x = 0
                 else:
                     bubble = self._bubble(line.words, colour, width)
-                    x = 0
+                    x = width - bubble.get_width()
                 blocks.append((bubble, y, x, None))
                 y += bubble.get_height() + BUBBLE_GAP
             for index, label in enumerate(log.replies or []):
                 bubble = self._reply(label, width, focus == index)
-                blocks.append((bubble, y, width - bubble.get_width(), index))
+                blocks.append((bubble, y, 0, index))
                 y += bubble.get_height() + BUBBLE_GAP
         self._paint(surface, blocks)
 

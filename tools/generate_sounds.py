@@ -169,7 +169,6 @@ def main() -> None:
     save('ui_open', [tone(520, 0.06, 0.5), tone(780, 0.09, 0.5)])
     save('ui_close', [tone(780, 0.06, 0.5), tone(520, 0.09, 0.5)])
     save('ui_click', [tone(1300, 0.035, 0.5, decay=7.0)])
-    save('board_open', [sweep(400, 1200, 0.12, 0.45), silence(0.04), tone(900, 0.08, 0.45)])
     save('mission_taken', [tone(523.25, 0.09, 0.55), tone(659.25, 0.16, 0.55)])
     save('mission_delivered', [tone(523.25, 0.08, 0.55), tone(659.25, 0.08, 0.55), tone(783.99, 0.08, 0.55),
                                tone(1046.5, 0.3, 0.55)])

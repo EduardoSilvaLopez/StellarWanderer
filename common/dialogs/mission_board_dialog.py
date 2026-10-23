@@ -7,10 +7,8 @@ can be dragged (see ScrollBar).
 
 MissionList is the list and the detail themselves, drawn in a rectangle its owner gives it (`place`), with no frame and
 no keys of its own: the owner feeds it the events. MissionListDialog is a window over one MissionList.
-MissionBoardDialog is the board of an outpost: "Your missions" (delivered there) and "Available" (offers, taken there,
-the latest deadline first), with their deadlines. Under the list (not under a detail) it has two buttons, Leave and
-Communicate (see MissionBoardDialog). PendingMissionsDialog is the view away from any outpost: the missions taken and
-not yet done, with the time left, and nothing to act on. OutpostMissions is the Missions of the outpost's screen
+PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time left, and
+nothing to act on. OutpostMissions is the Missions of the outpost's screen
 (outpost_screen.py), two columns side by side: "Available" on the left (the offers) and "Taken" on the right (the open
 missions taken here), both the latest deadline first."""
 
@@ -22,7 +20,7 @@ from common import audio
 from common.paths import resource_path
 from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import body_font, title_font
-from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, BUTTON_FILL_HOVER, TEXT_COLOR, MessageDialog
+from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR, MessageDialog
 from .scroll_bar import ScrollBar
 
 if TYPE_CHECKING:
@@ -49,10 +47,6 @@ SCROLL_STEP = 40
 SCROLL_BAR_GAP = 10  # between the text and the scroll bar to its right
 COLUMN_GAP = 24  # between the two columns of OutpostMissions
 PAGE_KEYS = {pygame.K_PAGEUP: -1, pygame.K_PAGEDOWN: 1}
-FOOTER_HEIGHT = 70  # the band under the text that MissionBoardDialog keeps for its two buttons
-FOOTER_BUTTON_HEIGHT = 64
-FOOTER_BUTTON_GAP = 30
-FOOTER_LABELS = ('Leave', 'Communicate')
 
 # One line of the content: (surface, gap above it, its clickable rect inside the surface or None, what a click does).
 Item = Tuple[pygame.Surface, int, Optional[pygame.Rect], Optional[Callable[[], None]]]
@@ -281,9 +275,9 @@ class MissionList:
 
 class MissionListDialog(Dialog, MissionList):
     """The list and the detail of missions in a window. A subclass gives the sections, the line about time, and the
-    action, if any. `footer_height` is the band under the text that a subclass keeps for its own buttons."""
+    action, if any."""
 
-    def __init__(self, title: str, footer_height: int = 0) -> None:
+    def __init__(self, title: str) -> None:
         Dialog.__init__(self, WIDTH, HEIGHT)
         MissionList.__init__(self)
         self._texture: Optional[pygame.Surface] = None
@@ -295,9 +289,8 @@ class MissionListDialog(Dialog, MissionList):
             size -= 1
             self._title = title_font(size).render(title, True, ACCENT)
         self._divider_y = MARGIN - 4 + self._title.get_height() + 12
-        text_bottom = HEIGHT - MARGIN - footer_height
-        self.place(pygame.Rect(MARGIN, self._divider_y + 16, WIDTH - 2 * MARGIN, text_bottom - 12
-                               - (self._divider_y + 16)))
+        top = self._divider_y + 16
+        self.place(pygame.Rect(MARGIN, top, WIDTH - 2 * MARGIN, HEIGHT - MARGIN - 12 - top))
 
     # region Drawing
     def _background(self) -> Optional[pygame.Surface]:
@@ -348,73 +341,6 @@ class MissionListDialog(Dialog, MissionList):
             return self.outcome
         return None
     # endregion
-
-
-class MissionBoardDialog(MissionListDialog):
-    """The board of an outpost: the player's missions to deliver here, and the offers to take.
-
-    Under the list (not under a detail or a notice) are two buttons: Leave, which does what Esc does there, and
-    Communicate. Results: ('close', None) and ('communicate', None); the
-    host talks to the officer and opens the board again (see main.visit_mission_board). Tab, Left and Right move the
-    focus between the buttons, Enter presses the focused one, and the mouse moves the focus too."""
-
-    OPEN_SOUND = 'board_open'
-
-    def __init__(self, board: MissionBoard) -> None:
-        super().__init__(board.title, FOOTER_HEIGHT)
-        self.board: MissionBoard = board
-        self.focus: int = 0  # the footer button that Enter presses
-        width = (WIDTH - 2 * MARGIN - FOOTER_BUTTON_GAP) // 2
-        top = HEIGHT - MARGIN + 6 - FOOTER_BUTTON_HEIGHT
-        self._footer_rects: List[pygame.Rect] = [
-            pygame.Rect(MARGIN + index * (width + FOOTER_BUTTON_GAP), top, width, FOOTER_BUTTON_HEIGHT)
-            for index in range(len(FOOTER_LABELS))]
-
-    def _draw_footer(self, surface: pygame.Surface) -> None:
-        font = body_font(20)
-        for index, (label, rect) in enumerate(zip(FOOTER_LABELS, self._footer_rects)):
-            pygame.draw.rect(surface, BUTTON_FILL_HOVER if index == self.focus else BUTTON_FILL, rect)
-            pygame.draw.rect(surface, ACCENT, rect, 2)
-            caption = font.render(label, True, ACCENT)
-            surface.blit(caption, caption.get_rect(center=rect.center))
-
-    def draw(self, surface: pygame.Surface) -> None:
-        super().draw(surface)
-        if self.open_mission is None and self.notice is None:
-            self._draw_footer(surface)
-
-    def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
-        if self.open_mission is not None or self.notice is not None:
-            return super().handle_event(event)
-        pressed: Optional[int] = None
-        if event.type == pygame.MOUSEMOTION:
-            for index, rect in enumerate(self._footer_rects):
-                if rect.collidepoint(event.pos):
-                    self.focus = index
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for index, rect in enumerate(self._footer_rects):
-                if rect.collidepoint(event.pos):
-                    pressed = index
-        elif event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                pressed = self.focus
-            elif event.key in (pygame.K_TAB, pygame.K_LEFT, pygame.K_RIGHT):
-                backwards = event.key == pygame.K_LEFT or (event.key == pygame.K_TAB and event.mod & pygame.KMOD_SHIFT)
-                self.focus = (self.focus + (-1 if backwards else 1)) % len(FOOTER_LABELS)
-        if pressed is None:
-            return super().handle_event(event)
-        audio.play('ui_click')
-        return ('close', None) if FOOTER_LABELS[pressed] == 'Leave' else ('communicate', None)
-
-    def _sections(self) -> List[Section]:
-        offers = sorted(self.board.offers, key=lambda offer: offer.deadline, reverse=True)  # the latest deadline first
-        return [('Your missions', self.board.mine(), 'None.'),
-                ('Available', offers, 'Nothing new.')]
-
-    def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
-        if mission in self.board.mine():
-            return 'Deliver', lambda: self._act(self.board.deliver, mission)
-        return 'Accept', lambda: self._act(self.board.accept, mission)
 
 
 class PendingMissionsDialog(MissionListDialog):

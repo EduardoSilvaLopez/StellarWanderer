@@ -37,6 +37,8 @@ class Player:
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
 
+    PRESENTATION_TAG = '<present yourself>'
+
     def __init__(self) -> None:
         self.first_name: str = ''
         self.surname: str = ''
@@ -49,7 +51,7 @@ class Player:
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Outpost] = None  # the outpost the pilot is in, if any (not the cockpit)
         # The conversation tags of the chat (see outpost_chat.py): one set for the pilot, not per person, saved sorted.
-        self.conversation_tags: set[str] = {'<present yourself>'}
+        self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -65,6 +67,9 @@ class Player:
         if self.time_scale != old_time_scale:
             audio.play('time_up')
         return self
+
+    def present_yourself(self) -> str:
+        return f"Hello. I am {self.first_name} {self.surname}, Pilot. How are you?"
 
     def decrease_time_scale(self) -> Player:
         """Slower, down to TIME_SCALE_MIN."""

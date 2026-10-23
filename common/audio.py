@@ -32,7 +32,6 @@ SOUNDS: Dict[str, SoundSpec] = {
     'ui_open': SoundSpec('ui_open.wav', 0.5, False),  # a dialog opens
     'ui_close': SoundSpec('ui_close.wav', 0.5, False),  # a dialog closes, or Esc or a right-click goes back
     'ui_click': SoundSpec('ui_click.wav', 0.5, False),  # a button or a row is pressed
-    'board_open': SoundSpec('board_open.wav', 0.5, False),  # the outpost's message board opens
     'mission_taken': SoundSpec('mission_taken.wav', 0.6, False),
     'mission_delivered': SoundSpec('mission_delivered.wav', 0.6, False),
     'mission_failed': SoundSpec('mission_failed.wav', 0.7, False),  # also when time is compressed: it is an alert

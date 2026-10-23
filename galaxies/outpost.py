@@ -13,7 +13,6 @@ import game_environment as gem
 import galaxies.people.player as gpp
 from galaxies import seeds
 if TYPE_CHECKING:
-    from galaxies.missions.mission_board import MissionBoard
     from spaceships.ship import Ship
 from galaxies.world import World
 from galaxies.people.person import Person
@@ -230,20 +229,6 @@ class Outpost(Updatable):
         if self not in update_queue:  # prepare runs each time ground near the outpost is made: one entry only
             update_queue.add(self)
 
-        return self
-
-    def open_mission_board(self) -> MissionBoard:
-        """The player opens the message board (see mission_board.py): a visit, not a conversation. Returns the board, to
-        show."""
-        now = gem.current_environment.date_time
-        self.mission_board.update_missions(now)
-        self._set_last_visited(now)
-        return self.mission_board
-
-    def communicate(self) -> Outpost:
-        from galaxies.people.conversation import Conversation
-        Conversation.generate(gpp.current_player, self.com_officer)
-        self._set_last_visited(gem.current_environment.date_time)
         return self
 
     def _set_last_visited(self, new_value: datetime) -> Outpost:

@@ -12,7 +12,6 @@ Controls:
     SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); on a targeted
                outpost, enter it (the ship must be landed): a screen over the whole window, the other state of the
                game, where it goes on; its Leave button leaves it
-    Numpad 5   on a targeted outpost, open its mission board (reputation 20 or more) or talk to its com officer
     M          place mine
     O          show or hide the orbit of the targeted body
     Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside an outpost; Esc
@@ -40,14 +39,14 @@ from graphics.font_cache import FontCache
 import game_environment as gem
 from galaxies.people import knowledge
 from common import audio
+from common.paths import resource_path
 import galaxies.people.player as player_module
 from common.savefile import Savefile
 from common.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, ShipSpecificationsDialog,
     StartingDialog, PilotIdentityDialog, confirm,
-    MissionBoardDialog, PendingMissionsDialog, OutpostScreenDialog, next_pending_message, run_in_window, show_message
+    PendingMissionsDialog, OutpostScreenDialog, next_pending_message, run_in_window, show_message
 )
-from galaxies.missions.mission_board import MissionBoard
 from galaxies.outpost import Outpost
 from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
@@ -61,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 WINDOW_TITLE = 'Stellar Wanderer'
 WINDOW_SIZE = (1920, 1080)
+WINDOW_ICON_SIZE = (32, 32)  # the installer's icon (presentation/game_icon.png), reduced for the title bar and taskbar
 MIN_SIZE = (640, 400)
 FPS = 60
 
@@ -199,21 +199,6 @@ def manage_missions(
             return False, screen
 
 
-def visit_mission_board(
-        outpost: Outpost, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
-        ) -> Tuple[bool, pygame.Surface]:
-    """The mission board of `outpost`. Communicate talks to the com officer: the conversation's messages are shown
-    (show_pending_messages) and, when the last is answered, the board opens again. Returns (keep running, window)."""
-    while True:
-        result, screen = run_modal_dialog(MissionBoardDialog(outpost.open_mission_board()), screen, gui, fonts, clock)
-        if result[0] != 'communicate':
-            return result[0] != 'exit', screen
-        outpost.communicate()
-        keep_running, screen = show_pending_messages(screen, gui, fonts, clock)
-        if not keep_running:
-            return False, screen
-
-
 def start_game(action: str, value: object) -> float:
     """Replace the current game with a new one ('new', seed) or a saved one ('load', path).
 
@@ -317,6 +302,8 @@ def open_start_menu(
 def main() -> None:
     configure_logging()
     pygame.init()
+    pygame.display.set_icon(pygame.transform.smoothscale(
+        pygame.image.load(resource_path('presentation', 'game_icon.png')), WINDOW_ICON_SIZE))
 
     # Create temporary display for the starting dialog
     temp_screen = pygame.display.set_mode((800, 600))
@@ -408,14 +395,6 @@ def main() -> None:
                         player.enter_outpost(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                         audio.play(OutpostScreenDialog.OPEN_SOUND)
-                # the outpost in the scanner: its message board for a pilot who may use it, else its com officer
-                elif event.key == pygame.K_KP5:
-                    outpost = player.ship.scanner.targeted_outpost
-                    if outpost is not None:
-                        if MissionBoard.is_available(player):
-                            running, screen = visit_mission_board(outpost, screen, gui, fonts, clock)
-                        else:
-                            outpost.communicate()  # its messages are shown at the start of the next frame
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
                     OrbitPath.shown = not OrbitPath.shown
                 # cycles the target (only outside every fixed zone); Shift+Tab goes back

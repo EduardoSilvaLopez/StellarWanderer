@@ -1,10 +1,5 @@
-"""The mission board of an outpost, opened with Numpad 5 while the scanner has the outpost, and only for a pilot whose
-reputation is MIN_REPUTATION or more (the others talk to the com officer with Numpad 5). It is shown by
-MissionBoardDialog (common/dialogs/mission_board_dialog.py), whose Communicate button talks to the com officer and comes
-back to the board.
-
-Opening it counts as a visit to the outpost (`Outpost.last_visited`), not as speaking with the com officer
-(`Person.last_communication_at`): the ship is not restocked or repaired here, that takes talking to the com officer.
+"""The mission board of an outpost, for a pilot whose reputation is MIN_REPUTATION or more. It is the Missions option of
+the outpost's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it opens.
 
 The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the
 outpost is in memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most
@@ -42,7 +37,6 @@ class MissionBoard:
         self.outpost: Outpost = outpost
         self.offers: List[Mission] = []
         self.updated_at: Optional[datetime] = None  # not saved: only so that the days already asked are not asked again
-        self.title: str = f'Outpost "{outpost.name}", message board'
 
     @staticmethod
     def is_available(player: Player) -> bool:

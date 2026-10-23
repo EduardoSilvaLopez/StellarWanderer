@@ -450,7 +450,7 @@ class OutpostScreenDialog(Dialog):
         self._chat_log = None
 
     def _chat_tags_now(self) -> List[str]:
-        """The pilot's conversation tags, alphabetical: '<present yourself>' comes first."""
+        """The pilot's conversation tags, alphabetical: Player.PRESENTATION_TAG comes first."""
         from galaxies.people.player import current_player  # local: the player needs the dialogs
         return sorted(current_player.conversation_tags)
 
