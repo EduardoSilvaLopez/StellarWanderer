@@ -427,7 +427,7 @@ class OutpostScreenDialog(Dialog):
 
         reply_focus = self._focus[1] if focus_kind == 'reply' else None
         self._chat_view.place(_list_in_panel(surface, conversation, margin))
-        self._chat_view.draw(surface, self._chat_log, reply_focus)
+        self._chat_view.draw(surface, self._chat_log, reply_focus, self._chat_active())
 
         person_focus = self._focus[1] if focus_kind == 'person' else None
         self._chat.place(_list_in_panel(surface, people, margin))
@@ -722,7 +722,7 @@ class OutpostScreenDialog(Dialog):
         """Chat: the people listed now, the tags and an empty chat log. The log is made when a person is selected."""
         self._chat = StaffList(self.outpost)
         self._chat_tags = ChatTags(self._start_tag)
-        self._chat_view = ChatView(self._choose_reply)
+        self._chat_view = ChatView(self._choose_reply, self._start_tag)
         self._chat_log = None
         self._chat_conversation = None
 

@@ -33,8 +33,11 @@ class OutpostChat(Conversation):
         """The tag is said by the pilot first, as a line of the chat, then the person answers it. The presentation tag
         is the exception: the pilot says what Player.present_yourself gives, not the tag."""
         pilot_line = self.player.present_yourself() if self.tag == Player.PRESENTATION_TAG else self.tag
-        self.log.add(PLAYER, [(word, False) for word in pilot_line.split()])
-        self.say(self.reactions[self.tag])
+        self.log.add(PLAYER, [(word, None) for word in pilot_line.split()])
+        if self.tag in self.reactions:
+            self.say(self.reactions[self.tag])
+        else:
+            self.say(self.talk_unknown_tag)
 
     def remember(self) -> None:
         """Writes the interaction into the person's record now, not only when the conversation closes, so a save made
@@ -59,11 +62,239 @@ class OutpostChat(Conversation):
     # region Talk
     def reactions_index(self) -> map:
         return {
-            Player.PRESENTATION_TAG: self.talk_present_yourself
+            Player.PRESENTATION_TAG: self.talk_present_yourself,
+            'asteroid': self.talk_asteroid,
+            'belt': self.talk_belt,
+            'founders': self.talk_founders,
+            'noobie': self.talk_noobie,
+            'paladin xi': self.talk_paladin_xi,
+            'pgms': self.talk_pgms,
+            'space': self.talk_space,
+            'the base': self.talk_the_base,
+            'the network': self.talk_the_network,
+            'the portal': self.talk_the_portal,
+            'the shining throne': self.talk_the_shining_throne,
+            'those-who-share': self.talk_those_who_share,
+            'united diversity': self.talk_united_diversity,
         }
 
     def talk_present_yourself(self) -> str:
-        reply = "Fascinating."
-        return reply
-    # endregion
+        # Short names to make the rest more legible
+        title: str = self.interlocutor.get_title()
+        role: str = self.interlocutor.role.name
+        first: str = self.interlocutor.name
+        last: str = self.interlocutor.surname
+        rep: float = self.interlocutor.reputation
+        loy: float = self.interlocutor.loyalty100
+        emp: float = self.interlocutor.empathy100
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
 
+        # Apolitical conversation: Loyalty is irrelevant, save the self presentation.
+        # Player in situation of weakness (begs for attention): Empathy relevant.
+        # Sociability always relevant, makes the reply less or more verbose.
+        # Sympathy always relevant, rejection or approval of the player.
+        is_grandiose = rep * (loy - emp) > 2500
+        self_present: str = " ".join(x for x in \
+            [
+            title if is_grandiose or loy > 80 else None,
+            role if is_grandiose or loy > 50 or emp > 50 else None,
+            first,
+            last if is_grandiose and emp < 50 else None,
+            ] \
+            if x is not None
+        )
+
+        if emp < 20:
+            if soc < 20:
+                if sym < 20:
+                    return "Leave me alone."
+                elif sym < 80:
+                    return "I know."
+                else:
+                    return "I know. Not so fond about living, are you?"
+            elif soc < 80:
+                if sym < 20:
+                    return "You. What do you want?"
+                elif sym < 80:
+                    return "The [noobie]. We will see how much you last."
+                else:
+                    return (
+                        "I know, [Paladin Xi]'s last discovery. Eager to kill yourself, yeah, [noobie]?"
+                        "[Space] is hard. You will see <smiles a wicked smile>."
+                    )
+            else:  # noqa: PLR5501
+                if sym < 20:
+                    return "You. What do you want? Don't you think you have done enough?"
+                elif sym < 80:
+                    return (
+                        "Yeah, I know. The [noobie]. We will see how much you last, noobie. [Space] is hard."
+                        " [Paladin Xi] wants to rush things, wants everybody on board. He has killed already some."
+                        " Noobs like you."
+                    )
+                else:
+                    return (
+                        "I know, [Paladin Xi]'s last discovery. Eager to kill yourself, yeah, [noobie]?"
+                        " [Space] is hard. You will see <smiles a wicked smile>."
+                        "\n\nYou should not move away from orbit. Moon and planet. Ore and rocks. Don't be stupid."
+                    )
+        elif emp < 80:
+            if soc < 20:
+                if sym < 20:
+                    return "Leave me alone, Pilot. You've done enough."
+                elif sym < 80:
+                    return "I know. Ehm... hi."
+                else:
+                    return "Heard about you. We're cool."
+            elif soc < 80:
+                if sym < 20:
+                    return "You. Look, I don't want problems, ok? Just leave me alone. You've done enough."
+                elif sym < 80:
+                    return f"Hello, Pilot, I am {self_present}. How are you? Share a drink?"
+                else:
+                    return (
+                        f"Nice to meet you, {self.player.first_name}! How are you doing? How is [space] being to you?"
+                        f"\n\nMe, I prefer to remain between the outpost and [the base]. Less risky, you know?"
+                        f" And people are nice here."
+                    )
+            else:  # noqa: PLR5501
+                if sym < 20:
+                    return (
+                        "Oh, no, [noobie], don't approach me, ok? I don't want troubles and you have done enough,"
+                        " just leave me alone. You should think about your life."
+                    )
+                elif sym < 80:
+                    return (
+                        "So here we have you, [Paladin Xi]'s last discovery. He wants everybody on [space]."
+                        " Take care. It is unforgiving. No beacon signal can save you if you are too far away,"
+                        " drifting between planets. [Noobie]s get killed."
+                    )
+                else:
+                    return (
+                        f"Nice to meet you, {self.player.first_name}! How are you doing?"
+                        " Be careful in [space]. It is hard. You can get yourself killed. Avoid the asteroid [belt]s."
+                        "\n\nBut if you build yourself a good basis of mines and then do some science work on rocks,"
+                        " everything will be ok. Safe way to build up some reputation and then back home, yes?"
+                    )
+        else:  # noqa: PLR5501
+            if soc < 20:
+                if sym < 20:
+                    return "<Looks sadly at you, says nothing>"
+                elif sym < 80:
+                    return f"Ah... yeah. Cool. Name's {first}. {role.capitalize()}."
+                else:
+                    return "Oh, you! Cool. <shy smile>"
+            elif soc < 80:
+                if sym < 20:
+                    return (
+                        "Yes, I know who you are. And I know what you have done. Look... [space] is hard. I know."
+                        " But... no. Just leave me alone, ok? Sorry."
+                    )
+                elif sym < 80:
+                    return (
+                        f"Hello, Pilot, I am {self_present}. How are you? How has [space] treated you lately?"
+                        f"\n\nIs [Paladin Xi] already proud of you? Ha!"
+                        f"\n\nDo you need a coffee?"
+                    )
+                else:
+                    return (
+                        f"Nice to meet you, {self.player.first_name}! Heard good things about you."
+                        f"\n\nHow is [space] treating you? [Paladin Xi] is not a bad guy, but he is ruthless. I see"
+                        f" the ships you start with. Ugh."
+                    )
+            else:  # noqa: PLR5501
+                if sym < 20:
+                    return (
+                        "DON'T YOU DARE! Oh, don't you dare to approach me, no, no, I know the likes of you!"
+                        " Just leave me alone, life here is hard enough, just go away and let me have my meal"
+                        " in peace. By the [Founders] I don't need this right now!"
+                    )
+                elif sym < 80:
+                    return (
+                        "So here we have you, [Paladin Xi]'s last discovery! He wants everybody on [space].\n\n"
+                        " I get, we need the [PGMs], and more valuable [asteroids], but the belts are dangerous."
+                        " People have been killed. No beacon signal can save you if you are too far away,"
+                        " drifting between planets. Be careful, [noobie], ok?"
+                    )
+                else:
+                    return (
+                        f"Nice to meet you, {self.player.first_name}! How are you doing?"
+                        "\n\nI have heard about you. Good things! Do you want a coffee? Or maybe something... stronger?"
+                        "\n\nHow is [space] treating you? Making our [Paladin Xi] proud? Tell me!"
+                    )
+
+    def talk_asteroid(self) -> str:
+        return (
+            "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
+            " simply fucking far away. Others are... in the [belt]. And those are worse."
+        )
+    def talk_belt(self) -> str:
+        return (
+            "Don't go there if you don't want to get killed. Not without a well-prodected ship"
+            " and a ton of sealant, at least."
+        )
+    def talk_founders(self) -> str:
+        return (
+            "Well, the ones who founded Those-Who-Share, you know?"
+        )
+    def talk_noobie(self) -> str:
+        return (
+            "Well, that's... no offense intended. [Paladin Xi] finished your training recently, yes? So..."
+            " that's it."
+        )
+    def talk_paladin_xi(self) -> str:
+        return (
+            "He trained you, yes? Of course 'Paladin' is not a real thing. I think he is considered a"
+            " Steward or Herald or something."
+        )
+    def talk_pgms(self) -> str:
+        return (
+            "Did you find many out there? I think Iridium is the most important right now, but the whole"
+            " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold [space]."
+        )
+    def talk_space(self) -> str:
+        return (
+            "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"
+            " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
+            " Just don't. Use [the portal], go to [the base], remain in [the network]"
+        )
+    def talk_the_base(self) -> str:
+        return (
+            "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
+            " uniform, I tell you. My shorts and cocktail looking at the trees. That's life. Almost like a planet."
+        )
+    def talk_the_network(self) -> str:
+        return (
+            "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
+            " [Those-Who-Share]. Sure, '[United Diversity]', UniDiv, has more. [The Shining Throne], no idea."
+        )
+    def talk_the_portal(self) -> str:
+        return (
+            "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
+            " you are simply travelling through. But one side is light years from the other side. Damn."
+        )
+    def talk_the_shining_throne(self) -> str:
+        return (
+            "The cute slavers, yes? Well, I know, they have laws against abuse and yadda yadda. But a slave is"
+            " a slave. And I don't buy that 'Knights-protect-the-weak' thing, that's the soap operas. But hey,"
+            " *they* are really good."
+        )
+    def talk_those_who_share(self) -> str:
+        return (
+            "Well, that's what we do, yes? We care about each other. Nobody tries to have a million stamps,"
+            " can you imagine? Carrying sacks of stamps to feel 'rich'. 'From each by their skills, to each"
+            " by their needs'."
+            "\n\nAnd nobody uses *those* [PGMs] as we do <evil smile>."
+        )
+    def talk_united_diversity(self) -> str:
+        return (
+            "They still hold the Moon. And the original system. The fighters. Suits them, Militaristic"
+            " bastards. And money, money, money yes? Everything about money. As if here in [space] you could"
+            " eat money, drink it or breathe it."
+            "\n\nBut yeah, the high tech is high. I must concede this."
+        )
+
+    def talk_unknown_tag(self) -> str:
+        return ("I don't know what you mean.")
+
+    # endregion

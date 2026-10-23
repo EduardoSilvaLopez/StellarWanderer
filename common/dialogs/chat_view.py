@@ -3,9 +3,10 @@ galaxies/people/chat_log.py for what it holds). Both are lists in the rectangle 
 them, scrolled with the wheel, Page Up and Page Down, and the scroll bar.
 
 ChatView draws the lines as bubbles, one colour per speaker: the pilot's on the left, the person's on the right, in the
-person's colour (chat_log.py, speaker_colour). A marked word is in the accent colour. The replies are bubbles of the
-pilot's colour on the left, under the lines, without numbers; choosing one calls `on_reply` with its index. The view
-follows the newest line, until the player scrolls up.
+person's colour (chat_log.py, speaker_colour). A tag word is in the accent colour, and a click on it calls `on_tag` with
+the tag, as if the pilot had said it (while `tags_active`). The replies are bubbles of the pilot's colour on the left,
+under the lines, without numbers; choosing one calls `on_reply` with its index. The view follows the newest line, until
+the player scrolls up.
 
 ChatTags draws the tags in the order given, one row each; a click on a tag calls `on_tag` with it, but only while the
 tags are `active` (a person is selected and no reply is open, see the outpost screen)."""
@@ -32,8 +33,9 @@ BUBBLE_FILL = (14, 24, 30, 230)
 PLAYER_COLOUR = (236, 226, 190)
 NPC_PALETTE = ((120, 200, 255), (255, 170, 110), (170, 235, 140), (230, 140, 220), (255, 226, 120), (140, 220, 220))
 
-# A block of the list: (surface, y in the content, x in the text area, what a click on it does, or None).
-Block = Tuple[pygame.Surface, int, int, Any]
+# A block of the list: (surface, y in the content, x in the text area, what a click on its parts does: a list of
+# (rectangle inside the surface, payload)).
+Block = Tuple[pygame.Surface, int, int, List[Tuple[pygame.Rect, Any]]]
 
 
 def speaker_colour(person: Person) -> Tuple[int, int, int]:
@@ -98,13 +100,12 @@ class _ScrolledList:
         self._hits = []
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)
-        for block, y, x, payload in blocks:
+        for block, y, x, hits in blocks:
             top = self.text_rect.top + y - self.scroll
             left = self.text_rect.left + x
             if top + block.get_height() >= self.text_rect.top and top <= self.text_rect.bottom:
                 surface.blit(block, (left, top))
-            if payload is not None:
-                self._hits.append((pygame.Rect(left, top, block.get_width(), block.get_height()), payload))
+            self._hits += [(rect.move(left, top), payload) for rect, payload in hits]
         surface.set_clip(previous_clip)
         self.scroll_bar.draw(surface, self.scroll, self._max_scroll(), self.text_rect.height)
 
@@ -133,14 +134,16 @@ class _ScrolledList:
 class ChatView(_ScrolledList):
     """The lines of a ChatLog as bubbles, and its open replies under them."""
 
-    def __init__(self, on_reply: Callable[[int], None]) -> None:
+    def __init__(self, on_reply: Callable[[int], None], on_tag: Callable[[str], None]) -> None:
         super().__init__()
         self.on_reply: Callable[[int], None] = on_reply
+        self.on_tag: Callable[[str], None] = on_tag
+        self.tags_active: bool = False  # set by draw: a click on a tag in a line starts a conversation
 
     def _bubble(self, words: Sequence[Word], colour: Tuple[int, int, int], width: int,
-                border: int = 1) -> pygame.Surface:
-        """A bubble of `words` in `colour`, at most BUBBLE_MAX_FRACTION of `width` wide: the marked words in the accent
-        colour, the others in `colour`."""
+                border: int = 1) -> Tuple[pygame.Surface, List[Tuple[pygame.Rect, Any]]]:
+        """A bubble of `words` in `colour`, at most BUBBLE_MAX_FRACTION of `width` wide: the words of a tag in the accent
+        colour, the others in `colour`. Also returns the rectangle of each tag word, with its ('tag', tag) payload."""
         font = body_font(BODY_SIZE)
         inner = int(width * BUBBLE_MAX_FRACTION) - 2 * BUBBLE_PAD
         lines = _wrap_words(words, font, inner)
@@ -149,28 +152,34 @@ class ChatView(_ScrolledList):
                                 pygame.SRCALPHA)
         bubble.fill(BUBBLE_FILL)
         pygame.draw.rect(bubble, colour, bubble.get_rect(), border)
+        hits: List[Tuple[pygame.Rect, Any]] = []
         y = BUBBLE_PAD
         for line in lines:
             x = BUBBLE_PAD
-            for index, (word, marked) in enumerate(line):
+            for index, (word, tag) in enumerate(line):
                 if index:
                     x += font.size(' ')[0]
-                rendered = font.render(word, True, ACCENT if marked else colour)
+                rendered = font.render(word, True, ACCENT if tag else colour)
                 bubble.blit(rendered, (x, y))
+                if tag:
+                    hits.append((pygame.Rect(x, y, rendered.get_width(), font.get_linesize()), ('tag', tag)))
                 x += rendered.get_width()
             y += font.get_linesize()
-        return bubble
+        return bubble, hits
 
     def _reply(self, label: str, width: int, focused: bool) -> pygame.Surface:
         """An open reply, a bubble in the pilot's colour; a focused one has an inner ring."""
-        words = [(word, False) for word in label.split()]
-        bubble = self._bubble(words, PLAYER_COLOUR, width, border=2 if focused else 1)
+        words = [(word, None) for word in label.split()]
+        bubble, _ = self._bubble(words, PLAYER_COLOUR, width, border=2 if focused else 1)
         if focused:
             pygame.draw.rect(bubble, ACCENT, bubble.get_rect().inflate(-8, -8), 1)
         return bubble
 
-    def draw(self, surface: pygame.Surface, log: Optional[ChatLog], focus: Optional[int] = None) -> None:
-        """The log's lines and its open replies; `focus` is the index of the reply the keyboard is on, if any."""
+    def draw(self, surface: pygame.Surface, log: Optional[ChatLog], focus: Optional[int] = None,
+             tags_active: bool = False) -> None:
+        """The log's lines and its open replies; `focus` is the index of the reply the keyboard is on, if any.
+        `tags_active` is whether a click on a tag in a line starts a conversation (see ChatTags.active)."""
+        self.tags_active = tags_active
         blocks: List[Block] = []
         width = self.text_rect.width
         y = 0
@@ -178,22 +187,29 @@ class ChatView(_ScrolledList):
             colour = speaker_colour(log.person)
             for line in log.lines:
                 if line.speaker == PLAYER:
-                    bubble = self._bubble(line.words, PLAYER_COLOUR, width)
+                    bubble, hits = self._bubble(line.words, PLAYER_COLOUR, width)
                     x = 0
                 else:
-                    bubble = self._bubble(line.words, colour, width)
+                    bubble, hits = self._bubble(line.words, colour, width)
                     x = width - bubble.get_width()
-                blocks.append((bubble, y, x, None))
+                blocks.append((bubble, y, x, hits))
                 y += bubble.get_height() + BUBBLE_GAP
             for index, label in enumerate(log.replies or []):
                 bubble = self._reply(label, width, focus == index)
-                blocks.append((bubble, y, 0, index))
+                blocks.append((bubble, y, 0, [(bubble.get_rect(), ('reply', index))]))
                 y += bubble.get_height() + BUBBLE_GAP
         self._paint(surface, blocks)
 
     def _pressed(self, payload: Any) -> bool:
+        kind, value = payload
+        if kind == 'tag':
+            if not self.tags_active:
+                return False
+            audio.play('ui_click')
+            self.on_tag(value)
+            return True
         audio.play('ui_click')
-        self.on_reply(payload)
+        self.on_reply(value)
         return True
 
 
@@ -221,7 +237,7 @@ class ChatTags(_ScrolledList):
             pygame.draw.rect(row, ACCENT if focused else ACCENT_DIM, row.get_rect(), 2 if focused else 1)
             caption = font.render(tag, True, TEXT_COLOR if active else DIM_COLOR)
             row.blit(caption, (BUBBLE_PAD, row_height // 2 - caption.get_height() // 2))
-            blocks.append((row, y, 0, ('tag', tag)))
+            blocks.append((row, y, 0, [(row.get_rect(), ('tag', tag))]))
             y += row_height + BUBBLE_GAP
         self._paint(surface, blocks)
 

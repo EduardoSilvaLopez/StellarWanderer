@@ -38,25 +38,24 @@ DEVELOPER'S DIARY
   * "Missions" button behaviour.
   * Installing "Blender" via Claude for its use.
   * "Chat" button behaviour
-
-> DONE (not committed)
-
   * Report button -> Dockmaster
   * Time display moved to the left
   * Ship and Missions buttons exchanged positions.
   * Check the whole thing with a new game, also to save tokens.
   * On Leave, check if the range changed and if so, offer better ship or missions. This is Coordinator's job.
+  * Remove the old dialog.
+  * A simple chat.
+
+
+> DONE (not committed)
 
 > STARTED:
 
 ### 2026-10-23 (2/11) Extra time: 101h30' + 4:00-5:15 + 6:15-8:00 + 9:00-11:15 + 11:45-
 
-  * A simple chat, including time consumption.
-
 # NOT STARTED YET = BACKLOG
 
   * Dialogs are still very neutral. Make variations asking an AI.
-  * Remove the old dialog.
   * Refine it all graphically.
   * Different backgrounds for different points of the menu.
   * Extra: Retirement.

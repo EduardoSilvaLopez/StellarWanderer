@@ -20,23 +20,23 @@ PLAYER = 'player'
 NPC = 'npc'
 MARK = re.compile(r'\[([^\[\]]+)\]')
 
-Word = Tuple[str, bool]  # a word, and whether it is a conversation tag (shown in the accent colour)
+Word = Tuple[str, Optional[str]]  # a word, and the conversation tag it is (lowercased), None if it is not one
 
 
 def parse_marks(text: str) -> Tuple[List[Word], List[str]]:
-    """The words of `text`, each flagged if it was inside square brackets, and the tags it marks: lowercased and
-    stripped, one for each mark, in the order written. The brackets are not words."""
+    """The words of `text`, each with the tag it is if it was inside square brackets, and the tags it marks: lowercased
+    and stripped, one for each mark, in the order written. The brackets are not words."""
     words: List[Word] = []
     tags: List[str] = []
     position = 0
     for match in MARK.finditer(text):
-        words += [(word, False) for word in text[position:match.start()].split()]
+        words += [(word, None) for word in text[position:match.start()].split()]
         tag = match.group(1).strip()
         if tag:
             tags.append(tag.lower())
-            words += [(word, True) for word in tag.split()]  # shown as written, the tag is the lowercase one
+            words += [(word, tag.lower()) for word in tag.split()]  # shown as written, the tag is the lowercase one
         position = match.end()
-    words += [(word, False) for word in text[position:].split()]
+    words += [(word, None) for word in text[position:].split()]
     return words, tags
 
 
@@ -73,6 +73,6 @@ class ChatLog:
         then = self._then
         self.replies = None
         self._then = None
-        self.add(PLAYER, [(word, False) for word in label.split()])
+        self.add(PLAYER, [(word, None) for word in label.split()])
         if then is not None:
             then(index)
