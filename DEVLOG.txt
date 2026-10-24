@@ -51,17 +51,18 @@ DEVELOPER'S DIARY
 
 * JOVIAN PLANETS
   * Extra: title from interlocutors in the outpost is relative, not absolute.
+  * Make screenshots.
+  * "life" > "happy birthday" path
 
 > STARTED:
 
-Extra time: 111h30' + 17:00
-
-  * Make screenshots.
+Extra time: 116h00' + 3:30-6:45 + 7:30-10:00 + 12:30 - 
+  * Just trying to raise in the ranks, dude :D Maybe stop getting mines... what for, more? Bound to extracting?
 
 > BACKLOG
 
 * JOVIAN PLANETS (current one)
-  * Forbitten area, apply first to star.
+  * Forbidden area, apply first to star.
   In order to arrive there, I need in my gameplay to advance quite more. So, some extras belong to that road.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
     Use INITIAL_TEMP_SHIELD_REDUCTION

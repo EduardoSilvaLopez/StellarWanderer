@@ -41,13 +41,13 @@ def _nudged(value: float, change: float) -> float:
     """A 'personality' trait (0 to 100) after `change`: it moves slower the nearer it is to the extremes."""
     return max(0, min(100, value + change / (1 + abs(value - 50))))
 
+class Ethnicity(Enum):
+    ASIAN = 1
+    BLACK = 2
+    WHITE = 3
+    LATIN = 4
 
 class Person:
-    class Race(Enum):
-        ASIAN = 1
-        BLACK = 2
-        WHITE = 3
-        LATIN = 4
 
     class GenderGroup(Enum):  # aesthetically speaking, identification can be done later.
         MALE = 1
@@ -60,14 +60,14 @@ class Person:
         self.seed: int = seed
         self.role: Role = role
 
-        self.race: Person.Race = Person.Race.ASIAN
+        self.race: Ethnicity = Ethnicity.ASIAN
         rnd: float = my_random.random()
         if rnd > 0.93:
-            self.race = Person.Race.BLACK
+            self.race = Ethnicity.BLACK
         elif rnd > 0.82:
-            self.race = Person.Race.LATIN
+            self.race = Ethnicity.LATIN
         elif rnd > 0.53:
-            self.race = Person.Race.WHITE
+            self.race = Ethnicity.WHITE
 
         self.gender_group = Person.GenderGroup.MALE
         rnd = my_random.random()
@@ -75,8 +75,8 @@ class Person:
             self.gender_group = Person.GenderGroup.FEMALE
 
         # All these can change later: mixed heritage, gender-fluid, french, german
-        language = 'chinese' if self.race == Person.Race.ASIAN \
-            else 'english' if self.race in (Person.Race.WHITE, Person.Race.BLACK) \
+        language = 'chinese' if self.race == Ethnicity.ASIAN \
+            else 'english' if self.race in (Ethnicity.WHITE, Ethnicity.BLACK) \
             else 'spanish'
         gender = self.gender_group.name.lower()
 
@@ -91,7 +91,12 @@ class Person:
         self.sympathy100: float = 50.0
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
-        self.dob = gem.current_environment.date_time + timedelta(seconds=-seconds_after_birth)
+        self.dob: datetime = gem.current_environment.date_time + timedelta(seconds=-seconds_after_birth)
+        self.planet_of_birth, self.place_of_birth = self._generate_place_of_birth(my_random)
+        self.childhood: str = self._generate_childhood(my_random)
+        self.hobby: str = self._generate_hobby(my_random)
+        for _ in range(1, 10): # Space for further characteristics.
+            my_random.random()
 
         self.residency: Any = residency
         self.last_communication_at: Optional[datetime] = None
@@ -118,6 +123,72 @@ class Person:
                     dt = datetime.fromisoformat(dt_str)
                     self.interactions[dt] = lines
             self.log_description()
+
+    def _generate_place_of_birth(self, my_random: random.Random) -> tuple:
+        """Chooses a place of birth according to ethnicity, or just 'some place'."""
+        matching: list[str] = [name for name, ethnicity in political_entity.THOSE_WHO_SHARE.settlements
+                               if ethnicity == self.race]
+        planet: str = my_random.choice(political_entity.THOSE_WHO_SHARE.planets)
+        if matching and my_random.random() < 0.8:
+            return planet, my_random.choice(matching)
+        return planet, ('a small city' if my_random.random() < 2 / 3 else 'a town') + ", " + planet
+
+    def _generate_childhood(self, my_random: random.Random) -> str:
+        return my_random.choice((
+            'a happy childhood',
+            'a quiet childhood',
+            'a lonely childhood',
+            'a hard childhood',
+            'a problematic childhood',
+            'a sheltered childhood',
+            'a hard but happy childhood',
+            'a turbulent childhood',
+            'a carefree childhood',
+            'an uneventful childhood',
+            'a strict, disciplined childhood',
+            'a busy, tiring childhood',
+            'a lively, noisy childhood',
+            'a restless, curious childhood',
+            'a difficult, unstable childhood',
+            'a warm, loving childhood',
+            'a cold, distant childhood',
+            'a privileged, comfortable childhood',
+            'a dull childhood',
+        ))
+
+    def _generate_hobby(self, my_random: random.Random) -> str:
+        return my_random.choice((
+            "I like to walk in the parks.",
+            "I enjoy people-watching in the transit hubs. Don't tell anyone.",
+            "I often visit the dome's botanical galleries.",
+            "I like to try new foods in the market arcades.",
+            "I spend time listening to street musicians.",
+            "I enjoy reading old novels in the public lounges.",
+            "I like to practice meditation under the dome lights.",
+            "I enjoy attending small theater plays.",
+            "I like to collect vintage printed magazines.",
+            "I enjoy cooking with imported ingredients, you know, from the Throne. I know.",
+            "I like to volunteer in community gardens.",
+            "I enjoy playing board games with friends.",
+            "I like to take long walks along the dome's perimeter paths.",
+            "I enjoy watching the weather cycles. Those guys have some creativity in my place.",
+            "I like to sketch the architecture.",
+            "I enjoy visiting the art exhibits.",
+            "I like to practice indoor climbing.",
+            "I enjoy swimming in the municipal reservoirs.",
+            "I enjoy watching PreDes movies.",
+            "I like to fly micro-drones in the recreation halls.",
+            "I enjoy tinkering with old household electronics.",
+            "I like to explore PreDes virtual landscapes.",
+            "I enjoy watching shuttle departures from the observation decks.",
+            "I like to practice gravity aerobics when the gym offers it.",
+            "I enjoy restoring antique star maps.",
+            "I like to attend debate nights in the civic forum.",
+            "I enjoy participating in collaborative mural projects.",
+            "I like to join the weekly storytelling circles.",
+            "I enjoy dancing during the dome's festival nights.",
+            "I like to help organize neighborhood events.",
+        ))
 
     def _load_icon(self, my_random: random.Random) -> None:
         """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the
@@ -165,6 +236,18 @@ class Person:
         if last_time_met:
             return last_time_met.strftime('%Y-%m-%d')
         return "Not met yet" if self.first_met_at is None else "Don't remember."
+
+    def work_hours_text(self) -> str:
+        """When the person works in their outpost, as a phrase for the chat: "all the time" for the Coordinator,
+        "from time to time" for the substitute, else the shift as "from 16 to 24" (the hours of the day)."""
+        from galaxies.outpost import SHIFT_HOURS
+        if self.role.shifts == 1 and self.role.vacation == 0:
+            return "24/7, as usual"
+        index: int = self.residency.roster(self.role).index(self)
+        if index == self.role.shifts:
+            return "from time to time"
+        start: int = index * SHIFT_HOURS
+        return f"from {start} to {start + SHIFT_HOURS}"
 
     def description_fields(self) -> list[tuple[str, str]]:
         """The person's characteristics as (label, value): what the log and the people dialog show. The label is empty

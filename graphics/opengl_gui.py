@@ -6,6 +6,7 @@ import math
 import pygame
 from OpenGL import GL
 
+from common.frame_watch import frame_watch
 from .constants import SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
 from .milky_way import MilkyWay
@@ -94,6 +95,7 @@ class OpenGLGui:
         elif ship.is_bound:
             LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
         OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
+        frame_watch.mark('sky')
 
         self.overlay_surface.fill((0, 0, 0, 0))
         Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
@@ -101,6 +103,7 @@ class OpenGLGui:
         HeatVignette.draw(self.overlay_surface, width, height, ship)
         FrostVignette.draw(self.overlay_surface, width, height, ship)
         DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
+        frame_watch.mark('cockpit')
 
         GL.glViewport(0, 0, width, height)
         GL.glClearColor(SPACE_COLOR[0] / 255, SPACE_COLOR[1] / 255, SPACE_COLOR[2] / 255, 1.0)
@@ -117,6 +120,7 @@ class OpenGLGui:
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
         if not ship.is_bound:
             Asteroids.draw(width, height, ship, environment)
+        frame_watch.mark('space')
         if light is not None:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
             ore_fields = [field for km2 in km2s for field in km2.ore_fields]
@@ -124,6 +128,7 @@ class OpenGLGui:
                 width, height, ship, km2s, ore_fields, [mine for field in ore_fields for mine in field.mines],
                 self._outposts(environment, ship), light,
             )
+        frame_watch.mark('surface')
         Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture)

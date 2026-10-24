@@ -54,6 +54,7 @@ from graphics.orbit_path import OrbitPath
 from graphics.instruments.clock import Clock
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
+from common.frame_watch import frame_watch
 from common.updating import update_queue
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,7 @@ def run_modal_dialog(
         player.ship.laser.cease_fire()
     audio.stop_loops()
     audio.play(dialog.OPEN_SOUND)
+    frame_watch.discard()  # the pilot decides how long it takes
 
     result = None
     while result is None:
@@ -302,6 +304,7 @@ def open_start_menu(
 
 def main() -> None:
     configure_logging()
+    frame_watch.watch_garbage_collector()
     pygame.init()
     pygame.display.set_icon(pygame.transform.smoothscale(
         pygame.image.load(resource_path('presentation', 'game_icon.png')), WINDOW_ICON_SIZE))
@@ -336,6 +339,7 @@ def main() -> None:
         running, screen = show_pending_messages(screen, gui, fonts, clock)
         if not running:
             break
+        frame_watch.mark('messages')
 
         # A new game or a load replaces the pilot (start_game), so it is read again each frame and after those.
         player = player_module.current_player
@@ -364,10 +368,12 @@ def main() -> None:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_MINUS:
                 player.decrease_time_scale()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
-                Savefile.save()
+                with frame_watch.timed('save'):
+                    Savefile.save()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F6:
                 audio.stop_loops()
-                Savefile.load_last()
+                with frame_watch.timed('load'):
+                    Savefile.load_last()
                 player = player_module.current_player  # a load may put the pilot inside an outpost (synced below)
                 elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
             # the starting dialog opens in both states of the game: in the cockpit, and inside an outpost
@@ -431,7 +437,10 @@ def main() -> None:
         left_pressed = focused and pygame.mouse.get_pressed()[0] and player.ship.is_bound
         WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
+        frame_watch.mark('events')
+        frame_watch.end()
         dt = clock.tick(FPS) / 1000.0
+        frame_watch.begin()
 
         ship = player.ship
         delta_game_seconds = dt * player.time_scale
@@ -504,11 +513,15 @@ def main() -> None:
             if ship.laser.firing:
                 ship.scanner.deactivate()
 
+        frame_watch.mark('ship')
         update_queue.update(gem.current_environment.date_time)
         LongDistanceAdvisor.update(player, gem.current_environment)
+        frame_watch.mark('queue and advice')
 
         gui.draw(screen, fonts, gem.current_environment, player)  # the outpost screen, if the pilot is inside one
+        frame_watch.mark('draw')
         pygame.display.flip()
+        frame_watch.mark('flip')
 
     pygame.quit()
 

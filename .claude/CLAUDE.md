@@ -52,6 +52,7 @@ def generate_default(self) -> None:
   - `game_logging/`: logging
   - `savefile.py`: save and load (Savefile)
   - `updating.py`: time-based updates (UpdateQueue, Updatable)
+  - `frame_watch.py`: logs the frames that hang (work over `HITCH_SECONDS`, with the time of each phase of `main`'s loop and of the rare operations, `timed`, in it), one line for each run of slow frames (over `SLOW_SECONDS`), and the slow garbage collections
   - `audio.py`: sound effects, `play(name)` (the sounds are in `resources/sounds`, made by `tools/generate_sounds.py`)
   - `paths.py`: the writable data folder (saves, logs) and `resource_path`
   - `units.py`: compact distance and speed formatting; `vector3.py`: Vector3

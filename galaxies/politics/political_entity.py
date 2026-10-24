@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Optional
+from typing import List, Optional
 
 import random
 import pygame
 
 from common.paths import resource_path
 import logging
+
+from galaxies.people.person import Ethnicity
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,9 @@ class PoliticalEntity:
             titles: dict,
             names_1: dict,
             names_2: dict,
-            exchange_reputation_changes: dict
+            exchange_reputation_changes: dict,
+            settlements: List[(str, Ethnicity)],
+            planets: List[(str)],
             ) -> None:
         self.name: str = name
         self.color: tuple = color
@@ -27,6 +31,8 @@ class PoliticalEntity:
         self.settlement_names_1 = names_1
         self.settlement_names_2 = names_2
         self.exchange_reputation_changes: dict = exchange_reputation_changes
+        self.settlements = settlements
+        self.planets = planets
 
     def title_for(self, reputation: float) -> Optional[str]:
         return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
@@ -44,10 +50,10 @@ class PoliticalEntity:
             + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
-        "Those-Who-Share",
-        (192, 0, 0),
-        "PoliticalEntity.1.png",
-        {
+        name="Those-Who-Share",
+        color=(192, 0, 0),
+        icon_filename="PoliticalEntity.1.png",
+        titles={
          float('-inf'): 'Prisoner',
             -30: 'Dependent',
             -10: 'Student',
@@ -63,7 +69,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             5000: 'Champion',
             10000: 'Premier'
         },
-        [
+        names_1=[
             "Arduous",
             "Beneficial",
             "Burdensome",
@@ -87,7 +93,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "Weighty",
             "Worthwhile"
         ],
-        [
+        names_2=[
             "Aim",
             "Assignment",
             "Charge",
@@ -112,7 +118,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "Undertaking",
             "Work"
         ],
-        {
+        exchange_reputation_changes={
             "maintenance": 24.0,
             "energy": 5e-13,
             "credits": 100.0,
@@ -120,6 +126,40 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "water": 0.0003,
             "food": 0.0006,
             "mines": 5.0,
-            "ore": 0.005,
-        }
+            "ore": 0.007,
+        },
+        settlements=[
+            ('Jiùjīnshān, Ài', Ethnicity.BLACK),
+            ('Niǔyuē, Shèqū', Ethnicity.BLACK),
+            ('Bālí, Tón-lǐ-xīn', Ethnicity.WHITE),
+            ('Bólín, Ài', Ethnicity.WHITE),
+            ('Mòxīgē, Ài', Ethnicity.LATIN),
+            ("Shèngbǎoluó, Xǐ'ài", Ethnicity.LATIN),
+            ('Mǎdélǐ', Ethnicity.LATIN),
+            ('Togyo, Ài', Ethnicity.ASIAN),
+            ('Sel, Shèqū', Ethnicity.ASIAN),
+            ('Shangha, Shèqū', Ethnicity.ASIAN),
+            ('Bejing, Ài', Ethnicity.ASIAN),
+            ('Chenzhen, Tón-lǐ-xīn', Ethnicity.ASIAN),
+            ('Singapa, Tón-lǐ-xīn', Ethnicity.ASIAN),
+            ('Guanzhou, Ài', Ethnicity.ASIAN),
+            ('Xīn-xīàng, Tón-lǐ-xīn', Ethnicity.ASIAN),
+            ("Pínděng, Xǐ'ài", Ethnicity.ASIAN),
+            ('Tuánjié, Ài', Ethnicity.ASIAN),
+            ('Lanfang-dexī, Tuánjié', Ethnicity.ASIAN),
+            ('Wei-de-xīwàng, Tuánjié', Ethnicity.ASIAN),
+            ('Kǎisèlín, Ài', Ethnicity.ASIAN),
+            ('Àidéhuá-duō, Guānhái', Ethnicity.ASIAN),
+            ('Dàshān, Guānhái', Ethnicity.ASIAN),
+            ('Huǒshānkǒu, Bānzhù', Ethnicity.ASIAN),
+        ]
+        , planets= [
+            'Ài',
+            'Shèqū',
+            'Tón-lǐ-xīn',
+            "Xǐ'ài",
+            'Tuánjié',
+            'Guānhái',
+            'Bānzhù',
+        ]
     )

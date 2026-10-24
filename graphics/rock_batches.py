@@ -23,6 +23,7 @@ import weakref
 import numpy as np
 from OpenGL import GL
 
+from common.frame_watch import frame_watch
 from .constants import SURFACE_STARLIGHT
 from .rock_shape import FACES, rock_meshes, rotate
 from .special_rocks import SPLITS, special_mesh
@@ -182,7 +183,8 @@ class RockBatches:
         for km2 in km2s:
             batches = RockBatches._batches.get(km2)
             if batches is None or not (batches[0].is_current(km2) and batches[1].is_current(km2)):
-                batches = (RockBatch(km2), RockBatch(km2, special=True))
+                with frame_watch.timed('rock batch build'):
+                    batches = (RockBatch(km2), RockBatch(km2, special=True))
                 RockBatches._batches[km2] = batches
             for batch in batches:
                 batch.draw(player_x, player_z, light)

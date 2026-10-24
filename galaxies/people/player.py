@@ -36,7 +36,7 @@ class Player:
     TIME_SCALE_MIN = 1
     TIME_SCALE_MAX = 1_000_000
     TIME_SCALE_STEP = 10
-    # From these time scales on the clock warns in red: a ship flying bound to a world, or unbound in space.
+    # From these time scales on the clock warns in red, while the ship is moving: bound to a world, or unbound in space.
     TIME_SCALE_DANGER_BOUND = 10_000
     TIME_SCALE_DANGER_UNBOUND = 100_000
 
@@ -64,9 +64,10 @@ class Player:
 
     # region Time scale
     def is_time_scale_dangerous(self) -> bool:
-        """Whether the time compression is clearly dangerous at the ship's state (bound or unbound)."""
+        """Whether the time compression is clearly dangerous at the ship's state (bound or unbound). Only while the ship
+        has a speed: a ship standing still is never dangerous (the same speed the console shows)."""
         limit = self.TIME_SCALE_DANGER_BOUND if self.ship.is_bound else self.TIME_SCALE_DANGER_UNBOUND
-        return self.time_scale >= limit
+        return self.time_scale >= limit and self.ship.velocity.as_vector().length() > 0.0
 
     def increase_time_scale(self) -> Player:
         """Faster, from TIME_SCALE_MIN up to TIME_SCALE_MAX."""

@@ -25,9 +25,8 @@ _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
 # The message board's sign, by size in pixels (None for a size whose image could not be loaded).
 _board_signs: dict = {}
 
-# Rock temperature colours, for 0-25%, 25-50%, 50-75% and 75-100% of the rock's max_temperature (black, dark red, gray,
-# cyan, blue).
-TEMPERATURE_COLORS = ((0, 0, 0), (96, 24, 24), (96, 96, 96), (96, 96, 192), (32, 32, 255))
+# Rock temperature colours:
+TEMPERATURE_COLORS = ((0, 0, 0), (48, 0, 0), (48, 8, 48), (24, 24, 64), (32, 32, 128))
 
 
 class Scanner:

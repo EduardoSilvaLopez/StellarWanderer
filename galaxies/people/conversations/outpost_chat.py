@@ -10,6 +10,7 @@ even while the chat is open.
 """
 
 from __future__ import annotations
+from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional
 
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
@@ -17,6 +18,21 @@ from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
 from galaxies.people.player import Player
 
+def pretty_date(dt: datetime) -> str:
+    ordinal: str = ''
+    if 11 <= dt.day % 100 <= 13:
+        ordinal = f"{dt.day}th"
+    match dt.day % 10:
+        case 1:
+            ordinal = f"{dt.day}st"
+        case 2:
+            ordinal = f"{dt.day}nd"
+        case 3:
+            ordinal = f"{dt.day}rd"
+        case _:
+            ordinal = f"{dt.day}th"
+
+    return f"{dt.strftime('%B')}, the {ordinal}"
 
 class OutpostChat(Conversation):
     def __init__(self, player: Player, interlocutor: Person, log: ChatLog, tag: str) -> None:
@@ -46,7 +62,11 @@ class OutpostChat(Conversation):
         self.interlocutor.record()
 
     def say(self, generator: Callable[[OutpostChat], str]) -> None:
-        """The person says `text` in the chat. Its [marks] become the pilot's conversation tags, from now on."""
+        """The person says `text` in the chat. Its [marks] become the pilot's conversation tags, from now on. Time
+        passes."""
+        import game_environment as gem
+        gem.current_environment.date_time += timedelta(seconds=60)
+
         text: str = generator()
         words, tags = parse_marks(text)
         self.player.conversation_tags.update(tags)
@@ -63,9 +83,11 @@ class OutpostChat(Conversation):
     def reactions_index(self) -> map:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
-            'asteroid': self.talk_asteroid,
+            'asteroids': self.talk_asteroid,
             'belt': self.talk_belt,
             'founders': self.talk_founders,
+            'happy birthday': self.talk_happy_birthday,
+            'life': self.talk_life,
             'noobie': self.talk_noobie,
             'paladin xi': self.talk_paladin_xi,
             'pgms': self.talk_pgms,
@@ -79,6 +101,13 @@ class OutpostChat(Conversation):
         }
 
     def talk_present_yourself(self) -> str:
+        if not any("Presented himself." in lines for lines in self.interlocutor.interactions.values()):
+            self.interlocutor.adjust_sympathy(1)
+            self.interaction_lines.append("Presented himself.")
+            return self.talk_present_yourself_first_time()
+        return self.talk_present_yourself_further_times()
+
+    def talk_present_yourself_first_time(self) -> str:
         # Short names to make the rest more legible
         title: str = self.interlocutor.get_title()
         role: str = self.interlocutor.role.name
@@ -150,18 +179,18 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return "You. Look, I don't want problems, ok? Just leave me alone. You've done enough."
                 elif sym < 80:
-                    return f"Hello, Pilot, I am {self_present}. How are you? Share a drink?"
+                    return f"Hello, Pilot, I am {self_present}. How are you? How's [life] going?"
                 else:
                     return (
                         f"Nice to meet you, {self.player.first_name}! How are you doing? How is [space] being to you?"
                         f"\n\nMe, I prefer to remain between the outpost and [the base]. Less risky, you know?"
                         f" And people are nice here."
                     )
-            else:  # noqa: PLR5501
+            else:  # noqa: PLR5501 - High soc
                 if sym < 20:
                     return (
                         "Oh, no, [noobie], don't approach me, ok? I don't want troubles and you have done enough,"
-                        " just leave me alone. You should think about your life."
+                        " just leave me alone. You should think about your [life]."
                     )
                 elif sym < 80:
                     return (
@@ -175,8 +204,9 @@ class OutpostChat(Conversation):
                         " Be careful in [space]. It is hard. You can get yourself killed. Avoid the asteroid [belt]s."
                         "\n\nBut if you build yourself a good basis of mines and then do some science work on rocks,"
                         " everything will be ok. Safe way to build up some reputation and then back home, yes?"
+                        "\n\n[Life]'s too precious to loose it so soon."
                     )
-        else:  # noqa: PLR5501
+        else:  # noqa: PLR5501 - High emp
             if soc < 20:
                 if sym < 20:
                     return "<Looks sadly at you, says nothing>"
@@ -194,7 +224,7 @@ class OutpostChat(Conversation):
                     return (
                         f"Hello, Pilot, I am {self_present}. How are you? How has [space] treated you lately?"
                         f"\n\nIs [Paladin Xi] already proud of you? Ha!"
-                        f"\n\nDo you need a coffee?"
+                        f"\n\nDo you need a coffee? I need a coffee!"
                     )
                 else:
                     return (
@@ -202,11 +232,11 @@ class OutpostChat(Conversation):
                         f"\n\nHow is [space] treating you? [Paladin Xi] is not a bad guy, but he is ruthless. I see"
                         f" the ships you start with. Ugh."
                     )
-            else:  # noqa: PLR5501
+            else:  # noqa: PLR5501 - High soc
                 if sym < 20:
                     return (
                         "DON'T YOU DARE! Oh, don't you dare to approach me, no, no, I know the likes of you!"
-                        " Just leave me alone, life here is hard enough, just go away and let me have my meal"
+                        " Just leave me alone, [life] here is hard enough, just go away and let me have my meal"
                         " in peace. By the [Founders] I don't need this right now!"
                     )
                 elif sym < 80:
@@ -214,13 +244,115 @@ class OutpostChat(Conversation):
                         "So here we have you, [Paladin Xi]'s last discovery! He wants everybody on [space].\n\n"
                         " I get, we need the [PGMs], and more valuable [asteroids], but the belts are dangerous."
                         " People have been killed. No beacon signal can save you if you are too far away,"
-                        " drifting between planets. Be careful, [noobie], ok?"
+                        " drifting between planets. Be careful, [noobie], ok? [Life] is a precious thing."
                     )
                 else:
                     return (
                         f"Nice to meet you, {self.player.first_name}! How are you doing?"
                         "\n\nI have heard about you. Good things! Do you want a coffee? Or maybe something... stronger?"
                         "\n\nHow is [space] treating you? Making our [Paladin Xi] proud? Tell me!"
+                    )
+
+    def talk_present_yourself_further_times(self) -> str:
+        # Short names to make the rest more legible
+        emp: float = self.interlocutor.empathy100
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+
+        if emp < 20:
+            if soc < 20:
+                if sym < 20:
+                    return "Fuck off."
+                elif sym < 80:
+                    return "Hi."
+                else:
+                    return "Hi <shy smile>."
+            elif soc < 80:
+                if sym < 20:
+                    return "You. What do you want?"
+                elif sym < 80:
+                    return "Hi. What's the matter?"
+                else:
+                    return "Hey. Still alive, apparently. Respect."
+            else:  # noqa: PLR5501
+                if sym < 20:
+                    return "Bugger off, will you? Nobody wants to talk with you."
+                elif sym < 80:
+                    return (
+                        f"If it's not good old {self.player.first_name}! You didn't manage to kill yourself yet,"
+                        " I see. What do you want?"
+                    )
+                else:
+                    return "Hello there. You are still alive, yes? I am surprised. You're not so stupid after all."
+        elif emp < 80:
+            if soc < 20:
+                if sym < 20:
+                    return f"{self.player.first_name}. Go."
+                elif sym < 80:
+                    return "Hello <looks suspiciously>."
+                else:
+                    return "Hey <shy smile>."
+            elif soc < 80:
+                if sym < 20:
+                    return f"{self.player.first_name} {self.player.surname}. Now my day is screwed."
+                elif sym < 80:
+                    return f"Hello {self.player.first_name}, how are you?"
+                else:
+                    return (
+                        f"{self.player.first_name}! Welcome! How are you doing? You want some coffee?"
+                    )
+            else:  # noqa: PLR5501 - High soc
+                if sym < 20:
+                    return (
+                        f"If it's not {self.player.get_title()} Pilot {self.player.first_name} {self.player.surname}!"
+                        " I have no interest in talking with you."
+                    )
+                elif sym < 80:
+                    return (
+                        f"Hey, {self.player.first_name}, how are you? Alive, I see! I'm glad."
+                        f" Me... I miss {self.interlocutor.planet_of_birth}."
+                    )
+                else:
+                    return (
+                        f"{self.player.first_name}, my friend! How are you doing? Did you see the game yesterday?"
+                    )
+        else:  # noqa: PLR5501 - High emp
+            if soc < 20:
+                if sym < 20:
+                    return "<Looks sadly at you, says nothing>"
+                elif sym < 80:
+                    return "Hello again." # 'again' maybe after five years, but he does not care: too son :D
+                else:
+                    return "Oh. You. Nice. <shy smile>"
+            elif soc < 80:
+                if sym < 20:
+                    return (
+                        "Oh, it's you again. Why don't you go bother someone else?"
+                    )
+                elif sym < 80:
+                    return (
+                        f"Ah, Pilot {self.player.surname}. Hello. I was going to make myself a tea. One for you?"
+                    )
+                else:
+                    return (
+                        f"{self.player.first_name}, hello! Welcome! How are you doing? Something interesting to tell?"
+                    )
+            else:  # noqa: PLR5501 - High soc
+                if sym < 20:
+                    return (
+                        f"If it's not {self.player.get_title()} Pilot {self.player.first_name} {self.player.surname}!"
+                        " What are you doing here? What do you want? I have no interest in talking with"
+                        " the likes of YOU."
+                    )
+                elif sym < 80:
+                    return (
+                        f"Hey, {self.player.first_name}, how are you? Alive, I see! I'm glad. How is good old [space]"
+                        f" treating you lately? Friend, I miss {self.interlocutor.planet_of_birth}. And you, do"
+                        f" you miss home?"
+                    )
+                else:
+                    return (
+                        f"{self.player.first_name}, my friend! How are you doing? What can I do for you?"
                     )
 
     def talk_asteroid(self) -> str:
@@ -237,6 +369,190 @@ class OutpostChat(Conversation):
         return (
             "Well, the ones who founded Those-Who-Share, you know?"
         )
+
+    def talk_happy_birthday(self) -> str:
+        # Short names to make the rest more legible
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+
+        # Loyalty is irrelevant, this is apolitical.
+        # Empathy is irrelevant, as this is all about the interlocutor.
+        # Sociability and sympathy combine, for verbose replies.
+
+        # Auxiliary variables:
+        interaction_key: str = "Happy birthday " + str(self.date_time.year)
+        dtb: Optional[int] = self.days_to_birthday()
+        is_really = dtb == 0
+        is_near_enough = dtb is not None and dtb != 0
+        is_not = dtb is None
+        told_already: bool = is_really and any(
+            interaction_key in lines for lines in self.interlocutor.interactions.values()
+            )
+        correction_text = "That's someone else." if is_not \
+            else "That was the day before yesterday." if is_near_enough and dtb == -2 \
+            else "That was yesterday." if is_near_enough and dtb == -1 \
+            else "That's tomorrow." if is_near_enough \
+            else "You told me already..." if told_already \
+            else ""
+
+        # The effects are impressive:
+        if is_not:
+            self.interlocutor.adjust_sympathy(-5)
+        elif is_near_enough:
+            self.interlocutor.adjust_sympathy(1)
+        elif told_already:
+            self.interlocutor.adjust_sympathy(-0.1)
+        else:
+            self.interaction_lines.append(interaction_key)
+            self.interlocutor.adjust_sympathy(20)
+
+        # Simplify soc and sym. The 1.212 is to keep variance.
+        ver: float = 50 + 1.212 * (0.5 * (50 - soc) + 0.5 * (50 - sym))
+
+        if told_already:
+            return correction_text
+        elif ver < 20:
+            if is_really:
+                return "Oh. Thank you. <Blushes a bit>"
+            else:
+                return correction_text
+        elif ver < 80:
+            if is_really:
+                return "Oh, well, thank you very much!"
+            elif is_near_enough:
+                return f"You are mistaken, sorry. {correction_text}\n\nBut thanks anyway."
+            else:
+                return f"That's... weird. {correction_text}"
+        else:  # noqa: PLR5501
+            if is_really:
+                return f"You remembered! That's so nice, {self.player.first_name}! THANK YOU!"
+            elif is_near_enough:
+                return f"Oh, dear! {correction_text}\n\nBut thanks anyway, don't worry."
+            else:
+                return f"Huh? {correction_text} And this was weird."
+
+    def talk_life(self) -> str:
+        # General effect. People like to be asked about their lives. Once.
+        if not any("Asked about life." in lines for lines in self.interlocutor.interactions.values()):
+            self.interlocutor.adjust_sympathy(5)
+            self.interaction_lines.append("Asked about life.")
+
+        # Short names to make the rest more legible
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+
+        # Apolitical conversation: Loyalty is irrelevant, save the self presentation.
+        # Empathy irrelevant: this is anyway about the interlocutor.
+        # Sociability always relevant, makes the reply less or more verbose.
+        # Sympathy always relevant, rejection or approval of the player.
+        # Special: birthday discovery -2 to +1 days is relevant.
+        days_to_birthday: Optional[int] = self.days_to_birthday()
+        self_description: str = ''
+
+        # more empathy = more humble
+        if self.interlocutor.empathy100 < 20:
+            self_description = "the best <smiles>"  # delulu :D
+        elif self.interlocutor.empathy100 < 80:
+            self_description = "cool"
+        else:
+            self_description = "ok, I guess"
+
+        if soc < 20:
+            if sym < 20:
+                if days_to_birthday == 0:
+                    return "On my birthday, for fuck's sake. Leave me alone."
+                return "Leave me alone."
+            elif sym < 80:
+                if days_to_birthday == 0:
+                    return "Life's ok. Birthday."
+                return "Life's ok."
+            else:
+                if days_to_birthday == 0:
+                    return "Doing ok. My birthday today."
+                return "Doing ok."
+        elif soc < 80:
+            if sym < 20:
+                if days_to_birthday == 0:
+                    return "On my birthday, for fuck's sake. Leave me alone."
+                return "Oh, no, leave me alone."
+            elif sym < 80:
+                text = (
+                    f"Me? I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
+                    f" I work here as a {self.interlocutor.role.name}. People say I'm {self_description}."
+                )
+                if days_to_birthday == -2:
+                    text += "\n\nI had my birthday two days ago."
+                elif days_to_birthday == -1:
+                    text += "\n\nMy birthday was yesterday."
+                elif days_to_birthday == 0:
+                    text += "\n\nToday is my birthday."
+                elif days_to_birthday == 1:
+                    text += "\n\nTomorrow is my birthday."
+                return text
+            else:
+                text = (
+                    "Me? Thank you for asking, friend <smiles>."
+                    f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
+                    f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}. People say I'm {self_description}."
+                    f"\n\nOh... and {self.interlocutor.hobby}"
+                )
+                if days_to_birthday == -2:
+                    text += "\n\nMy birthday was two days ago."
+                elif days_to_birthday == -1:
+                    text += "\n\nMy birthday was yesterday."
+                elif days_to_birthday == 0:
+                    text += "\n\nToday is my birthday. Just saying."
+                elif days_to_birthday == 1:
+                    text += "\n\nTomorrow is my birthday, by the way."
+                return text
+        else: # noqa: PLR5501 High soc
+            if sym < 20:
+                text = "What do you want to know? I work here. I do my best <stares at you firmly>."
+                if days_to_birthday == -1:
+                    text += "\n\nYesterday was my birthday, if you want to know."
+                elif days_to_birthday == 0:
+                    text += "\n\nToday is my birthday. So leave me alone."
+                return text
+            elif sym < 80:
+                text = (
+                    f"Me? I was born in {self.interlocutor.place_of_birth},"
+                    f" I had {self.interlocutor.childhood}, I would say."
+                    f" I am {self.interlocutor.age} years old."
+                    f" I work here as a {self.interlocutor.role.name}."
+                    f" People say I'm {self_description}."
+                )
+                if days_to_birthday == -2:
+                    text += "\n\nI had my birthday two days ago. Too late for [Happy birthday]! <laughs>."
+                elif days_to_birthday == -1:
+                    text += "\n\nMy birthday was yesterday, you just missed my '[Happy birthday]!' <laughs>."
+                elif days_to_birthday == 0:
+                    text += "\n\nToday is my birthday. You can still wish me '[happy birthday]' <smiles>."
+                elif days_to_birthday == 1:
+                    text += "\n\nTomorrow is my birthday, if you want to wish me [happy birthday] <smiles>."
+                return text
+            else:
+                text = (
+                    "Me? You want to talk about my life? I am flattered <laughs>."
+                    f" Well... ok, I was born in {self.interlocutor.place_of_birth}. I really miss home sometimes."
+                    f" I had {self.interlocutor.childhood}, I would say. But that's the past."
+                    f" I am {self.interlocutor.age} years old. I know, I know."
+                    f" I work here as a {self.interlocutor.role.name}. I like it."
+                    f" People say I'm {self_description}."
+                    f"\n\nOh... and {self.interlocutor.hobby}"
+                )
+                if days_to_birthday == -2:
+                    text += "\n\nBTW, I had my birthday two days ago."
+                elif days_to_birthday == -1:
+                    text += "\n\nBTW, my birthday was yesterday, if you want to know."
+                elif days_to_birthday == 0:
+                    text += "\n\nYou know something? Today is my birthday! Will you wish me [happy birthday]?"
+                elif days_to_birthday == 1:
+                    text += (
+                        "\n\nLook, so... tomorrow is my birthday. You could come by. Even without a present."
+                        " I forgive you <laughs>."
+                    )
+                return text
+
     def talk_noobie(self) -> str:
         return (
             "Well, that's... no offense intended. [Paladin Xi] finished your training recently, yes? So..."
@@ -261,7 +577,7 @@ class OutpostChat(Conversation):
     def talk_the_base(self) -> str:
         return (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
-            " uniform, I tell you. My shorts and cocktail looking at the trees. That's life. Almost like a planet."
+            " uniform, I tell you. My shorts and cocktail looking at the trees. That's [life]. Almost like a planet."
         )
     def talk_the_network(self) -> str:
         return (
@@ -286,7 +602,7 @@ class OutpostChat(Conversation):
         # Sociability always relevant, makes the reply less or more verbose.
         # Sympathy always relevant, rejection or approval of the player.
 
-        # Must simplify this, so a formula which combines two without changing the sigma too much.
+        # Simplify loy and emp. The 1.212 is to keep variance.
         likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
 
         if sym < 20:
@@ -411,5 +727,22 @@ class OutpostChat(Conversation):
 
     def talk_unknown_tag(self) -> str:
         return ("I don't know what you mean.")
+
+    # endregion
+
+    # region Auxiliar methods
+
+    def days_to_birthday(self) -> Optional[int]:
+        """birthday discovery -2 to +1 days is relevant."""
+        import game_environment as gem
+        now: datetime = gem.current_environment.date_time
+        birthday: date = self.interlocutor.dob.date()
+        days_to_birthday: Optional[int] = None
+        for offset in range(-2, 2):
+            day = (now + timedelta(days=offset)).date()
+            if day.day == birthday.day and day.month == birthday.month:
+                days_to_birthday = offset
+                break
+        return days_to_birthday
 
     # endregion

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Dict, Tuple
 import logging
 import math
 
+from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
 from galaxies.world import World
 import game_environment as gem
@@ -130,7 +131,8 @@ class Navigation:
 
         environment = gem.current_environment
         if not ship.is_bound:
-            environment.refresh_fixed_body(ship.position.as_vector())
+            with frame_watch.timed('refresh fixed body'):
+                environment.refresh_fixed_body(ship.position.as_vector())
         body = environment.fixed_body  # None outside every fixed zone: then there is nothing to bind to
         if ship.is_bound and ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
             self._unbind_from(body)
@@ -143,7 +145,9 @@ class Navigation:
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
             if not ship.position.y > World.SURROUNDINGS_RADIUS \
                 and (km2 is None or km2 != ship.position.km2):
-                world.update_surroundings(ship.position.y, ship.position.x, ship.position.z, environment.date_time)
+                with frame_watch.timed('update surroundings'):
+                    world.update_surroundings(
+                        ship.position.y, ship.position.x, ship.position.z, environment.date_time)
                 km2 = world.get_km2_at(ship.position.x, ship.position.z)
             ship.position.km2 = km2
         return self

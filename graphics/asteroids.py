@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from OpenGL import GL, GLU
 
+from common.frame_watch import frame_watch
 from common.vector3 import Vector3
 from galaxies import seeds
 from galaxies.asteroid import AsteroidKey
@@ -94,7 +95,8 @@ class CosmeticView:
         stale = (self._date is None or abs((date - self._date).total_seconds()) > self.REQUERY_SECONDS
                  or float(np.linalg.norm(ship_position - self._ship_position)) > self.REQUERY_DISTANCE)
         if stale:
-            self._found = belt.near(Vector3(*ship_position), date, Asteroids.tier_reaches(focal))
+            with frame_watch.timed('asteroid belt near'):
+                self._found = belt.near(Vector3(*ship_position), date, Asteroids.tier_reaches(focal))
             self._date, self._ship_position = date, ship_position
         found = self._found
         if found is None or not len(found.diameter):
