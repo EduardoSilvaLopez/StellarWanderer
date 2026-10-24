@@ -6,18 +6,23 @@ recomputed, and only when needed: they depend on the sun and on the heat glow, a
 frame to the next (see SUN_TOLERANCE_DEGREES). Graphics reads the rocks' temperature colour (rock.color) and shape
 seed; Galaxies knows nothing about this module.
 
-Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`).
+Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`), and only while the
+ship is under MAX_DEPTH and does not outrun the rocks (`Navigation.outruns_rocks`).
 
 A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rocks change: when one melts, or is given an
-adjective. A Km2 has two batches: the ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals,
-see special_rocks.py). Rocks add their heat glow (rock.color above initial_color) after shading, so a hot rock still
-glows on the dark side. A rock whose lowest point would float above the ground is lowered onto it, and one whose top
-would be hidden is raised to show (VISIBLE_TOP_SHARE).
+adjective. A frame builds batches, the nearest Km2s to the player first, until BUILD_BUDGET_SECONDS has passed (always
+at least one), so a ship that enters a new row of Km2s fills it over a few frames instead of in a single long one; the
+Km2s still waiting show nothing (or their last batch, if only their rocks changed). A Km2 has two batches: the
+ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals, see special_rocks.py). Rocks add
+their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on the dark side. A rock
+whose lowest point would float above the ground is lowered onto it, and one whose top would be hidden is raised to
+show (VISIBLE_TOP_SHARE).
 """
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
 import math
+import time
 import weakref
 
 import numpy as np
@@ -40,6 +45,9 @@ if TYPE_CHECKING:
 # the sun moves fast and they are recomputed every frame, as without a cache.
 SUN_TOLERANCE_DEGREES = 0.1
 _SUN_TOLERANCE_COS = math.cos(math.radians(SUN_TOLERANCE_DEGREES))
+
+# A frame stops building batches once it has spent this long on them (the one being built is finished).
+BUILD_BUDGET_SECONDS = 0.004
 
 # A rock's top is kept at least this share of its size above the ground, so it is always visible.
 VISIBLE_TOP_SHARE = 0.1
@@ -180,11 +188,19 @@ class RockBatches:
 
     @staticmethod
     def draw(km2s: Sequence[Km2], player_x: float, player_z: float, light: SurfaceLight) -> None:
+        pending = []
         for km2 in km2s:
             batches = RockBatches._batches.get(km2)
             if batches is None or not (batches[0].is_current(km2) and batches[1].is_current(km2)):
-                with frame_watch.timed('rock batch build'):
-                    batches = (RockBatch(km2), RockBatch(km2, special=True))
-                RockBatches._batches[km2] = batches
-            for batch in batches:
+                pending.append(km2)
+        pending.sort(key=lambda km2: (km2.longitude + km2.SIZE / 2 - player_x) ** 2
+                     + (km2.latitude + km2.SIZE / 2 - player_z) ** 2)
+        started = time.perf_counter()
+        for built, km2 in enumerate(pending):
+            if built and time.perf_counter() - started >= BUILD_BUDGET_SECONDS:
+                break
+            with frame_watch.timed('rock batch build'):
+                RockBatches._batches[km2] = (RockBatch(km2), RockBatch(km2, special=True))
+        for km2 in km2s:
+            for batch in RockBatches._batches.get(km2, ()):
                 batch.draw(player_x, player_z, light)

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from galaxies.world import World
 
 MINE_MARK_COLOR = (255, 255, 0)
+ROCK_MARK_COLOR = (255, 140, 0)  # the rock of an open scan mission: an orange cross, apart from the yellow mines
 
 # Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, centred on the ship.
 # The scales are fixed values in metres per pixel (1, 2, 5, 10, ...) down to MIN_SCALE, so a step means the same
@@ -29,8 +30,8 @@ class WorldMap:
 
     Bound only. It shows the outposts of the planet as white dots with their names (the name goes towards the middle
     of the map: left of the dot in its right half, below it in its upper half, and is kept inside the map), the ore
-    mines of the world (`World.registered_mines`) as small yellow crosses, and the player as a bright dot. Rocks are
-    not shown.
+    mines of the world (`World.registered_mines`) as small yellow crosses, the rock of each open rock-scan mission on
+    the world as an orange cross (`ScanRock.target_on`), and the player as a bright dot. Other rocks are not shown.
 
     With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
     centred on the ship (the ship's dot stays at the middle until the map is dragged). The levels are fixed scales in
@@ -206,10 +207,11 @@ class WorldMap:
     @staticmethod
     def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: World, ship: Ship,
                        to_pixel: PixelFunction, area: pygame.Rect) -> None:
-        """Everything the map shows: the outposts (planets only; moons have none), the ore mines and the
-        player. Rocks are not shown."""
+        """Everything the map shows: the outposts (planets only; moons have none), the ore mines, the rocks of the open
+        scan missions and the player."""
         WorldMap._draw_outposts(surface, fonts, h, world, to_pixel, area)
         WorldMap._draw_mines(surface, world, to_pixel)
+        WorldMap._draw_rock_targets(surface, world, ship, to_pixel)
 
         # Player position as a brilliant dot
         player_pixel = to_pixel(ship.position.x, ship.position.z)
@@ -234,14 +236,29 @@ class WorldMap:
     @staticmethod
     def _draw_mines(surface: pygame.Surface, world: World, to_pixel: PixelFunction) -> None:
         """A small yellow cross per ore mine of the world (its registered_mines)."""
-        arm = 3
         for mine_pos in world.registered_mines:
-            pixel = to_pixel(mine_pos[0], mine_pos[1])
-            if pixel is None:
+            WorldMap._draw_cross(surface, to_pixel(mine_pos[0], mine_pos[1]), MINE_MARK_COLOR)
+
+    @staticmethod
+    def _draw_rock_targets(surface: pygame.Surface, world: World, ship: Ship, to_pixel: PixelFunction) -> None:
+        """An orange cross on the rock of each open scan mission that is on this world."""
+        from galaxies.missions import ScanRock  # local: the missions import the player, which imports this package
+        for mission in ship.owner.missions:
+            if not isinstance(mission, ScanRock):
                 continue
-            x, y = pixel
-            pygame.draw.line(surface, MINE_MARK_COLOR, (x - arm, y - arm), (x + arm, y + arm), 2)
-            pygame.draw.line(surface, MINE_MARK_COLOR, (x - arm, y + arm), (x + arm, y - arm), 2)
+            site = mission.target_on(world)
+            if site is not None:
+                WorldMap._draw_cross(surface, to_pixel(site[0], site[1]), ROCK_MARK_COLOR)
+
+    @staticmethod
+    def _draw_cross(surface: pygame.Surface, pixel: Optional[Tuple[int, int]], colour: Tuple[int, int, int]) -> None:
+        """A small cross centred on `pixel`; nothing when it is None (outside the map)."""
+        if pixel is None:
+            return
+        arm = 3
+        x, y = pixel
+        pygame.draw.line(surface, colour, (x - arm, y - arm), (x + arm, y + arm), 2)
+        pygame.draw.line(surface, colour, (x - arm, y + arm), (x + arm, y - arm), 2)
 
     @staticmethod
     def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world: World, to_pixel: PixelFunction,

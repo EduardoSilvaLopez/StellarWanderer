@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import pygame
 from datetime import datetime
+from common.frame_watch import frame_watch
 from .instruments.canopy import Canopy
 from .instruments.console import Console
 from .instruments.clock import Clock
@@ -37,13 +38,17 @@ class Cockpit:
         """
         import game_environment as gem
         Canopy.draw(surface, w, h)
+        frame_watch.mark('canopy')
         Crosshair.draw(surface, w, h)
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)
         TargetMarker.draw(surface, w, h, gem.current_environment, player.ship)
         LeadMarker.draw(surface, w, h, player.ship)
         ObjectLabels.draw(surface, fonts, w, h, gem.current_environment, player.ship)
+        frame_watch.mark('markers and labels')
         CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h), player)
+        frame_watch.mark('buttons and political info')
         Console.draw(surface, fonts, w, h, player.ship, date_time)
+        frame_watch.mark('console')
         LocationInfo.draw_name(surface, fonts, w, h)
         Clock.draw(surface, fonts, date_time, player.time_scale, w, h,
                    dangerous=player.is_time_scale_dangerous())

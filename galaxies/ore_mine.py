@@ -103,8 +103,6 @@ class OreMine(Updatable):
         self.next_update_at = game_date_time + timedelta(seconds=self.EXTRACTION_PERIOD)
         update_queue.add(self)
 
-        logger.debug(f"Mine at {self.longitude}, {self.latitude} updated, content {self.content}.")
-
     def _extract_completed_periods(self, game_date_time: datetime) -> float:
         """Extracts the whole extraction periods since last_updated_at, and returns how many there were (0 if under
         one). The part of a period still running is left for later."""

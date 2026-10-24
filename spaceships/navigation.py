@@ -48,9 +48,14 @@ class Navigation:
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
     ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship changes its speed by, thrusting or braking
+    ROCKS_TRAVEL_LIMIT = World.SURROUNDINGS_RADIUS  # m: a ship that moves farther than this in a frame outruns the rocks
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
+        # Bound and moving along the surface more than ROCKS_TRAVEL_LIMIT in the last frame: nothing seen in a frame is
+        # seen in the next, so the rocks are neither generated (the Km2s around the ship are left as they are, and the
+        # ship's own may be missing) nor drawn (see OpenGLGui.draw) until the ship slows down.
+        self.outruns_rocks: bool = False
 
     # region Angles and directions
     def pitch_angle(self, body: Body, current_datetime: datetime) -> float:
@@ -128,6 +133,8 @@ class Navigation:
         ship = self.ship
         self._update_velocity(delta_time, longitude_accel_input, altitude_accel_input, latitude_accel_input, braking)
         self._update_position(delta_time)
+        self.outruns_rocks = ship.is_bound and math.hypot(ship.velocity.x, ship.velocity.z) * delta_time > \
+            Navigation.ROCKS_TRAVEL_LIMIT
 
         environment = gem.current_environment
         if not ship.is_bound:
@@ -143,8 +150,8 @@ class Navigation:
         if ship.is_bound:
             world = environment.fixed_world
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
-            if not ship.position.y > World.SURROUNDINGS_RADIUS \
-                and (km2 is None or km2 != ship.position.km2):
+            if not ship.position.y > World.SURROUNDINGS_RADIUS and not self.outruns_rocks \
+                    and (km2 is None or km2 != ship.position.km2):
                 with frame_watch.timed('update surroundings'):
                     world.update_surroundings(
                         ship.position.y, ship.position.x, ship.position.z, environment.date_time)

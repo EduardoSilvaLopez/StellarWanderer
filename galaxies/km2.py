@@ -125,8 +125,6 @@ class Km2:
         for mine in (m for field in self.ore_fields for m in field.mines):
             mine.stop_updating()
 
-        logger.info(f"Stop updating: {self.longitude} {self.latitude}")
-
     def start_updating(self, update_time: datetime) -> None:
         for rock in self.rocks:
             rock.start_updating(update_time)
@@ -134,8 +132,6 @@ class Km2:
         for mine in (m for field in self.ore_fields for m in field.mines):
             if mine not in update_queue:  # a mine already queued keeps its entry (see OreMine.update)
                 mine.update(update_time)
-
-        logger.info(f"Start updating: {self.longitude} {self.latitude}")
     # endregion
 
     def melt_rock(self, tgt_rock: Rock) -> Km2:

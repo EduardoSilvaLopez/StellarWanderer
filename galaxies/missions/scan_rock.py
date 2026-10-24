@@ -9,7 +9,7 @@ offer nobody takes leaves the world as it was."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 import logging
 import math
 import random
@@ -166,6 +166,13 @@ class ScanRock(Mission):
         if rock.parent_km2.parent_world is self._world() and [rock.longitude, rock.latitude] == self.rock_site['rock']:
             self.was_scanned = True
 
+    def target_on(self, world: World) -> Optional[Tuple[float, float]]:
+        """The longitude and latitude of the mission's rock, while the mission is open and the rock is on `world`;
+        None otherwise."""
+        if self.status != OPEN or self.object_type != 'rock' or self._world() is not world:
+            return None
+        return tuple(self.rock_site['rock'])
+
     def progress(self) -> str:
         if self.accepted_at is None:
             return ''
@@ -196,7 +203,7 @@ class ScanRock(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 0.5 # Later... depends on distance? When asteroids.
+        reputation_change: float = 1.0
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")

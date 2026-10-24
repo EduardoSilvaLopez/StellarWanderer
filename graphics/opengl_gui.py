@@ -81,29 +81,37 @@ class OpenGLGui:
 
         ship = player.ship
         self.world_surface.fill((0, 0, 0, 0))  # transparent: what is behind the sky (the Milky Way) shows through
+        frame_watch.mark('sky fill')
         DistantStars.draw(self.world_surface, width, height, environment, ship)
+        frame_watch.mark('distant stars')
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
         view = view_of(environment, ship, width, height)
         if view is not None:
             erase(self.world_surface, view, width, height)  # the sun shows through the sky here
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False)
+        frame_watch.mark('other worlds')
         OrbitPath.draw(self.world_surface, width, height, environment, ship)
+        frame_watch.mark('orbit path')
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
         if light is not None:
             FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
         elif ship.is_bound:
             LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
+        frame_watch.mark('fixed world')
         OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
-        frame_watch.mark('sky')
+        frame_watch.mark('outpost markers')
 
         self.overlay_surface.fill((0, 0, 0, 0))
+        frame_watch.mark('overlay fill')
         Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
+        frame_watch.mark('cockpit')
         Starlight.tint_cockpit(self.overlay_surface, environment, ship)
+        frame_watch.mark('cockpit tint')
         HeatVignette.draw(self.overlay_surface, width, height, ship)
         FrostVignette.draw(self.overlay_surface, width, height, ship)
+        frame_watch.mark('vignettes')
         DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
-        frame_watch.mark('cockpit')
 
         GL.glViewport(0, 0, width, height)
         GL.glClearColor(SPACE_COLOR[0] / 255, SPACE_COLOR[1] / 255, SPACE_COLOR[2] / 255, 1.0)
@@ -121,7 +129,9 @@ class OpenGLGui:
         if not ship.is_bound:
             Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
-        if light is not None:
+        # Nothing is seen beyond MAX_DEPTH, so above it there is no ground and no rocks to draw; and a ship that outruns
+        # the rocks (see Navigation.outruns_rocks) sees none either.
+        if light is not None and ship.position.y <= MAX_DEPTH and not ship.navigation.outruns_rocks:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
             ore_fields = [field for km2 in km2s for field in km2.ore_fields]
             Rocks.draw(
