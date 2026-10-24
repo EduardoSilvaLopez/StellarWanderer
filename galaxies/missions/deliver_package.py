@@ -22,9 +22,10 @@ class DeliverPackage(Mission):
 
     KIND = 'deliver_package'
     CHANCES_PER_DAY = 0.05
-    DAYS_MIN = 5
-    DAYS_MAX = 25
-    # each day of an offer's life, from the day it is made: the chance somebody takes it
+    DEADLINE_DAYS_MIN = 5
+    DEADLINE_DAYS_MAX = 25
+    BASIC_REWARD = 2.0  # reputation of a delivery made instantly.
+    FAILURE_PENALTY = 0.1 # Not really a Community affair.
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.015
 
     def __init__(
@@ -34,7 +35,7 @@ class DeliverPackage(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline).
-        days = self.my_random.randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)
+        days = self.my_random.randint(DeliverPackage.DEADLINE_DAYS_MIN, DeliverPackage.DAYS_MAX)
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
@@ -78,7 +79,7 @@ class DeliverPackage(Mission):
         """The offer made on the day of `created_at`, from `outpost` to `destination_outpost`."""
         seed = of_text(f"{outpost.full_keys()} {DeliverPackage.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverPackage.DAYS_MIN, DeliverPackage.DAYS_MAX)
+        days = random.Random(seed).randint(DeliverPackage.DEADLINE_DAYS_MIN, DeliverPackage.DAYS_MAX)
         return DeliverPackage(
             seed=seed,
             issuer=outpost.full_keys(),
@@ -125,7 +126,7 @@ class DeliverPackage(Mission):
         speed_factor: float = (self.deadline - gem.current_environment.date_time).total_seconds() \
             / (self.deadline - self.created_at).total_seconds()
 
-        reputation_change: float = 2.0 * speed_factor
+        reputation_change: float = DeliverPackage.BASIC_REWARD * speed_factor
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: Package delivered at %{100*speed_factor:.0f} of time ahead of deadline. "
         f"Reputation +{reputation_change} = {player.those_who_share.reputation}")
@@ -151,6 +152,8 @@ class DeliverPackage(Mission):
         return f"Thank you {self.recipient.get_player_title()}, this {package} was really expected."
 
     def fail(self, player: Player) -> None:
+        player.those_who_share -=  DeliverPackage.FAILURE_PENALTY
+
         # The main people involved are disappointed. But you tried.
         self.sender.adjust_sympathy(-5)
         self.recipient.adjust_sympathy(-2)

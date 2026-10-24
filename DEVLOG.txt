@@ -57,10 +57,12 @@ DEVELOPER'S DIARY
 > STARTED:
 
 Extra time: 116h00' + 3:30-6:45 + 7:30-10:00 + 14:30 - 
-  * Go back, scan the last rock, collect ore, back to Rigorous.
-  * Solar panels.
-  * Mission to jovian planet. Play it.
-  * Later, same for solar panels and other gimmicks.
+  * Notification panel for outpost dialog. "You do not have enough reputation for this" when wants mines,
+    "Your ship is not read for more of this" when other things.
+  * Solar panels are the reward of the next level. First of a series of gimmicks which can be "purchased" by reputation.
+    Also, the heat shield :D But they are "expensive" so player must choose...
+  * Mission to jovian planet. Play it. Maybe before, increase water / air etc... importan later, maybe
+    ("realistic speed")
   * "Realistic speed" in "ideas".
 
 > BACKLOG

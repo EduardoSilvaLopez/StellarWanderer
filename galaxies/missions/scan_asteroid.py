@@ -34,15 +34,13 @@ class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
     CHANCES_PER_DAY = 0.05
+    DEADLINE_DAYS_MIN = 45
+    DEADLINE_DAYS_MAX = 90
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.01
-    DAYS_MIN = 45
-    DAYS_MAX = 90
-    # Each day of an offer's life, from the day it is made: the chance somebody takes it.
-    FREE_LIVING_CHANCE = 0.10  # of the offers in a system with a belt: the target belongs to no belt
-    # The reputation of a scan is proportional to the asteroid's distance from the star, its semi-major axis (which,
-    # unlike its position, does not change with the date). An asteroid of the real main belt, whose mean distance is
-    # 2.7 AU (4.0e11 m), gives REPUTATION_BELT_MEAN on average.
-    REPUTATION_BELT_MEAN_DISTANCE = 4.0e11  # m
+    BASIC_REWARD = 35.0
+    REPUTATION_BELT_MEAN_DISTANCE = 4.0e11  # Earh belt taken as reference, for the reward.
+    FAILURE_PENALTY = -2.0  # Those missions are hard and dangerous. There is understanding.
+    FREE_LIVING_CHANCE = 0.10  # Of the offers in a system with a belt: the target belongs to no belt
 
     def __init__(
             self, asteroid_site: dict | None = None,
@@ -50,7 +48,7 @@ class ScanAsteroid(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanAsteroid.DAYS_MIN, ScanAsteroid.DAYS_MAX)
+        days = self.my_random.randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DAYS_MAX)
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
@@ -119,7 +117,7 @@ class ScanAsteroid(Mission):
     def generate(created_at: datetime, outpost: Outpost) -> ScanAsteroid:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanAsteroid.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(ScanAsteroid.DAYS_MIN, ScanAsteroid.DAYS_MAX)
+        days = random.Random(seed).randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DAYS_MAX)
              # the first draw of the seed, as in __init__
         return ScanAsteroid(
             seed=seed,
@@ -208,7 +206,8 @@ class ScanAsteroid(Mission):
         return f"You have not scanned the asteroid {self.asteroid().name} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 50.0 * self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
+        reputation_change: float = ScanAsteroid.BASIC_REWARD * self.asteroid().semi_major_axis \
+            / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: asteroid scanned. "
                     f"Reputation +{reputation_change} = {player.those_who_share.reputation}"
@@ -221,7 +220,7 @@ class ScanAsteroid(Mission):
             )
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = -2  # These missions are hard and dangerous. There is understanding.
+        reputation_change: float = ScanAsteroid.FAILURE_PENALTY
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: asteroid not scanned. "
                     f"Reputation {reputation_change} = {player.those_who_share.reputation}"

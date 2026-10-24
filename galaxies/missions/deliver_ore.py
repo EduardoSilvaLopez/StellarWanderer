@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ORE_REPUTATION_REWARD = 0.010 # Used for normal delivery too.
-
 @register
 class DeliverOre(Mission):
     """Deliver ore: bring some ore to the outpost that asked for it. The ore is taken from the cargo hold on delivery.
@@ -26,16 +24,17 @@ class DeliverOre(Mission):
     CHANCES_PER_DAY = 0.3
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
-    DAYS_MIN = 5
-    DAYS_MAX = 15
-    # each day of an offer's life, from the day it is made: the chance somebody takes it
+    DEADLINE_DAYS_MIN = 5
+    DEADLINE_DAYS_MAX = 15
+    BASIC_REWARD = 0.010  # Per Kg
+    FAILURE_PENALTY = -5.0
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1
 
     def __init__(self, quantity: Optional[int] = None, **common: Any) -> None:
         super().__init__(**common)
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline), the
         # quantity.
-        days = self.my_random.randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)
+        days = self.my_random.randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DAYS_MAX)
         amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1E2, DeliverOre.QUANTITY_MAX_1E2) * 100
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
@@ -55,7 +54,7 @@ class DeliverOre(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverOre.DAYS_MIN, DeliverOre.DAYS_MAX)
+        days = random.Random(seed).randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DAYS_MAX)
         return DeliverOre(
             seed=seed,
             issuer=outpost.full_keys(),
@@ -82,7 +81,7 @@ class DeliverOre(Mission):
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = ORE_REPUTATION_REWARD * self.quantity
+        reputation_change: float = DeliverOre.BASIC_REWARD * self.quantity
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")
@@ -93,7 +92,7 @@ class DeliverOre(Mission):
         return f"Thank you Pilot {player.surname}, this {mineral}-rich ore will help the Community."
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = -5 # If you did not have the time don't accept the mission.
+        reputation_change: float = DeliverOre.FAILURE_PENALTY # If you did not have the time don't accept the mission.
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: Ore not brought. Reputation {reputation_change} = "
         f"{player.those_who_share.reputation}")

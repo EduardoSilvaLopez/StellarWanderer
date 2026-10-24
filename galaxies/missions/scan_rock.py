@@ -32,9 +32,10 @@ class ScanRock(Mission):
     """Scan an object somewhere, then come back."""
     KIND = 'scan_rock'
     CHANCES_PER_DAY = 0.25
-    DAYS_MIN = 10
-    DAYS_MAX = 30
-    # each day of an offer's life, from the day it is made: the chance somebody takes it
+    DEADLINE_DAYS_MIN = 8
+    DEADLINE_DAYS_MAX = 24
+    BASIC_REWARD = 1.5
+    FAILURE_PENALTY = -5.0
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1
 
     def __init__(
@@ -46,7 +47,7 @@ class ScanRock(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)
+        days = self.my_random.randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DAYS_MAX)
 
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
@@ -136,7 +137,7 @@ class ScanRock(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(ScanRock.DAYS_MIN, ScanRock.DAYS_MAX)
+        days = random.Random(seed).randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DAYS_MAX)
         return ScanRock(
             object_type=object_type,
             seed=seed,
@@ -203,7 +204,7 @@ class ScanRock(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 1.5
+        reputation_change: float = ScanRock.BASIC_REWARD
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")
@@ -215,7 +216,7 @@ class ScanRock(Mission):
         )
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = -5 # If you did not have the time don't accept the mission.
+        reputation_change: float = ScanRock.FAILURE_PENALTY # If you did not have the time don't accept the mission.
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = "
         f"{player.those_who_share.reputation}")
