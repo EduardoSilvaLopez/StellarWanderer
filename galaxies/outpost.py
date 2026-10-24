@@ -53,6 +53,7 @@ class Outpost(Updatable):
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
     MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
+    READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
     def __init__(self, planet: World, saved_alterations: dict) -> None:
         self.planet = planet
@@ -245,6 +246,14 @@ class Outpost(Updatable):
             (ship.cargo_hold.ore) / Outpost.UNLOAD_ORE_PER_SECOND \
             if self.handling_includes_ore else 0
         return int(max(time_to_charge, time_to_repair + time_to_unload)) # Dockmaster is alone, repairs or unloads.
+
+    def is_ready(self, ship: Ship) -> bool:
+        """Whether the Dockmaster has nothing to offer `ship`: no handling is going on, no ore to unload, and its energy
+        and maintenance are within READY_MARGIN of full (energy_max, MAX_MAINTENANCE). A handling going on is not
+        judged: it still brings the ship to full."""
+        full = 1 - self.READY_MARGIN
+        return (self.handling_due_at is None and ship.cargo_hold.ore == 0
+                and ship.energy >= ship.energy_max * full and ship.maintenance >= self.MAX_MAINTENANCE * full)
 
     def start_handle(self, ship: Ship) -> Outpost:
         """The outpost starts working on the pilot's `ship`, from the state it is in now: it will be ready after

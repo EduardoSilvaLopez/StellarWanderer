@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
+import numpy as np
 import pygame
 
 from common.vector3 import Vector3
-from galaxies.constants import FIXED_STAR_SHOW_RADIUS, LIGHT_YEAR_M
+from galaxies.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, FIXED_STAR_SHOW_RADIUS, LIGHT_YEAR_M
 
 from .constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE
 
@@ -25,7 +25,24 @@ class DistantStars:
 
     Drawn bound or unbound, using the same directions as the other sky objects. Drawn first in the sky layer, so
     the sun's hole in the sky hides a star behind the sun, and the ground hides the stars below the horizon.
+
+    The range, brightness and in-front tests run on numpy arrays of all the stars, made once for the galaxy's list
+    of fixed stars (their positions do not change); only the stars that pass are projected one by one.
     """
+
+    _source: Optional[list] = None  # the galaxy's list the arrays were made from
+    _positions: Optional[np.ndarray] = None  # (n, 3), in meters, in the stellar frame
+    _absolute_magnitudes: Optional[np.ndarray] = None  # (n,)
+
+    @staticmethod
+    def _star_arrays(environment: GameEnvironment) -> tuple[list, np.ndarray, np.ndarray]:
+        """The galaxy's fixed stars, their positions and their absolute magnitudes, as arrays in the same order."""
+        stars = environment.galaxy.fixed_star_positions()
+        if DistantStars._source is not stars:
+            DistantStars._source = stars
+            DistantStars._positions = np.array([position for _, position in stars], dtype=float).reshape(-1, 3)
+            DistantStars._absolute_magnitudes = np.array([star.absolute_magnitude for star, _ in stars], dtype=float)
+        return stars, DistantStars._positions, DistantStars._absolute_magnitudes
 
     @staticmethod
     def visible_dots(environment: GameEnvironment, ship: Ship, w: int, h: int) -> list[tuple[tuple, tuple[int, int]]]:
@@ -34,22 +51,22 @@ class DistantStars:
         _, horizon_y, focal_length_px = view_geometry(h)
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
-        sx, sy, sz = ship_position.x, ship_position.y, ship_position.z
-        radius_squared = (FIXED_STAR_SHOW_RADIUS * LIGHT_YEAR_M) ** 2
+        stars, positions, absolute_magnitudes = DistantStars._star_arrays(environment)
+        offsets = positions - np.array([ship_position.x, ship_position.y, ship_position.z])
+        distance_squared = np.einsum('ij,ij->i', offsets, offsets)
+        # The same brightness as Star.apparent_magnitude, for every star at once.
+        distance_ly = np.sqrt(distance_squared) / LIGHT_YEAR_M
+        apparent_magnitudes = absolute_magnitudes + 5 * np.log10(distance_ly / ABSOLUTE_MAGNITUDE_DISTANCE_LY)
+        visible = (distance_squared <= (FIXED_STAR_SHOW_RADIUS * LIGHT_YEAR_M) ** 2) & \
+            (apparent_magnitudes <= NAKED_EYE_LIMIT_MAGNITUDE)
         # Unbound, a star behind the ship is not visible: its forward component is the dot product with the ship's
-        # forward axis. Checked here, before any vector is built, since most stars in range are behind.
-        forward = ship.attitude.forward
-        check_forward = not ship.is_bound
+        # forward axis.
+        if not ship.is_bound:
+            forward = ship.attitude.forward
+            visible &= offsets @ np.array([forward.x, forward.y, forward.z]) > 0.0
         dots: list[tuple[tuple, tuple[int, int]]] = []
-        for star, (x, y, z) in environment.galaxy.fixed_star_positions():
-            dx, dy, dz = x - sx, y - sy, z - sz
-            distance_squared = dx * dx + dy * dy + dz * dz
-            if distance_squared > radius_squared:
-                continue
-            if star.apparent_magnitude(math.sqrt(distance_squared)) > NAKED_EYE_LIMIT_MAGNITUDE:
-                continue
-            if check_forward and dx * forward.x + dy * forward.y + dz * forward.z <= 0.0:
-                continue
+        for index in np.flatnonzero(visible):
+            star, (x, y, z) = stars[index]
             direction = ship.navigation.direction_to_point(Vector3(x, y, z), date_time)
             projected = project_to_camera(ship, direction, w, horizon_y, focal_length_px)
             if projected is not None:

@@ -1,7 +1,7 @@
 """Political entity information display in the top-left corner."""
 
 from __future__ import annotations
-from typing import Any
+from typing import Any, Optional, Tuple
 import pygame
 from ..constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP
 
@@ -18,6 +18,13 @@ class PoliticalInfo:
     MIN_ICON_SIZE = 40
     MAX_ICON_SIZE = 260
     ICON_STEP = 4
+
+    # The last name and icon drawn, with what they were made from: fitting the name steps the font down a pixel at a time,
+    # which is too slow for every frame, and so is scaling the icon.
+    _name_key: Optional[Tuple[str, Any, int]] = None
+    _name_surface: Optional[pygame.Surface] = None
+    _icon_key: Optional[Tuple[pygame.Surface, int]] = None
+    _icon_surface: Optional[pygame.Surface] = None
 
     @staticmethod
     def hull_edge_x(y: float, w: int, h: int) -> float:
@@ -51,8 +58,12 @@ class PoliticalInfo:
         # Name: as large as fits the hull width at the top of the text (the pillar
         # only narrows slightly over the text's own height, so this is a safe bound).
         max_text_width = PoliticalInfo.hull_edge_x(y, w, h) - x - PoliticalInfo.EDGE_MARGIN
-        text_surface = fonts.render_to_fit(entity.name, entity.color, max(1, int(max_text_width)),
-                                           PoliticalInfo.MAX_FONT_SIZE)
+        name_key = (entity.name, entity.color, max(1, int(max_text_width)))
+        if PoliticalInfo._name_key != name_key:
+            PoliticalInfo._name_surface = fonts.render_to_fit(entity.name, entity.color, name_key[2],
+                                                              PoliticalInfo.MAX_FONT_SIZE)
+            PoliticalInfo._name_key = name_key
+        text_surface = PoliticalInfo._name_surface
         surface.blit(text_surface, (x, y))
 
         icon_y = y + text_surface.get_height() + PoliticalInfo.GAP
@@ -68,6 +79,9 @@ class PoliticalInfo:
                 break
             icon_size -= PoliticalInfo.ICON_STEP
 
-        scaled_icon = pygame.transform.scale(entity.icon, (icon_size, icon_size))
-        surface.blit(scaled_icon, (x, icon_y))
+        icon_key = (entity.icon, icon_size)
+        if PoliticalInfo._icon_key != icon_key:
+            PoliticalInfo._icon_surface = pygame.transform.scale(entity.icon, (icon_size, icon_size))
+            PoliticalInfo._icon_key = icon_key
+        surface.blit(PoliticalInfo._icon_surface, (x, icon_y))
         return icon_y + icon_size

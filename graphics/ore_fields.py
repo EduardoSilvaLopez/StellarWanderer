@@ -4,8 +4,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
 import math
 
+import numpy as np
 import pygame
 from OpenGL import GL
+from common.frame_watch import frame_watch
 from common.paths import resource_path
 
 if TYPE_CHECKING:
@@ -93,50 +95,47 @@ class OreFields:
         - Grays at or above TEXTURE_CLEAR_GRAY become fully transparent (alpha 0), the paper background included
         - Black (0) becomes fully opaque (alpha 255)
         - Grays below it map proportionally
+
+        Computed with numpy over all pixels at once (a per-pixel Python loop took over a second on the 1024 x 1024 image,
+        a hang on the first ore field drawn).
         """
         texture_path = resource_path("textures", "ore_field.png")
         # Load image (will be RGB or RGBA)
         img = pygame.image.load(texture_path)
         w, h = img.get_size()
 
-        # Get image data as pixel array and process each pixel
-        img_data = pygame.image.tostring(img, 'RGB')
+        # Get image data as pixel array, one row of (r, g, b) per pixel
+        rgb = np.frombuffer(pygame.image.tostring(img, 'RGB'), dtype=np.uint8).reshape(-1, 3).astype(np.float64)
 
-        # Process pixels: compute alpha from grayscale intensity
-        # Iterate through the image data 3 bytes at a time (RGB)
-        result_pixels = bytearray()
-        for i in range(0, len(img_data), 3):
-            r = img_data[i]
-            g = img_data[i + 1]
-            b = img_data[i + 2]
-            # Convert RGB to grayscale, then invert for alpha, with the paper background cut to zero
-            grayscale = int(0.299 * r + 0.587 * g + 0.114 * b)
-            alpha = max(0, OreFields.TEXTURE_CLEAR_GRAY - grayscale) * 255 // OreFields.TEXTURE_CLEAR_GRAY
-            result_pixels.extend([r, g, b, alpha])
+        # Convert RGB to grayscale, then invert for alpha, with the paper background cut to zero
+        grayscale = np.floor(rgb[:, 0] * 0.299 + rgb[:, 1] * 0.587 + rgb[:, 2] * 0.114).astype(np.int64)
+        alpha = np.maximum(0, OreFields.TEXTURE_CLEAR_GRAY - grayscale) * 255 // OreFields.TEXTURE_CLEAR_GRAY
 
         # Create surface from the processed pixel data
-        return pygame.image.fromstring(bytes(result_pixels), (w, h), 'RGBA')
+        pixels = np.concatenate([rgb.astype(np.uint8), alpha.astype(np.uint8)[:, None]], axis=1)
+        return pygame.image.fromstring(pixels.tobytes(), (w, h), 'RGBA')
 
     @staticmethod
     def _get_ore_field_texture() -> int:
         """Get or create the cached ore field texture."""
         if OreFields._ore_field_texture_id is None:
-            surface = OreFields._load_ore_field_texture_surface()
-            w, h = surface.get_size()
+            with frame_watch.timed('ore field texture'):
+                surface = OreFields._load_ore_field_texture_surface()
+                w, h = surface.get_size()
 
-            # Convert to RGBA
-            pixels = pygame.image.tostring(surface, 'RGBA', False)
+                # Convert to RGBA
+                pixels = pygame.image.tostring(surface, 'RGBA', False)
 
-            texture = GL.glGenTextures(1)
-            GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
-            GL.glTexImage2D(
-                GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, w, h, 0,
-                GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
-            )
-            OreFields._ore_field_texture_id = texture
+                texture = GL.glGenTextures(1)
+                GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
+                GL.glTexImage2D(
+                    GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, w, h, 0,
+                    GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
+                )
+                OreFields._ore_field_texture_id = texture
 
         return OreFields._ore_field_texture_id

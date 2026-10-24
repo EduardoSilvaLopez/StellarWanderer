@@ -48,7 +48,13 @@ class OutpostChat(Conversation):
     def start(self) -> None:
         """The tag is said by the pilot first, as a line of the chat, then the person answers it. The presentation tag
         is the exception: the pilot says what Player.present_yourself gives, not the tag."""
-        pilot_line = self.player.present_yourself() if self.tag == Player.PRESENTATION_TAG else self.tag
+        has_met_before: bool = any("Presented himself." in lines for lines in self.interlocutor.interactions.values())
+        is_presentation: bool = self.tag == Player.PRESENTATION_TAG
+
+        pilot_line = \
+            self.player.present_yourself_first_time() if is_presentation and not has_met_before \
+            else self.player.present_yourself_further_times(self.interlocutor) if is_presentation \
+            else self.tag
         self.log.add(PLAYER, [(word, None) for word in pilot_line.split()])
         if self.tag in self.reactions:
             self.say(self.reactions[self.tag])

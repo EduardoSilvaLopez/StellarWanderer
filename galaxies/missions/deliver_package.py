@@ -25,7 +25,7 @@ class DeliverPackage(Mission):
     DAYS_MIN = 5
     DAYS_MAX = 25
     # each day of an offer's life, from the day it is made: the chance somebody takes it
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.015
 
     def __init__(
             self, sender_seed: Optional[int] = None,

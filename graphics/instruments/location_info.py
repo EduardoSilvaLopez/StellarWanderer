@@ -70,7 +70,8 @@ class LocationInfo:
         texts = []
         for label, position, velocity in axis_lines:
             if ship.is_bound:
-                texts.append(f'{label}: {int(position)} Δ {int(velocity)}')
+                grouped = f'{int(position):,}'.replace(',', '.')  # thousands separated by dots: 12.345
+                texts.append(f'{label}: {grouped} Δ {int(velocity)}')
             else:
                 texts.append(f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}')
         texts += [

@@ -24,6 +24,9 @@ from .asteroids import Asteroids
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
+from .ore_fields import OreFields
+from .ore_mines import OreMines
+from .outposts import Outposts
 from .laser import Laser
 from .surface_light import SurfaceLight
 
@@ -57,6 +60,15 @@ class OpenGLGui:
         # While the pilot is inside an outpost, what takes the whole window in place of the cockpit: it is given the
         # window's size and returns the layer to show. Dialogs are drawn over it (see draw).
         self.full_screen_source: Optional[Callable[[Tuple[int, int]], pygame.Surface]] = None
+
+    @staticmethod
+    def preload_textures() -> None:
+        """Builds the textures of the ore fields, mines and outposts now, while the window is being set up, rather than
+        on the first frame that shows one (a hang of about 0.1 s, see common/frame_watch.py). Needs the OpenGL window
+        to exist; the textures are kept for the whole run."""
+        OreFields._get_ore_field_texture()
+        OreMines._get_mine_texture()
+        Outposts._get_texture()
 
     # region Frame
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,

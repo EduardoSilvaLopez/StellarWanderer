@@ -47,7 +47,7 @@ class Navigation:
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
-    ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship changes its speed by, thrusting or braking
+    ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship's speed changes by, thrusting or braking (not turning)
     ROCKS_TRAVEL_LIMIT = World.SURROUNDINGS_RADIUS  # m: a ship that moves farther than this in a frame outruns the rocks
 
     def __init__(self, ship: Ship) -> None:
@@ -180,8 +180,11 @@ class Navigation:
                 + attitude.forward * (latitude_accel_input * ship.FORWARD_BACKWARD_ACC)
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
+        reference = self.velocity_reference_frame()
+        speed_before = (ship.velocity.as_vector() - reference).length()
         ship.velocity.add_vector(accel * delta_time)
-        ship.energy -= Navigation.ENERGY_PER_SPEED * abs(sum(accel)) * delta_time
+        speed_after = (ship.velocity.as_vector() - reference).length()
+        ship.energy -= Navigation.ENERGY_PER_SPEED * abs(speed_after - speed_before)
 
     def is_landed(self) -> bool:
         """True when the ship rests on the surface of its world: bound, at the ground (the lowest altitude the ship can
@@ -202,7 +205,8 @@ class Navigation:
         engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
-        frame when the slowest engine is done. Each engine's change of speed costs ENERGY_PER_SPEED energy per m/s."""
+        frame when the slowest engine is done. The energy is ENERGY_PER_SPEED per m/s that the speed relative to the frame
+        drops by, whichever engines do it."""
         ship = self.ship
         reference = self.velocity_reference_frame()
         relative = ship.velocity.as_vector() - reference
@@ -219,7 +223,7 @@ class Navigation:
             component = relative.dot(axis)
             decel = min(ship.BRAKE_ACC * delta_time, abs(component))
             braked = braked - axis * math.copysign(decel, component)
-            ship.energy -= Navigation.ENERGY_PER_SPEED * decel
+        ship.energy -= Navigation.ENERGY_PER_SPEED * abs(relative.length() - braked.length())
         ship.velocity.set_vector(reference + braked)
 
     def _update_position(self, delta_time: float) -> None:

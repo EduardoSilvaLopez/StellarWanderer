@@ -34,7 +34,7 @@ class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
     CHANCES_PER_DAY = 0.05
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.02
+    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.01
     DAYS_MIN = 45
     DAYS_MAX = 90
     # Each day of an offer's life, from the day it is made: the chance somebody takes it.

@@ -331,6 +331,7 @@ def main() -> None:
     fonts = FontCache()
     elapsed = start_game(*choice)  # seconds of ship time since EPOCH
     gui = OpenGLGui()
+    gui.preload_textures()
 
     running = True
     outpost_screen: Optional[OutpostScreenDialog] = None  # the inside of an outpost, while it is open

@@ -7,8 +7,8 @@ drawn over it by the host, shows time passing. Esc is not for the screen: it ope
 over it, as it is over the cockpit. The window is split in two.
 On the left, the ship time display (graphics/instruments/clock.py) at the top, then the name of the outpost, and under
 it, smaller, the world, star and political entity it is in, then a radio group of five buttons (Dockmaster, Cargo,
-Missions, Chat, Leave; Missions only from the reputation the board needs): one is always selected, and Dockmaster is
-the one selected when the screen opens. The selected one is filled with the accent colour. What it does is what the
+Missions, Chat, Leave; Missions only from the reputation the board needs, or while a taken mission is open here): one is always selected, and Dockmaster is
+the one selected when the screen opens, unless the ship is ready (Outpost.is_ready): then it is Cargo. The selected one is filled with the accent colour. What it does is what the
 right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
 missions (OutpostMissions,
 drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
@@ -199,7 +199,8 @@ class OutpostScreenDialog(Dialog):
     press, all within the hold's maxima. The outpost has what it takes: its stock is not limited. A + or ++ that asks
     for more than the room left turns the room line red, until a − is pressed or Cargo is left.
 
-    Missions (selected, and shown only from the reputation the board needs, see _shows_option): the outpost's
+    Missions (selected, and shown from the reputation the board needs or while a taken mission is open here, see
+    _shows_option): the outpost's
     OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
     deadline first. A click opens a detail, where an offer is accepted or a taken mission delivered. Backspace or a
     right-click goes back from a detail; Page Up and Page Down and the wheel scroll the list. The arrow keys still
@@ -230,7 +231,7 @@ class OutpostScreenDialog(Dialog):
         self._frame_texture: Optional[pygame.Surface] = None  # textures/bezel.png, loaded at the first draw
         self._frame_image: Optional[pygame.Surface] = None  # the frame made for _frame_key
         self._frame_key: Optional[Tuple[Tuple[int, int], int]] = None
-        self.selected: int = 0  # the radio group: exactly one button is selected, Dockmaster at first
+        self.selected: int = 0  # the radio group: exactly one button is selected, Dockmaster at first (Cargo if ready)
         self._button_rects: List[Tuple[int, pygame.Rect]] = []  # the options shown: index and where they were drawn
         # one picture per area, chosen from the outpost's seed among the files named outpost.<area>.*
         self._area_pictures: Dict[str, Optional[str]] = {}
@@ -270,6 +271,9 @@ class OutpostScreenDialog(Dialog):
         # local: the player needs the missions, which need the outposts, which need the dialogs
         from galaxies.people.player import current_player
         self.ship = current_player.ship  # docked by the player's enter_outpost, which comes before this screen
+        if self.outpost.is_ready(self.ship):  # no offer from the Dockmaster: the screen goes to the cargo
+            self.selected = BUTTON_LABELS.index('Cargo')
+            self._focus = ('option', self.selected)
         self._open_option(True)
         self.outpost.player_reputation_on_entering = current_player.those_who_share.reputation
 
@@ -492,14 +496,18 @@ class OutpostScreenDialog(Dialog):
         self._missions.draw_content(surface)
 
     def _supply_limit(self, k: int) -> float:
-        """The most of supply `k` the pilot may have in the hold: the hold's maximum, and for mines the reputation's
-        share, as the outpost's cargo shows it (the mines are not trusted more than that)."""
+        """The most of supply `k` the pilot may have in the hold: the hold's maximum, and for mines the number that can
+        be taken without losing the title held on entering, whatever it is (each one costs its reputation change)."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         hold = self.ship.cargo_hold
         supply = SUPPLIES[k]
         maximum = supply.maximum(hold)
         if supply.key == "mines":  # They don't trust him more. Mines are *expensive*
-            maximum = min(maximum, self.outpost.player_reputation_on_entering // 5)
+            entity = self.ship.owner.those_who_share.entity
+            entered = self.outpost.player_reputation_on_entering
+            floor = entity.title_floor(entered)
+            if floor > float('-inf'):  # the lowest title is kept whatever is taken
+                maximum = min(maximum, (entered - floor) // entity.exchange_reputation_changes["mines"])
         return maximum
 
     def _press_cargo(self, k: int, delta: int) -> None:
@@ -824,10 +832,12 @@ class OutpostScreenDialog(Dialog):
         return BUTTON_LABELS[self.selected] == 'Cargo' and self._shown is None
 
     def _shows_option(self, index: int) -> bool:
-        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available): the
-        pilot cannot see the missions yet."""
+        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available), unless
+        a mission the pilot has taken is open here to deliver: then the Taken missions are there, without any offer."""
         from galaxies.missions.mission_board import MissionBoard  # local: as in AvailableColumn
-        return BUTTON_LABELS[index] != 'Missions' or MissionBoard.is_available(self.ship.owner)
+        if BUTTON_LABELS[index] != 'Missions':
+            return True
+        return MissionBoard.is_available(self.ship.owner) or bool(self.outpost.mission_board.mine())
 
     def _leave_hidden_option(self) -> None:
         """If the reputation fell below what Missions needs while it was selected, Dockmaster is selected instead."""

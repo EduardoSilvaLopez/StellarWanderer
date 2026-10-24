@@ -37,6 +37,10 @@ class PoliticalEntity:
     def title_for(self, reputation: float) -> Optional[str]:
         return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
 
+    def title_floor(self, reputation: float) -> float:
+        """The lowest reputation that keeps the title `reputation` gives: its threshold (-inf for the lowest one)."""
+        return max((k for k in self.titles if reputation >= k), default=float('-inf'))
+
     def _load_icon(self, icon_filename: str) -> None:
         """Load the icon image from common/resources/textures."""
         icon_path = resource_path('textures', icon_filename)
@@ -126,7 +130,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "water": 0.0003,
             "food": 0.0006,
             "mines": 5.0,
-            "ore": 0.007,
+            "ore": 0.008,
         },
         settlements=[
             ('Jiùjīnshān, Ài', Ethnicity.BLACK),

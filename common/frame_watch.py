@@ -5,7 +5,7 @@ it. At most one such warning is written per second; the hangs left out in betwee
 
 The game loop marks the end of each phase (mark) between `begin`, right after the frame timer ticks, and `end`, right
 before it ticks again; the drawing marks its own parts in between. Rare or first-use operations (a Km2 generated, a
-rock batch built, a belt sector, a save) are timed at their top calling method with `timed`; never nest them, so the
+rock batch built, a texture built, a belt sector, a save) are timed at their top calling method with `timed`; never nest them, so the
 figures do not count twice. A modal dialog, which blocks for as long as the pilot takes, calls `discard` so its frame
 is not reported. The last phase is the GPU one: pygame.display.flip is where a slow draw shows up, because OpenGL
 calls return before the work is done.

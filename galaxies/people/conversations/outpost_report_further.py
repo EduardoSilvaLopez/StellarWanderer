@@ -26,7 +26,8 @@ class OutpostReportFurther(Conversation):
         handle_info_or_question: str = "Your ship is ready."
         do_ask: bool = False
         time_str: str = self._time_as_string(int(time_to_handle))
-        if time_to_handle > 0:
+        ready: bool = self.outpost.is_ready(self.player.ship)  # nothing to offer, even if a few seconds are left
+        if time_to_handle > 0 and not ready:
             handle_info_or_question = f"Your ship will be ready {time_str}."
         elif self.player.ship.cargo_hold.ore > 0:
             handle_info_or_question = f"Shall we start unloading the ore? It should be ready in {time_str}."

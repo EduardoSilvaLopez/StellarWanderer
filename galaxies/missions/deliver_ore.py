@@ -23,7 +23,7 @@ class DeliverOre(Mission):
     save) gives back the days, the quantity and whether, and when, somebody else takes the offer."""
 
     KIND = 'deliver_ore'
-    CHANCES_PER_DAY = 0.25
+    CHANCES_PER_DAY = 0.3
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
     DAYS_MIN = 5

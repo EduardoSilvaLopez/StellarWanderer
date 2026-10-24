@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class ScanRock(Mission):
     """Scan an object somewhere, then come back."""
     KIND = 'scan_rock'
-    CHANCES_PER_DAY = 0.20
+    CHANCES_PER_DAY = 0.25
     DAYS_MIN = 10
     DAYS_MAX = 30
     # each day of an offer's life, from the day it is made: the chance somebody takes it
@@ -203,7 +203,7 @@ class ScanRock(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = 1.0
+        reputation_change: float = 1.5
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")

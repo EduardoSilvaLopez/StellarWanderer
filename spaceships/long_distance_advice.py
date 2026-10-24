@@ -31,9 +31,10 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      `d + u_r^2 / (2 * a)`.
    - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
      `RESERVE_WITH_OUTPOST` (20 %) if the target has an outpost. A change of speed costs
-     `Navigation.ENERGY_PER_SPEED` per m/s, whatever its direction: changing the velocity to `v` along the line (the
-     drift cancelled on the way) and then stopping costs `hypot(v - u_r, u_perp) + v`, which cannot be more than the
-     energy above the reserve divided by that cost.
+     `Navigation.ENERGY_PER_SPEED` per m/s that the speed changes by, not per m/s of velocity: thrust across the
+     velocity turns the ship at no cost. Changing the velocity from `u` to `v` along the line (the drift cancelled on
+     the way) and then stopping costs `energy_cost`, which for no drift is `2 * v - u_r` (as before). The plan cannot
+     cost more than the energy above the reserve divided by `ENERGY_PER_SPEED`.
    - Keep the supplies (air, water and food, a day of each per day) at the end at the same shares of their maxima:
      the time left of the plan, `eta`, and of the last leg, cannot exceed the days that the supply with the least above
      its reserve has.
@@ -150,6 +151,29 @@ def coast_limit(distance: float, start_speed: float, acceleration: float, brake:
     return low
 
 
+def energy_cost(peak: float, radial: float, drift: float) -> float:
+    """The change of speed, in m/s, that a plan costs: from the velocity (`radial`, `drift`) to `peak` along the line,
+    then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. Its speed
+    falls to `closest` on the way when there is a drift, so the cost is the fall and the rise: `start + peak - 2 * closest`,
+    then `peak` for the brake."""
+    start = math.hypot(radial, drift)
+    dx = peak - radial
+    length_sq = dx * dx + drift * drift
+    t = 0.0 if length_sq == 0.0 else min(1.0, max(0.0, -(radial * dx - drift * drift) / length_sq))
+    closest = math.hypot(radial + t * dx, drift * (1.0 - t))
+    return start + 2.0 * peak - 2.0 * closest
+
+
+def peak_limit(budget: float, radial: float, drift: float) -> float:
+    """The highest peak speed whose plan costs no more than `budget` (see `energy_cost`), by bisection: the cost rises
+    with the peak. The budget must cover stopping, which costs the speed `hypot(radial, drift)`."""
+    low, high = 0.0, budget + math.hypot(radial, drift) + 1.0
+    for _ in range(60):
+        middle = (low + high) / 2.0
+        low, high = (middle, high) if energy_cost(middle, radial, drift) <= budget else (low, middle)
+    return low
+
+
 def make_plan(distance: float, radial: float, drift: float, acceleration: float, brake: float, budget: float,
               coast_share: float) -> Plan | None:
     """The plan for a trip of `distance` m (to the point where the advice ends) by a ship that comes closer at
@@ -159,8 +183,7 @@ def make_plan(distance: float, radial: float, drift: float, acceleration: float,
     if budget < stop_cost * (1.0 - ENERGY_SLACK):
         return None
     budget = max(budget, stop_cost * (1.0 + 1e-6))
-    # The highest v with hypot(v - radial, drift) + v <= budget (see 2. in the module docstring).
-    energy_limit = (budget * budget - radial * radial - drift * drift) / (2.0 * (budget - radial))
+    energy_limit = peak_limit(budget, radial, drift)  # see 2. in the module docstring
     if radial > 0.0:  # as if the trip had started at rest here: the distance it would have covered so far counts
         coast = coast_limit(distance + radial * radial / (2.0 * acceleration), 0.0, acceleration, brake, coast_share)
     else:

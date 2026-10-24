@@ -112,6 +112,7 @@ class World(Body):
     def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
         self._position_cache: Optional[Tuple[datetime, Vector3]] = None
         self._velocity_cache: Optional[Tuple[datetime, Vector3]] = None
+        self._surface_basis_cache: Optional[Tuple[tuple, Tuple[Vector3, Vector3, Vector3]]] = None
 
         # A parent_planet? Then it is a moon.
         if parent_planet:
@@ -565,7 +566,13 @@ class World(Body):
     # region Surface frame
     def surface_basis(self, longitude: float, latitude: float,
                       current_datetime: datetime) -> Tuple[Vector3, Vector3, Vector3]:
-        """East, up and north unit vectors at a surface point, in the star-centered basis."""
+        """East, up and north unit vectors at a surface point, in the star-centered basis. Memoised for the last call's
+        arguments: a frame asks for the same point once per star."""
+        key = (longitude, latitude, current_datetime)
+        cached = self._surface_basis_cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+
         total_azimuth = self._spin_angle_rad(current_datetime) + longitude / self.radius
         latitude_angle = latitude / self.radius
 
@@ -577,7 +584,9 @@ class World(Body):
             -math.sin(latitude_angle) * math.sin(total_azimuth),
             math.cos(latitude_angle),
         )
-        return east_hat, up_hat, north_hat
+        result = (east_hat, up_hat, north_hat)
+        self._surface_basis_cache = (key, result)
+        return result
 
     def surface_point_stellar(self, longitude: float, latitude: float, current_datetime: datetime) -> Vector3:
         """Stellar position (metres) of a point on this world's surface, given in surface coordinates.

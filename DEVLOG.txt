@@ -56,13 +56,17 @@ DEVELOPER'S DIARY
 
 > STARTED:
 
-Extra time: 116h00' + 3:30-6:45 + 7:30-10:00 + 12:30 - 
-  * Just trying to raise in the ranks, dude :D Maybe stop getting mines... what for, more? Bound to extracting?
+Extra time: 116h00' + 3:30-6:45 + 7:30-10:00 + 14:30 - 
+  * Go back, scan the last rock, collect ore, back to Rigorous.
+  * Solar panels.
+  * Mission to jovian planet. Play it.
+  * Later, same for solar panels and other gimmicks.
+  * "Realistic speed" in "ideas".
 
 > BACKLOG
 
 * JOVIAN PLANETS (current one)
-  * Forbidden area, apply first to star.
+  * Forbidden area.
   In order to arrive there, I need in my gameplay to advance quite more. So, some extras belong to that road.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
     Use INITIAL_TEMP_SHIELD_REDUCTION

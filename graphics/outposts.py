@@ -26,6 +26,7 @@ import os
 
 import pygame
 from OpenGL import GL, GLU
+from common.frame_watch import frame_watch
 from common.paths import resource_path
 
 if TYPE_CHECKING:
@@ -171,21 +172,22 @@ class Outposts:
     @staticmethod
     def _get_texture() -> int:
         if Outposts._texture_id is None:
-            if os.path.exists(TEXTURE_PATH):
-                surface = pygame.image.load(TEXTURE_PATH).convert_alpha()
-            else:
-                logger.error(f"Outpost texture missing: {TEXTURE_PATH}. Using a plain grey texture.")
-                surface = pygame.Surface((ATLAS_WIDTH, ATLAS_HEIGHT)).convert()
-                surface.fill((90, 94, 102))
-            width, height = surface.get_size()
-            pixels = pygame.image.tostring(surface, 'RGBA', False)
+            with frame_watch.timed('outpost texture'):
+                if os.path.exists(TEXTURE_PATH):
+                    surface = pygame.image.load(TEXTURE_PATH).convert_alpha()
+                else:
+                    logger.error(f"Outpost texture missing: {TEXTURE_PATH}. Using a plain grey texture.")
+                    surface = pygame.Surface((ATLAS_WIDTH, ATLAS_HEIGHT)).convert()
+                    surface.fill((90, 94, 102))
+                width, height = surface.get_size()
+                pixels = pygame.image.tostring(surface, 'RGBA', False)
 
-            texture = GL.glGenTextures(1)
-            GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
-            GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
-            GLU.gluBuild2DMipmaps(GL.GL_TEXTURE_2D, GL.GL_RGBA, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels)
-            Outposts._texture_id = texture
+                texture = GL.glGenTextures(1)
+                GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
+                GLU.gluBuild2DMipmaps(GL.GL_TEXTURE_2D, GL.GL_RGBA, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels)
+                Outposts._texture_id = texture
         return Outposts._texture_id

@@ -1,5 +1,7 @@
 """The mission board of an outpost, for a pilot whose reputation is MIN_REPUTATION or more. It is the Missions option of
 the outpost's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it opens.
+A pilot below MIN_REPUTATION sees no offers, but still the missions they took from here (the Taken column), so that the
+option is there while one is open here (see OutpostScreenDialog._shows_option).
 
 The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the
 outpost is in memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most
