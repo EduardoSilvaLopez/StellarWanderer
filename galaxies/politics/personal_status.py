@@ -40,3 +40,9 @@ class PersonalStatus:
         logger.info(f"Reputation in {self.entity.name} changed because of {key}: {old_rep} + {change} = {new_rep}.")
         gpp.current_player.those_who_share.reputation = new_rep
 
+    def adjust_reputation(self, change: float) -> None:
+        '''Adds `change` to the reputation: negative for a cost paid, positive for a refund.'''
+        old_rep: float = self.reputation
+        self.reputation = old_rep + change
+        logger.info(f"Reputation in {self.entity.name} changed by {change}: {old_rep} + {change} = {self.reputation}.")
+

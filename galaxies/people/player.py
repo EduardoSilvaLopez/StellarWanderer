@@ -81,15 +81,7 @@ class Player:
         return f"Hello. I am {self.first_name} {self.surname}, Pilot. Who are you?"
 
     def present_yourself_further_times(self, interlocutor: Person) -> str:
-        # A bit of respect :D
-        if interlocutor.reputation > 2 * self.those_who_share.reputation:
-            return f"Hello, {interlocutor.role.name} {interlocutor.surname}. How are you doing?"
-        elif interlocutor.sympathy100 < 20:
-            return f"Hello, {interlocutor.get_title()}. How are you doing?"
-        elif interlocutor.sympathy100 < 80 and interlocutor.reputation * 2 > self.those_who_share.reputation:
-            return f"Hello, {interlocutor.get_title()} {interlocutor.name}. How are you doing?"
-        else: # Friends, or far below.
-            return f"Hello, {interlocutor.name}. How are you doing?"
+        return f"Hello, {interlocutor.address(self, to_player=False)}. How are you doing?"
 
     def decrease_time_scale(self) -> Player:
         """Slower, down to TIME_SCALE_MIN."""

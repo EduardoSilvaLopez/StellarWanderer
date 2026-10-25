@@ -6,10 +6,12 @@ from functools import cache
 import logging
 import os
 import random
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 import pygame
 
+if TYPE_CHECKING:
+    from galaxies.people.player import Player
 from galaxies.politics import political_entity
 from galaxies.people.role import Role
 import game_environment as gem
@@ -290,6 +292,27 @@ class Person:
         mood_mod = random.gauss(0.5, 0.01)
         final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
         return political_entity.THOSE_WHO_SHARE.title_for(final_rep)
+
+    def address(self, player: Player, to_player: bool) -> str:
+        """How the pilot and this person address each other once they have met, by their relative reputation: the
+        form this person uses for the pilot (`to_player`), or the one the pilot uses for this person.
+        Whoever is more than twice above the speaker is addressed with respect ("Pilot Surname", "Role Surname"); then
+        the person's sympathy decides: a low one only gets the title, a middle one the title and the name unless the
+        addressee is far below the speaker, a high one the name alone."""
+        if to_player:
+            addressee_reputation, speaker_reputation = player.those_who_share.reputation, self.reputation
+            respectful, title, name = f"Pilot {player.surname}", player.get_title(), player.first_name
+        else:
+            addressee_reputation, speaker_reputation = self.reputation, player.those_who_share.reputation
+            respectful, title, name = f"{self.role.name} {self.surname}", self.get_title(), self.name
+
+        if addressee_reputation > 2 * speaker_reputation:
+            return respectful
+        elif self.sympathy100 < 20:
+            return title
+        elif self.sympathy100 < 80 and addressee_reputation * 2 > speaker_reputation:
+            return f"{title} {name}"
+        return name  # Friends, or far below.
 
     def get_full_name(self) -> str:
         return f"{self.get_title()} {self.name} {self.surname}"  # No Chinese exception. Intentional.

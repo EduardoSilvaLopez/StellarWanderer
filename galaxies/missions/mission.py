@@ -51,7 +51,7 @@ class Mission(Updatable):
     KIND: str = ''
     CHANCES_PER_DAY: float = 0.0  # the chance a kind makes an offer on a given day; a kind that makes none keeps 0
     # the most days an offer of the kind lasts (its deadline): how far back the board looks for its offers
-    DAYS_MAX: int = 0
+    DEADLINE_DAYS_MAX: int = 0
 
     def __init__(self,
                  seed: int,

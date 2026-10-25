@@ -139,7 +139,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             ('Bólín, Ài', Ethnicity.WHITE),
             ('Mòxīgē, Ài', Ethnicity.LATIN),
             ("Shèngbǎoluó, Xǐ'ài", Ethnicity.LATIN),
-            ('Mǎdélǐ', Ethnicity.LATIN),
+            ('Mǎdélǐ, Shèqū', Ethnicity.LATIN),
             ('Togyo, Ài', Ethnicity.ASIAN),
             ('Sel, Shèqū', Ethnicity.ASIAN),
             ('Shangha, Shèqū', Ethnicity.ASIAN),

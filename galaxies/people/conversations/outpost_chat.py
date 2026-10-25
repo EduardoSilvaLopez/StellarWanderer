@@ -7,6 +7,9 @@ player then starts the next one from a tag, in the same log. `start` says the ta
 (for the presentation tag, the pilot's line is Player.present_yourself).
 Each interaction is written into the person's record as it happens (`remember`), so the last time met is up to date
 even while the chat is open.
+
+Note for Claude: before writing or reworking a `talk_*` method here, read temp/ideas/outpost_chat_methods.md (the rules,
+the pattern to follow and how to test). Do not read it for any other task.
 """
 
 from __future__ import annotations
@@ -20,17 +23,18 @@ from galaxies.people.player import Player
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
-    if 11 <= dt.day % 100 <= 13:
+    if 11 <= dt.day <= 13:
         ordinal = f"{dt.day}th"
-    match dt.day % 10:
-        case 1:
-            ordinal = f"{dt.day}st"
-        case 2:
-            ordinal = f"{dt.day}nd"
-        case 3:
-            ordinal = f"{dt.day}rd"
-        case _:
-            ordinal = f"{dt.day}th"
+    else:
+        match dt.day % 10:
+            case 1:
+                ordinal = f"{dt.day}st"
+            case 2:
+                ordinal = f"{dt.day}nd"
+            case 3:
+                ordinal = f"{dt.day}rd"
+            case _:
+                ordinal = f"{dt.day}th"
 
     return f"{dt.strftime('%B')}, the {ordinal}"
 
@@ -124,6 +128,7 @@ class OutpostChat(Conversation):
         emp: float = self.interlocutor.empathy100
         soc: float = self.interlocutor.sociability100
         sym: float = self.interlocutor.sympathy100
+        you: str = self.interlocutor.address(self.player, to_player=True)  # how the person calls the pilot
 
         # Apolitical conversation: Loyalty is irrelevant, save the self presentation.
         # Player in situation of weakness (begs for attention): Empathy relevant.
@@ -188,7 +193,7 @@ class OutpostChat(Conversation):
                     return f"Hello, Pilot, I am {self_present}. How are you? How's [life] going?"
                 else:
                     return (
-                        f"Nice to meet you, {self.player.first_name}! How are you doing? How is [space] being to you?"
+                        f"Nice to meet you, {you}! How are you doing? How is [space] being to you?"
                         f"\n\nMe, I prefer to remain between the outpost and [the base]. Less risky, you know?"
                         f" And people are nice here."
                     )
@@ -206,7 +211,7 @@ class OutpostChat(Conversation):
                     )
                 else:
                     return (
-                        f"Nice to meet you, {self.player.first_name}! How are you doing?"
+                        f"Nice to meet you, {you}! How are you doing?"
                         " Be careful in [space]. It is hard. You can get yourself killed. Avoid the asteroid [belt]s."
                         "\n\nBut if you build yourself a good basis of mines and then do some science work on rocks,"
                         " everything will be ok. Safe way to build up some reputation and then back home, yes?"
@@ -234,7 +239,7 @@ class OutpostChat(Conversation):
                     )
                 else:
                     return (
-                        f"Nice to meet you, {self.player.first_name}! Heard good things about you."
+                        f"Nice to meet you, {you}! Heard good things about you."
                         f"\n\nHow is [space] treating you? [Paladin Xi] is not a bad guy, but he is ruthless. I see"
                         f" the ships you start with. Ugh."
                     )
@@ -254,7 +259,7 @@ class OutpostChat(Conversation):
                     )
                 else:
                     return (
-                        f"Nice to meet you, {self.player.first_name}! How are you doing?"
+                        f"Nice to meet you, {you}! How are you doing?"
                         "\n\nI have heard about you. Good things! Do you want a coffee? Or maybe something... stronger?"
                         "\n\nHow is [space] treating you? Making our [Paladin Xi] proud? Tell me!"
                     )
@@ -264,6 +269,7 @@ class OutpostChat(Conversation):
         emp: float = self.interlocutor.empathy100
         soc: float = self.interlocutor.sociability100
         sym: float = self.interlocutor.sympathy100
+        you: str = self.interlocutor.address(self.player, to_player=True)  # how the person calls the pilot
 
         if emp < 20:
             if soc < 20:
@@ -293,7 +299,7 @@ class OutpostChat(Conversation):
         elif emp < 80:
             if soc < 20:
                 if sym < 20:
-                    return f"{self.player.first_name}. Go."
+                    return f"{you}. Go."
                 elif sym < 80:
                     return "Hello <looks suspiciously>."
                 else:
@@ -302,10 +308,10 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return f"{self.player.first_name} {self.player.surname}. Now my day is screwed."
                 elif sym < 80:
-                    return f"Hello {self.player.first_name}, how are you?"
+                    return f"Hello {you}, how are you?"
                 else:
                     return (
-                        f"{self.player.first_name}! Welcome! How are you doing? You want some coffee?"
+                        f"{you}! Welcome! How are you doing? You want some coffee?"
                     )
             else:  # noqa: PLR5501 - High soc
                 if sym < 20:
@@ -315,12 +321,12 @@ class OutpostChat(Conversation):
                     )
                 elif sym < 80:
                     return (
-                        f"Hey, {self.player.first_name}, how are you? Alive, I see! I'm glad."
+                        f"Hey, {you}, how are you? Alive, I see! I'm glad."
                         f" Me... I miss {self.interlocutor.planet_of_birth}."
                     )
                 else:
                     return (
-                        f"{self.player.first_name}, my friend! How are you doing? Did you see the game yesterday?"
+                        f"{you}, my friend! How are you doing? Did you see the game yesterday?"
                     )
         else:  # noqa: PLR5501 - High emp
             if soc < 20:
@@ -341,7 +347,7 @@ class OutpostChat(Conversation):
                     )
                 else:
                     return (
-                        f"{self.player.first_name}, hello! Welcome! How are you doing? Something interesting to tell?"
+                        f"{you}, hello! Welcome! How are you doing? Something interesting to tell?"
                     )
             else:  # noqa: PLR5501 - High soc
                 if sym < 20:
@@ -352,13 +358,13 @@ class OutpostChat(Conversation):
                     )
                 elif sym < 80:
                     return (
-                        f"Hey, {self.player.first_name}, how are you? Alive, I see! I'm glad. How is good old [space]"
+                        f"Hey, {you}, how are you? Alive, I see! I'm glad. How is good old [space]"
                         f" treating you lately? Friend, I miss {self.interlocutor.planet_of_birth}. And you, do"
                         f" you miss home?"
                     )
                 else:
                     return (
-                        f"{self.player.first_name}, my friend! How are you doing? What can I do for you?"
+                        f"{you}, my friend! How are you doing? What can I do for you?"
                     )
 
     def talk_asteroid(self) -> str:
@@ -380,6 +386,7 @@ class OutpostChat(Conversation):
         # Short names to make the rest more legible
         soc: float = self.interlocutor.sociability100
         sym: float = self.interlocutor.sympathy100
+        you: str = self.interlocutor.address(self.player, to_player=True)  # how the person calls the pilot
 
         # Loyalty is irrelevant, this is apolitical.
         # Empathy is irrelevant, as this is all about the interlocutor.
@@ -431,7 +438,7 @@ class OutpostChat(Conversation):
                 return f"That's... weird. {correction_text}"
         else:  # noqa: PLR5501
             if is_really:
-                return f"You remembered! That's so nice, {self.player.first_name}! THANK YOU!"
+                return f"You remembered! That's so nice, {you}! THANK YOU!"
             elif is_near_enough:
                 return f"Oh, dear! {correction_text}\n\nBut thanks anyway, don't worry."
             else:
@@ -723,13 +730,109 @@ class OutpostChat(Conversation):
             " by their needs'."
             "\n\nAnd nobody uses *those* [PGMs] as we do <evil smile>."
         )
+
     def talk_united_diversity(self) -> str:
-        return (
-            "They still hold the Moon. And the original system. The fighters. Suits them, Militaristic"
-            " bastards. And money, money, money yes? Everything about money. As if here in [space] you could"
-            " eat money, drink it or breathe it."
-            "\n\nBut yeah, the high tech is high. I must concede this."
-        )
+        # Short names to make the rest more legible
+        loy: float = self.interlocutor.loyalty100
+        emp: float = self.interlocutor.empathy100
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        rep: float = self.interlocutor.reputation
+
+        # Political conversation: Loyalty is relevant. As for now everybody lives in Those-Who-Share (see get_title),
+        # so the texts judge United Diversity from there: the more loyal, the less the person likes it.
+        # Empathy relevant: the less empathic, the more they like the money and the force; the more, the poor.
+        # Sociability always relevant, makes the reply less or more verbose: a remark, one topic or three topics.
+        # Sympathy always relevant, rejection or approval of the player; and trust to praise what is frowned upon.
+        # Reputation relevant: those who have a lot in Those-Who-Share are proud of its industry.
+        if sym < 20:
+            return "Leave me alone, Pilot." if soc < 20 \
+                 else "Ask somebody else. I have nothing to say about them. Nor to you."
+
+        # Simplify loy and emp. The 1.212 is to keep variance.
+        likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
+        tone: int = -1 if likes_them < 20 else 0 if likes_them < 80 else 1
+        # Praising United Diversity is frowned upon: it is said only by the very sociable, the hardly loyal or in
+        # trust (high sympathy). Otherwise the person stays guarded.
+        if tone == 1 and not (soc >= 80 or loy < 20 or sym >= 80):
+            tone = 0
+
+        # What each person is most inclined to talk about. Each topic has its text for the tones: -1 a complete,
+        # colourful rejection; 0 a nuanced rejection; 1 approval. The tuples are indexed by tone + 1.
+        topics: dict[str, tuple[float, tuple[str, str, str]]] = {
+            'size': (40, (
+                "Fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated"
+                " giant, that is all they are. Big.",
+                "Fifty systems with cities, against our fifteen. And the Moon, the most crowded world by far. Big,"
+                " yes. Big is not the same as good.",
+                "Fifty systems with cities. Fifteen ours. And the Moon, with more people than anywhere else."
+                " Imagine being part of that.",
+            )),
+            'money': (30 + 0.6 * loy, (
+                "Everything about money, yes? The rich are admired just for being rich. As if here in [space] you"
+                " could eat money, drink it or breathe it.",
+                "They love money, yes. The rich are admired and get their luxury. Maybe some earned it, ok. But a"
+                " society that measures people in money? No, thanks.",
+                "You make something people want to buy, you get rich, you get admired. No sacks of stamps, no"
+                " waiting for a title. There is a logic there.",
+            )),
+            'military': (70 - 0.4 * emp, (
+                "The largest armed forces of mankind, and a cult of violence around them. Still licking the wounds of"
+                " the war against the Exterminating Mother two hundred years ago. Sick.",
+                "Their military is the largest. They say it is only for the ETs, never against"
+                " humans. Maybe so. Still... that much weaponry makes me nervous.",
+                "The largest armed forces, well paid, and for ETs only, never against humans."
+                " If a new Exterminating Mother comes out of the dark, I want those people between her and me.",
+            )),
+            'science': (80 - 0.5 * loy, (
+                "Their famous science! Experts playing gods, and the vote only for those who have served the State"
+                " and passed their little exams. Knowledge as a ticket. Disgusting.",
+                "The most advanced science of mankind, no discussion. But the vote only for those who served the"
+                " State? And who decides you 'really know politics'? I don't like it.",
+                "The most advanced science there is, and they let those who know what they talk about vote."
+                " Experts count there. Wouldn't harm anyone to ask for some brains.",
+            )),
+            'poor': (0.6 * emp + 0.2 * loy, (
+                "Those living only on their U.B.I. get a cell in a kind of big reeducation camp,"
+                " shared kitchens and washrooms. Ghettos. Here nobody lacks what they need.",
+                "Basic income and healthcare for everybody, they say. In practice a cell in a prison, shared"
+                " washrooms. Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
+                "There is a basic income, healthcare for everybody and nobody is a slave. Not like"
+                " [The Shining Throne]. Yes, there are cells and ghettos... but it is a start.",
+            )),
+            'industry': (0.6 * loy + 0.4 * min(max(rep, 0), 100), (
+                "But they don't build as we do. We have the biggest industry of mankind. They"
+                " have the money, [Those-Who-Share] has the PGMs. We know that more than many, yes?",
+                "They are the wealthy guys, ok. But industry? That is ours. They come second.",
+                "Well. They are only second in industry, after us. Small comfort if you ask me.",
+            )),
+            'federalism': (0.4 * loy + 20, (
+                "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had"
+                " built a laboratory and not a community.",
+                "They say they find the other entities interesting experiments, and cultural diversity something to"
+                " encourage. Nice words. A bit condescending, though. We are nobody's experiment.",
+                "They see everybody else, us too, as interesting experiments, not as rivals. A kind of respect we"
+                " don't give.",
+            )),
+        }
+        # Length: the least sociable give a remark, the normal ones one topic (up to 30 words), only the very sociable
+        # go on with three topics and, if they are friends, a confidence.
+        if soc < 20:
+            return (
+                "Fucking moneygrubbers with guns.",
+                "<shrugs> Rich and armed. Clever, I'll give them that. Not for me.",
+                "Rich, strong, free. Not bad at all.",
+            )[tone + 1]
+        chosen: list[str] = sorted(topics, key=lambda name: topics[name][0], reverse=True)[:1 if soc < 80 else 3]
+        text: str = "\n\n".join(topics[name][1][tone + 1] for name in chosen)
+
+        if soc >= 80 and sym >= 80:
+            text += "\n\n" + (
+                "Believe me, friend, I'd rather eat my boots than live there.",
+                "They are not all bad, friend. But I would never live there.",
+                "<Whispers> Between you and me, yes?",
+            )[tone + 1]
+        return text
 
     def talk_unknown_tag(self) -> str:
         return ("I don't know what you mean.")

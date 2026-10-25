@@ -48,7 +48,7 @@ class ScanAsteroid(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DAYS_MAX)
+        days = self.my_random.randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DEADLINE_DAYS_MAX)
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
@@ -117,7 +117,7 @@ class ScanAsteroid(Mission):
     def generate(created_at: datetime, outpost: Outpost) -> ScanAsteroid:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanAsteroid.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DAYS_MAX)
+        days = random.Random(seed).randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DEADLINE_DAYS_MAX)
              # the first draw of the seed, as in __init__
         return ScanAsteroid(
             seed=seed,

@@ -52,6 +52,7 @@ from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
 from graphics.instruments.clock import Clock
+from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.world_map import WorldMap
 from common.frame_watch import frame_watch
@@ -141,11 +142,14 @@ def run_modal_dialog(
 
 def draw_outpost_view(outpost_screen: OutpostScreenDialog, fonts: FontCache, size: Tuple[int, int]) -> pygame.Surface:
     """What the window shows while the pilot is inside an outpost: its screen, with the clock over its name, on the left
-    (OutpostScreenDialog.clock_topleft). The gui draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
+    (OutpostScreenDialog.clock_topleft), and the cockpit's notification bar along the bottom, under both blocks. The gui
+    draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
     layer = outpost_screen.compose_overlay(size)
     player = player_module.current_player
     Clock.draw(layer, fonts, gem.current_environment.date_time, player.time_scale, *size,
                topleft=outpost_screen.clock_topleft(size), dangerous=player.is_time_scale_dangerous())
+    bar_height = outpost_screen.notification_height(size)
+    notification_bar.draw(layer, fonts, size[0], size[1] - bar_height, bar_height, player.ship)
     return layer
 
 

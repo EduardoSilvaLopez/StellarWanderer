@@ -34,7 +34,7 @@ class DeliverOre(Mission):
         super().__init__(**common)
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline), the
         # quantity.
-        days = self.my_random.randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DAYS_MAX)
+        days = self.my_random.randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DEADLINE_DAYS_MAX)
         amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1E2, DeliverOre.QUANTITY_MAX_1E2) * 100
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
@@ -54,7 +54,7 @@ class DeliverOre(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DAYS_MAX)
+        days = random.Random(seed).randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DEADLINE_DAYS_MAX)
         return DeliverOre(
             seed=seed,
             issuer=outpost.full_keys(),

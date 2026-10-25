@@ -5,7 +5,7 @@ option is there while one is open here (see OutpostScreenDialog._shows_option).
 
 The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the
 outpost is in memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most
-`Mission.DAYS_MAX` days, so `update_missions` finds every offer that can still be alive by looking back that far,
+`Mission.DEADLINE_DAYS_MAX` days, so `update_missions` finds every offer that can still be alive by looking back that far,
 however the board was visited, saved or loaded. Each offer can be taken, and each mission the player has taken can be
 delivered. An offer's deadline is fixed when the offer is made, so taking it late does not give more time. An offer can
 also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 MIN_REPUTATION = 20.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
 KINDS = (DeliverOre, DeliverPackage, ScanRock, ScanAsteroid)  # what a board offers: a new kind of mission comes here
-LOOK_BACK_DAYS = max(kind.DAYS_MAX for kind in KINDS)  # an older offer has expired, whatever its kind
+LOOK_BACK_DAYS = max(kind.DEADLINE_DAYS_MAX for kind in KINDS)  # an older offer has expired, whatever its kind
 
 class MissionBoard:
 

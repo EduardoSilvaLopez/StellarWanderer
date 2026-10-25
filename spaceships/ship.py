@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Tuple
 import math
 
@@ -18,6 +19,7 @@ from common import audio
 from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
     from galaxies.people.player import Player
+    from galaxies.star import Star
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,11 @@ class Ship(Updatable):
     height and the descent limit use it too. Rotation acceleration, braking and speed limit (ANGULAR_ACC,
     ANGULAR_BRAKE, MAX_ANGULAR_SPEED) are the same on every axis.
     """
+
+    class HeatShield(Enum):
+        HeatShieldNone = 0
+        HeatShieldOne = 1
+        HeatShieldTwo = 2
 
     HEIGHT = 4  # meters, up to the camera
 
@@ -101,6 +108,9 @@ class Ship(Updatable):
         self.temperature: float = Ship.TEMP_DEFAULT
         self.scanner: Scanner = Scanner(self)
         self.laser: Laser = Laser(self)
+        self.heat_shield: Ship.HeatShield = self.HeatShield.HeatShieldNone
+        self.has_scoop = False
+        self.has_solar_panels = False
         self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
         self.is_docked: bool = False  # the pilot is inside an outpost: nothing is consumed (see dock). Not saved
@@ -160,6 +170,12 @@ class Ship(Updatable):
         self.last_update_at = now
         return self
 
+    def death_radius(self, star: Star) -> float:
+        """The distance from the star at which the ship reaches TEMP_MAX, with its heat shield: a level L lets through
+        5**-L of the light, so the death flux is reached 5**L times farther out, scaled from the default radius."""
+        death_flux = star.HEAT_FLUX + (star.DEATH_FLUX - star.HEAT_FLUX) * 5 ** self.heat_shield.value
+        return star.default_death_radius * math.sqrt(star.DEATH_FLUX / death_flux)
+
     def _live_through(self, days: float) -> Ship:
         """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked), the
         temperature moves, the pilot is warned when a level is crossed, and dies when one runs out."""
@@ -181,12 +197,13 @@ class Ship(Updatable):
             temp_diff: float = (Ship.TEMP_DEFAULT - self.temperature) * (1 - 0.9**hours)
             self.temperature += temp_diff # Stabilizing.
         else:
-            dist: float = self.navigation.distance_to_body_centre(gem.current_environment.nearest_system.star)
-            if dist < gem.current_environment.nearest_system.star.default_heat_radius:
-                default_heat_radius = gem.current_environment.nearest_system.star.default_heat_radius
-                default_death_radius = gem.current_environment.nearest_system.star.default_death_radius
-                self.temperature = Ship.TEMP_MAX \
-                    - Ship.TEMP_DEFAULT * (dist - default_death_radius)/(default_heat_radius - default_death_radius)
+            star = gem.current_environment.nearest_system.star
+            dist: float = self.navigation.distance_to_body_centre(star)
+            heat_radius = star.default_heat_radius
+            if dist < heat_radius:
+                death_radius = self.death_radius(star)
+                fall = Ship.TEMP_DEFAULT * (dist - death_radius) / (heat_radius - death_radius)
+                self.temperature = Ship.TEMP_MAX - fall
 
         # Maintenance thresholds:
         if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:
@@ -242,6 +259,9 @@ class Ship(Updatable):
         upgraded.maintenance = self.maintenance
         upgraded.energy = self.energy if upgraded.energy_max == self.energy_max else upgraded.energy_max
         upgraded.temperature = self.temperature
+        upgraded.heat_shield = self.heat_shield
+        upgraded.has_scoop = self.has_scoop
+        upgraded.has_solar_panels = self.has_solar_panels
         upgraded.notification = self.notification
         upgraded.last_update_at = self.last_update_at
         upgraded.next_update_at = self.next_update_at
@@ -351,6 +371,9 @@ class Ship(Updatable):
             'maintenance': self.maintenance,
             'energy': self.energy,
             'temperature': self.temperature,
+            'heat_shield': self.heat_shield.value,
+            'has_scoop': self.has_scoop,
+            'has_solar_panels': self.has_solar_panels,
             'cargo_hold': self.cargo_hold.serialize()
         }
 
@@ -367,6 +390,9 @@ class Ship(Updatable):
         result.maintenance = src['maintenance']
         result.energy = src['energy']
         result.temperature = src['temperature']
+        result.heat_shield = Ship.HeatShield(src['heat_shield'])
+        result.has_scoop = src['has_scoop']
+        result.has_solar_panels = src['has_solar_panels']
         result.cargo_hold = CargoHold.deserialize(result, src['cargo_hold'])
         return result
     # endregion

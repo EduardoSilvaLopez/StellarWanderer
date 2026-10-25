@@ -17,6 +17,7 @@ from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
 from .dialog import DialogResult
 from .messages import Message
+from .outpost_screen import HEAT_SHIELD_OPTIONS
 
 if TYPE_CHECKING:
     from galaxies.people.person import Person
@@ -348,9 +349,14 @@ class ShipSpecificationsDialog(_ListDialog):
             ('Air carried at most', f"{hold.AIR_MAX:g} kg"),
             ('Water carried at most', f"{hold.WATER_MAX:g} kg"),
             ('Food carried at most', f"{hold.FOOD_MAX:g} kg"),
+            ('Heat shield', HEAT_SHIELD_OPTIONS[self._ship.heat_shield.value]),
         ]
         blocks: List[Tuple[pygame.Surface, int]] = [(title_font(22).render(configuration.NAME, True, ACCENT),
                                                      SECTION_GAP)]
         for label, value in fields:
             blocks += [(surface, 2) for surface in _ListDialog._field(label, value, width)]
+        for installed, line in ((self._ship.has_scoop, 'Scoop installed'),
+                                (self._ship.has_solar_panels, 'Solar panels installed')):
+            if installed:
+                blocks += [(surface, 2) for surface in _ListDialog._field('', line, width)]
         return blocks

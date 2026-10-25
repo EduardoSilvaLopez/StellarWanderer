@@ -47,7 +47,7 @@ class ScanRock(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DAYS_MAX)
+        days = self.my_random.randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DEADLINE_DAYS_MAX)
 
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.

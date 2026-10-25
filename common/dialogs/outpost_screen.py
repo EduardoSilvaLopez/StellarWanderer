@@ -4,7 +4,8 @@ leaves it).
 It is not a modal dialog: the host (main) draws it alone, without the cockpit behind it, and keeps the game running
 while it is open (the pilot is `inside` the outpost, the other state of the game: see Player), so the time instrument,
 drawn over it by the host, shows time passing. Esc is not for the screen: it opens the starting dialog, which is drawn
-over it, as it is over the cockpit. The window is split in two.
+over it, as it is over the cockpit. The window is split in two, above the notification bar along the bottom: the
+cockpit's own bar, drawn by the host over the screen (see main.draw_outpost_view).
 On the left, the ship time display (graphics/instruments/clock.py) at the top, then the name of the outpost, and under
 it, smaller, the world, star and political entity it is in, then a radio group of five buttons (Dockmaster, Cargo,
 Missions, Chat, Leave; Missions only from the reputation the board needs, or while a taken mission is open here): one is always selected, and Dockmaster is
@@ -30,11 +31,12 @@ conversation.
 from __future__ import annotations
 import os
 import random
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import pygame
 
 from common import audio
 from common.paths import resource_path
+from graphics.constants import CONSOLE_TOP
 from graphics.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
@@ -54,6 +56,12 @@ if TYPE_CHECKING:
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
+SECOND_GROUP = ('Heat Shield', 'Mines', 'Scoop', 'Solar Panels')  # the rows right of the levels, in alphabetical order
+HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
+ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
+HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
+SCOOP_COST = 10  # reputation
+SOLAR_PANELS_COST = 10  # reputation
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button
 FULL_HOLD_COLOUR = (240, 96, 96)  # the room left in the hold, while a load has found none
 AREA_PICTURE_PREFIXES = {  # the picture of each area: a file of common/resources/backgrounds named <prefix>*
@@ -197,7 +205,13 @@ class OutpostScreenDialog(Dialog):
     Cargo (selected, without a conversation): the ship's picture, the room left in the hold, and a row for each supply
     (spaceships/cargo_hold.py SUPPLIES), with − and + to give and take one unit, and ++ to fill it to its maximum in one
     press, all within the hold's maxima. The outpost has what it takes: its stock is not limited. A + or ++ that asks
-    for more than the room left turns the room line red, until a − is pressed or Cargo is left.
+    for more than the room left turns the room line red, until a − is pressed or Cargo is left. A take that is refused
+    shows a notification: the Community's when a mine goes over the reputation limit, else the ship's.
+    The second group, right of the levels, in alphabetical order: Heat Shield (a combo box: None, Heat Shield I costing
+    10 reputation, Heat Shield II costing 50), Mines, Scoop and Solar Panels (toggles, Yes or No). An attachment that
+    costs more than the reputation the pilot has now over the title's floor (the floor of the title held on entering)
+    is refused with the Community's message. The cost is charged to the reputation at once, and refunded when it is
+    given back. They are the ship's fields (heat_shield, has_scoop, has_solar_panels), saved with the ship.
 
     Missions (selected, and shown from the reputation the board needs or while a taken mission is open here, see
     _shows_option): the outpost's
@@ -249,11 +263,14 @@ class OutpostScreenDialog(Dialog):
         self._answer_rects: List[pygame.Rect] = []  # where the answers of the shown message were last drawn
         self._answer_hover: Optional[int] = None  # the answer under the mouse at the last draw, if any
         # The button the keyboard is on (Tab), as a token: ('option', index), ('cargo', row, -1 or 1) for a row's − or
-        # +, ('fill', row) for its ++, or ('answer', index). See _focus_targets. It is drawn only while the keyboard is
+        # +, ('fill', row) for its ++, ('attach', name) for an attachment's control, or ('answer', index). See _focus_targets. It is drawn only while the keyboard is
         # the one in use.
         self._focus: tuple = ('option', 0)
         # the −, + and ++ of each cargo row, and the row
         self._cargo_rects: List[Tuple[pygame.Rect, pygame.Rect, pygame.Rect, int]] = []
+        self._attachment_rects: List[Tuple[pygame.Rect, str]] = []  # the controls, where last drawn
+        self._open_combo: Optional[str] = None  # the combo box that is open (the Heat Shield's), if any
+        self._combo_option_rects: List[Tuple[pygame.Rect, str]] = []  # the options of the open combo box
         self._hold_full: bool = False  # the last + or ++ asked for more than the room left: the room is drawn red
         self._ship_source: Optional[pygame.Surface] = None  # the ship's picture, loaded once
         self._ship_image: Optional[pygame.Surface] = None  # it, scaled for the cargo view, made for _ship_image_size
@@ -310,8 +327,14 @@ class OutpostScreenDialog(Dialog):
             self._left_size = size
         return self._left
 
+    def notification_height(self, window_size: Tuple[int, int]) -> int:
+        """The height of the notification bar along the bottom: the cockpit's, the same share of the console
+        (graphics/instruments/console.py). The host draws it (see main.draw_outpost_view); the blocks end above it."""
+        return int(window_size[1] * (1 - CONSOLE_TOP) * 0.12)
+
     def draw(self, surface: pygame.Surface) -> None:
-        width, height = surface.get_size()
+        width, window_height = surface.get_size()
+        height = window_height - self.notification_height((width, window_height))
         left_width = max(LEFT_MIN_WIDTH, int(width * LEFT_FRACTION))
         left = pygame.Rect(0, 0, left_width, height)
         right = pygame.Rect(left_width, 0, width - left_width, height)
@@ -351,9 +374,10 @@ class OutpostScreenDialog(Dialog):
         return self._ship_image
 
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
-        """The cargo: the ship's picture, the room left in the hold, and a row for each supply (SUPPLIES, in the hold's
-        module), with − and + to give and take one unit, and ++ to fill it to its maximum. There is no conversation
-        here."""
+        """The cargo: the ship's picture, the levels and the room left in the hold, and a row for each supply (SUPPLIES,
+        in the hold's module), with − and + to give and take one unit, and ++ to fill it to its maximum. The second
+        group, right of the levels from the height of Maintenance, holds the Mines row and the attachments (SECOND_GROUP).
+        There is no conversation here."""
         from spaceships.cargo_hold import SUPPLIES  # local: the ship's hold is the game's, not the dialogs'
         margin = _margin(height)
         font = body_font(max(14, height // 48))
@@ -368,6 +392,7 @@ class OutpostScreenDialog(Dialog):
         width = picture.get_width()
         y = top + picture.get_height() + margin
         bar_height = max(8, height // 90)
+        levels_top = y  # the Mines row sits here, beside the levels
         levels =(('Maintenance', self.ship.maintenance), ('Energy', self.ship.energy / self.ship.energy_max))
         for label, fraction in levels:
             caption = font.render(f"{label}   {fraction:.0%}", True, TEXT_COLOR)
@@ -384,29 +409,91 @@ class OutpostScreenDialog(Dialog):
         y += font.get_linesize() + gap
 
         self._cargo_rects = []
+        self._attachment_rects = []
+        self._combo_option_rects = []
         for k, supply in enumerate(SUPPLIES):
-            row = pygame.Rect(left, y, width, row_height)
-            shade = pygame.Surface(row.size, pygame.SRCALPHA)
-            shade.fill(ANSWER_SHADE)
-            surface.blit(shade, row)
-            fill = pygame.Rect(row.right - button_width, row.top, button_width, row_height)
-            plus = pygame.Rect(fill.left - gap - button_width, row.top, button_width, row_height)
-            minus = pygame.Rect(plus.left - gap - button_width, row.top, button_width, row_height)
-            buttons = ((minus, ('cargo', k, -1), '-'), (plus, ('cargo', k, 1), '+'), (fill, ('fill', k), '++'))
-            for rect, token, sign in buttons:
-                focused = self._focus_visible and self._focus == token
-                pygame.draw.rect(surface, BUTTON_FILL, rect)
-                pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
-                caption = font.render(sign, True, ACCENT if focused else TEXT_COLOR)
-                surface.blit(caption, caption.get_rect(center=rect.center))
-            stock = getattr(hold, supply.key)
-            maximum = self._supply_limit(k)
-            amount = f"{int(stock)}" if supply.whole else f"{stock:.1f}"
-            value = f"{supply.label}   {amount} / {maximum:g} {supply.unit}"
-            caption = font.render(value, True, TEXT_COLOR)
-            surface.blit(caption, (row.left + margin, row.centery - caption.get_height() // 2))
-            self._cargo_rects.append((minus, plus, fill, k))
-            y += row_height + gap
+            if supply.key != "mines":
+                self._draw_supply_row(surface, pygame.Rect(left, y, width, row_height), k, font, button_width, gap,
+                                      margin)
+                y += row_height + gap
+        # the second group, to the right of the first: its rows start at the levels, in alphabetical order
+        group_left = left + width + margin
+        group_width = min(width, right.right - margin - group_left)
+        for i, name in enumerate(SECOND_GROUP):
+            row = pygame.Rect(group_left, levels_top + i * (row_height + gap), group_width, row_height)
+            if name == "Mines":
+                mines = next(k for k, supply in enumerate(SUPPLIES) if supply.key == "mines")
+                self._draw_supply_row(surface, row, mines, font, button_width, gap, margin)
+            else:
+                self._draw_attachment(surface, row, name, font, button_width * 3 + gap * 2, margin)
+        self._draw_open_combo(surface, font)  # over the rows below it
+
+    def _draw_supply_row(self, surface: pygame.Surface, row: pygame.Rect, k: int, font: FallbackFont,
+                         button_width: int, gap: int, margin: int) -> None:
+        """The row of supply `k` in `row`: its −, +, ++ on the right, and its stock and maximum on the left."""
+        from spaceships.cargo_hold import SUPPLIES  # local: the ship's hold is the game's, not the dialogs'
+        supply = SUPPLIES[k]
+        hold = self.ship.cargo_hold
+        shade = pygame.Surface(row.size, pygame.SRCALPHA)
+        shade.fill(ANSWER_SHADE)
+        surface.blit(shade, row)
+        fill = pygame.Rect(row.right - button_width, row.top, button_width, row.height)
+        plus = pygame.Rect(fill.left - gap - button_width, row.top, button_width, row.height)
+        minus = pygame.Rect(plus.left - gap - button_width, row.top, button_width, row.height)
+        buttons = ((minus, ('cargo', k, -1), '-'), (plus, ('cargo', k, 1), '+'), (fill, ('fill', k), '++'))
+        for rect, token, sign in buttons:
+            focused = self._focus_visible and self._focus == token
+            pygame.draw.rect(surface, BUTTON_FILL, rect)
+            pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
+            caption = font.render(sign, True, ACCENT if focused else TEXT_COLOR)
+            surface.blit(caption, caption.get_rect(center=rect.center))
+        stock = getattr(hold, supply.key)
+        maximum = self._supply_limit(k)
+        amount = f"{int(stock)}" if supply.whole else f"{stock:.1f}"
+        value = f"{supply.label}   {amount} / {maximum:g} {supply.unit}"
+        caption = font.render(value, True, TEXT_COLOR)
+        surface.blit(caption, (row.left + margin, row.centery - caption.get_height() // 2))
+        self._cargo_rects.append((minus, plus, fill, k))
+
+    def _draw_attachment(self, surface: pygame.Surface, row: pygame.Rect, name: str, font: FallbackFont,
+                         control_width: int, margin: int) -> None:
+        """The row of an attachment: its name on the left, and on the right its control, a combo box (the Heat Shield)
+        or a toggle (Yes or No). Clicking the control, or Enter on it, changes it (see _press_attachment)."""
+        shade = pygame.Surface(row.size, pygame.SRCALPHA)
+        shade.fill(ANSWER_SHADE)
+        surface.blit(shade, row)
+        control = pygame.Rect(row.right - control_width, row.top, control_width, row.height)
+        focused = self._focus_visible and self._focus == ('attach', name)
+        pygame.draw.rect(surface, BUTTON_FILL, control)
+        pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, control, 2 if focused else 1)
+        value = self._attachment(name)
+        if name == "Heat Shield":  # a combo box: the option, and a triangle to open it
+            caption = font.render(str(value), True, ACCENT if focused else TEXT_COLOR)
+            surface.blit(caption, (control.left + margin, control.centery - caption.get_height() // 2))
+            half = max(4, control.height // 6)
+            tip = control.right - margin - half
+            pygame.draw.polygon(surface, ACCENT if focused else TEXT_COLOR,
+                                [(tip - half, control.centery - half // 2), (tip + half, control.centery - half // 2),
+                                 (tip, control.centery + half // 2 + 1)])
+        else:  # a toggle
+            caption = font.render("Yes" if value else "No", True, ACCENT if focused else TEXT_COLOR)
+            surface.blit(caption, caption.get_rect(center=control.center))
+        self._attachment_rects.append((control, name))
+        label = font.render(name, True, TEXT_COLOR)
+        surface.blit(label, (row.left + margin, row.centery - label.get_height() // 2))
+
+    def _draw_open_combo(self, surface: pygame.Surface, font: FallbackFont) -> None:
+        """The options of the open combo box, under its box, each a row of the box's width (see _attachment_press)."""
+        box = next((rect for rect, name in self._attachment_rects if name == self._open_combo), None)
+        if box is None:
+            return
+        for i, option in enumerate(HEAT_SHIELD_OPTIONS):
+            rect = pygame.Rect(box.left, box.bottom + i * box.height, box.width, box.height)
+            pygame.draw.rect(surface, BUTTON_FILL, rect)
+            pygame.draw.rect(surface, ACCENT_DIM, rect, 1)
+            caption = font.render(option, True, ACCENT if option == self._attachment("Heat Shield") else TEXT_COLOR)
+            surface.blit(caption, (rect.left + _margin(box.height), rect.centery - caption.get_height() // 2))
+            self._combo_option_rects.append((rect, option))
 
     def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """Chat: three areas in the block, inside its margin: the tags and the chat log share the left, in dark panels,
@@ -496,19 +583,24 @@ class OutpostScreenDialog(Dialog):
         self._missions.draw_content(surface)
 
     def _supply_limit(self, k: int) -> float:
-        """The most of supply `k` the pilot may have in the hold: the hold's maximum, and for mines the number that can
-        be taken without losing the title held on entering, whatever it is (each one costs its reputation change)."""
+        """The most of supply `k` the pilot may have in the hold: the hold's maximum, and the reputation's limit
+        (_reputation_limit)."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
-        hold = self.ship.cargo_hold
-        supply = SUPPLIES[k]
-        maximum = supply.maximum(hold)
-        if supply.key == "mines":  # They don't trust him more. Mines are *expensive*
-            entity = self.ship.owner.those_who_share.entity
-            entered = self.outpost.player_reputation_on_entering
-            floor = entity.title_floor(entered)
-            if floor > float('-inf'):  # the lowest title is kept whatever is taken
-                maximum = min(maximum, (entered - floor) // entity.exchange_reputation_changes["mines"])
-        return maximum
+        return min(SUPPLIES[k].maximum(self.ship.cargo_hold), self._reputation_limit(k))
+
+    def _reputation_limit(self, k: int) -> float:
+        """The most of supply `k` the Community lets the pilot have, whatever the hold: for mines, the number that can
+        be taken without losing the title held on entering (each one costs its reputation change). No limit otherwise,
+        or when the lowest title is kept whatever is taken."""
+        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        if SUPPLIES[k].key != "mines":  # They don't trust him more. Mines are *expensive*
+            return float('inf')
+        entity = self.ship.owner.those_who_share.entity
+        entered = self.outpost.player_reputation_on_entering
+        floor = entity.title_floor(entered)
+        if floor == float('-inf'):  # the lowest title is kept whatever is taken
+            return float('inf')
+        return (entered - floor) // entity.exchange_reputation_changes["mines"]
 
     def _press_cargo(self, k: int, delta: int) -> None:
         """One unit of supply `k` given (delta < 0) or taken (delta > 0), within the limits (see _move_cargo)."""
@@ -524,18 +616,106 @@ class OutpostScreenDialog(Dialog):
     def _move_cargo(self, k: int, delta: int, units: float) -> None:
         """`units` of supply `k` given (delta < 0) or taken (delta > 0), within the hold's limits and the supply's
         limit (_supply_limit); the reputation follows what actually moved. A take that asked for more than the room
-        left turns the room red (_hold_full), until a give or leaving Cargo. A take of mines that gets none plays the
-        refused sound, the others the click."""
+        left turns the room red (_hold_full), until a give or leaving Cargo. A take that gets less than it asked for is
+        refused, with a notification and the sound of the refusal (mine_refused for a mine, the click for the others):
+        the Community's message when a mine goes over the reputation limit (_reputation_limit), else the ship's. A take
+        that goes through plays the click."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         supply = SUPPLIES[k]
         hold = self.ship.cargo_hold
+        before = getattr(hold, supply.key)
+        asked = units
         if delta > 0:
-            units = max(0, min(units, self._supply_limit(k) - getattr(hold, supply.key)))
+            units = max(0, min(units, self._supply_limit(k) - before))
         quantity = hold.load(supply, units) if delta > 0 else hold.unload(supply, units)
         self._hold_full = delta > 0 and quantity < units and hold.free_capacity() < supply.weight
         self.ship.owner.those_who_share.adjust_reputation_by_supply(supply.key, -delta*quantity)
-        refused = delta > 0 and supply.key == "mines" and quantity == 0  # no mine taken: the pilot is told so
-        audio.play('mine_refused' if refused else 'ui_click')
+        refused = delta > 0 and quantity < asked - 1e-9  # a float can fall a hair short of what was asked
+        if not refused:
+            audio.play('ui_click')
+        else:
+            sound = 'mine_refused' if supply.key == "mines" else 'ui_click'
+            if supply.key == "mines" and before + asked > self._reputation_limit(k):
+                self._community_refuses(sound)
+            else:
+                self.ship.notification.set("This kind of ship has no more space for this.", sound)
+
+    def _community_refuses(self, sound: str) -> None:
+        """The Community's refusal of a mine or an attachment that goes over the reputation limit: the title held on
+        entering is named, as the limit is set by it."""
+        title = self.ship.owner.those_who_share.entity.title_for(self.outpost.player_reputation_on_entering)
+        self.ship.notification.set(f"The Community thinks you have already enough stuff for a {title}.", sound)
+
+    # region Attachments
+    def _attachment(self, name: str) -> Any:
+        """The value of an attachment, on the ship: the Heat Shield's option, or a toggle's yes or no."""
+        if name == "Heat Shield":
+            return HEAT_SHIELD_OPTIONS[self.ship.heat_shield.value]
+        return getattr(self.ship, ATTACHMENT_FIELDS[name])
+
+    def _store_attachment(self, name: str, value: Any) -> None:
+        """Puts the value of an attachment on the ship (see _attachment): saved with the ship."""
+        if name == "Heat Shield":
+            self.ship.heat_shield = self.ship.HeatShield(HEAT_SHIELD_OPTIONS.index(value))
+        else:
+            setattr(self.ship, ATTACHMENT_FIELDS[name], value)
+
+    def _reputation_remaining(self) -> float:
+        """What the attachments may still cost: the reputation the pilot has now over the lowest one that keeps the
+        title held on entering. They are charged to the reputation as they are set, so this is what is left. No limit
+        when that title is the lowest."""
+        those_who_share = self.ship.owner.those_who_share
+        floor = those_who_share.entity.title_floor(self.outpost.player_reputation_on_entering)
+        if floor == float('-inf'):
+            return float('inf')
+        return those_who_share.reputation - floor
+
+    @staticmethod
+    def _attachment_cost(name: str, value: Any) -> float:
+        """What an attachment costs in reputation at `value`: the Heat Shield's option, or a toggle's yes."""
+        if name == "Heat Shield":
+            return HEAT_SHIELD_COSTS[value]
+        cost = SCOOP_COST if name == "Scoop" else SOLAR_PANELS_COST
+        return cost if value else 0
+
+    def _set_attachment(self, name: str, value: Any) -> None:
+        """Sets an attachment to `value`, charging the difference in reputation (a cheaper value is refunded). A
+        difference that would take the reputation below the title's floor (_reputation_remaining) is refused with the
+        Community's message, as a mine over the limit is."""
+        change = self._attachment_cost(name, value) - self._attachment_cost(name, self._attachment(name))
+        if change > 0 and change > self._reputation_remaining():
+            self._community_refuses('mine_refused')
+            return
+        self.ship.owner.those_who_share.adjust_reputation(-change)
+        self._store_attachment(name, value)
+
+    def _press_attachment(self, name: str) -> None:
+        """Enter on an attachment, or a click on its control (after _attachment_press has closed any open box): the
+        Heat Shield's combo box opens, a toggle goes to its other value."""
+        if name == "Heat Shield":
+            self._open_combo = name
+        else:
+            self._set_attachment(name, not self._attachment(name))
+
+    def _attachment_press(self, pos: Tuple[int, int]) -> None:
+        """A click in the cargo view: an option of the open combo box is chosen, a click anywhere else closes it, and a
+        click on an attachment's control presses it (see _press_attachment)."""
+        was_open, self._open_combo = self._open_combo, None
+        if was_open is not None:
+            for rect, option in self._combo_option_rects:
+                if rect.collidepoint(pos):
+                    self._set_attachment(was_open, option)
+                    return
+        for rect, name in self._attachment_rects:
+            if rect.collidepoint(pos) and name != was_open:
+                self._press_attachment(name)
+                return
+
+    def _cycle_combo(self, step: int) -> None:
+        """Up and Down with the combo box open: the next or previous option, as a change (see _set_attachment)."""
+        index = HEAT_SHIELD_OPTIONS.index(self._attachment("Heat Shield"))
+        self._set_attachment("Heat Shield", HEAT_SHIELD_OPTIONS[(index + step) % len(HEAT_SHIELD_OPTIONS)])
+    # endregion
 
     def clock_topleft(self, window_size: Tuple[int, int]) -> Tuple[int, int]:
         """Where the ship time display goes: the top left of the left block, inside its margin, over the name (the host
@@ -888,8 +1068,15 @@ class OutpostScreenDialog(Dialog):
         targets: List[tuple] = [] if self._shown is not None else \
             [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
         if self._shows_cargo():
+            mines = next(k for k, supply in enumerate(SUPPLIES) if supply.key == "mines")
             for k in range(len(SUPPLIES)):
-                targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
+                if k != mines:
+                    targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
+            for name in SECOND_GROUP:  # the Mines row is in the second group, among the attachments
+                if name == "Mines":
+                    targets += [('cargo', mines, -1), ('cargo', mines, 1), ('fill', mines)]
+                else:
+                    targets.append(('attach', name))
         if self._shows_chat():
             self._sync_chat_log()
             targets += [('tag', tag) for tag in self._chat_tags_now()]
@@ -912,6 +1099,9 @@ class OutpostScreenDialog(Dialog):
         takes one unit, its ++ fills it, Leave leaves (see _try_leave), an option is selected. On the option that is
         selected already, it answers the shown message as Enter always did: the answer under the mouse, else the
         first."""
+        if self._open_combo is not None:  # Enter closes an open combo box: its options are chosen by click, or Up/Down
+            self._open_combo = None
+            return
         targets = self._focus_targets()
         token = self._focus if self._focus in targets else ('option', self.selected)
         if token[0] == 'answer':
@@ -920,6 +1110,8 @@ class OutpostScreenDialog(Dialog):
             self._press_cargo(token[1], token[2])
         elif token[0] == 'fill':
             self._fill_cargo(token[1])
+        elif token[0] == 'attach':
+            self._press_attachment(token[1])
         elif token[0] == 'person':
             self._chat.select_at(token[1])
         elif token[0] == 'tag':
@@ -935,6 +1127,7 @@ class OutpostScreenDialog(Dialog):
         """Selects another option: the conversation of the old one is closed, and the new one starts. Leave is not an
         option that stays selected: it leaves (see _try_leave), and the selection is the same as before."""
         self._focus = ('option', index)
+        self._open_combo = None
         if BUTTON_LABELS[index] == 'Leave':
             self._try_leave()
         elif index != self.selected:
@@ -955,6 +1148,9 @@ class OutpostScreenDialog(Dialog):
             self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
             self._press_focus()
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) \
+                and self._open_combo is not None:
+            self._cycle_combo(-1 if event.key == pygame.K_UP else 1)
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and self._shown is None:
             self._focus_visible = True
             index = self.selected
@@ -965,11 +1161,13 @@ class OutpostScreenDialog(Dialog):
             self._select(index)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._focus_visible = False
-            for minus, plus, fill, k in self._cargo_rects:
-                if minus.collidepoint(event.pos) or plus.collidepoint(event.pos):
-                    self._press_cargo(k, 1 if plus.collidepoint(event.pos) else -1)
-                elif fill.collidepoint(event.pos):
-                    self._fill_cargo(k)
+            if self._shows_cargo():  # the rows and controls are drawn in this view only
+                for minus, plus, fill, k in self._cargo_rects:
+                    if minus.collidepoint(event.pos) or plus.collidepoint(event.pos):
+                        self._press_cargo(k, 1 if plus.collidepoint(event.pos) else -1)
+                    elif fill.collidepoint(event.pos):
+                        self._fill_cargo(k)
+                self._attachment_press(event.pos)
             for index, rect in self._button_rects:  # no option while a message waits for its answer
                 if self._shown is None and rect.collidepoint(event.pos):
                     self._select(index)
