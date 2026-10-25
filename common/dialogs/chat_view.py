@@ -32,6 +32,7 @@ BUBBLE_MAX_FRACTION = 0.8  # the most a bubble takes, of the view's width
 BUBBLE_FILL = (14, 24, 30, 230)
 PLAYER_COLOUR = (236, 226, 190)
 NPC_PALETTE = ((120, 200, 255), (255, 170, 110), (170, 235, 140), (230, 140, 220), (255, 226, 120), (140, 220, 220))
+GLUED = '.,;:!?'  # a word starting with one of these sticks to the word before it: no space
 
 # A block of the list: (surface, y in the content, x in the text area, what a click on its parts does: a list of
 # (rectangle inside the surface, payload)).
@@ -44,10 +45,12 @@ def speaker_colour(person: Person) -> Tuple[int, int, int]:
 
 
 def _line_width(words: Sequence[Word], font: pygame.font.Font) -> int:
-    """The width of `words` on one line, with a space between them."""
+    """The width of `words` on one line, with a space between them, except before a GLUED word."""
     if not words:
         return 0
-    return sum(font.size(word)[0] for word, _ in words) + font.size(' ')[0] * (len(words) - 1)
+    space = font.size(' ')[0]
+    return sum(font.size(word)[0] for word, _ in words) + sum(
+        space for word, _ in words[1:] if word[0] not in GLUED)
 
 
 def _wrap_words(words: Sequence[Word], font: pygame.font.Font, width: int) -> List[List[Word]]:
@@ -58,10 +61,11 @@ def _wrap_words(words: Sequence[Word], font: pygame.font.Font, width: int) -> Li
     used = 0
     for word in words:
         size = font.size(word[0])[0]
-        if line and used + space + size > width:
+        gap = 0 if word[0][0] in GLUED else space
+        if line and used + gap + size > width:
             lines.append(line)
             line, used = [], 0
-        used += space if line else 0
+        used += gap if line else 0
         line.append(word)
         used += size
     if line:
@@ -140,13 +144,18 @@ class ChatView(_ScrolledList):
         self.on_tag: Callable[[str], None] = on_tag
         self.tags_active: bool = False  # set by draw: a click on a tag in a line starts a conversation
 
-    def _bubble(self, words: Sequence[Word], colour: Tuple[int, int, int], width: int,
+    def _bubble(self, paragraphs: Sequence[Sequence[Word]], colour: Tuple[int, int, int], width: int,
                 border: int = 1) -> Tuple[pygame.Surface, List[Tuple[pygame.Rect, Any]]]:
-        """A bubble of `words` in `colour`, at most BUBBLE_MAX_FRACTION of `width` wide: the words of a tag in the accent
-        colour, the others in `colour`. Also returns the rectangle of each tag word, with its ('tag', tag) payload."""
+        """A bubble of `paragraphs` in `colour`, at most BUBBLE_MAX_FRACTION of `width` wide: the words of a tag in the
+        accent colour, the others in `colour`. A blank line separates two paragraphs. Also returns the rectangle of each
+        tag word, with its ('tag', tag) payload."""
         font = body_font(BODY_SIZE)
         inner = int(width * BUBBLE_MAX_FRACTION) - 2 * BUBBLE_PAD
-        lines = _wrap_words(words, font, inner)
+        lines: List[List[Word]] = []
+        for index, paragraph in enumerate(paragraphs):
+            if index:
+                lines.append([])
+            lines += _wrap_words(paragraph, font, inner)
         text_width = max((_line_width(line, font) for line in lines), default=0)
         bubble = pygame.Surface((text_width + 2 * BUBBLE_PAD, len(lines) * font.get_linesize() + 2 * BUBBLE_PAD),
                                 pygame.SRCALPHA)
@@ -157,7 +166,7 @@ class ChatView(_ScrolledList):
         for line in lines:
             x = BUBBLE_PAD
             for index, (word, tag) in enumerate(line):
-                if index:
+                if index and word[0] not in GLUED:
                     x += font.size(' ')[0]
                 rendered = font.render(word, True, ACCENT if tag else colour)
                 bubble.blit(rendered, (x, y))
@@ -170,7 +179,7 @@ class ChatView(_ScrolledList):
     def _reply(self, label: str, width: int, focused: bool) -> pygame.Surface:
         """An open reply, a bubble in the pilot's colour; a focused one has an inner ring."""
         words = [(word, None) for word in label.split()]
-        bubble, _ = self._bubble(words, PLAYER_COLOUR, width, border=2 if focused else 1)
+        bubble, _ = self._bubble([words], PLAYER_COLOUR, width, border=2 if focused else 1)
         if focused:
             pygame.draw.rect(bubble, ACCENT, bubble.get_rect().inflate(-8, -8), 1)
         return bubble
@@ -187,10 +196,10 @@ class ChatView(_ScrolledList):
             colour = speaker_colour(log.person)
             for line in log.lines:
                 if line.speaker == PLAYER:
-                    bubble, hits = self._bubble(line.words, PLAYER_COLOUR, width)
+                    bubble, hits = self._bubble(line.paragraphs, PLAYER_COLOUR, width)
                     x = 0
                 else:
-                    bubble, hits = self._bubble(line.words, colour, width)
+                    bubble, hits = self._bubble(line.paragraphs, colour, width)
                     x = width - bubble.get_width()
                 blocks.append((bubble, y, x, hits))
                 y += bubble.get_height() + BUBBLE_GAP

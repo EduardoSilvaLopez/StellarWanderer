@@ -2,12 +2,14 @@
 
 Ore mines are drawn as textured cylinders. The texture — a procedurally
 generated "futuristic device" look — is built once on first use and cached
-as a single OpenGL texture shared by every mine, since every mine has the
-same fixed shape and appearance.
+as an OpenGL texture shared by every mine, since every mine has the same fixed
+shape and appearance. The only other look is a weathered texture for the external
+mines that have been unused for long (`ExternalMine.is_inactive`).
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from datetime import datetime
+from typing import TYPE_CHECKING, Dict, List, Tuple
 import math
 
 import pygame
@@ -19,34 +21,44 @@ from .constants import (
     MINE_TEXTURE_WIDTH, MINE_TEXTURE_HEIGHT,
     MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT,
     MINE_WARNING_A, MINE_WARNING_B, MINE_CAP_COLOR,
+    MINE_INACTIVE_HULL_COLOR, MINE_INACTIVE_HULL_DARK, MINE_INACTIVE_HULL_LIGHT, MINE_INACTIVE_ACCENT,
+    MINE_INACTIVE_WARNING_A, MINE_INACTIVE_WARNING_B,
 )
 
 if TYPE_CHECKING:
     from galaxies.ore_mine import OreMine
     from .surface_light import SurfaceLight
 
+# The colours of each look: hull, seams, highlights, accent band, hazard stripes (two).
+_ACTIVE_PALETTE = (MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_WARNING_B)
+_INACTIVE_PALETTE = (MINE_INACTIVE_HULL_COLOR, MINE_INACTIVE_HULL_DARK, MINE_INACTIVE_HULL_LIGHT,
+                     MINE_INACTIVE_ACCENT, MINE_INACTIVE_WARNING_A, MINE_INACTIVE_WARNING_B)
+
 
 class OreMines:
-    """Render textured cylinders marking placed ore mines."""
+    """Render textured cylinders marking ore mines."""
 
-    _mine_texture_id: Optional[int] = None
+    _mine_texture_ids: Dict[bool, int] = {}  # by inactive
 
     @staticmethod
-    def draw(mines: List[OreMine], player_x: float, player_z: float, light: SurfaceLight) -> None:
+    def draw(mines: List[OreMine], player_x: float, player_z: float, light: SurfaceLight,
+             game_date_time: datetime) -> None:
         """Draw every mine, within the camera transform set up by the caller.
 
-        Side walls (textured) are drawn for all mines first, then texturing
-        is disabled before drawing the untextured caps, so no texture state
-        leaks into whatever the caller draws next.
+        Side walls (textured, the weathered look for the mines inactive at `game_date_time`) are drawn for all mines
+        first, then texturing is disabled before drawing the untextured caps, so no texture state leaks into whatever
+        the caller draws next.
         """
         if not mines:
             return
 
         GL.glColor3ub(255, 255, 255)
         GL.glEnable(GL.GL_TEXTURE_2D)
-        GL.glBindTexture(GL.GL_TEXTURE_2D, OreMines._get_mine_texture())
-        for mine in mines:
-            OreMines._draw_mine_side(mine, player_x, player_z, light)
+        for inactive in (False, True):
+            GL.glBindTexture(GL.GL_TEXTURE_2D, OreMines._get_mine_texture(inactive))
+            for mine in mines:
+                if mine.is_inactive(game_date_time) == inactive:
+                    OreMines._draw_mine_side(mine, player_x, player_z, light)
         GL.glDisable(GL.GL_TEXTURE_2D)
 
         for mine in mines:
@@ -118,33 +130,35 @@ class OreMines:
             GL.glEnd()
 
     @staticmethod
-    def _build_mine_texture_surface() -> pygame.Surface:
-        """Procedurally paint a "futuristic device" panel onto an offscreen surface."""
+    def _build_mine_texture_surface(inactive: bool) -> pygame.Surface:
+        """Procedurally paint a "futuristic device" panel onto an offscreen surface (dull and without a glowing band if
+        `inactive`)."""
+        hull, hull_dark, hull_light, accent, warning_a, warning_b = _INACTIVE_PALETTE if inactive else _ACTIVE_PALETTE
         w, h = MINE_TEXTURE_WIDTH, MINE_TEXTURE_HEIGHT
         surface = pygame.Surface((w, h)).convert()
-        surface.fill(MINE_HULL_COLOR)
+        surface.fill(hull)
 
         # Vertical panel seams.
         panel_count = 6
         for i in range(panel_count + 1):
             x = int(w * i / panel_count)
-            pygame.draw.line(surface, MINE_HULL_DARK, (x, 0), (x, h), 3)
+            pygame.draw.line(surface, hull_dark, (x, 0), (x, h), 3)
 
         # Horizontal vent ridges, repeated down the height.
         for y in range(20, h - 20, 48):
-            pygame.draw.rect(surface, MINE_HULL_DARK, (8, y, w - 16, 6))
-            pygame.draw.rect(surface, MINE_HULL_LIGHT, (8, y + 6, w - 16, 2))
+            pygame.draw.rect(surface, hull_dark, (8, y, w - 16, 6))
+            pygame.draw.rect(surface, hull_light, (8, y + 6, w - 16, 2))
 
         # Glowing accent band (flat saturated color, no real transparency).
         band_y = int(h * 0.42)
-        pygame.draw.rect(surface, MINE_ACCENT, (0, band_y, w, 18))
+        pygame.draw.rect(surface, accent, (0, band_y, w, 18))
 
         # Diagonal hazard stripe near the base.
         stripe_y = h - 60
         stripe_h = 28
         step = 24
         for x in range(-step, w + step, step):
-            color = MINE_WARNING_A if (x // step) % 2 == 0 else MINE_WARNING_B
+            color = warning_a if (x // step) % 2 == 0 else warning_b
             pygame.draw.polygon(surface, color, [
                 (x, stripe_y), (x + step, stripe_y),
                 (x + step - stripe_h, stripe_y + stripe_h), (x - stripe_h, stripe_y + stripe_h),
@@ -154,20 +168,20 @@ class OreMines:
         for i in range(panel_count + 1):
             x = int(w * i / panel_count)
             for y in range(30, h - 30, 100):
-                pygame.draw.circle(surface, MINE_HULL_LIGHT, (x, y), 3)
+                pygame.draw.circle(surface, hull_light, (x, y), 3)
 
         # Heavier edge bars at u=0/u=1 disguise the texture wrap seam as a
         # deliberate structural corner beam.
-        pygame.draw.rect(surface, MINE_HULL_DARK, (0, 0, 4, h))
-        pygame.draw.rect(surface, MINE_HULL_DARK, (w - 4, 0, 4, h))
+        pygame.draw.rect(surface, hull_dark, (0, 0, 4, h))
+        pygame.draw.rect(surface, hull_dark, (w - 4, 0, 4, h))
 
         return surface
 
     @staticmethod
-    def _get_mine_texture() -> int:
-        if OreMines._mine_texture_id is None:
+    def _get_mine_texture(inactive: bool = False) -> int:
+        if inactive not in OreMines._mine_texture_ids:
             with frame_watch.timed('ore mine texture'):
-                surface = OreMines._build_mine_texture_surface()
+                surface = OreMines._build_mine_texture_surface(inactive)
                 w, h = surface.get_size()
                 pixels = pygame.image.tostring(surface, 'RGBA', False)
 
@@ -181,6 +195,6 @@ class OreMines:
                     GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, w, h, 0,
                     GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels
                 )
-                OreMines._mine_texture_id = texture
+                OreMines._mine_texture_ids[inactive] = texture
 
-        return OreMines._mine_texture_id
+        return OreMines._mine_texture_ids[inactive]

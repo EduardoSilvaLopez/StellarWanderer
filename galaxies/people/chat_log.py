@@ -23,27 +23,32 @@ MARK = re.compile(r'\[([^\[\]]+)\]')
 Word = Tuple[str, Optional[str]]  # a word, and the conversation tag it is (lowercased), None if it is not one
 
 
-def parse_marks(text: str) -> Tuple[List[Word], List[str]]:
-    """The words of `text`, each with the tag it is if it was inside square brackets, and the tags it marks: lowercased
-    and stripped, one for each mark, in the order written. The brackets are not words."""
-    words: List[Word] = []
+def parse_marks(text: str) -> Tuple[List[List[Word]], List[str]]:
+    """The paragraphs of `text` (split at blank lines), each as its words, each with the tag it is if it was inside square
+    brackets; and the tags it marks: lowercased and stripped, one for each mark, in the order written. The brackets are
+    not words."""
+    paragraphs: List[List[Word]] = []
     tags: List[str] = []
-    position = 0
-    for match in MARK.finditer(text):
-        words += [(word, None) for word in text[position:match.start()].split()]
-        tag = match.group(1).strip()
-        if tag:
-            tags.append(tag.lower())
-            words += [(word, tag.lower()) for word in tag.split()]  # shown as written, the tag is the lowercase one
-        position = match.end()
-    words += [(word, None) for word in text[position:].split()]
-    return words, tags
+    for paragraph in text.split('\n\n'):
+        words: List[Word] = []
+        position = 0
+        for match in MARK.finditer(paragraph):
+            words += [(word, None) for word in paragraph[position:match.start()].split()]
+            tag = match.group(1).strip()
+            if tag:
+                tags.append(tag.lower())
+                words += [(word, tag.lower()) for word in tag.split()]  # shown as written, the tag is the lowercase one
+            position = match.end()
+        words += [(word, None) for word in paragraph[position:].split()]
+        if words:
+            paragraphs.append(words)
+    return paragraphs, tags
 
 
 @dataclass(frozen=True)
 class ChatLine:
     speaker: str  # PLAYER or NPC
-    words: Tuple[Word, ...]
+    paragraphs: Tuple[Tuple[Word, ...], ...]
 
 
 class ChatLog:
@@ -55,8 +60,8 @@ class ChatLog:
         self.replies: Optional[List[str]] = None  # the labels the player may choose from, if any
         self._then: Optional[Callable[[int], object]] = None  # what the chosen reply starts
 
-    def add(self, speaker: str, words: List[Word]) -> None:
-        self.lines.append(ChatLine(speaker, tuple(words)))
+    def add(self, speaker: str, paragraphs: List[List[Word]]) -> None:
+        self.lines.append(ChatLine(speaker, tuple(tuple(words) for words in paragraphs)))
 
     def offer(self, labels: List[str], then: Optional[Callable[[int], object]] = None) -> None:
         """Shows `labels` as replies from the player. Choosing one calls `then` with its index. No labels: no replies
@@ -73,6 +78,6 @@ class ChatLog:
         then = self._then
         self.replies = None
         self._then = None
-        self.add(PLAYER, [(word, None) for word in label.split()])
+        self.add(PLAYER, [[(word, None) for word in label.split()]])
         if then is not None:
             then(index)

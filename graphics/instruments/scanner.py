@@ -43,7 +43,8 @@ class Scanner:
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
         A mine's content is written above the square, in place of the title, and its field's remaining
-        ore inside the square, at the bottom.
+        ore inside the square, at the bottom. An external mine (another miners', see ExternalMine) says "Not ours"
+        instead, with no field line.
 
         While unbound, the targeted asteroid that is not yet fully scanned (`Scanner.scan_asteroid`) takes the square
         when nothing else is in it: its name in place of the title, its shape as the ship sees it (the mesh the 3D view
@@ -76,7 +77,8 @@ class Scanner:
         if ore_rock is not None:
             title = label_font.render(f'Ore Purity: {round(ore_rock.get_purity() * 100)}%', True, (255, 255, 0))
         elif shown_mine is not None:
-            title = label_font.render(f'Content: {int(shown_mine.content)} Kg Ore', True, ACCENT)
+            title = label_font.render('Not ours' if shown_mine.is_external else f'Content: {int(shown_mine.content)} Kg Ore',
+                                      True, ACCENT)
         elif asteroid is not None:
             title = label_font.render(asteroid.name, True, ACCENT)
         else:
@@ -96,8 +98,9 @@ class Scanner:
             Scanner._draw_asteroid_scan(surface, label_font, rect, ship, asteroid)
         elif mine is not None:
             Scanner._draw_scanned_mine(surface, rect, mine)
-            field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
-            surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
+            if not mine.is_external:
+                field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
+                surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
 
     @staticmethod
     def _draw_asteroid_scan(surface: pygame.Surface, font: pygame.font.Font, rect: pygame.Rect, ship: Ship,

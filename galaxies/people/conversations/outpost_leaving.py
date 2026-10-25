@@ -58,8 +58,6 @@ class OutpostLeaving(Conversation):
             )
 
     def _higher_title_effects(self, old_rep: float) -> str:
-
-
         if old_rep < 10:
             self.player.ship.change_cargo_hold(ShabbyThsMiner.StandardHold)
             return (
@@ -68,6 +66,7 @@ class OutpostLeaving(Conversation):
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
         elif old_rep < 20:
+            # The effect is the availability of missions.
             return (
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
                 "Anytime you want, check the mission board of any outpost. But be careful you really can"
@@ -79,12 +78,11 @@ class OutpostLeaving(Conversation):
             self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
             return (
                 f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
-                f"We found a cargo extention you could use.\n\n"
+                f"We found a cargo extension you could use.\n\n"
                 f"Keep doing the good job.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
         elif old_rep < 100:
-            # Prepare the message:
             self.player.ship.upgrade_to(ThsMiner)
             return  (
                 "People were asking why you still have to go around with that piece of..."

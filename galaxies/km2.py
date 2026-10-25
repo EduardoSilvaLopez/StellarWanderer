@@ -10,6 +10,7 @@ import logging
 from galaxies import seeds
 from galaxies.rock import Rock
 from galaxies.ore_fields import OreField
+from galaxies.ore_mine import ExternalMine
 from common.updating import update_queue
 
 if TYPE_CHECKING:
@@ -48,6 +49,7 @@ class Km2:
         self.rocks: List[Rock] = []
         self.molten_rocks: List[str] = []
         self.ore_fields: List[OreField] = []
+        self.external_fields: List[OreField] = []  # of other miners: generated, so never saved (see ExternalMine)
 
         all_rocks_alterations: Optional[dict] = own.get('rocks')
         molten_rocks: Optional[dict] = own.get('molten_rocks')
@@ -79,9 +81,35 @@ class Km2:
         if ore_fields:
             self.ore_fields = [OreField.deserialize(self, f) for f in ore_fields]
 
+        self._make_external_fields(all_rocks_alterations)
+
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} "
             f"ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+
+    def _make_external_fields(self, rocks_alterations: Optional[dict]) -> None:
+        """Turns into an external field each ore-rich rock whose conversion date (ExternalMine.conversion_date) has
+        come, and clears the other rocks of this Km2 within the field, as around an outpost. A rock with saved
+        alterations is neither converted nor cleared."""
+        import game_environment as gem  # local: the environment needs the galaxy, which needs this module
+        now = gem.current_environment.date_time
+        altered_keys = rocks_alterations or {}
+        converted: List[Rock] = []
+        for rock in self.rocks:
+            if not rock.is_ore_rich() or rock.get_alterations_key() in altered_keys:
+                continue
+            converted_at = ExternalMine.conversion_date(self.seed, rock.longitude, rock.latitude)
+            if converted_at is not None and converted_at <= now:
+                converted.append(rock)
+                self.external_fields.append(OreField.external_from_rock(rock, converted_at))
+        if not converted:
+            return
+        self.rocks = [
+            rock for rock in self.rocks
+            if rock not in converted and (rock.get_alterations_key() in altered_keys or not any(
+                math.hypot(rock.longitude - field.longitude, rock.latitude - field.latitude) < field.radius
+                for field in self.external_fields))
+        ]
 
     # region Alterations
     def set_altered(self) -> Km2:

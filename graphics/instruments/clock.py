@@ -28,7 +28,7 @@ class Clock:
 
         ink = DANGER_INK if dangerous else ACCENT
         digits = Clock._ink(digit_font.render(text, True, ink))
-        label = Clock._ink(label_font.render('PosDes', True, ink))
+        label = Clock._ink(label_font.render('PosDis', True, ink))
 
         # Highlight the rate whenever time is compressed; the normal rate is bright too, beside the label
         rate_color = ink if dangerous or time_scale == Player.TIME_SCALE_MIN else AMBER

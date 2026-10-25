@@ -259,7 +259,7 @@ class Scanner:
         for km2 in self._get_relevant_km2s(world):
             for rock in km2.rocks:
                 yield rock, self._rock_entry
-            for field in km2.ore_fields:
+            for field in km2.ore_fields + km2.external_fields:
                 for mine in field.mines:
                     yield mine, self._mine_entry
             if km2.outpost:

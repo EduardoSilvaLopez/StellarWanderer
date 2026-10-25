@@ -89,6 +89,14 @@ MINE_WARNING_A = (240, 196, 40)
 MINE_WARNING_B = (26, 26, 26)
 MINE_CAP_COLOR = (48, 51, 58)
 
+# The texture of an external mine that has been unused for long (ExternalMine.is_inactive): weathered, no glowing band.
+MINE_INACTIVE_HULL_COLOR = (74, 68, 60)
+MINE_INACTIVE_HULL_DARK = (44, 40, 36)
+MINE_INACTIVE_HULL_LIGHT = (98, 90, 80)
+MINE_INACTIVE_ACCENT = (58, 52, 46)
+MINE_INACTIVE_WARNING_A = (118, 98, 54)
+MINE_INACTIVE_WARNING_B = (38, 35, 32)
+
 # Canopy geometry (as fractions of window)
 CANOPY_TOP = 0.055
 CANOPY_TOP_INSET = 0.105

@@ -53,23 +53,26 @@ DEVELOPER'S DIARY
   * Extra: title from interlocutors in the outpost is relative, not absolute.
   * Make screenshots.
   * "life" > "happy birthday" path
+  * Notification panel for outpost dialog. "The Community thinks you have enough stuff." when wants mines,
+    "Your ship is not ready for more of this" when other things.
+  * More full dialogs... now Those-Who-Share :)
+  * External mines and ore fields.
+
 
 > STARTED:
 
-### 2026-10-22 (1/11) Extra time: 129h15' + 1:45 - 3:30 + 5:00
+### 2026-10-22 (2/11)
 
-  * Notification panel for outpost dialog. "The Community thinks you have enough stuff." when wants mines,
-    "Your ship is not read for more of this" when other things.
+Extra time: 126h30' + 1:45 - 3:30 + 5:00  + 6:00 - 7:15 + 10:30 - 
+
+  * Generate the jovian planet.
+  * Mission to jovian planet. Play it. Maybe before, increase water / air etc... importan later, maybe
+    ("realistic speed")
 
 > BACKLOG
 
 * JOVIAN PLANETS (current one)
-  * Solar panels are the reward of the next level. First of a series of gimmicks which can be "purchased" by reputation.
-    Also, the heat shield :D But they are "expensive" so player must choose...
-  * Mission to jovian planet. Play it. Maybe before, increase water / air etc... importan later, maybe
-    ("realistic speed")
-  * "Realistic speed" in "ideas".
-  * More full dialogs... now Those-Who-Share :)
+  * Extra: "Realistic speed" in "ideas".
   * Forbidden area.
   In order to arrive there, I need in my gameplay to advance quite more. So, some extras belong to that road.
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
@@ -80,7 +83,10 @@ DEVELOPER'S DIARY
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
 THE TRAITOR MISSION
-  * Dialogs are still very neutral. Make variations asking an AI.
+  * New level brings solar panels and heat shield.
+  * "Scan the sun" mission. Solar panels, heat shield.
+  * "Bring water" mission. Uses the scoop.
+  * More full dialogs... now The Shining Throne and Those-Who-Share :)
   * Extra: Gravity. Evaluate, at least... for realism's sake.
   * Extra: Improve the sounds for real.
 * INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system)

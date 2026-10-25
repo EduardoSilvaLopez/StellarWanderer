@@ -13,6 +13,7 @@ the pattern to follow and how to test). Do not read it for any other task.
 """
 
 from __future__ import annotations
+import random
 from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional
 
@@ -59,7 +60,7 @@ class OutpostChat(Conversation):
             self.player.present_yourself_first_time() if is_presentation and not has_met_before \
             else self.player.present_yourself_further_times(self.interlocutor) if is_presentation \
             else self.tag
-        self.log.add(PLAYER, [(word, None) for word in pilot_line.split()])
+        self.log.add(PLAYER, [[(word, None) for word in pilot_line.split()]])
         if self.tag in self.reactions:
             self.say(self.reactions[self.tag])
         else:
@@ -742,12 +743,11 @@ class OutpostChat(Conversation):
         # Political conversation: Loyalty is relevant. As for now everybody lives in Those-Who-Share (see get_title),
         # so the texts judge United Diversity from there: the more loyal, the less the person likes it.
         # Empathy relevant: the less empathic, the more they like the money and the force; the more, the poor.
-        # Sociability always relevant, makes the reply less or more verbose: a remark, one topic or three topics.
+        # Sociability always relevant, makes the reply less or more verbose: a remark, or one to four topics.
         # Sympathy always relevant, rejection or approval of the player; and trust to praise what is frowned upon.
         # Reputation relevant: those who have a lot in Those-Who-Share are proud of its industry.
         if sym < 20:
-            return "Leave me alone, Pilot." if soc < 20 \
-                 else "Ask somebody else. I have nothing to say about them. Nor to you."
+            return random.choice(self.unfriendly_rejections(soc))
 
         # Simplify loy and emp. The 1.212 is to keep variance.
         likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
@@ -815,15 +815,33 @@ class OutpostChat(Conversation):
                 " don't give.",
             )),
         }
-        # Length: the least sociable give a remark, the normal ones one topic (up to 30 words), only the very sociable
-        # go on with three topics and, if they are friends, a confidence.
+        # Under 20: short lines, one per topic and some generic, all under five words.
         if soc < 20:
-            return (
-                "Fucking moneygrubbers with guns.",
-                "<shrugs> Rich and armed. Clever, I'll give them that. Not for me.",
-                "Rich, strong, free. Not bad at all.",
-            )[tone + 1]
-        chosen: list[str] = sorted(topics, key=lambda name: topics[name][0], reverse=True)[:1 if soc < 80 else 3]
+            curt: dict[str, tuple[str, str, str]] = {
+                'size': ("Bloated. The Moon.", "Big. Not good.", "Fifty systems. Wow."),
+                'money': ("Money, money. Disgusting.", "They love money.", "Get rich, get admired."),
+                'military': ("Biggest army. Sick.", "Big guns. Nervous.", "Guns for ETs. Good."),
+                'science': ("Exams to vote. Ugh.", "Brains, but who votes?", "Experts should vote."),
+                'poor': ("Cells and ghettos. Ugh.", "Basic income. Cells too.", "Nobody is a slave."),
+                'industry': ("We build more. Obviously.", "Second in industry.", "Good at industry, yes."),
+                'federalism': ("Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals."),
+            }
+            generic: tuple[tuple[str, ...], ...] = (
+                ("Fucking moneygrubbers with guns.", "Not for me.", "<shrugs>"),
+                ("Whatever.", "<shrugs>", "Not for me."),
+                ("Rich, strong, free.", "Not bad at all.", "Good for them."),
+            )
+            return random.choice([texts[tone + 1] for texts in curt.values()] + list(generic[tone + 1]))
+
+        # From 20 on, the count of topics grows with sociability: 1 and 2 stay the most frequent.
+        x: float = (soc - 20) / 80
+        count: int = random.choices([1, 2, 3, 4], weights=[3 - 2 * x, 2, 1.5 * x, 0.5 * x ** 3])[0]
+        pool: list[str] = list(topics)
+        chosen: list[str] = []
+        for _ in range(count):
+            name: str = random.choices(pool, weights=[topics[topic][0] for topic in pool])[0]
+            pool.remove(name)
+            chosen.append(name)
         text: str = "\n\n".join(topics[name][1][tone + 1] for name in chosen)
 
         if soc >= 80 and sym >= 80:
@@ -840,6 +858,32 @@ class OutpostChat(Conversation):
     # endregion
 
     # region Auxiliar methods
+
+    def unfriendly_rejections(self, soc: float) -> list[str]:
+        """The unfriendly rejections the person may say at random, by sociability: curt ones, then ones that remind the
+        pilot of what they did (someone is refused only when the pilot did something terrible in their eyes). Add more
+        to a band."""
+        if soc < 20:
+            return [
+                "Leave me alone.",
+                "Leave me alone, Pilot.",
+                "Just leave me.",
+                "Fuck off.",
+                "Bugger off.",
+            ]
+        elif soc < 80:
+            return [
+                "You. What do you want?",
+                "Oh, no, leave me alone.",
+                "Oh, it's you again. Why don't you go bother someone else?",
+                "Leave me alone, Pilot. You've done enough.",
+                "You. What do you want? Don't you think you have done enough?",
+            ]
+        return [
+                "Yes, I know who you are. And I know what you have done. But... no. Just leave me alone, ok? Sorry.",
+                "Oh, no, don't approach me, ok? I don't want troubles and you have done enough. Just leave me alone.",
+                "Bugger off, will you? I know what you did. Nobody wants to talk with you.",
+        ]
 
     def days_to_birthday(self) -> Optional[int]:
         """birthday discovery -2 to +1 days is relevant."""

@@ -14,6 +14,7 @@ from .rock_batches import RockBatches
 from .surface_light import SurfaceLight
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from spaceships.ship import Ship
     from galaxies.km2 import Km2
     from galaxies.ore_fields import OreField
@@ -26,7 +27,7 @@ class Rocks:
 
     @staticmethod
     def draw(width: int, height: int, ship: Ship, km2s: List[Km2], ore_fields: List[OreField], mines: List[OreMine],
-             outposts: List[Outpost], light: SurfaceLight) -> None:
+             outposts: List[Outpost], light: SurfaceLight, game_date_time: datetime) -> None:
         """Draw the rocks of `km2s` (cached batches, see rock_batches.py) and the rest of the surface in a
         perspective OpenGL pass.
 
@@ -67,7 +68,7 @@ class Rocks:
         Rocks._draw_ground(light)
 
         OreFields.draw(ore_fields, ship.position.x, ship.position.z, light)
-        OreMines.draw(mines, ship.position.x, ship.position.z, light)
+        OreMines.draw(mines, ship.position.x, ship.position.z, light, game_date_time)
         Outposts.draw(outposts, ship.position.x, ship.position.z, light)
 
         RockBatches.draw(km2s, ship.position.x, ship.position.z, light)

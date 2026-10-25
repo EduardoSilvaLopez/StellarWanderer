@@ -68,6 +68,7 @@ class OpenGLGui:
         to exist; the textures are kept for the whole run."""
         OreFields._get_ore_field_texture()
         OreMines._get_mine_texture()
+        OreMines._get_mine_texture(inactive=True)
         Outposts._get_texture()
 
     # region Frame
@@ -145,10 +146,10 @@ class OpenGLGui:
         # the rocks (see Navigation.outruns_rocks) sees none either.
         if light is not None and ship.position.y <= MAX_DEPTH and not ship.navigation.outruns_rocks:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
-            ore_fields = [field for km2 in km2s for field in km2.ore_fields]
+            ore_fields = [field for km2 in km2s for field in km2.ore_fields + km2.external_fields]
             Rocks.draw(
                 width, height, ship, km2s, ore_fields, [mine for field in ore_fields for mine in field.mines],
-                self._outposts(environment, ship), light,
+                self._outposts(environment, ship), light, environment.date_time,
             )
         frame_watch.mark('surface')
         Laser.draw(width, height, ship)
