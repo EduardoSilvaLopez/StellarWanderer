@@ -21,7 +21,7 @@ class Rock(Updatable):
     COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
     TEMP_MAX_MU = 7.57 # Gives around 2000
     TEMP_MAX_SIGMA = 0.2
-    ORE_RICH_THRESHOLD = 0.9998
+    ORE_RICH_THRESHOLD = 0.99975
     # the adjectives a rock can have (see _generate_adjective)
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.

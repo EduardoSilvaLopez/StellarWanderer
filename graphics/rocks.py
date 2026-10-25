@@ -1,7 +1,7 @@
 """Depth-tested OpenGL rock rendering."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Tuple
 import math
 
 from OpenGL import GL, GLU
@@ -35,23 +35,28 @@ class Rocks:
         projected face is visible at each pixel.
         """
         view_height = int(height * CONSOLE_TOP)
-        aspect = width / view_height
-        near_plane = max(0.1, NEAR_CLIP)
-
         # OpenGL's origin is bottom-left; the canopy is the top part of the
         # Pygame frame, so position this 3D viewport above the cockpit panel.
-        GL.glViewport(0, height - view_height, width, view_height)
+        Rocks.draw_view((0, height - view_height, width, view_height), math.degrees(VIEW_VERTICAL_FOV_RADIANS),
+                        MAX_DEPTH, ship.attitude.camera_matrix(), ship, km2s, ore_fields, mines, outposts, light,
+                        game_date_time)
+
+    @staticmethod
+    def draw_view(viewport: Tuple[int, int, int, int], fov_degrees: float, far: float, camera_matrix: list, ship: Ship,
+                  km2s: List[Km2], ore_fields: List[OreField], mines: List[OreMine], outposts: List[Outpost],
+                  light: SurfaceLight, game_date_time: datetime) -> None:
+        """The same, in `viewport` (x, y, width, height, from the window's bottom left), with the given vertical field
+        of view, far plane and camera matrix (see Attitude.camera_matrix): the canopy's, or the scoop's."""
+        GL.glViewport(*viewport)
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GLU.gluPerspective(
-            math.degrees(VIEW_VERTICAL_FOV_RADIANS), aspect, near_plane, MAX_DEPTH
-        )
+        GLU.gluPerspective(fov_degrees, viewport[2] / viewport[3], max(0.1, NEAR_CLIP), far)
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
         # Maps the ship's right/up/forward axes onto OpenGL's eye axes (looking down -Z).
-        GL.glMultMatrixf(ship.attitude.camera_matrix())
+        GL.glMultMatrixf(camera_matrix)
         # X/Z are NOT translated here: at large enough world coordinates (far
         # from the origin), glTranslatef's float32 truncation would already
         # have destroyed sub-meter precision before the GPU ever sees it.

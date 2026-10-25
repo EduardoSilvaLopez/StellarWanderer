@@ -1,6 +1,7 @@
 """The small buttons under the political entity's icon: what the pilot knows of the stellar systems and of the people,
 the specifications of the ship (below the stellar systems), and, when there is a mission to see (see shows_missions),
-the pending missions, below the people."""
+the pending missions, below the people. The outpost screen shows the same buttons in one row (KNOWLEDGE_ORDER), with
+the same drawing (CockpitButtons.draw_button)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -20,6 +21,7 @@ SHIP = 'ship'
 # white, in resources/icons
 ICON_FILES: Dict[str, str] = {SYSTEMS: 'stellar_system.png', PEOPLE: 'head.png', MISSIONS: 'missions.png',
                               SHIP: 'ship.png'}
+KNOWLEDGE_ORDER = (SYSTEMS, PEOPLE, SHIP, MISSIONS)  # the order of the buttons, in the cockpit and in a row elsewhere
 
 
 def shows_missions(player: Player) -> bool:
@@ -69,6 +71,17 @@ class CockpitButtons:
         return CockpitButtons._tinted[key]
 
     @staticmethod
+    def draw_button(surface: pygame.Surface, rect: pygame.Rect, name: str, hovered: bool) -> None:
+        """One button, square in `rect`: its frame, lit while the mouse is over it, and its icon."""
+        colour = ACCENT if hovered else ACCENT_DIM
+        pygame.draw.rect(surface, READOUT_BG, rect, border_radius=6)
+        pygame.draw.rect(surface, colour, rect, 2, border_radius=6)
+        icon = CockpitButtons._tinted_icon(name, rect.width - 2 * CockpitButtons.ICON_MARGIN, ACCENT if hovered
+                                           else (150, 215, 205))
+        if icon is not None:
+            surface.blit(icon, icon.get_rect(center=rect.center))
+
+    @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, top: int, player: Player) -> None:
         """Draw the buttons with their top edge `top` pixels down (the bottom of the political icon, plus the gap)."""
         x = PoliticalInfo.PADDING_X
@@ -96,13 +109,7 @@ class CockpitButtons:
         for name, rect in places:
             CockpitButtons.rects[name] = rect
             hovered = mouse is not None and rect.collidepoint(mouse)
-            colour = ACCENT if hovered else ACCENT_DIM
-            pygame.draw.rect(surface, READOUT_BG, rect, border_radius=6)
-            pygame.draw.rect(surface, colour, rect, 2, border_radius=6)
-            icon = CockpitButtons._tinted_icon(name, size - 2 * CockpitButtons.ICON_MARGIN, ACCENT if hovered
-                                               else (150, 215, 205))
-            if icon is not None:
-                surface.blit(icon, icon.get_rect(center=rect.center))
+            CockpitButtons.draw_button(surface, rect, name, hovered)
 
     @staticmethod
     def hit(position: Tuple[int, int]) -> Optional[str]:

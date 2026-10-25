@@ -1,0 +1,5 @@
+To make the passage of time more bearable, the pilot's veins are connected to a system which can deliver
+drugs that make subjective time pass faster. The ship's clock shows the factor by which subjective time is
+accelerated, also called "time compression". The ship detects that the pilot's reaction time is slowed, so it
+prevents some actions, such as opening the scoop. This state of the pilot is called "coldsleep", and the
+technology used is the same as for hibernation during interstellar travel without portals.

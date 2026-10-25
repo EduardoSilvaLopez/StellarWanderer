@@ -34,22 +34,32 @@ class OutpostReportFirst(Conversation):
         time_str: str = self._time_as_string(int(time_to_handle))
         handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
-        do_ask: bool = self.player.ship.cargo_hold.ore > 0
-        ore_question: str = f"\n\nShall we start unloading the ore, {self.interlocutor.get_player_title()}?" \
+        unloading: str = self.outpost.unloading_text(self.player.ship)
+        do_ask: bool = unloading != ''
+        ore_question: str = f"\n\nShall we start unloading {unloading}, {self.interlocutor.get_player_title()}?" \
             if do_ask else ''
 
         text: str = oit + it + handle_info + ore_question
 
-        # Prepare the buttons:
-        buttons = ['Yes', 'Not yet, please'] if do_ask else ['Ok']
-
-        self.show(Message(
-                title=self.title,
-                text=text,
-                buttons=buttons,
-                open_sound='radio_open'
-                ), self._finish
-            )
+        if do_ask:
+            self.show(Message(
+                    title=self.title,
+                    text=text,
+                    buttons=['Yes', 'Not yet, please'],
+                    open_sound='radio_open'
+                    ), self._finish
+                )
+        else:
+            # Information only: the handling starts now, not when its Ok is pressed, so that a click away from the
+            # message does not leave the ship unhandled (the screen does not wait for the Ok, see OutpostScreenDialog).
+            self._start_handling(True)
+            self.show(Message(
+                    title=self.title,
+                    text=text,
+                    buttons=['Ok'],
+                    open_sound='radio_open'
+                    ), self._info_closed
+                )
 
     def _generate_outpost_introduction_text(self) -> str:
          return (
@@ -66,13 +76,23 @@ class OutpostReportFirst(Conversation):
             return "in " + str(1 + (time_in_secs // 60)) + " minutes"
         return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
-    def _finish(self, chosen_button: Optional[int]) -> OutpostReportFirst:
-        if chosen_button == 0:
-            self.outpost.handling_includes_ore = True
+    def _start_handling(self, unloads: bool) -> None:
+        """The handling of the ship starts (repair and recharge), unloading the hold if `unloads`, unless it takes no
+        time at all."""
+        if unloads:
+            self.outpost.handling_unloads = True
 
         if self.outpost.get_time_to_handle(self.player.ship): # Skip by absurd amounts.
             self.outpost.start_handle(self.player.ship)
 
+    def _finish(self, chosen_button: Optional[int]) -> OutpostReportFirst:
+        """The answer to Yes or Not yet: Yes unloads the hold, then the handling starts."""
+        self._start_handling(chosen_button == 0)
         self.interlocutor.last_communication_at = self.date_time
+        self.close()
+        return self
+
+    def _info_closed(self, chosen_button: Optional[int]) -> OutpostReportFirst:
+        """The Ok of the information message: the conversation is over. The handling started in start."""
         self.close()
         return self

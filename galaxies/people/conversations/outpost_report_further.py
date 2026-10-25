@@ -29,8 +29,8 @@ class OutpostReportFurther(Conversation):
         ready: bool = self.outpost.is_ready(self.player.ship)  # nothing to offer, even if a few seconds are left
         if time_to_handle > 0 and not ready:
             handle_info_or_question = f"Your ship will be ready {time_str}."
-        elif self.player.ship.cargo_hold.ore > 0:
-            handle_info_or_question = f"Shall we start unloading the ore? It should be ready in {time_str}."
+        elif unloading := self.outpost.unloading_text(self.player.ship):
+            handle_info_or_question = f"Shall we start unloading {unloading}? It should be ready in {time_str}."
             do_ask = True
 
         text: str = handle_info_or_question
@@ -43,7 +43,7 @@ class OutpostReportFurther(Conversation):
                 text=text,
                 buttons=buttons,
                 open_sound='radio_open'
-                ), self._unload_the_ore_answered if do_ask else self._finish
+                ), self._unload_answered if do_ask else self._finish
             )
 
     @staticmethod
@@ -54,9 +54,9 @@ class OutpostReportFurther(Conversation):
             return "in " + str(1 + (time_in_secs // 60)) + " minutes"
         return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
-    def _unload_the_ore_answered(self, chosen_button: Optional[int]) -> OutpostReportFurther:
+    def _unload_answered(self, chosen_button: Optional[int]) -> OutpostReportFurther:
         if chosen_button == 0:
-            self.outpost.handling_includes_ore = True
+            self.outpost.handling_unloads = True
             self.outpost.start_handle(self.player.ship)
         self._finish(chosen_button)
         return self

@@ -25,11 +25,17 @@ Colour = Tuple[int, int, int]
 class SurfaceLight:
     """The sun seen from the ground: `sun` is the unit vector from the ship's surface towards the star,
     in the surface frame (x east, y up, z north), the same axes the 3D view uses for every object;
-    `tint` is the world's surface colour times the star's colour, 0..255 per channel."""
+    `tint` is the world's surface colour times the star's colour, 0..255 per channel. A lamp light (`lamp`) is the
+    scoop's: its "sun" is straight up, the lamps being on the ship above the ground, whatever the star does."""
 
-    def __init__(self, sun: Vector3, tint: Tuple[float, float, float]) -> None:
+    def __init__(self, sun: Vector3, tint: Tuple[float, float, float], lamp: bool = False) -> None:
         self.sun: Vector3 = sun
         self.tint: Tuple[float, float, float] = tint
+        self.lamp: bool = lamp
+
+    def lit_by_lamps(self) -> SurfaceLight:
+        """The same surface lit by the scoop's lamps (see ScoopView)."""
+        return SurfaceLight(Vector3(0.0, 1.0, 0.0), self.tint, lamp=True)
 
     @staticmethod
     def of(ship: Ship, environment: GameEnvironment) -> SurfaceLight:

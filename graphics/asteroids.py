@@ -11,7 +11,8 @@ Each asteroid is drawn with its own perspective, whose near and far planes just 
 (cleared before it), farthest first: the distances and the sizes in space are too many orders of magnitude for one depth
 buffer. Its mesh (asteroid_shape.py) and colours (asteroid_looks.py) come from its seed and are built once, then kept in
 a small cache; only the colours are computed again when the sun has moved. Its place relative to the ship is worked out
-in double precision before it goes to OpenGL, as for the rocks.
+in double precision before it goes to OpenGL, as for the rocks. The scoop's view draws the near ones again from under the
+ship (`draw_near`), lit by the lamps.
 """
 
 from __future__ import annotations
@@ -67,6 +68,10 @@ class AsteroidModel:
             self._cached = shade(self._base, self._normals, sun)
             self._cached_sun = sun
         return self._cached
+
+    def lit_by_lamps(self, towards_ship: np.ndarray) -> np.ndarray:
+        """The colour of each vertex lit from the direction `towards_ship`, as the scoop's lamps do. Not kept."""
+        return shade(self._base, self._normals, towards_ship)
 
 
 @dataclass(frozen=True)
@@ -126,8 +131,9 @@ class Asteroids:
     _views: dict[int, CosmeticView] = {}
 
     @staticmethod
-    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
-        """Draws the asteroids that are in front of the ship, farthest first. Call while unbound, after the sky."""
+    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment) -> list[Sighting]:
+        """Draws the asteroids that are in front of the ship, farthest first. Call while unbound, after the sky.
+        Returns the asteroids that were sought, which the scoop's view draws the near ones of (`draw_near`)."""
         system: StellarSystem = environment.targeted_body.stellar_system
         date = environment.date_time
         position = ship.navigation.stellar_position(date)
@@ -147,7 +153,7 @@ class Asteroids:
                 view = Asteroids._views[id(belt)] = CosmeticView()
             sightings += view.sightings(belt, date, ship_position, ship_velocity, focal)
         if not sightings:
-            return
+            return sightings
 
         ahead_axis = ship.attitude.forward
         forward = np.array([ahead_axis.x, ahead_axis.y, ahead_axis.z])
@@ -158,10 +164,11 @@ class Asteroids:
             if float(relative @ forward) > 0.0 and distance > 0.0:
                 ahead.append((distance, relative, sighting))
         if not ahead:
-            return
+            return sightings
 
         view_height = int(height * CONSOLE_TOP)
         aspect = width / view_height
+        matrix, fov = ship.attitude.camera_matrix(), math.degrees(VIEW_VERTICAL_FOV_RADIANS)
         GL.glViewport(0, height - view_height, width, view_height)
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPushMatrix()
@@ -169,15 +176,46 @@ class Asteroids:
         GL.glPushMatrix()
         for distance, relative, sighting in sorted(ahead, key=lambda item: item[0], reverse=True):
             if sighting.diameter * focal / distance >= Asteroids.MIN_PIXELS:
-                Asteroids._draw_mesh(ship, sighting, relative, distance, aspect)
+                Asteroids._draw_mesh(matrix, fov, sighting, relative, distance, aspect)
             elif sighting.is_mission:
-                Asteroids._draw_point(ship, sighting, relative, aspect)
+                Asteroids._draw_point(matrix, sighting, relative, aspect)
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPopMatrix()
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPopMatrix()
         GL.glViewport(0, 0, width, height)
+        return sightings
+
+    @staticmethod
+    def draw_near(ship: Ship, environment: GameEnvironment, sightings: list[Sighting], reach: float, fov_degrees: float,
+                  aspect: float) -> None:
+        """Draws, in the viewport that is set, the `sightings` within `reach` metres as the scoop's camera sees them
+        (Attitude.down_camera_matrix), farthest first, lit by the lamps on the ship, not by the star."""
+        position = ship.navigation.stellar_position(environment.date_time)
+        ship_position = np.array([position.x, position.y, position.z])
+        down = -np.array(tuple(ship.attitude.up))
+        near = []
+        for sighting in sightings:
+            relative = sighting.centre - ship_position
+            distance = float(np.linalg.norm(relative))
+            if 0.0 < distance and distance - Asteroids.BOUND_MARGIN * sighting.diameter / 2.0 <= reach \
+                    and float(relative @ down) > 0.0:
+                near.append((distance, relative, sighting))
+        if not near:
+            return
+        matrix = ship.attitude.down_camera_matrix()
+        GL.glMatrixMode(GL.GL_PROJECTION)
+        GL.glPushMatrix()
+        GL.glMatrixMode(GL.GL_MODELVIEW)
+        GL.glPushMatrix()
+        for distance, relative, sighting in sorted(near, key=lambda item: item[0], reverse=True):
+            Asteroids._draw_mesh(matrix, fov_degrees, sighting, relative, distance, aspect, lamps=True)
+        GL.glDisable(GL.GL_DEPTH_TEST)
+        GL.glMatrixMode(GL.GL_MODELVIEW)
+        GL.glPopMatrix()
+        GL.glMatrixMode(GL.GL_PROJECTION)
+        GL.glPopMatrix()
 
     @staticmethod
     def tier_reaches(focal: float) -> dict[AsteroidTier, float]:
@@ -202,24 +240,29 @@ class Asteroids:
         return model
 
     @staticmethod
-    def _camera(ship: Ship, near: float, far: float, aspect: float) -> None:
-        """The ship's perspective, with these near and far planes, on the model-view and projection stacks."""
+    def _camera(matrix: list, fov_degrees: float, near: float, far: float, aspect: float) -> None:
+        """The perspective of the camera of `matrix` (Attitude.camera_matrix: the ship's right, up and forward onto
+        OpenGL's eye axes), with these near and far planes, on the model-view and projection stacks."""
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glLoadIdentity()
-        GLU.gluPerspective(math.degrees(VIEW_VERTICAL_FOV_RADIANS), aspect, near, far)
+        GLU.gluPerspective(fov_degrees, aspect, near, far)
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glLoadIdentity()
-        GL.glMultMatrixf(ship.attitude.camera_matrix())  # the ship's right, up and forward onto OpenGL's eye axes
+        GL.glMultMatrixf(matrix)
 
     @staticmethod
-    def _draw_mesh(ship: Ship, sighting: Sighting, relative: np.ndarray, distance: float, aspect: float) -> None:
+    def _draw_mesh(matrix: list, fov_degrees: float, sighting: Sighting, relative: np.ndarray, distance: float,
+                   aspect: float, lamps: bool = False) -> None:
         model = Asteroids.model(sighting.seed, sighting.diameter)
         margin = Asteroids.BOUND_MARGIN * model.radius
-        Asteroids._camera(ship, max(0.05, distance - margin), distance + margin, aspect)
+        Asteroids._camera(matrix, fov_degrees, max(0.05, distance - margin), distance + margin, aspect)
         GL.glTranslatef(float(relative[0]), float(relative[1]), float(relative[2]))
-        # towards the star, which is the origin
-        sun = -sighting.centre / max(float(np.linalg.norm(sighting.centre)), 1.0)
-        colours = model.colours(sun)
+        if lamps:
+            colours = model.lit_by_lamps(-relative / distance)  # the lamps are on the ship
+        else:
+            # towards the star, which is the origin
+            sun = -sighting.centre / max(float(np.linalg.norm(sighting.centre)), 1.0)
+            colours = model.colours(sun)
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)
         GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
@@ -232,9 +275,9 @@ class Asteroids:
         GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
 
     @staticmethod
-    def _draw_point(ship: Ship, sighting: Sighting, relative: np.ndarray, aspect: float) -> None:
+    def _draw_point(matrix: list, sighting: Sighting, relative: np.ndarray, aspect: float) -> None:
         """A mission's asteroid too far to show its shape: a point in its direction, of its colour."""
-        Asteroids._camera(ship, 1.0, 10.0 * Asteroids.POINT_DISTANCE, aspect)
+        Asteroids._camera(matrix, math.degrees(VIEW_VERTICAL_FOV_RADIANS), 1.0, 10.0 * Asteroids.POINT_DISTANCE, aspect)
         direction = relative / float(np.linalg.norm(relative)) * Asteroids.POINT_DISTANCE
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glPointSize(Asteroids.POINT_SIZE)

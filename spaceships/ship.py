@@ -55,6 +55,15 @@ class Ship(Updatable):
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
+    SCOOP_MAX_SPEED = 100.0  # m/s relative to the fixed object (the ground while bound): above it the scoop is closed
+    SCOOP_RANGE = 100.0  # metres: the ground the scoop shows, and what it takes from it (graphics/scoop_view.py)
+    SCOOP_WATER_KG_PER_SECOND = 10.0  # Raw water into the hold while the scoop takes it: 2000 Kg in about 3 minutes
+    # The scoop's notifications. TODO texts: placeholders that say what each one is for, to be flavoured.
+    SCOOP_OPENED = "Scoop opened. Hull integrity compromised."
+    SCOOP_CLOSED = "Scoop closed. Hull integrity restored."
+    SCOOP_CLOSED_FAST = (f"Speed over {SCOOP_MAX_SPEED:.0f} m/s. Scoop blocked.")
+    SCOOP_CLOSED_TIME = "Pilot in coldsleep. Scoop blocked."
+    SCOOP_WATER_FULL = "TODO: the hold is full of raw water: the scoop closed."
 
     UPDATE_PERIOD = 60 * 60
 
@@ -110,6 +119,7 @@ class Ship(Updatable):
         self.laser: Laser = Laser(self)
         self.heat_shield: Ship.HeatShield = self.HeatShield.HeatShieldNone
         self.has_scoop = False
+        self.scoop_open = False  # its view is in the scanner's place (see toggle_scoop). Not saved
         self.has_solar_panels = False
         self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
@@ -128,6 +138,71 @@ class Ship(Updatable):
         self.position.y = Ship.HEIGHT
         self.position.z = central_km2.latitude + 500
         return self
+    # endregion
+
+    # region Scoop
+    def scoop_speed(self) -> float:
+        """Speed relative to the fixed object, in m/s: the ground while bound, else the body of the velocity reference
+        frame (Navigation.velocity_reference_frame)."""
+        return (self.velocity.as_vector() - self.navigation.velocity_reference_frame()).length()
+
+    def toggle_scoop(self, time_scale: float) -> None:
+        """Opens the scoop's view, or closes it (Numpad 5), each with its notification. Without a scoop installed
+        nothing happens. It opens only at x1 and up to SCOOP_MAX_SPEED; otherwise it stays closed, with only the sound
+        of a refusal for the pilot to learn from."""
+        if not self.has_scoop:
+            return
+        if self.scoop_open:
+            self.scoop_open = False
+            self.notification.set(Ship.SCOOP_CLOSED)
+        elif time_scale > 1 or self.scoop_speed() > Ship.SCOOP_MAX_SPEED:
+            audio.play('mine_refused')
+        else:
+            self.scoop_open = True
+            self.notification.set(Ship.SCOOP_OPENED)
+
+    def collect_raw_water(self, game_seconds: float) -> bool:
+        """SPACE held with the scoop open over an icy world (bound, the ground within SCOOP_RANGE): the hold takes Raw
+        Water at SCOOP_WATER_KG_PER_SECOND, but only while the ship is at rest (`scoop_speed` exactly zero). Returns
+        whether the scoop has SPACE, so that it does not reach the scanner or the laser. A full hold closes the scoop.
+        """
+        from galaxies.rocky_world import RockyWorld
+        from galaxies.world_surface import SurfaceType
+        world = gem.current_environment.fixed_world
+        if not (self.scoop_open and self.is_bound and self.position.y <= Ship.SCOOP_RANGE
+                and isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE):
+            audio.set_loop('scan', False)
+            return False
+        self.laser.cease_fire()
+        hold = self.cargo_hold
+        if hold.free_capacity() < hold.RAW_WATER_WEIGHT:
+            self.scoop_open = False
+            audio.set_loop('scan', False)
+            self.notification.set(Ship.SCOOP_WATER_FULL)
+            return True
+        if self.scoop_speed() != 0.0:
+            audio.set_loop('scan', False)
+            return True
+        audio.set_loop('scan', True)
+        hold.raw_water += min(Ship.SCOOP_WATER_KG_PER_SECOND * game_seconds,
+                              hold.free_capacity() / hold.RAW_WATER_WEIGHT)
+        return True
+
+    def check_scoop(self, time_scale: float) -> None:
+        """Every frame: an open scoop is closed, with a notification, when the time is compressed or the ship is faster
+        than SCOOP_MAX_SPEED: the hole in the hull would be open to what comes at it. As with any notification, the
+        compression goes back to the minimum. One that is no longer installed closes silently (it was given back at an
+        outpost)."""
+        if not self.scoop_open:
+            return
+        if not self.has_scoop:
+            self.scoop_open = False
+        elif time_scale > 1:
+            self.scoop_open = False
+            self.notification.set(Ship.SCOOP_CLOSED_TIME)
+        elif self.scoop_speed() > Ship.SCOOP_MAX_SPEED:
+            self.scoop_open = False
+            self.notification.set(Ship.SCOOP_CLOSED_FAST)
     # endregion
 
     # region Updating

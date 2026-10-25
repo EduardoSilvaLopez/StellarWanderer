@@ -7,7 +7,8 @@ frame to the next (see SUN_TOLERANCE_DEGREES). Graphics reads the rocks' tempera
 seed; Galaxies knows nothing about this module.
 
 Used by `Rocks.draw`, which `OpenGLGui.draw` gives the visible Km2s (`RockBatches.visible_km2s`), and only while the
-ship is under MAX_DEPTH and does not outrun the rocks (`Navigation.outruns_rocks`).
+ship is under MAX_DEPTH and does not outrun the rocks (`Navigation.outruns_rocks`); and by the scoop's view (see
+ScoopView), with the nearest of those Km2s.
 
 A batch is built on first use (about 5 ms) and rebuilt only when the Km2's rocks change: when one melts, or is given an
 adjective. A frame builds batches, the nearest Km2s to the player first, until BUILD_BUDGET_SECONDS has passed (always
@@ -20,7 +21,7 @@ show (VISIBLE_TOP_SHARE).
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
 import math
 import time
 import weakref
@@ -104,10 +105,10 @@ class RockBatch:
         self.face_colours: np.ndarray = colours * (1.0 - down)[..., None]
         self.glow: np.ndarray = np.zeros((count, 3), dtype=np.int32)
         self._was_hot: List[bool] = [False] * count
-        # The last colours computed, the sun they were computed for, and whether a glow has changed since.
-        self._cached_colours: Optional[np.ndarray] = None
-        self._cached_sun: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-        self._glow_changed: bool = False
+        # The last colours computed for the sun and for the scoop's lamps (SurfaceLight.lamp): the colours, the light
+        # they were computed for, and the glow version they have. The glow version rises when a glow changes.
+        self._cached: Dict[bool, Tuple[np.ndarray, Tuple[float, float, float], int]] = {}
+        self._glow_version: int = 0
 
     def _rocks_of(self, km2: Km2) -> Tuple[Rock, ...]:
         return tuple(rock for rock in km2.rocks if bool(rock.adjective) == self.special)
@@ -126,21 +127,21 @@ class RockBatch:
                 glow = [max(0, int(now) - int(start)) for now, start in zip(rock.color, rock.initial_color)]
                 if glow != self.glow[index].tolist():
                     self.glow[index] = glow
-                    self._glow_changed = True
+                    self._glow_version += 1
                 self._was_hot[index] = hot
 
     def colours(self, light: SurfaceLight) -> np.ndarray:
         """Per-vertex colours (uint8, one per vertex), recomputed only when the sun has moved more than
-        SUN_TOLERANCE_DEGREES or a glow has changed (call `_refresh_glow` first); otherwise the same array again."""
+        SUN_TOLERANCE_DEGREES or a glow has changed (call `_refresh_glow` first); otherwise the same array again. The
+        scoop's lamps (`light.lamp`) have colours of their own, so the two views do not make each other recompute."""
         sun = (light.sun.x, light.sun.y, light.sun.z)
-        if self._cached_colours is not None and not self._glow_changed:
-            cached = self._cached_sun
-            if sun[0] * cached[0] + sun[1] * cached[1] + sun[2] * cached[2] >= _SUN_TOLERANCE_COS:
-                return self._cached_colours
-        self._cached_colours = self._compute_colours(sun)
-        self._cached_sun = sun
-        self._glow_changed = False
-        return self._cached_colours
+        cached = self._cached.get(light.lamp)
+        if cached is not None and cached[2] == self._glow_version:
+            if sun[0] * cached[1][0] + sun[1] * cached[1][1] + sun[2] * cached[1][2] >= _SUN_TOLERANCE_COS:
+                return cached[0]
+        colours = self._compute_colours(sun)
+        self._cached[light.lamp] = (colours, sun, self._glow_version)
+        return colours
 
     def _compute_colours(self, sun_direction: Tuple[float, float, float]) -> np.ndarray:
         """Each face lit by the sun from its own normal, as in SurfaceLight.brightness, then the glow added, so

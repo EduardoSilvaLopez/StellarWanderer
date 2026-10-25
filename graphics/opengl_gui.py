@@ -29,6 +29,8 @@ from .ore_mines import OreMines
 from .outposts import Outposts
 from .laser import Laser
 from .surface_light import SurfaceLight
+from .scoop_view import ScoopView
+from .instruments.scanner import Scanner
 
 if TYPE_CHECKING:
     from galaxies.people.player import Player
@@ -48,7 +50,10 @@ class OpenGLGui:
     down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
     (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at
     about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame
-    `image.tostring`."""
+    `image.tostring`.
+
+    With the scoop open (Ship.scoop_open) the cockpit leaves the scanner's square empty and the scoop's view is drawn
+    over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes."""
 
     def __init__(self) -> None:
         self.world_surface: Optional[pygame.Surface] = None
@@ -139,22 +144,26 @@ class OpenGLGui:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
-        if not ship.is_bound:
-            Asteroids.draw(width, height, ship, environment)
+        sightings = [] if ship.is_bound else Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
         # Nothing is seen beyond MAX_DEPTH, so above it there is no ground and no rocks to draw; and a ship that outruns
         # the rocks (see Navigation.outruns_rocks) sees none either.
+        km2s, outposts = None, []  # None: no rocks are drawn
         if light is not None and ship.position.y <= MAX_DEPTH and not ship.navigation.outruns_rocks:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
             ore_fields = [field for km2 in km2s for field in km2.ore_fields + km2.external_fields]
+            outposts = self._outposts(environment, ship)
             Rocks.draw(
                 width, height, ship, km2s, ore_fields, [mine for field in ore_fields for mine in field.mines],
-                self._outposts(environment, ship), light, environment.date_time,
+                outposts, light, environment.date_time,
             )
         frame_watch.mark('surface')
         Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture)
+        if Scanner.scoop_rect is not None:  # the cockpit has just left the scanner's square empty for it
+            ScoopView.draw(Scanner.scoop_rect, (width, height), ship, environment, km2s, outposts, light, sightings)
+            frame_watch.mark('scoop')
         if top_layer is not None:
             self._draw_texture(top_layer, self.dialog_texture)
 

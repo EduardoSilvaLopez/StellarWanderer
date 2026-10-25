@@ -28,6 +28,10 @@ TEMPERATURE_COLORS = ((0, 0, 0), (48, 0, 0), (48, 8, 48), (24, 24, 64), (32, 32,
 class Scanner:
     """Draw a square scanner readout showing targeted rock, ore mine or outpost."""
 
+    # Where the square is while the scoop is open (Ship.scoop_open), else None: the scoop's view (ScoopView) is drawn
+    # there by OpenGLGui, over the cockpit.
+    scoop_rect: Optional[pygame.Rect] = None
+
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, title_top: int, bottom: int,
              mfd_right: int) -> None:
@@ -38,7 +42,8 @@ class Scanner:
         fill the square but kept at the same relative orientation and color
         the player sees ahead. If somehow several are set, an outpost comes first, then a rock.
 
-        A scanned outpost is titled SCANNER.
+        A scanned outpost is titled SCANNER. With the scoop open the square is left empty, titled SCOOP: its view is
+        drawn over it (`scoop_rect`).
 
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
@@ -66,6 +71,12 @@ class Scanner:
 
         bevel_depth = bezel_depth(h)
         draw_beveled_panel(surface, rect, depth=bevel_depth)
+
+        Scanner.scoop_rect = rect if ship.scoop_open else None
+        if ship.scoop_open:
+            title = label_font.render('SCOOP', True, ACCENT)
+            surface.blit(title, title.get_rect(midtop=(rect.centerx, title_top)))
+            return
 
         rock = ship.scanner.targeted_rock
         mine = ship.scanner.targeted_mine

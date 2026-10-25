@@ -9,10 +9,12 @@ Controls:
     Numpad 4/6 yaw left/right
     Q/E        roll left/right
     S          brake (linear and rotational)
-    SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); on a targeted
+    SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); with the scoop
+               open over an icy world, at rest, the scoop takes raw water instead; on a targeted
                outpost, enter it (the ship must be landed): a screen over the whole window, the other state of the
                game, where it goes on; its Leave button leaves it
     M          place mine
+    Keypad 5   open or close the scoop's view in the scanner's place (with a scoop installed, at x1, up to 100 m/s)
     O          show or hide the orbit of the targeted body
     Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside an outpost; Esc
                again resumes. Game time is paused while a dialog is open.
@@ -166,6 +168,21 @@ def sync_outpost_screen(
         outpost_screen = OutpostScreenDialog(inside)
     gui.full_screen_source = None if outpost_screen is None else partial(draw_outpost_view, outpost_screen, fonts)
     return outpost_screen
+
+
+def open_knowledge(
+        pressed: str, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
+        ) -> Tuple[bool, pygame.Surface]:
+    """The dialog of a knowledge button (graphics/instruments/cockpit_buttons.py): the missions, else the known systems,
+    the known people or the ship. Returns (keep running, window)."""
+    if pressed == MISSIONS:
+        return manage_missions(screen, gui, fonts, clock)
+    if pressed == SHIP:
+        dialog = ShipSpecificationsDialog(player_module.current_player.ship)
+    else:
+        dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
+    result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
+    return result[0] != 'exit', screen
 
 
 def show_pending_messages(
@@ -390,6 +407,10 @@ def main() -> None:
                 if event.type == pygame.VIDEORESIZE:
                     screen = resize_window(event.w, event.h)
                 elif (result := outpost_screen.handle_event(event)) is not None:
+                    if result[0] == 'knowledge':  # a knowledge button: its dialog, then the screen goes on
+                        keep_running, screen = open_knowledge(result[1], screen, gui, fonts, clock)
+                        running = running and keep_running
+                        continue
                     running = result[0] != 'exit'
                     if result[0] == 'close':  # the Leave button: the pilot is back in the cockpit, which takes time too
                         leaving_seconds = outpost_screen.outpost.leave(player.ship, gem.current_environment.date_time)
@@ -409,6 +430,8 @@ def main() -> None:
                         player.enter_outpost(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                         audio.play(OutpostScreenDialog.OPEN_SOUND)
+                elif event.key == pygame.K_KP_5:
+                    player.ship.toggle_scoop(player.time_scale)
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
                     OrbitPath.shown = not OrbitPath.shown
                 # cycles the target (only outside every fixed zone); Shift+Tab goes back
@@ -420,15 +443,7 @@ def main() -> None:
                     player.ship.place_mine()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
-                if pressed == MISSIONS:
-                    running, screen = manage_missions(screen, gui, fonts, clock)
-                    continue
-                if pressed == SHIP:
-                    dialog = ShipSpecificationsDialog(player.ship)
-                else:
-                    dialog = KnownSystemsDialog() if pressed == SYSTEMS else KnownPeopleDialog()
-                result, screen = run_modal_dialog(dialog, screen, gui, fonts, clock)
-                running = result[0] != 'exit'
+                running, screen = open_knowledge(pressed, screen, gui, fonts, clock)
             elif event.type == pygame.MOUSEWHEEL:
                 if player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
@@ -510,9 +525,11 @@ def main() -> None:
             or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
         # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
         audio.set_loop('attitude', rotating)
+        ship.check_scoop(player.time_scale)
         ship.scanner.update_target()
         if keys[pygame.K_SPACE]:
-            ship.scanner.activate(delta_game_seconds)
+            if not ship.collect_raw_water(delta_game_seconds):
+                ship.scanner.activate(delta_game_seconds)
         else:
             ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
             if ship.laser.firing:

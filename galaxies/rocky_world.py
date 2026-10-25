@@ -140,7 +140,7 @@ class RockyWorld(World):
         if self.parent_planet is not None and self.parent_planet._is_initial_planet():
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
-            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.66 * my_random.random()
+            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.68 * my_random.random()
 
         # Alterations:
         self.is_altered = False

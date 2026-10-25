@@ -131,6 +131,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "food": 0.0006,
             "mines": 5.0,
             "ore": 0.008,
+            "raw_water": 0.001,
         },
         settlements=[
             ('Jiùjīnshān, Ài', Ethnicity.BLACK),

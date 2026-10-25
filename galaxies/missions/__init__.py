@@ -5,8 +5,10 @@ Importing the package registers every kind, so Mission.deserialize can rebuild a
 
 from .mission import Mission, OPEN, DONE, FAILED
 from .deliver_ore import DeliverOre
+from .deliver_water import DeliverWater
 from .deliver_package import DeliverPackage
 from .scan_asteroid import ScanAsteroid
 from .scan_rock import ScanRock
 
-__all__ = ['Mission', 'OPEN', 'DONE', 'FAILED', 'DeliverOre', 'DeliverPackage', 'ScanAsteroid', 'ScanRock']
+__all__ = ['Mission', 'OPEN', 'DONE', 'FAILED', 'DeliverOre', 'DeliverWater', 'DeliverPackage', 'ScanAsteroid',
+           'ScanRock']

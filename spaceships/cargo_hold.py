@@ -21,6 +21,7 @@ class CargoHold(ABC):
     WATER_WEIGHT = 2.0
     FOOD_WEIGHT = 1.0
     ORE_WEIGHT = 1.0
+    RAW_WATER_WEIGHT = 1.0  # per Kg: the room a Kg of raw water takes, as ore does
     MINE_WEIGHT = 200.0
 
     INITIAL_MINES = 2
@@ -47,6 +48,7 @@ class CargoHold(ABC):
         self.food: float = self.food_max
         self.mines: int = self.INITIAL_MINES
         self.ore: int = 0
+        self.raw_water: float = 0.0  # Kg, scooped from an icy world (see DeliverWater); not a supply of the outposts
 
     # region Configuration
     @property
@@ -70,6 +72,7 @@ class CargoHold(ABC):
         its stock instead. The capacity is not stock, so nothing refills it."""
         self.mines = old.mines
         self.ore = old.ore
+        self.raw_water = old.raw_water
         self.air = self.air_max if self.air_max != old.air_max else old.air
         self.water = self.water_max if self.water_max != old.water_max else old.water
         self.food = self.food_max if self.food_max != old.food_max else old.food
@@ -84,6 +87,7 @@ class CargoHold(ABC):
         result.food = src['food']
         result.mines = src['mines']
         result.ore = src['ore']
+        result.raw_water = src['raw_water']
         return result
 
     def serialize(self) -> dict:
@@ -94,12 +98,13 @@ class CargoHold(ABC):
             'food': self.food,
             'mines': self.mines,
             'ore': self.ore,
+            'raw_water': self.raw_water,
         }
 
     def used_capacity(self) -> float:
-        cargo = [self.air, self.water, self.food, self.mines, self.ore]
+        cargo = [self.air, self.water, self.food, self.mines, self.ore, self.raw_water]
         weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.MINE_WEIGHT,
-                   CargoHold.ORE_WEIGHT]
+                   CargoHold.ORE_WEIGHT, CargoHold.RAW_WATER_WEIGHT]
         return sum(x*y for x, y in zip(cargo, weights))
 
     def free_capacity(self) -> float:

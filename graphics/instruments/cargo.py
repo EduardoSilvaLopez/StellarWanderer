@@ -41,11 +41,12 @@ class Cargo:
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
-        for element in ('air', 'water', 'food', 'mines', 'ore'):  # the capacity is shown above, the rest is not cargo
+        # the capacity is shown above, the rest is not cargo
+        for element in ('air', 'water', 'food', 'mines', 'ore', 'raw_water'):
             quantity = getattr(ship.cargo_hold, element)
             # Red at or below the warning level, as the ship's notice says.
             warning = element in warning_days and quantity <= warning_days[element]
             colour = BINDING_MARK_RED if warning else ACCENT
-            line = label_font.render(f'{element.upper()}: {format_quantity(quantity)}', True, colour)
+            line = label_font.render(f'{element.replace("_", " ").upper()}: {format_quantity(quantity)}', True, colour)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

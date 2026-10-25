@@ -90,7 +90,15 @@ class Attitude:
 
     def camera_matrix(self) -> list:
         """Column-major 4x4 for glMultMatrixf, mapping the ship's axes to OpenGL's eye axes."""
-        rows = (self.right, self.up, -self.forward)
+        return Attitude._matrix((self.right, self.up, -self.forward))
+
+    def down_camera_matrix(self) -> list:
+        """The same, for the camera of the scoop, under the hull: it looks along the ship's down, and what it sees
+        higher in its picture is towards the ship's forward."""
+        return Attitude._matrix((self.right, self.forward, self.up))
+
+    @staticmethod
+    def _matrix(rows: Tuple[Vector3, Vector3, Vector3]) -> list:
         return [
             rows[0][0], rows[1][0], rows[2][0], 0.0,
             rows[0][1], rows[1][1], rows[2][1], 0.0,

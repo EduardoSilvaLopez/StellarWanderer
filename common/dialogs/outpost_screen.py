@@ -7,10 +7,12 @@ drawn over it by the host, shows time passing. Esc is not for the screen: it ope
 over it, as it is over the cockpit. The window is split in two, above the notification bar along the bottom: the
 cockpit's own bar, drawn by the host over the screen (see main.draw_outpost_view).
 On the left, the ship time display (graphics/instruments/clock.py) at the top, then the name of the outpost, and under
-it, smaller, the world, star and political entity it is in, then a radio group of five buttons (Dockmaster, Cargo,
-Missions, Chat, Leave; Missions only from the reputation the board needs, or while a taken mission is open here): one is always selected, and Dockmaster is
-the one selected when the screen opens, unless the ship is ready (Outpost.is_ready): then it is Cargo. The selected one is filled with the accent colour. What it does is what the
-right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
+it, smaller, the world, star and political entity it is in, then the knowledge buttons in one row (the cockpit's, in
+the same order: systems, people, ship, missions; a click opens the same dialog, see main.open_knowledge), then a radio
+group of five buttons (Dockmaster, Cargo, Missions, Chat, Leave; Missions only from the reputation the board needs, or
+while a taken mission is open here): one is always selected, and Dockmaster is the one selected when the screen opens,
+unless the ship is ready (Outpost.is_ready): then it is Cargo. The selected one is filled with the accent colour. What
+it does is what the right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
 missions (OutpostMissions,
 drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
 middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the area on
@@ -23,8 +25,10 @@ The conversation of the selected option shows its messages here, not in a dialog
 `show` of the conversation (see Conversation). The title and the text of the message are drawn in a dark panel under
 the dockmaster. Its answers are translucent rectangles, the last at the bottom of the right side, tinted while the mouse
 is over one; they are answered with the mouse, the number keys or Enter. A message asked while another is shown waits
-its turn. While a message waits for its answer the options are not selectable (Esc still opens the starting dialog),
-so the conversation is answered and its effects happen. Selecting another option, or leaving the screen, closes the
+its turn. While a message with more than one answer waits for its answer, the options and the knowledge buttons are not
+selectable (Esc still opens the starting dialog), so the conversation is answered and its effects happen. A message with
+one answer only informs: the options stay selectable, and a click away closes it without its answer (its conversation
+must then do its work at once, not in the answer). Selecting another option, or leaving the screen, closes the
 conversation.
 """
 
@@ -247,6 +251,7 @@ class OutpostScreenDialog(Dialog):
         self._frame_key: Optional[Tuple[Tuple[int, int], int]] = None
         self.selected: int = 0  # the radio group: exactly one button is selected, Dockmaster at first (Cargo if ready)
         self._button_rects: List[Tuple[int, pygame.Rect]] = []  # the options shown: index and where they were drawn
+        self._knowledge_rects: List[Tuple[str, pygame.Rect]] = []  # the knowledge buttons shown: name and where drawn
         # one picture per area, chosen from the outpost's seed among the files named outpost.<area>.*
         self._area_pictures: Dict[str, Optional[str]] = {}
         for area, prefix in AREA_PICTURE_PREFIXES.items():
@@ -340,7 +345,8 @@ class OutpostScreenDialog(Dialog):
         right = pygame.Rect(left_width, 0, width - left_width, height)
 
         surface.blit(self._left_background(left.size), left)
-        buttons_top = self._draw_name(surface, left, height)
+        knowledge_top = self._draw_name(surface, left, height)
+        buttons_top = self._draw_knowledge(surface, left, height, knowledge_top)
         self._draw_buttons(surface, left, height, buttons_top)
 
         picture = self._faded_picture(right.size)
@@ -736,6 +742,23 @@ class OutpostScreenDialog(Dialog):
             y = _draw_wrapped(surface, x, width, y, detail, body_font(max(16, height // 40)), TEXT_COLOR)
         return y + margin
 
+    def _draw_knowledge(self, surface: pygame.Surface, left: pygame.Rect, height: int, top: int) -> int:
+        """The knowledge buttons (KNOWLEDGE_ORDER) in one row across the left block, from `top`, each square and as wide
+        as its share of the row; Missions only where the cockpit shows it (shows_missions). Returns the y under the row."""
+        from graphics.instruments.cockpit_buttons import KNOWLEDGE_ORDER, MISSIONS, CockpitButtons, shows_missions
+        # local: the instruments import the player, which imports the dialogs
+        margin = _margin(height)
+        gap = _button_size(height)[1]
+        names = [name for name in KNOWLEDGE_ORDER if name != MISSIONS or shows_missions(self.ship.owner)]
+        size = (left.width - 2 * margin - gap * (len(names) - 1)) // len(names)
+        mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
+        self._knowledge_rects = []
+        for i, name in enumerate(names):
+            rect = pygame.Rect(left.left + margin + i * (size + gap), top, size, size)
+            CockpitButtons.draw_button(surface, rect, name, mouse is not None and rect.collidepoint(mouse))
+            self._knowledge_rects.append((name, rect))
+        return top + size + margin
+
     @property
     def speaker(self) -> Optional[Person]:
         """Who is shown at the top: the coordinator while the Leave is being decided, else the dockmaster."""
@@ -1006,6 +1029,11 @@ class OutpostScreenDialog(Dialog):
         else:
             self._open_option(False)
 
+    def _blocks_options(self) -> bool:
+        """Whether a message waits for its answer and stops the options and the knowledge buttons: only one with more
+        than one answer does. A message with one answer is information (see the module docstring)."""
+        return self._shown is not None and len(self._shown[0].buttons) > 1
+
     def _shows_cargo(self) -> bool:
         """Cargo is the view while it is selected and no message is shown: a message (the question of leaving, which
         any option can ask) takes the right side in its place."""
@@ -1061,11 +1089,11 @@ class OutpostScreenDialog(Dialog):
         return any(results)
 
     def _focus_targets(self) -> List[tuple]:
-        """What Tab goes over, in order: the options (Leave among them) unless a message waits for its answer, the −,
-        +, and ++ of each cargo row while Cargo is selected, the people listed while Chat is selected, and the answers
-        of the shown message. Then round again."""
+        """What Tab goes over, in order: the options (Leave among them) unless a message with more than one answer waits
+        (_blocks_options), the −, +, and ++ of each cargo row while Cargo is selected, the people listed while Chat is
+        selected, and the answers of the shown message. Then round again."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
-        targets: List[tuple] = [] if self._shown is not None else \
+        targets: List[tuple] = [] if self._blocks_options() else \
             [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
         if self._shows_cargo():
             mines = next(k for k, supply in enumerate(SUPPLIES) if supply.key == "mines")
@@ -1138,6 +1166,7 @@ class OutpostScreenDialog(Dialog):
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
         if event.type == pygame.QUIT:
             return ('exit', None)
+        pressed: Optional[str] = None  # a knowledge button clicked: its name, the host opens its dialog
         if self._shown is not None and self._answer_event(event):  # noqa: SIM114
             pass
         elif self._shows_missions() and self._missions_event(event):
@@ -1151,7 +1180,7 @@ class OutpostScreenDialog(Dialog):
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) \
                 and self._open_combo is not None:
             self._cycle_combo(-1 if event.key == pygame.K_UP else 1)
-        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and self._shown is None:
+        elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and not self._blocks_options():
             self._focus_visible = True
             index = self.selected
             while True:  # Up and Down select the options: passing over Leave must not leave
@@ -1168,9 +1197,11 @@ class OutpostScreenDialog(Dialog):
                     elif fill.collidepoint(event.pos):
                         self._fill_cargo(k)
                 self._attachment_press(event.pos)
-            for index, rect in self._button_rects:  # no option while a message waits for its answer
-                if self._shown is None and rect.collidepoint(event.pos):
+            for index, rect in self._button_rects:  # no option while a message with more than one answer waits
+                if not self._blocks_options() and rect.collidepoint(event.pos):
                     self._select(index)
+            if not self._blocks_options():  # the knowledge buttons wait for such a message too, as the options do
+                pressed = next((name for name, rect in self._knowledge_rects if rect.collidepoint(event.pos)), None)
         elif event.type == pygame.MOUSEMOTION:
             self._focus_visible = False  # the mouse is the one in use
         self._after_conversation()
@@ -1178,4 +1209,6 @@ class OutpostScreenDialog(Dialog):
         if self._leaving:
             self._close_option()
             return ('close', None)
+        if pressed is not None:
+            return ('knowledge', pressed)
         return None

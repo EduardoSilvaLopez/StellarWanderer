@@ -52,6 +52,7 @@ class Outpost(Updatable):
     CHARGE_PER_SECOND = 5e7 # Wh.
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
+    UNLOAD_RAW_WATER_PER_SECOND = 0.5  # Kg a second, a separate rate for caution: the same number for now
     MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
     READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
@@ -79,7 +80,7 @@ class Outpost(Updatable):
         # unloading. It gets saved / loaded to restart on load if needed.
         self.handling_due_at: Optional[datetime] = None
         self.handling_checked_at: Optional[datetime] = None
-        self.handling_includes_ore: bool = False
+        self.handling_unloads: bool = False  # the ore and the raw water of the hold are unloaded by the handling
         # local: the board needs the player, which needs missions
         from galaxies.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this outpost is in memory
@@ -100,7 +101,7 @@ class Outpost(Updatable):
                     self.handling_due_at = datetime.strptime(self.saved_alterations['handling_due_at'], DATE_FORMAT)
                     self.handling_checked_at = \
                         datetime.strptime(self.saved_alterations['handling_checked_at'], DATE_FORMAT)
-                    self.handling_includes_ore = self.saved_alterations['handling_includes_ore']
+                    self.handling_unloads = self.saved_alterations['handling_unloads']
                 self.set_altered()
         self._log_generation()
 
@@ -242,27 +243,36 @@ class Outpost(Updatable):
         time_to_repair = (Outpost.MAX_MAINTENANCE - ship.maintenance) / Outpost.MAINTENANCE_PER_SECOND
         if time_to_repair < 0:
             time_to_repair = 0.0
-        time_to_unload = \
-            (ship.cargo_hold.ore) / Outpost.UNLOAD_ORE_PER_SECOND \
-            if self.handling_includes_ore else 0
+        time_to_unload = (ship.cargo_hold.ore / Outpost.UNLOAD_ORE_PER_SECOND
+                          + ship.cargo_hold.raw_water / Outpost.UNLOAD_RAW_WATER_PER_SECOND) \
+            if self.handling_unloads else 0
         return int(max(time_to_charge, time_to_repair + time_to_unload)) # Dockmaster is alone, repairs or unloads.
 
+    @staticmethod
+    def unloading_text(ship: Ship) -> str:
+        """What the Dockmaster would unload from the hold, as he asks for it: 'the ore', 'the raw water', both, or ''
+        when there is nothing of either."""
+        cargo = (('the ore', ship.cargo_hold.ore), ('the raw water', ship.cargo_hold.raw_water))
+        names = [name for name, amount in cargo if amount > 0]
+        return ' and '.join(names)
+
     def is_ready(self, ship: Ship) -> bool:
-        """Whether the Dockmaster has nothing to offer `ship`: no handling is going on, no ore to unload, and its energy
-        and maintenance are within READY_MARGIN of full (energy_max, MAX_MAINTENANCE). A handling going on is not
-        judged: it still brings the ship to full."""
+        """Whether the Dockmaster has nothing to offer `ship`: no handling is going on, no ore or raw water to unload,
+        and its energy and maintenance are within READY_MARGIN of full (energy_max, MAX_MAINTENANCE). A handling going
+        on is not judged: it still brings the ship to full."""
         full = 1 - self.READY_MARGIN
-        return (self.handling_due_at is None and ship.cargo_hold.ore == 0
+        return (self.handling_due_at is None and ship.cargo_hold.ore == 0 and ship.cargo_hold.raw_water == 0
                 and ship.energy >= ship.energy_max * full and ship.maintenance >= self.MAX_MAINTENANCE * full)
 
-    def start_handle(self, ship: Ship) -> Outpost:
+    def start_handle(self, ship: Ship, extra_seconds: float = 0.0) -> Outpost:
         """The outpost starts working on the pilot's `ship`, from the state it is in now: it will be ready after
-        get_time_to_handle. A handle already going is first brought up to date, then restarted. The ship
+        get_time_to_handle, and `extra_seconds` more (work the ship's hold is about to lose, such as raw water
+        unloaded at delivery). A handle already going is first brought up to date, then restarted. The ship
         is near, so `prepare` has put the outpost in the update queue, which wakes it when the handle is due. The dates
         are saved with the outpost."""
         now = gem.current_environment.date_time
         self.update_handle(ship, now)
-        self.handling_due_at = now + timedelta(seconds=self.get_time_to_handle(ship))
+        self.handling_due_at = now + timedelta(seconds=self.get_time_to_handle(ship) + extra_seconds)
         self.handling_checked_at = now
         return self.set_altered()
 
@@ -287,10 +297,16 @@ class Outpost(Updatable):
                     ship.maintenance += maintenance_change
                 gpp.current_player.those_who_share.adjust_reputation_by_supply("maintenance", -maintenance_change)
 
-            if self.handling_includes_ore and ship.cargo_hold.ore > 0:
-                ore_change = min (ship.cargo_hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
-                ship.cargo_hold.ore -= ore_change
+            if self.handling_unloads:
+                # The dockmaster unloads the ore first, then the raw water, with the time the ore did not take.
+                hold = ship.cargo_hold
+                ore_change = min(hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
+                hold.ore -= ore_change
+                water_time = seconds - ore_change / self.UNLOAD_ORE_PER_SECOND
+                water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * water_time)
+                hold.raw_water -= water_change
                 gpp.current_player.those_who_share.adjust_reputation_by_supply("ore", ore_change)
+                gpp.current_player.those_who_share.adjust_reputation_by_supply("raw_water", water_change)
 
             self.handling_checked_at = until
         return self
@@ -299,7 +315,7 @@ class Outpost(Updatable):
         self.update_handle(ship, now)
         self.handling_due_at = None
         self.handling_checked_at = None
-        self.handling_includes_ore = False
+        self.handling_unloads = False
         return self
 
     def leave(self, ship: Ship, now: datetime) -> int:
@@ -352,7 +368,7 @@ class Outpost(Updatable):
         if self.handling_due_at is not None:
             alterations['handling_due_at'] = self.handling_due_at.strftime(DATE_FORMAT)
             alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)
-            alterations['handling_includes_ore'] = self.handling_includes_ore
+            alterations['handling_unloads'] = self.handling_unloads
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime(DATE_FORMAT)
             # Nobody on duty yet when the ship has not been near since the load: the saved one is kept.

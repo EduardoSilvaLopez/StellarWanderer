@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
 @register
 class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
@@ -37,7 +36,7 @@ class ScanAsteroid(Mission):
     DEADLINE_DAYS_MIN = 45
     DEADLINE_DAYS_MAX = 90
     TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.01
-    BASIC_REWARD = 35.0
+    BASIC_REWARD = 50.0 # Only if completed at time of creation.
     REPUTATION_BELT_MEAN_DISTANCE = 4.0e11  # Earh belt taken as reference, for the reward.
     FAILURE_PENALTY = -2.0  # Those missions are hard and dangerous. There is understanding.
     FREE_LIVING_CHANCE = 0.10  # Of the offers in a system with a belt: the target belongs to no belt
@@ -206,8 +205,11 @@ class ScanAsteroid(Mission):
         return f"You have not scanned the asteroid {self.asteroid().name} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = ScanAsteroid.BASIC_REWARD * self.asteroid().semi_major_axis \
-            / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
+        import game_environment as gem
+        reputation_change: float = ScanAsteroid.BASIC_REWARD
+        reputation_change *= self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
+        reputation_change *= (gem.current_environment.date_time - self.created_at).total_seconds() \
+                            / (self.deadline - self.created_at).total_seconds()
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: asteroid scanned. "
                     f"Reputation +{reputation_change} = {player.those_who_share.reputation}"
