@@ -121,6 +121,8 @@ class Asteroid(Body):
             World.GRAVITATIONAL_CONSTANT * stellar_system.star.mass / semi_major_axis ** 3)
         self.name: str = self._generate_name(my_random)
         self.scan_progress: float = 0.0  # 0 to 1, the share of the scan done; saved with the asteroid (get_alterations)
+        # 0 to 1, the share of a whole scoop done; not saved (see Ship.collect_raw_water)
+        self.scoop_progress: float = 0.0
 
     @property
     def stellar_system(self) -> StellarSystem:
@@ -165,6 +167,18 @@ class Asteroid(Body):
         if self.parent_belt is not None:
             return {'belt': int(self.parent_belt.number), 'key': str(self.key), 'seed': None}
         return {'belt': None, 'key': None, 'seed': self.offer_seed}
+
+    @property
+    def mass(self) -> float:
+        """The mass, in Kg: the density of its class times the volume of its sphere."""
+        return class_of(self.seed).density * 4.0 / 3.0 * math.pi * self.radius ** 3
+
+    def consume(self) -> None:
+        """The scoop has taken the whole asteroid: it is gone from its belt or its system, for good."""
+        if self.parent_belt is not None:
+            self.parent_belt.consume(self.key)
+        else:
+            self.stellar_system.consume_free_asteroid(self.offer_seed)
 
     def advance_scan(self, game_seconds: float) -> bool:
         """The beam has worked for `game_seconds` on it: the scan advances, never back. True when it has just
@@ -244,7 +258,7 @@ class Asteroid(Body):
         star = self.stellar_system.star
         asteroid_class = class_of(self.seed)
         diameter = 2.0 * self.radius
-        mass = asteroid_class.density * 4.0 / 3.0 * math.pi * self.radius ** 3
+        mass = self.mass
         gravity = World.GRAVITATIONAL_CONSTANT * mass / self.radius ** 2
         a, e = self.semi_major_axis, self.eccentricity
         periapsis, apoapsis = a * (1.0 - e), a * (1.0 + e)

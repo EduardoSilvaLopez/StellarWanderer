@@ -108,7 +108,6 @@ VIEW_VERTICAL_FOV_RADIANS = math.radians(40)  # was 60; narrowed ~1/3 to better 
 NEAR_CLIP = 0.5  # metres
 MAX_DEPTH = 2000  # metres
 # The scoop's view (graphics/scoop_view.py): the camera under the hull, and how far its lamps reach.
-SCOOP_FOV_DEGREES = 80.0  # vertical, and horizontal: the view is a square
 # The local star (graphics/local_star.py): a limb-darkened disc and its corona.
 STAR_LIMB_DARKENING = 0.5  # u in I(mu) = 1 - u (1 - mu): the rim's brightness is 1 - u of the centre's
 STAR_CORE_WHITENESS = 0.6  # the centre of the disc: the star's colour mixed this much towards white

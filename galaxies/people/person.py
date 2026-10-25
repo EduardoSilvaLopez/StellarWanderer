@@ -277,7 +277,7 @@ class Person:
         logger.info(
             f"PERSON UPDATE: {self.get_full_name()}"
             f"\n{description}"
-            f"\n - Sympathy: {self.sympathy100}" # Not told to player.
+            f"- Sympathy: {self.sympathy100}" # Not told to player.
             )
         return self
 

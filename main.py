@@ -532,6 +532,7 @@ def main() -> None:
                 ship.scanner.activate(delta_game_seconds)
         else:
             ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
+            audio.set_loop('scoop', False)
             if ship.laser.firing:
                 ship.scanner.deactivate()
 

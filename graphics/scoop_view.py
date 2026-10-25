@@ -8,7 +8,6 @@ from OpenGL import GL
 
 from .asteroids import Asteroids
 from spaceships.ship import Ship
-from .constants import SCOOP_FOV_DEGREES
 from .rocks import Rocks
 
 if TYPE_CHECKING:
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from .asteroids import Sighting
     from .surface_light import SurfaceLight
 
+SCOOP_FOV_DEGREES = 2.0 * Ship.SCOOP_VIEW_HALF_ANGLE  # vertical, and horizontal: the view is a square
 LAMP_REACH = 0.6  # the spread of each corner lamp's light (a Gaussian's sigma), in half sides of the square
 LAMP_FLOOR = 0.5  # the share of the light that reaches the middle of the square whatever the lamps do
 

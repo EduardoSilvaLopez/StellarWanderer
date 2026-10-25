@@ -57,13 +57,15 @@ class Ship(Updatable):
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
     SCOOP_MAX_SPEED = 100.0  # m/s relative to the fixed object (the ground while bound): above it the scoop is closed
     SCOOP_RANGE = 100.0  # metres: the ground the scoop shows, and what it takes from it (graphics/scoop_view.py)
-    SCOOP_WATER_KG_PER_SECOND = 10.0  # Raw water into the hold while the scoop takes it: 2000 Kg in about 3 minutes
+    SCOOP_WATER_KG_PER_SECOND = 100.0  # Kg per second scooped
+    SCOOP_VIEW_HALF_ANGLE = 40.0  # degrees from straight down: the scoop's view is a square of twice this (scoop_view)
     # The scoop's notifications. TODO texts: placeholders that say what each one is for, to be flavoured.
     SCOOP_OPENED = "Scoop opened. Hull integrity compromised."
     SCOOP_CLOSED = "Scoop closed. Hull integrity restored."
     SCOOP_CLOSED_FAST = (f"Speed over {SCOOP_MAX_SPEED:.0f} m/s. Scoop blocked.")
     SCOOP_CLOSED_TIME = "Pilot in coldsleep. Scoop blocked."
-    SCOOP_WATER_FULL = "TODO: the hold is full of raw water: the scoop closed."
+    SCOOP_WATER_FULL = "Hold full. Closing scoop."
+    SCOOP_ASTEROID_TAKEN = "Asteroid consumed."
 
     UPDATE_PERIOD = 60 * 60
 
@@ -162,31 +164,77 @@ class Ship(Updatable):
             self.notification.set(Ship.SCOOP_OPENED)
 
     def collect_raw_water(self, game_seconds: float) -> bool:
-        """SPACE held with the scoop open over an icy world (bound, the ground within SCOOP_RANGE): the hold takes Raw
-        Water at SCOOP_WATER_KG_PER_SECOND, but only while the ship is at rest (`scoop_speed` exactly zero). Returns
-        whether the scoop has SPACE, so that it does not reach the scanner or the laser. A full hold closes the scoop.
-        """
+        """SPACE held with the scoop open, over an icy world (bound, the ground within SCOOP_RANGE) or over the targeted
+        asteroid (unbound, in the straight-down view within SCOOP_RANGE of its surface). The hold takes Raw Water at
+        SCOOP_WATER_KG_PER_SECOND, but only while the ship is at rest relative to that object (`scoop_speed` exactly
+        zero). An asteroid whose whole mass fits the hold's free room is taken whole: its water is stored when the scoop
+        has taken all of it, and it is gone (no scan mission may need it). A bigger one stays, and the water fills the
+        hold as from ice. Returns whether the scoop has SPACE, so that it does not reach the scanner or the laser. A
+        full hold closes the scoop."""
+        from galaxies.asteroid import Asteroid
         from galaxies.rocky_world import RockyWorld
         from galaxies.world_surface import SurfaceType
-        world = gem.current_environment.fixed_world
-        if not (self.scoop_open and self.is_bound and self.position.y <= Ship.SCOOP_RANGE
-                and isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE):
-            audio.set_loop('scan', False)
+        environment = gem.current_environment
+        asteroid: Optional[Asteroid] = None
+        if not self.scoop_open:
+            audio.set_loop('scoop', False)
             return False
+        if self.is_bound:
+            world = environment.fixed_world
+            if not (self.position.y <= Ship.SCOOP_RANGE and isinstance(world, RockyWorld)
+                    and world.surface_type is SurfaceType.ICE):
+                audio.set_loop('scoop', False)
+                return False
+        else:
+            asteroid = environment.targeted_body
+            if not (isinstance(asteroid, Asteroid) and self._in_scoop_view(asteroid)):
+                audio.set_loop('scoop', False)
+                return False
         self.laser.cease_fire()
         hold = self.cargo_hold
         if hold.free_capacity() < hold.RAW_WATER_WEIGHT:
             self.scoop_open = False
-            audio.set_loop('scan', False)
+            audio.set_loop('scoop', False)
             self.notification.set(Ship.SCOOP_WATER_FULL)
             return True
         if self.scoop_speed() != 0.0:
-            audio.set_loop('scan', False)
+            audio.set_loop('scoop', False)
             return True
-        audio.set_loop('scan', True)
+        audio.set_loop('scoop', True)
+        if asteroid is not None and self._fits_whole(asteroid):
+            asteroid.scoop_progress += Ship.SCOOP_WATER_KG_PER_SECOND * game_seconds / asteroid.mass
+            if asteroid.scoop_progress >= 1.0:
+                hold.raw_water += asteroid.mass
+                asteroid.consume()
+                asteroid.scoop_progress = 0.0
+                environment.targeted_body = environment.last_fixed_body
+                self.notification.set(Ship.SCOOP_ASTEROID_TAKEN)
+            return True
+        if asteroid is not None:
+            asteroid.scoop_progress = 0.0
         hold.raw_water += min(Ship.SCOOP_WATER_KG_PER_SECOND * game_seconds,
                               hold.free_capacity() / hold.RAW_WATER_WEIGHT)
         return True
+
+    def _in_scoop_view(self, asteroid: Asteroid) -> bool:
+        """The asteroid is in the scoop's straight-down view: below the ship, within SCOOP_VIEW_HALF_ANGLE of straight
+        down, and its surface within SCOOP_RANGE of the ship."""
+        date = gem.current_environment.date_time
+        relative = asteroid.calculate_stellar_position(date) - self.navigation.stellar_position(date)
+        distance = relative.length()
+        if distance <= 0.0:
+            return False
+        cosine = -relative.dot(self.attitude.up) / distance  # straight down is minus the ship's up
+        return (distance - asteroid.radius <= Ship.SCOOP_RANGE
+                and cosine >= math.cos(math.radians(Ship.SCOOP_VIEW_HALF_ANGLE)))
+
+    def _fits_whole(self, asteroid: Asteroid) -> bool:
+        """The asteroid's whole mass fits the hold's free room, and no open scan mission asks for the asteroid."""
+        from galaxies.missions import OPEN, ScanAsteroid
+        if asteroid.mass > self.cargo_hold.free_capacity():
+            return False
+        return not any(isinstance(mission, ScanAsteroid) and mission.status == OPEN and mission.asteroid() is not None
+                       and mission.asteroid().seed == asteroid.seed for mission in self.owner.missions)
 
     def check_scoop(self, time_scale: float) -> None:
         """Every frame: an open scoop is closed, with a notification, when the time is compressed or the ship is faster

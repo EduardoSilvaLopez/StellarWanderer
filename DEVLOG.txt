@@ -58,18 +58,18 @@ DEVELOPER'S DIARY
   * More full dialogs... now Those-Who-Share :)
   * External mines and ore fields.
   * Generate the jovian planet, astronomically.
+  * Scoop basic functionality.
+  * Extra: "Bring water" mission. Uses the scoop.
+  * Reduce the prize of the asteroid, but not much.
 
 > STARTED:
 
 ### 2026-10-22 (2/11)
 
 Extra time: 126h30' + 1:45 - 3:30 + 5:00  + 6:00 - 7:15 + 10:30 - 13:30 + 15:00 - 
-  * Scoop basic functionality.
-  * Reduce the prize of the asteroid, but not much.
 
 > BACKLOG
 * INTERSTELLAR TRAVEL VIA BASE (50-100)
-  * Extra: "Bring water" mission. Uses the scoop.
   * Base
   * Portal
   * New level brings scoop, solar panels and heat shield. Hide them else.

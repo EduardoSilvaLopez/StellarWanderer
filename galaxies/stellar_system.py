@@ -53,6 +53,15 @@ class StellarSystem:
         self.free_asteroids: dict[int, Asteroid] = {}
         for offer_seed, saved in (self.saved_alterations or {}).get('free_asteroids', {}).items():
             self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed)).apply_alterations(saved)
+        # The free-living asteroids taken whole by a scoop: gone for good (see Asteroid.consume).
+        self.consumed_free: set[int] = {int(offer_seed) for offer_seed in
+                                        (self.saved_alterations or {}).get('consumed_free', [])}
+
+    def consume_free_asteroid(self, offer_seed: int) -> None:
+        """The scoop has taken the free-living asteroid of the offer whole: it is gone, and the system is altered."""
+        self.free_asteroids.pop(offer_seed, None)
+        self.consumed_free.add(offer_seed)
+        self.set_altered()
 
     def forget_free_asteroid(self, offer_seed: int) -> None:
         """Forgets a kept free-living asteroid: it is no longer in the system, and it is not made again."""
@@ -118,14 +127,15 @@ class StellarSystem:
         are shown, and can be targeted and fixed to."""
         # Local: the player imports the missions, which import this package.
         import galaxies.people.player as player_module
-        from galaxies.missions import OPEN, ScanAsteroid
+        from galaxies.missions import OPEN, DeliverWater, ScanAsteroid
         player = player_module.current_player
         if player is None:
             return []
         key = self.get_alterations_key()
-        return [mission.asteroid() for mission in player.missions
-                if isinstance(mission, ScanAsteroid) and mission.status == OPEN
-                and mission.asteroid_site['system'] == key]
+        asteroids = [mission.asteroid() for mission in player.missions
+                     if isinstance(mission, (ScanAsteroid, DeliverWater)) and mission.status == OPEN
+                     and mission.asteroid_site is not None and mission.asteroid_site['system'] == key]
+        return [asteroid for asteroid in asteroids if asteroid is not None]
 
     def asteroid_from_site(self, site: dict) -> Asteroid:
         """The asteroid that `Asteroid.site` describes, in this system: the kept one if it is kept (a belt's relevant
@@ -175,6 +185,8 @@ class StellarSystem:
             if self.free_asteroids:
                 alterations['free_asteroids'] = {str(offer_seed): asteroid.get_alterations()
                                                  for offer_seed, asteroid in self.free_asteroids.items()}
+            if self.consumed_free:
+                alterations['consumed_free'] = sorted(self.consumed_free)
         if not alterations:
             return None
         return alterations

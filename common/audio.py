@@ -52,10 +52,11 @@ SOUNDS: Dict[str, SoundSpec] = {
     'thrust': SoundSpec('thrust.wav', 0.25, True),  # loop
     'attitude': SoundSpec('thrust.wav', 0.1, True),  # loop: the thrust's sound, softer, for yaw, pitch and roll
     'scan': SoundSpec('scan.wav', 0.3, True),  # loop: the low, soft buzz of the beam scanning an asteroid
+    'scoop': SoundSpec('scoop.wav', 0.3, True),  # loop: air and water pulled into the scoop
 }
 
 MIN_GAP_MS = 80  # the least time between two plays of the same sound
-LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan')  # the sounds started with set_loop
+LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan', 'scoop')  # the sounds started with set_loop
 
 _loaded: Dict[str, Optional[pygame.mixer.Sound]] = {}  # None for a sound that could not be loaded
 _last_played_at: Dict[str, int] = {}

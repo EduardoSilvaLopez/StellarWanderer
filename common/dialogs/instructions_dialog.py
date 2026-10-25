@@ -27,8 +27,7 @@ INSTRUCTIONS: List[Tuple[str, List[str]]] = [
         "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look "
         "around.",
         "The scanner shows what is in the crosshair. Hold Space to activate it (whichever that means in context).",
-        "Numpad 5: with a scoop installed, the scanner gives way to the scoop's view of what is under the ship, lit "
-        "100 m around it. It closes at faster than 100 m/s, or when time is compressed.",
+        "Numpad 5: open or close the scoop, if you have one. Used to collect things. Activate with SPACE.",
     ]),
     ("Flying", [  # drawn above the text: see _flying_figure
         "Numpad + / -: faster / slower passing of game time (be careful!).",

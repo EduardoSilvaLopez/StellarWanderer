@@ -149,6 +149,17 @@ def sizzle(loudness: float) -> np.ndarray:
     return loudness * wave_ / np.abs(wave_).max()
 
 
+def intake(loudness: float) -> np.ndarray:
+    """One second of air and water drawn into a scoop: a low rushing noise, its flutter a whole number of Hz. Made to
+    loop without a click: the noise is smoothed around the loop (np.roll), so the sound ends where it began."""
+    t = np.arange(RATE) / RATE
+    noise = np.random.default_rng(31).uniform(-1.0, 1.0, len(t))
+    rush = sum(np.roll(noise, k) for k in range(8)) / 8.0
+    flutter = 0.7 + 0.3 * np.sin(2 * np.pi * 2 * t)
+    wave_ = rush * flutter
+    return loudness * wave_ / np.abs(wave_).max() + hum([(60, 1.0), (90, 0.5)], tremolo=4, loudness=0.25)
+
+
 def silence(seconds: float) -> np.ndarray:
     return np.zeros(int(RATE * seconds))
 
@@ -190,6 +201,7 @@ def main() -> None:
     save('laser_hit', [sizzle(0.3)])
     save('thrust', [hum([(55, 1.0), (82, 0.6), (110, 0.4), (165, 0.15)], tremolo=3, loudness=0.5)])
     save('scan', [hum([(38, 1.0), (57, 0.5), (76, 0.3)], tremolo=5, loudness=0.35)])  # low, soft: a passive beam
+    save('scoop', [intake(0.35)])  # loop: air and water pulled into the scoop
 
 
 if __name__ == '__main__':

@@ -167,6 +167,9 @@ class AsteroidBelt(Orbit):
         for text, saved in (self.saved_alterations or {}).get('asteroids', {}).items():
             key = AsteroidKey.from_ints(text.split())
             self.relevant[key] = self.build(key).apply_alterations(saved)
+        # Taken whole by a scoop: gone for good, cosmetic or not (see Asteroid.consume).
+        self.consumed: set[AsteroidKey] = {AsteroidKey.from_ints(text.split())
+                                           for text in (self.saved_alterations or {}).get('consumed', [])}
 
         logger.info(
             f"Asteroid belt {self.number}: {self.count:.3g} asteroids of {MIN_DIAMETER:.0f} m or more, richness "
@@ -302,6 +305,8 @@ class AsteroidBelt(Orbit):
         found = NearAsteroids.join(parts)
         for key in self.relevant:  # promoted: no longer cosmetic
             found = self._without(found, key)
+        for key in self.consumed:
+            found = self._without(found, key)
         return found
 
     def _near_in_tier(self, tier: AsteroidTier, centre: Vector3, radius: float, epoch: int,
@@ -383,12 +388,17 @@ class AsteroidBelt(Orbit):
     # endregion
 
     # region Relevant asteroids
-    def random_key(self, my_random: random.Random, tier: AsteroidTier, epoch: int) -> AsteroidKey | None:
-        """The key of a cosmetic asteroid of the tier in a random place of the belt (drawn from its density), in the
-        epoch; a random one of those in the sector of that place. None if the sector has none. Nothing is changed."""
+    def random_key(self, my_random: random.Random, tier: AsteroidTier, epoch: int,
+                   radius_range: tuple[float, float] | None = None) -> AsteroidKey | None:
+        """The key of a cosmetic asteroid of the tier in a random place of the belt (drawn from its density, or
+        uniformly within `radius_range` when given), in the epoch; a random one of those in the sector of that place.
+        None if the sector has none. Nothing is changed."""
         grid = self.grids[tier]
         generator = np.random.default_rng(my_random.getrandbits(64))
-        radius = self._draw_weighted(generator, 1, self.inner, self.outer, self._radial_weight, self.outer)[0]
+        if radius_range is None:
+            radius = self._draw_weighted(generator, 1, self.inner, self.outer, self._radial_weight, self.outer)[0]
+        else:
+            radius = generator.uniform(*radius_range)
         height = self._draw_weighted(
             generator, 1, -self.half_thickness, self.half_thickness, self._vertical_weight, 1.0)[0]
         arc = math.floor(generator.random() * grid.arcs)
@@ -422,11 +432,22 @@ class AsteroidBelt(Orbit):
         """Forgets a promoted asteroid: it goes back to the cosmetic population, nameless, and its scan is lost. When
         the belt has no relevant asteroid left, it is no longer altered: the one exception to 'once altered, always'."""
         self.relevant.pop(key, None)
-        if not self.relevant:
+        if not self.relevant and not self.consumed:
             self.is_altered = False
 
+    def consume(self, key: AsteroidKey) -> None:
+        """The scoop has taken the asteroid of the key whole: it is gone, kept or cosmetic, and the belt is altered."""
+        self.relevant.pop(key, None)
+        self.consumed.add(key)
+        self.set_altered()
+
     def get_alterations(self) -> dict | None:
-        if not self.relevant:
+        if not self.relevant and not self.consumed:
             return None
-        return {'asteroids': {str(key): asteroid.get_alterations() for key, asteroid in self.relevant.items()}}
+        alterations = {}
+        if self.relevant:
+            alterations['asteroids'] = {str(key): asteroid.get_alterations() for key, asteroid in self.relevant.items()}
+        if self.consumed:
+            alterations['consumed'] = [str(key) for key in sorted(self.consumed, key=str)]
+        return alterations
     # endregion
