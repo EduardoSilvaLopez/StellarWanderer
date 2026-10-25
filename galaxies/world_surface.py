@@ -51,10 +51,10 @@ SURFACE_WEIGHTS: Tuple[Tuple[float, Dict[SurfaceType, int]], ...] = (
 )
 
 
-def equilibrium_temperature(star: Star, distance: float) -> float:
-    """K: the temperature of an airless world `distance` m from the star, in balance with the light it takes in
-    (it reflects WORLD_BOND_ALBEDO of it and radiates the rest from its whole surface)."""
-    absorbed = star.luminosity * (1.0 - WORLD_BOND_ALBEDO)
+def equilibrium_temperature(star: Star, distance: float, bond_albedo: float = WORLD_BOND_ALBEDO) -> float:
+    """K: the temperature of a world `distance` m from the star, in balance with the light it takes in (it reflects
+    `bond_albedo` of it and radiates the rest from its whole surface). The default albedo is an airless world's."""
+    absorbed = star.luminosity * (1.0 - bond_albedo)
     return (absorbed / (16.0 * math.pi * star.STEFAN_BOLTZMANN * distance ** 2)) ** 0.25
 
 
@@ -67,17 +67,22 @@ def generate_surface(my_random: random.Random, temperature: float) -> Tuple[Surf
     vivid colour's hue and saturation, and the brightness."""
     weights = next(band for limit, band in SURFACE_WEIGHTS if temperature < limit)
     surface_type = my_random.choices(list(weights), weights=list(weights.values()))[0]
+    return surface_type, vary_colour(my_random, surface_type.colour)
 
-    # A random vivid colour, scaled to the brightness of the type's colour (and kept within 0 to 255).
+
+def vary_colour(my_random: random.Random, real_colour: Colour) -> Colour:
+    """A colour near the realistic one: a mix, by WORLD_COLOUR_REALISM, of it and a random vivid colour of the same
+    brightness, scaled a little brighter or darker. Draws three values from `my_random`: the vivid colour's hue and
+    saturation, and the brightness."""
     vivid = colorsys.hsv_to_rgb(
         my_random.random(), my_random.uniform(WORLD_VIVID_SATURATION_MIN, WORLD_VIVID_SATURATION_MAX), 1.0
     )
-    scale = _luminance(surface_type.colour) / (255.0 * _luminance(vivid))
+    scale = _luminance(real_colour) / (255.0 * _luminance(vivid))
     jitter = 1.0 + my_random.uniform(-WORLD_BRIGHTNESS_JITTER, WORLD_BRIGHTNESS_JITTER)
     red, green, blue = (
         round(min(255.0, max(0.0, jitter * (
             WORLD_COLOUR_REALISM * real + (1.0 - WORLD_COLOUR_REALISM) * min(255.0, 255.0 * v * scale)
         ))))
-        for real, v in zip(surface_type.colour, vivid)
+        for real, v in zip(real_colour, vivid)
     )
-    return surface_type, (red, green, blue)
+    return red, green, blue

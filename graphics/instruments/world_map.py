@@ -9,7 +9,7 @@ from ..constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
-    from galaxies.world import World
+    from galaxies.rocky_world import RockyWorld
 
 MINE_MARK_COLOR = (255, 255, 0)
 ROCK_MARK_COLOR = (255, 140, 0)  # the rock of an open scan mission: an orange cross, apart from the yellow mines
@@ -30,7 +30,7 @@ class WorldMap:
 
     Bound only. It shows the outposts of the planet as white dots with their names (the name goes towards the middle
     of the map: left of the dot in its right half, below it in its upper half, and is kept inside the map), the ore
-    mines of the world (`World.registered_mines`) as small yellow crosses, the rock of each open rock-scan mission on
+    mines of the world (`RockyWorld.registered_mines`) as small yellow crosses, the rock of each open rock-scan mission on
     the world as an orange cross (`ScanRock.target_on`), and the player as a bright dot. Other rocks are not shown.
 
     With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
@@ -166,7 +166,7 @@ class WorldMap:
         surface.set_clip(previous_clip)
 
     @staticmethod
-    def _draw_header(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, world: World,
+    def _draw_header(surface: pygame.Surface, fonts: Any, mfd: pygame.Rect, h: int, world: RockyWorld,
                      world_name_text: pygame.Surface, title_size: int, scale: float, date_time: datetime) -> None:
         """The header: the scale while the mouse is over the map, else the world's name; flanked by the local year and
         day."""
@@ -205,7 +205,7 @@ class WorldMap:
         return f'{metres / 1000:.3g} Km' if metres >= 1000 else f'{metres:.3g} m'
 
     @staticmethod
-    def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: World, ship: Ship,
+    def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: RockyWorld, ship: Ship,
                        to_pixel: PixelFunction, area: pygame.Rect) -> None:
         """Everything the map shows: the outposts (planets only; moons have none), the ore mines, the rocks of the open
         scan missions and the player."""
@@ -234,13 +234,13 @@ class WorldMap:
         return int(area.left + norm_lon * area.width), int(area.top + (1 - norm_lat) * area.height)
 
     @staticmethod
-    def _draw_mines(surface: pygame.Surface, world: World, to_pixel: PixelFunction) -> None:
+    def _draw_mines(surface: pygame.Surface, world: RockyWorld, to_pixel: PixelFunction) -> None:
         """A small yellow cross per ore mine of the world (its registered_mines)."""
         for mine_pos in world.registered_mines:
             WorldMap._draw_cross(surface, to_pixel(mine_pos[0], mine_pos[1]), MINE_MARK_COLOR)
 
     @staticmethod
-    def _draw_rock_targets(surface: pygame.Surface, world: World, ship: Ship, to_pixel: PixelFunction) -> None:
+    def _draw_rock_targets(surface: pygame.Surface, world: RockyWorld, ship: Ship, to_pixel: PixelFunction) -> None:
         """An orange cross on the rock of each open scan mission that is on this world."""
         from galaxies.missions import ScanRock  # local: the missions import the player, which imports this package
         for mission in ship.owner.missions:
@@ -261,7 +261,7 @@ class WorldMap:
         pygame.draw.line(surface, colour, (x - arm, y + arm), (x + arm, y - arm), 2)
 
     @staticmethod
-    def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world: World, to_pixel: PixelFunction,
+    def _draw_outposts(surface: pygame.Surface, fonts: Any, h: int, world: RockyWorld, to_pixel: PixelFunction,
                        area: pygame.Rect) -> None:
         """White dot per outpost, with its name beside it. The label goes towards the middle of `area`
         (left when the dot is in the right half, above when in the lower half), and is kept inside it."""

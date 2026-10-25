@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from galaxies import seeds
 from galaxies.orbit_layout import OrbitKind
+from galaxies.jovian_world import JovianWorld
+from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 if TYPE_CHECKING:
     from galaxies.stellar_system import StellarSystem
@@ -13,9 +15,8 @@ if TYPE_CHECKING:
 class Orbit:
     """One orbit of a stellar system, numbered from the star (1.0 is the closest, then 2.0, 3.0... every kind together).
     Its `kind` and `distance_from_star` come from the system's layout (`OrbitLayout`). An earthlike orbit can have 2
-    planets, even more later, but very seldom. Jovian orbits have none for now: they only mark where they are (see
-    orbit_layout.py). An asteroid belt is an `AsteroidBelt` (asteroid_belt.py), a kind of orbit, chosen by
-    `StellarSystem._generate_orbits`."""
+    planets, even more later, but very seldom; a jovian orbit has one giant (`JovianWorld`). An asteroid belt is an
+    `AsteroidBelt` (asteroid_belt.py), a kind of orbit, chosen by `StellarSystem._generate_orbits`."""
 
     def __init__(self,
                  parent_stellar_system: StellarSystem,
@@ -44,7 +45,9 @@ class Orbit:
         if kind is OrbitKind.EARTHLIKE:
             world_count = max(min(int(my_random.gauss(1, 0.2)), 2), 1)  # >1 is extraordinary!
             for _ in range(world_count):
-                self.planets.append(World(self, None, self.saved_alterations))
+                self.planets.append(RockyWorld(self, None, self.saved_alterations))
+        elif kind is OrbitKind.JOVIAN:
+            self.planets.append(JovianWorld(self))
 
     def set_altered(self) -> Orbit:
         self.is_altered = True

@@ -230,20 +230,6 @@ class RockyWorld(World):
             and (self.stellar_system.x, self.stellar_system.y,
                  self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
 
-    def _generate_planet_name(self, my_random: random.Random) -> str:
-        """Generate a random name for the world."""
-        vocals = "aeiouaeio"  # repeating the most common.
-        consonants = "bcdfghjklmnpqrstvwxyzbcdfgjlmnprst"
-        name = ""
-        for _ in range(1, my_random.randint(2, 5)):
-            if my_random.random() < 0.5:
-                name += my_random.choice(consonants)
-            name += my_random.choice(vocals)
-            if my_random.random() < 0.5:
-                name += my_random.choice(consonants)
-
-        return name.capitalize()
-
     def _generate_planet_radius(self, my_random: random.Random) -> int:
         result: float = 0.0
         while result < RockyWorld.WORLD_MIN_RADIUS:

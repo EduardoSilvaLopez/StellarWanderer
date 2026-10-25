@@ -46,7 +46,8 @@ class Scanner:
         ore inside the square, at the bottom. An external mine (another miners', see ExternalMine) says "Not ours"
         instead, with no field line.
 
-        While unbound, the targeted asteroid that is not yet fully scanned (`Scanner.scan_asteroid`) takes the square
+        While unbound, the targeted asteroid that is not yet fully scanned and within scan range (`Scanner.scan_asteroid`)
+        takes the square
         when nothing else is in it: its name in place of the title, its shape as the ship sees it (the mesh the 3D view
         draws, lit by the star), and over it the share scanned in the middle with a bar under it,
         and under that, in amber, what keeps the beam from working (`Scanner.scan_problem`) or, if nothing does, an
@@ -125,7 +126,7 @@ class Scanner:
             colour, text = ACCENT, 'Scanning...'
         else:
             colour, text = ACCENT, 'Hold SPACE to scan'
-        for index, line in enumerate(text.split(': ')):  # "Out of range: 12 Km, 5 Km at most" on two lines
+        for index, line in enumerate(text.split(': ')):  # "Too fast: 60 m/s, 50 m/s at most" on two lines
             rendered = Scanner._outlined(font, line, colour)
             top = track.bottom + 6 + index * font.get_linesize()
             surface.blit(rendered, rendered.get_rect(midtop=(rect.centerx, top)))

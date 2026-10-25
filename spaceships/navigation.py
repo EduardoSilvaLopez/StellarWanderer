@@ -9,6 +9,7 @@ import math
 
 from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
+from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 import game_environment as gem
 
@@ -48,7 +49,8 @@ class Navigation:
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
     ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship's speed changes by, thrusting or braking (not turning)
-    ROCKS_TRAVEL_LIMIT = World.SURROUNDINGS_RADIUS  # m: a ship that moves farther than this in a frame outruns the rocks
+    # m: a ship that moves farther than this in a frame outruns the rocks
+    ROCKS_TRAVEL_LIMIT = RockyWorld.SURROUNDINGS_RADIUS
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -150,7 +152,7 @@ class Navigation:
         if ship.is_bound:
             world = environment.fixed_world
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
-            if not ship.position.y > World.SURROUNDINGS_RADIUS and not self.outruns_rocks \
+            if not ship.position.y > RockyWorld.SURROUNDINGS_RADIUS and not self.outruns_rocks \
                     and (km2 is None or km2 != ship.position.km2):
                 with frame_watch.timed('update surroundings'):
                     world.update_surroundings(

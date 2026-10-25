@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from galaxies.outpost import Outpost
     from galaxies.people.player import Player
     from galaxies.rock import Rock
-    from galaxies.world import World
+    from galaxies.rocky_world import RockyWorld
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class ScanRock(Mission):
                 'rock': [rock.longitude, rock.latitude]}
 
     @staticmethod
-    def _km2_at(world: World, cell_longitude: int, cell_latitude: int, keep: bool) -> Km2:
+    def _km2_at(world: RockyWorld, cell_longitude: int, cell_latitude: int, keep: bool) -> Km2:
         """The Km2 of a cell: the one in memory if it is loaded, else a new one, which is put in the world's Km2s if
         `keep` (so that a change to it is kept), or only made for the moment."""
         from galaxies.km2 import Km2
@@ -108,7 +108,7 @@ class ScanRock(Mission):
                 world.km2s.append(km2)
         return km2
 
-    def _world(self) -> World:
+    def _world(self) -> RockyWorld:
         """The world the rock is on: the planet of the outpost, or one of its moons."""
         planet = self.issuer_outpost.planet
         index = self.rock_site['world']
@@ -137,7 +137,7 @@ class ScanRock(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DAYS_MAX)
+        days = random.Random(seed).randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DEADLINE_DAYS_MAX)
         return ScanRock(
             object_type=object_type,
             seed=seed,
@@ -167,7 +167,7 @@ class ScanRock(Mission):
         if rock.parent_km2.parent_world is self._world() and [rock.longitude, rock.latitude] == self.rock_site['rock']:
             self.was_scanned = True
 
-    def target_on(self, world: World) -> Optional[Tuple[float, float]]:
+    def target_on(self, world: RockyWorld) -> Optional[Tuple[float, float]]:
         """The longitude and latitude of the mission's rock, while the mission is open and the rock is on `world`;
         None otherwise."""
         if self.status != OPEN or self.object_type != 'rock' or self._world() is not world:

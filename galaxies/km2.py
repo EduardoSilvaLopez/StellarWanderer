@@ -15,7 +15,7 @@ from common.updating import update_queue
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
-    from galaxies.world import World
+    from galaxies.rocky_world import RockyWorld
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Km2:
 
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
-    def __init__(self, parent_world: World, longitude: int, latitude: int, saved_alterations: dict) -> None:
+    def __init__(self, parent_world: RockyWorld, longitude: int, latitude: int, saved_alterations: dict) -> None:
         from galaxies.outpost import Outpost  # local: the outpost module needs the world, which needs this one
         self.parent_world = parent_world
         self.longitude: int = longitude

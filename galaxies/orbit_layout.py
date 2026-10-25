@@ -1,11 +1,10 @@
 """The layout of a stellar system's orbits: how many there are, of which kind, and how far from the star.
 
-Three kinds of orbit (`OrbitKind`): earthlike (terrestrial) planets, asteroid belts and jovian planets. Jovian planets
-are only laid out, not created yet: `Orbit` gives them no planets. An asteroid belt is created as an `AsteroidBelt`
-(asteroid_belt.py), which generates its asteroids. The layout is a pure function of the star and of the
-system's random generator, so the same seed always gives the same system. Orbits are numbered 1.0, 2.0, ... from the
-star, every kind together. Stars of type O have no orbits (their discs do not last long enough to form planets), except
-the initial star, which always has some.
+Three kinds of orbit (`OrbitKind`): earthlike (terrestrial) planets, asteroid belts and jovian planets. An asteroid
+belt is created as an `AsteroidBelt` (asteroid_belt.py), which generates its asteroids. The layout is a pure function of
+the star and of the system's random generator, so the same seed always gives the same system. Orbits are numbered 1.0,
+2.0, ... from the star, every kind together. Stars of type O have no orbits (their discs do not last long enough to form
+planets), except the initial star, which always has some.
 
 Where things go. Distances that depend on temperature come from the star's luminosity L, in watts: a black body at
 temperature T is at the distance d = sqrt(L / (16 pi sigma T^4)) from the star, sigma being the Stefan-Boltzmann
@@ -37,7 +36,7 @@ than `MIN_SPACING` are resolved by dropping the belt.
 
 The initial system is generated until its orbit `INITIAL_ORBIT_NUMBER` is an earthlike planet that can start the
 game: outside the star's death radius (the ship would reach its maximum temperature), and with room for a stable moon
-(`World.moon_limit_in_radii`, `World.MOON_MIN_ROOM_RADII`). It always has one: see `OrbitLayout.generate`.
+(`RockyWorld.moon_limit_in_radii`, `RockyWorld.MOON_MIN_ROOM_RADII`). It always has one: see `OrbitLayout.generate`.
 """
 
 from __future__ import annotations
@@ -48,7 +47,7 @@ import random
 from typing import List, Optional, Tuple
 
 from galaxies.star import Star
-from galaxies.world import World
+from galaxies.rocky_world import RockyWorld
 
 Entry = Tuple[float, "OrbitKind"]  # (distance from the star in metres, kind)
 
@@ -290,20 +289,21 @@ class OrbitLayout:
     @staticmethod
     def _can_start(entries: List[Entry], star: Star) -> bool:
         """True if the orbit INITIAL_ORBIT_NUMBER is an earthlike planet where the game can start: outside the star's
-        death radius, and with room for a stable moon (World.MOON_MIN_ROOM_RADII, see World.moon_limit_in_radii)."""
+        death radius, and with room for a stable moon (RockyWorld.MOON_MIN_ROOM_RADII, see
+        RockyWorld.moon_limit_in_radii)."""
         index = OrbitLayout.INITIAL_ORBIT_NUMBER - 1
         if len(entries) <= index:
             return False
         distance, kind = entries[index]
         return (kind is OrbitKind.EARTHLIKE
                 and distance >= star.default_death_radius
-                and World.moon_limit_in_radii(distance, star.mass) >= World.MOON_MIN_ROOM_RADII)
+                and RockyWorld.moon_limit_in_radii(distance, star.mass) >= RockyWorld.MOON_MIN_ROOM_RADII)
 
     @staticmethod
     def _fallback(star: Star, scales: SystemScales) -> List[Entry]:
         """Four earthlike planets, the third where the game can start (see _can_start): for a star whose zones left
         no layout."""
-        room = World.MOON_MIN_ROOM_RADII / World.moon_limit_in_radii(1.0, star.mass)
+        room = RockyWorld.MOON_MIN_ROOM_RADII / RockyWorld.moon_limit_in_radii(1.0, star.mass)
         third = max(star.default_death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
         return [(third * ratio, OrbitKind.EARTHLIKE) for ratio in OrbitLayout.FALLBACK_RATIOS]
     # endregion

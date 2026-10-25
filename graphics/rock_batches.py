@@ -36,7 +36,7 @@ from .special_rocks import SPLITS, special_mesh
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
     from galaxies.rock import Rock
-    from galaxies.world import World
+    from galaxies.rocky_world import RockyWorld
     from .surface_light import SurfaceLight
 
 # The cached colours are reused until the sun has moved this far. At 0.1 degrees the brightness changes by less
@@ -179,7 +179,7 @@ class RockBatches:
     _batches: weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, RockBatch]] = weakref.WeakKeyDictionary()
 
     @staticmethod
-    def visible_km2s(world: World, player_x: float, player_z: float) -> List[Km2]:
+    def visible_km2s(world: RockyWorld, player_x: float, player_z: float) -> List[Km2]:
         """The Km2s whose rocks are drawn, those within two Km2s of the player. OpenGLGui.draw also draws their ore
         fields and mines."""
         return [km2 for km2 in world.km2s

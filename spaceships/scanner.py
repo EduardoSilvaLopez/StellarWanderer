@@ -9,7 +9,7 @@ from common import audio
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
-    from galaxies.world import World
+    from galaxies.rocky_world import RockyWorld
     from galaxies.km2 import Km2
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
@@ -34,9 +34,9 @@ class Scanner:
     `targeted_rock` and `targeted_mine` are what the scanner panel (graphics/instruments/scanner.py, a different class
     with the same name) shows, and what `activate` heats or collects from.
 
-    Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned: it is
-    `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it can): out of range, too fast
-    or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no problem, the scan
+    Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned and
+    within scan range: it is `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it
+    can): too fast or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no problem, the scan
     advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays off until SPACE
     is released. The time scale is capped at its minimum then, and stays there: the progress of the first frame at the
     old scale does not count. When it reaches 1, the ship says so.
@@ -132,29 +132,29 @@ class Scanner:
 
     # region Asteroids
     def _look_for_asteroid(self) -> None:
-        """Sets `scan_asteroid` to the targeted body if it is an asteroid still to scan, and `scan_problem` to what
-        keeps the beam from working on it."""
+        """Sets `scan_asteroid` to the targeted body if it is an asteroid still to scan and within scan range, and
+        `scan_problem` to what keeps the beam from working on it. Out of range, it is not set at all: the scanner shows
+        nothing until the asteroid is in reach."""
         import game_environment as gem
-        from common.units import format_compact_distance
         from galaxies.asteroid import Asteroid
         environment = gem.current_environment
         body = environment.targeted_body
         if not isinstance(body, Asteroid) or body.scan_progress >= 1.0:
             return
-        self.scan_asteroid = body
 
         ship = self.ship
         distance = ship.navigation.distance_to_body_centre(body)
         reach = min(Asteroid.SCAN_RANGE_DIAMETERS * 2.0 * body.radius, Asteroid.SCAN_MAX_RANGE)
+        if distance - body.radius > reach:
+            return
+        self.scan_asteroid = body
+
         relative_speed = math.dist(tuple(ship.velocity.as_vector()),
                                    tuple(body.calculate_stellar_velocity(environment.date_time)))
         direction = ship.navigation.direction_to_body(body, environment.date_time)
         cosine = direction.dot(ship.attitude.forward) / max(direction.length(), 1e-9)
         in_crosshair = distance <= body.radius or cosine >= math.cos(math.asin(body.radius / distance))
-        if distance - body.radius > reach:
-            self.scan_problem = (f"Out of range: {format_compact_distance(distance - body.radius)}, "
-                                 f"{format_compact_distance(reach)} at most")
-        elif relative_speed > Asteroid.SCAN_MAX_SPEED:
+        if relative_speed > Asteroid.SCAN_MAX_SPEED:
             self.scan_problem = f"Too fast: {relative_speed:.0f} m/s, {Asteroid.SCAN_MAX_SPEED:.0f} m/s at most"
         elif not in_crosshair:
             self.scan_problem = "Aim at the asteroid"
@@ -244,7 +244,7 @@ class Scanner:
     # endregion
 
     # region Search
-    def _closest_hit(self, world: World) -> Optional[Tuple[Target, float]]:
+    def _closest_hit(self, world: RockyWorld) -> Optional[Tuple[Target, float]]:
         """The target the beam enters first, with its t-value, or None."""
         hits = []
         for target, hit_t in self._candidates(world):
@@ -253,7 +253,7 @@ class Scanner:
                 hits.append((target, t))
         return min(hits, key=lambda hit: hit[1], default=None)
 
-    def _candidates(self, world: World) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
+    def _candidates(self, world: RockyWorld) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
         """Every target within reach (the rocks, mines and outpost of the Km2s near the beam), each with the test that
         finds where the beam enters it."""
         for km2 in self._get_relevant_km2s(world):
@@ -265,7 +265,7 @@ class Scanner:
             if km2.outpost:
                 yield km2.outpost, self._outpost_entry
 
-    def _get_relevant_km2s(self, world: World) -> List[Km2]:
+    def _get_relevant_km2s(self, world: RockyWorld) -> List[Km2]:
         """Km2s whose square lies within the beam's reach in longitude and latitude. A rough filter, applied
         before the per-object tests."""
         position = self.ship.position

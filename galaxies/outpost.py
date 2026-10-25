@@ -14,7 +14,7 @@ import galaxies.people.player as gpp
 from galaxies import seeds
 if TYPE_CHECKING:
     from spaceships.ship import Ship
-from galaxies.world import World
+from galaxies.rocky_world import RockyWorld
 from galaxies.people.person import Person
 from galaxies.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, ROLES, STAFF_AGE_MAX, STAFF_AGE_MIN, Role
 
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class Outpost(Updatable):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
-    Outposts belong to planets (`World.outposts`, keyed by "lon lat"; the initial planet always has at least one).
+    Outposts belong to planets (`RockyWorld.outposts`, keyed by "lon lat"; the initial planet always has at least one).
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
 
@@ -55,7 +55,7 @@ class Outpost(Updatable):
     MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
     READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
-    def __init__(self, planet: World, saved_alterations: dict) -> None:
+    def __init__(self, planet: RockyWorld, saved_alterations: dict) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
         self.seed: int = seeds.derive(planet.seed, 'outpost', self.index)
