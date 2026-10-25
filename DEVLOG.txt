@@ -49,7 +49,7 @@ DEVELOPER'S DIARY
   * Extra: Rodina checked (in Steam) Checked. One system, lots of fight, few social.
   * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
 
-* JOVIAN PLANETS
+* JOVIAN PLANETS I
   * Extra: title from interlocutors in the outpost is relative, not absolute.
   * Make screenshots.
   * "life" > "happy birthday" path
@@ -57,6 +57,7 @@ DEVELOPER'S DIARY
     "Your ship is not ready for more of this" when other things.
   * More full dialogs... now Those-Who-Share :)
   * External mines and ore fields.
+  * Generate the jovian planet, astronomically.
 
 
 > STARTED:
@@ -65,13 +66,23 @@ DEVELOPER'S DIARY
 
 Extra time: 126h30' + 1:45 - 3:30 + 5:00  + 6:00 - 7:15 + 10:30 - 
 
-  * Generate the jovian planet, astronomically.
-  * Mission to jovian planet. Play it. Maybe before, increase water / air etc... importan later, maybe
-    ("realistic speed"). It needs a THS Miner, so rep > 50.
-
 > BACKLOG
+* INTERSTELLAR TRAVEL VIA BASE (50-100)
+  * Base
+  * Portal
+  * New level brings scoop, solar panels and heat shield. Hide them else.
+  * Extra: "Scan the sun" mission. Solar panels, heat shield.
+  * Extra: "Bring water" mission. Uses the scoop.
+  * Extra: More full dialogs... now The Shining Throne :)
 
-* JOVIAN PLANETS (current one) (50-100)
+THE TRAITORS WAY (Rep 50-100)
+  * Extra: Gravity. Evaluate, at least... for realism's sake.
+  * Extra: Improve the sounds for real.
+  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+
+* JOVIAN PLANETS II (current one) (100-200)
+  * Mission to jovian planet.
   * Next step is to draw it.
   * Generate the moons.
   * Extra: "Realistic speed" in "ideas".
@@ -82,17 +93,12 @@ Extra time: 126h30' + 1:45 - 3:30 + 5:00  + 6:00 - 7:15 + 10:30 -
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
-* INTERSTELLAR TRAVEL (now 3 coordinate systems, 'unbind' from the stellar system) (50-100)
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+* INTERSTELLAR TRAVEL DIRECTLY (200-500 in THS)
+  * Base
   * Directly? Try the current ship configurations.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
-THE TRAITORS WAY (Rep 50-100)
-  * New level brings solar panels and heat shield.
-  * "Scan the sun" mission. Solar panels, heat shield.
-  * "Bring water" mission. Uses the scoop.
-  * More full dialogs... now The Shining Throne and Those-Who-Share :)
-  * Extra: Gravity. Evaluate, at least... for realism's sake.
-  * Extra: Improve the sounds for real.
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+
 * OROGRAPHY
   * Craters
   * Terrain elevation / sinkage.
