@@ -508,7 +508,8 @@ class OutpostChat(Conversation):
                 text = (
                     "Me? Thank you for asking, friend <smiles>."
                     f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
-                    f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}. People say I'm {self_description}."
+                    f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}."
+                    f" People say I'm {self_description}."
                     f"\n\nOh... and {self.interlocutor.hobby}"
                 )
                 if days_to_birthday == -2:
@@ -621,74 +622,76 @@ class OutpostChat(Conversation):
             'luxury': (40, (
                 "Soap operas. Ugh.", "Soap operas are nice.", "Parks and boulevards. Gorgeous.",
             ), (
-                "Luxury built on the back of poor serfs and henchmen. Corruption and filth, the lot of them.",
+                "Luxury built on the back of poor serfs and servants. Corruption and filth, the lot of them.",
                 "Not that I'd like to *live* there, but the soap operas are really nice. Still...",
-                "Hard to say. The parks, the boulevards, the clothes. It's so gorgeous. I bet they'd prefer to live"
-                " here, as a community.",
+                "Hard to say. The parks, the boulevards, the clothes. It's so gorgeous. But hey, here is also ok.",
             )),
             'honour': (30, (
                 "Honour and beauty. Bah.", "They're not like us.", "Super-humans. Hm.",
             ), (
-                "They look for the 'super-humans', all that talk about ethics and aesthetics. Horrible.",
-                "They're just not like us. For them it's all about 'honor' and 'beauty' and 'protect the weak'.",
-                "They're completely different to us, aren't they? Honour, beauty, protecting the weak. I see what they"
-                " mean.",
+                "They look for the 'super-humans', all that's whose more handsome. Stupid.",
+                "They're just not like us. For them it's all about 'honor' and 'beauty' and 'chivalry'.",
+                "They're completely different to us, aren't they? Honour, beauty, protecting the weak."
+                " I see what they mean.",
             )),
             'gardens': (30, (
-                "Parks. Hm.", "Their gardens.", "Their gardens. Wow.",
+                "Parks. Hm.", "Their gardens.", "The boulevards. Wow.",
             ), (
-                "They have their parks and fountains and music, and they're not sharing any of it.",
-                "Their parks, their music. I'd like to see one once.",
+                "They have their parks and fountains and music, but it's all for the aristocrats.",
+                "Their parks, their music. I'd like to see that in the shows.",
                 "Parks, fountains, music, dances, poetry. They live, and we don't. They reward merit. We don't.",
             )),
             'freedom': (40, (
-                "Own a person? Never.", "Slaves have rights.", "Maybe they're free.",
+                "Own a person. Disgusting.", "Slaves. I don't get it.", "Heard slaves have rights.",
             ), (
-                "How can one people own another human being? That's over me.",
-                "I've heard the slaves have a lot of rights, and the Knights have lots of duties. Things are not how"
+                "How can one people own another human being? That's fucking disgusting.",
+                "They *say* even slaves have rights, but who knows what happens behind closed doors.",
+                "I've heard the slaves have rights, and the Knights have lots of duties. Things are not how"
                 " people want them to be.",
-                "I've heard things, you know. That the slaves have rights. We don't get it, but maybe they have"
-                " something.",
             )),
         }
         friend_topics: PoliticalTopics = {
             'chapter': (40, (
-                "Soap operas. Shh.", "Never miss a chapter.", "Soap operas, guilty.",
+                "Soap operas. Pah.", "Some shows are cool.", "Soap operas, guilty.",
             ), (
                 "<whispers> In confidence, I never miss a chapter. But it's all slaves and depravity, friend. Makes no"
-                " sense.",
-                "<whispers> In confidence, I never miss a chapter. Gorgeous cutlery, for the [Founders]' sake. But at"
-                " what cost?",
-                "<whispers> I have heard... things, you know. The slaves have a lot of rights. I think they have"
-                " something.",
+                " sense. That's why it's so interesting!",
+                "<whispers> In confidence, I never miss a chapter. Gorgeous *cutlery*, for the [Founders]' sake. But"
+                " at what cost?",
+                "<whispers> I have heard... things, you know. The slaves have a lot of rights. The powerful have a lot"
+                " of duties. Protect the weak. There is some logic there.",
             )),
             'ownership': (40, (
-                "Own a person? Never.", "Not ours to own.", "Own a house, sure.",
+                "Own a person? Never.", "People are not ours to own.", "Own a house, sure. Person? Strange.",
             ), (
-                "Own a person? How can one people own ANOTHER HUMAN BEING? That's over me. Fuck them all. With a wrench.",
-                "Somehow a person can own a house, I guess. But another human being? That's over me.",
-                "Owning a house, fine. Owning a person is what they do. I won't judge the whole place for that, friend.",
+                "Own a person? How can one people own ANOTHER HUMAN BEING? That's over me. Fuck them all."
+                " With a wrench.",
+                "I guess I can see how a person can own even a house. But another human being? That's over me.",
+                "Owning a house, fine. Strange, but fine. Owning a *person* is what they do."
+                " I cannot wrap my head around it. But they don't rebel. So maybe it's not so bad."
+                ,
             )),
             'merit': (30, (
-                "They reward merit. Ugh.", "Merit, sure.", "They reward merit.",
+                "They demand 'deeds'. Ugh.", "Merit, sure.", "They reward heroic deeds. Like yours, eh? <laugh>",
             ), (
-                "They reward merit, and we don't. A follower there lives better than a Hero here.",
-                "They reward merit. Some of it is earned, I suppose.",
-                "They reward merit, and they live. Parks, fountains, music. We could learn from that.",
+                "They are all for heroes and deeds and stuff. They don't know what a hero is. We do.",
+                "They reward heroic deeds and such. At least in the shows. Reality is probably a different stuff, ha!",
+                "They try heroic stuff, those aristocrats. That's how they got so many stars."
+                " We could learn from that.",
             )),
             'public gardens': (30, (
-                "Gardens. Never forget.", "Their gardens.", "Gardens, gorgeous.",
+                "Gardens for aristos. Bah.", "Their gardens. Wow.", "Gardens. Not hydroponic.",
             ), (
-                "<Whispers> I've seen their gardens. Public gardens. Will never forget, and it's not ours.",
-                "<Whispers> Their public gardens are something. I'd like to see them again.",
-                "<Whispers> I've seen their gardens. Public gardens, and the music. Beautiful, and I'm not ashamed to"
-                " say so.",
+                "<Whispers> They spend so much in those gardens for the aristocrats. Meh.",
+                "<Whispers> Their public gardens are something. I'd like to see them in person some day.",
+                "<Whispers> So wonderful, their gardens and boulevards and whatnot. Simply gorgeous,"
+                " and I'm not ashamed to say so.",
             )),
         }
         generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
             ("Disgusting people.", "Fucking bastards.", "Not the way to go, friend."),
             ("<shrugs>", "Whatever. Who knows, yes?", "<shrugs>"),
-            ("Beautiful.", "Maybe better than here.", "<Whispers> Public gardens. Will never forget."),
+            ("Beautiful.", "Maybe better than here.", "<Whispers> So beautiful. Everything."),
         )
         if self.interlocutor.sympathy100 < 20:
             return "Just leave me."
@@ -703,48 +706,52 @@ class OutpostChat(Conversation):
             'work': (40 + 0.4 * loy, (
                 "Work, work. Ugh.", "We build things. Fine.", "Biggest industry. Good.",
             ), (
-                "The biggest heavy industry of mankind, and the working places should be pleasant. Should be. We work"
+                "The biggest industry of mankind, and the working places should be pleasant. Should be. We work"
                 " for the Community, not for ourselves.",
-                "We have the biggest heavy industry of mankind, and the hydroponic gardens are as good as any. We do"
-                " fine.",
-                "The biggest heavy industry of mankind, and the factories are pleasant places to be. I like my"
+                "We have the biggest industry of mankind, and the hydroponic gardens are as good as any. We do fine.",
+                "The biggest industry of mankind, and the factories are pleasant places to be. I like my"
                 " workplace. Proud of it.",
             )),
             'money': (30 + 0.4 * loy, (
-                "No money. Stamps. Ugh.", "Stamps. Fine.", "No money. Good.",
+                "Stamps. Worth nothing.", "Stamps. Fine.", "No greed. Good.",
             ), (
                 "Money is banned, and stamps only buy the small things: clothes, food, personal devices. Nothing else"
                 " is ours.",
-                "No money, so nobody buys their way up. Stamps for the small things. It works, mostly.",
+                "No money, so nobody buys their way up. Stamps for the small things. It works.",
                 "No money. Nobody is admired for being rich, only for what they give. Stamps for the small things, and"
                 " that's enough.",
             )),
-            'reputation': (40, (
-                "Students, prisoners. Shame.", "Reputation counts. Fine.", "Reputation counts. Fair.",
+            'reputation': (40,(
+                "Students, prisoners. Shame.",
+                "What people think of you counts. Fine.",
+                "Reputation matters. Fair.",
             ), (
-                "Low reputation means Student, then Dependent, and prisoners work for the State. The highly reputed get"
-                " the housing and the luxuries. Fair, they say.",
-                "Reputation decides the title you hear and the housing you get. It's not perfect, but everybody knows"
-                " where they stand.",
-                "Reputation rewards what people give. More skills, more obligations, more reputation. I think that's"
-                " right.",
+                "People speak low of you, you are sent to study. Or worse, you get a chaperone. People like"
+                " you, you can get anything you want, a better apartment, a better job. Fair, they say.",
+                "How you behave decides how they call you, and at the end even the housing you get. It's not"
+                " perfect, but everybody knows where they stand.",
+                "The Community rewards those who give. More skills, more obligations, better reputation."
+                " I think that's right.",
             )),
             'community': (50 + 0.5 * loy, (
-                "Community. Sure.", "We share. Mostly.", "Nobody left alone.",
+                "Community. Yeah. Whatever.", "We share. Mostly.", "Nobody left alone. I like that.",
             ), (
-                "The Community, always the Community. Individualism is frowned upon, and I'd like to be left alone once"
-                " in a while.",
-                "We share, and nobody gets less than they need. People are proud of the Community, and I suppose I am"
+                "The Community, always the Community. Thinking about yourself is frowned upon, and I'd like to do"
+                " my own stuff once in a while, you know? Like you.",
+                "We share, and nobody gets less than they need. People are proud of the Community, and I guess I am"
                 " too.",
-                "From each by their skills, to each by their needs. Nobody is left alone here. That's what I'd defend.",
+                "From each by their skills, to each by their needs. Nobody is left alone here. There's something"
+                " to defend there.",
             )),
             'culture': (25 + 0.3 * loy, (
-                "Statues. Dull.", "Statues and posters. Eh.", "Poetry, festivals. Nice.",
+                "Slogans and statues. Meh.", "Posters and songs. Ok.", "Poetry, festivals. Nice.",
             ), (
                 "Nothing made just for beauty, only statues, posters and big screens. Art is for the propaganda, and"
                 " that's sad.",
-                "Statues, posters, the big screens. They say it's for the Community. Some of it is nice, some is dull.",
-                "Poetry and skill competitions in the square, festivals. Nothing useless about them. Not dull at all.",
+                "Statues, posters, the big screens. They say it's for the Community. I guess so, we must be reminded"
+                " of what we have.",
+                "Poetry and skill competitions in the square, songs, festivals. Nothing useless about them."
+                " Art for the normal people. Feeds the soul.",
             )),
             'isolation': (20 + 0.3 * loy, (
                 "Isolated. Scared.", "We keep to ourselves.", "We keep ourselves safe.",
@@ -756,7 +763,7 @@ class OutpostChat(Conversation):
         }
         friend_topics: PoliticalTopics = {
             'camps': (30, (
-                "Camps. Shh.", "Don't ask.", "They come back better.",
+                "Camps. Shh.", "Camps? Not so bad.", "Camps. Hard. But they learn.",
             ), (
                 "<Whispers> I know people who went to the re-education camps. They came back quiet. Don't ask me more.",
                 "<Whispers> The camps are hard to think about. I'd rather not, friend.",
@@ -765,25 +772,21 @@ class OutpostChat(Conversation):
             'home': (40, (
                 "Family. Shh.", "We're fine here.", "Family. Good.",
             ), (
-                "<Whispers> Reputation hangs over every friendship here. I'd rather be somewhere nobody counts my points.",
+                (
+                    "<Whispers> Reputation hangs over every friendship here."
+                     " I'd rather be somewhere nobody calculates how to call me."
+                ),
                 "<Whispers> It's not perfect, but I'd rather be here than anywhere else.",
                 "<Whispers> I've got friends in every square, and that's worth more than any stamp.",
             )),
             'founders': (30, (
-                "The Founders. Hm.", "The Founders, sure.", "The Founders, yes.",
+                "The [Founders]. Hm.", "The [Founders], sure.", "The [Founders], yes.",
             ), (
-                "<Whispers> The Founders wanted empathy, and now we're watched. Something went wrong along the way.",
-                "<Whispers> The Founders wanted empathy first. We try, mostly.",
+                "<Whispers> The [Founders] wanted empathy, and now we watch each other."
+                " Something went wrong along the way.",
+                "<Whispers> The [Founders] wanted empathy first. We try. That's more than others do.",
                 "<Whispers> The [Founders] had it right. Empathy first, and nobody left alone. I wouldn't trade this"
                 " square for anything.",
-            )),
-            'rules': (30, (
-                "Rules hurt. Shh.", "Rules, sure.", "Rules keep us together.",
-            ), (
-                "<Whispers> The rules hurt, friend, and nobody can say so. Your reputation goes up or down, and the"
-                " pressure follows.",
-                "<Whispers> The rules are hard sometimes, but they keep us together.",
-                "<Whispers> The rules hurt sometimes. But they are ours, and I'd not swap them for anything.",
             )),
         }
         generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
@@ -806,7 +809,7 @@ class OutpostChat(Conversation):
                 "Bloated. The Moon.", "Big. Not good.", "Fifty systems. Wow.",
             ), (
                 "Fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated giant,"
-                " that is all they are. Big.",
+                " that's all they are. Big.",
                 "Fifty systems with cities, against our fifteen. And the Moon, the most crowded world by far. Big, yes."
                 " Big is not the same as good.",
                 "Fifty systems with cities. Fifteen ours. And the Moon, with more people than anywhere else. Imagine"
@@ -827,8 +830,8 @@ class OutpostChat(Conversation):
             ), (
                 "The largest armed forces of mankind, and a cult of violence around them. Still licking the wounds of"
                 " the war against the Exterminating Mother two hundred years ago. Sick.",
-                "Their military is the largest. They say it is only for the ETs, never against humans. Maybe so. Still..."
-                " that much weaponry makes me nervous.",
+                "Their military is the largest. They say it is only for the ETs, never against humans."
+                " Maybe so. Still... that much weaponry makes me nervous.",
                 "The largest armed forces, well paid, and for ETs only, never against humans. If a new Exterminating"
                 " Mother comes out of the dark, I want those people between her and me.",
             )),
@@ -836,7 +839,7 @@ class OutpostChat(Conversation):
                 "Exams to vote. Ugh.", "Brains, but who votes?", "Experts should vote.",
             ), (
                 "Their famous science! Experts playing gods, and the vote only for those who have served the State and"
-                " shown some political knowledge. Knowledge as a ticket. Disgusting.",
+                " passed their exams. Disgusting.",
                 "The most advanced science of mankind, no discussion. But the vote only for those who served the"
                 " State? And who decides you 'really know politics'? I don't like it.",
                 "The most advanced science there is, and they let those who know what they talk about vote. Experts"
@@ -849,7 +852,10 @@ class OutpostChat(Conversation):
                 " washrooms. Ghettos. Here nobody lacks what they need.",
                 "Basic income and healthcare for everybody, they say. In practice a cell in a prison, shared washrooms."
                 " Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
-                "There is a basic income, healthcare for everybody and nobody is a slave. Not like [The Shining Throne]."
+                (
+                    "There is a basic income, healthcare for everybody and nobody is a slave."
+                    " Not like [The Shining Throne]."
+                ),
                 " Yes, there are cells and ghettos... but it is a start.",
             )),
             'industry': (0.6 * loy + 0.4 * min(max(rep, 0), 100), (
@@ -863,8 +869,10 @@ class OutpostChat(Conversation):
             'federalism': (0.4 * loy + 20, (
                 "Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals.",
             ), (
-                "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had built a"
-                " laboratory and not a community.",
+                (
+                    "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had"
+                    " built a laboratory and not a community."
+                ),
                 "They say they find the other entities interesting experiments, and cultural diversity something to"
                 " encourage. Nice words. A bit condescending, though. We are nobody's experiment.",
                 "They see everybody else, us too, as interesting experiments, not as rivals. A kind of respect we don't"
@@ -884,7 +892,10 @@ class OutpostChat(Conversation):
             ), (
                 "<Whispers> The science is incredible, and the experts decide who votes. Nobody asked us, friend.",
                 "<Whispers> The science is incredible. I'd like to see their labs once, that's all.",
-                "<Whispers> Their science is the best there is. I envy them that a little. Don't tell anyone I said so.",
+                (
+                    "<Whispers> Their science is the best there is. I envy them that a little."
+                    " Don't tell anyone I said so."
+                 ),
             )),
             'life': (30, (
                 "Parks. Cinemas. Ugh.", "Parks. Shh.", "Concerts. Wish I'd seen.",
@@ -972,10 +983,10 @@ class OutpostChat(Conversation):
         return "\n\n".join(pool_topics[name][2][tone + 1] for name in chosen)
 
     def political_tone(self, own_entity: bool, praise_guarded: bool) -> int:
-        """-1, 0 or 1 from how much the person likes the entity. Their own entity: loyalty alone decides, the more loyal
-        the more they approve. The other one: loyalty against it weighs most, empathy less (the less empathic, the more
-        they like the money and the force). With praise_guarded, approval of the other one is said only by the very
-        sociable, the hardly loyal or the trusted; otherwise it falls to 0, a nuanced rejection."""
+        """-1, 0 or 1 from how much the person likes the entity. Their own entity: loyalty alone decides, the more
+        loyal the more they approve. The other one: loyalty against it weighs most, empathy less (the less empathic,
+        the more they like the money and the force). With praise_guarded, approval of the other one is said only by
+        the very sociable, the hardly loyal or the trusted; otherwise it falls to 0, a nuanced rejection."""
         loy: float = self.interlocutor.loyalty100
         if own_entity:
             return -1 if loy < 20 else 0 if loy < 80 else 1
