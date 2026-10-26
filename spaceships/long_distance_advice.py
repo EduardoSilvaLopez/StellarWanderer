@@ -25,10 +25,11 @@ from the state of the ship, so it follows the target as it moves and corrects wh
 2. The constraints, for a peak speed `v` (acceleration `a`, the ship's forward and backward one, and braking `b`,
    its brake's, which is never less):
    - Minimise the travel time: the highest `v` that satisfies the others.
-   - At least a third of the time stays (coasts): `COAST_SHARE` of the whole trip, from the departure to the arrival.
-     For a trip that starts at rest, with `a` = `b`, this is `v <= sqrt(a * D / 2)`, `D` being the whole distance. As
-     the plan is worked out again at every frame, `D` is that of the trip as if it had started at rest here:
-     `d + u_r^2 / (2 * a)`.
+   - Never more than the ship can cover with no coast at all: the peak speed that spends the whole distance `d`
+     thrusting, accelerating from `u_r` to `v` then braking to rest, `v = sqrt((2*a*b*d + b*u_r^2) / (a + b))`. A
+     trip short of this (most of them) is flown flat out, like a short hop by road: no cruise. Only a trip long
+     enough that going flat out would eat into the energy reserve (below) is slower than this and coasts, to spare
+     the energy, the way a long-haul trip eases off its top speed to spare fuel.
    - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
      `RESERVE_WITH_OUTPOST` (20 %) if the target has an outpost. A change of speed costs
      `Navigation.ENERGY_PER_SPEED` per m/s that the speed changes by, not per m/s of velocity: thrust across the
@@ -131,26 +132,6 @@ class Plan:
     eta: float | None  # s: the time left; None if the ship cannot stop in the distance
 
 
-def coast_limit(distance: float, start_speed: float, acceleration: float, brake: float, coast_share: float) -> float:
-    """The highest peak speed of a trip of `distance` from `start_speed`, accelerating at `acceleration` and braking at
-    `brake`, that coasts `coast_share` of its time at least. By bisection: the more speed, the less coast."""
-    ratio = coast_share / (1.0 - coast_share)  # the coast, in the time of the two thrusts
-
-    def excess(speed: float) -> float:
-        thrust_time = (speed - start_speed) / acceleration + speed / brake
-        covered = (speed * speed - start_speed * start_speed) / (2.0 * acceleration) + speed * speed / (2.0 * brake)
-        return (distance - covered) / speed - ratio * thrust_time
-
-    low = max(start_speed, 1e-3)
-    if excess(low) < 0.0:
-        return low
-    high = math.sqrt(2.0 * acceleration * brake / (acceleration + brake) * distance + start_speed * start_speed) + 1.0
-    for _ in range(60):
-        middle = (low + high) / 2.0
-        low, high = (middle, high) if excess(middle) >= 0.0 else (low, middle)
-    return low
-
-
 def energy_cost(peak: float, radial: float, drift: float) -> float:
     """The change of speed, in m/s, that a plan costs: from the velocity (`radial`, `drift`) to `peak` along the line,
     then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. Its speed
@@ -174,8 +155,8 @@ def peak_limit(budget: float, radial: float, drift: float) -> float:
     return low
 
 
-def make_plan(distance: float, radial: float, drift: float, acceleration: float, brake: float, budget: float,
-              coast_share: float) -> Plan | None:
+def make_plan(distance: float, radial: float, drift: float, acceleration: float, brake: float,
+              budget: float) -> Plan | None:
     """The plan for a trip of `distance` m (to the point where the advice ends) by a ship that comes closer at
     `radial` m/s (negative: moves away) and drifts across at `drift`, with `budget` m/s of change of speed (the energy
     above the reserve); None if the budget does not even stop the ship."""
@@ -184,11 +165,8 @@ def make_plan(distance: float, radial: float, drift: float, acceleration: float,
         return None
     budget = max(budget, stop_cost * (1.0 + 1e-6))
     energy_limit = peak_limit(budget, radial, drift)  # see 2. in the module docstring
-    if radial > 0.0:  # as if the trip had started at rest here: the distance it would have covered so far counts
-        coast = coast_limit(distance + radial * radial / (2.0 * acceleration), 0.0, acceleration, brake, coast_share)
-    else:
-        coast = coast_limit(distance, radial, acceleration, brake, coast_share)
-    peak = min(coast, energy_limit)
+    no_coast = math.sqrt((2.0 * acceleration * brake * distance + brake * radial * radial) / (acceleration + brake))
+    peak = min(no_coast, energy_limit)
     speed = max(peak, radial)  # a ship that is faster than the plan stays at its speed
     covered = (speed * speed - radial * radial) / (2.0 * acceleration) + speed * speed / (2.0 * brake)
     if distance < covered:
@@ -200,7 +178,6 @@ class LongDistanceAdvisor:
     """Works out the advice every frame (see the module docstring) and keeps it in `current` for the instruments."""
 
     FAR_DISTANCE = 1.0e9  # m, a million km: the advice is given beyond it
-    COAST_SHARE = 1.0 / 3.0
     RESERVE_WITHOUT_OUTPOST = 0.60
     RESERVE_WITH_OUTPOST = 0.20
     BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft
@@ -290,10 +267,9 @@ class LongDistanceAdvisor:
 
     @staticmethod
     def _final_leg(accelerations: tuple[float, float]) -> tuple[float, float]:
-        """What the pilot's last leg costs, kept back by the plan: a trip of FAR_DISTANCE from rest, with a coast of
-        COAST_SHARE of it. The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
-        leg = make_plan(LongDistanceAdvisor.FAR_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12,
-                        LongDistanceAdvisor.COAST_SHARE)
+        """What the pilot's last leg costs, kept back by the plan: a trip of FAR_DISTANCE from rest, flown flat out
+        (it is short). The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
+        leg = make_plan(LongDistanceAdvisor.FAR_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12)
         return 2.0 * leg.peak_speed, leg.eta
 
     @staticmethod
@@ -320,7 +296,7 @@ class LongDistanceAdvisor:
             relative = velocity - target_velocity
             radial = float(relative @ direction)
             drift = float(np.linalg.norm(relative - radial * direction))
-            plan = make_plan(distance, radial, drift, *accelerations, budget, advisor.COAST_SHARE)
+            plan = make_plan(distance, radial, drift, *accelerations, budget)
             if plan is None or plan.eta is None or abs(plan.eta - trip_time) <= 1e-3 * max(trip_time, 1.0):
                 break
             trip_time = plan.eta

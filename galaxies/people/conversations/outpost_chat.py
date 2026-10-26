@@ -5,8 +5,7 @@ The texts are written with `say` (the person's line, with its [marks] that make 
 (the callback gets the index of the reply the player chose). The conversation dies out when it offers nothing more: the
 player then starts the next one from a tag, in the same log. `start` says the tag as the pilot's line, then the answer
 (for the presentation tag, the pilot's line is Player.present_yourself).
-Each interaction is written into the person's record as it happens (`remember`), so the last time met is up to date
-even while the chat is open.
+Flags can be written to mark important events of the conversation.
 
 Note for Claude: before writing or reworking a `talk_*` method here, read temp/ideas/outpost_chat_methods.md (the rules,
 the pattern to follow and how to test). Do not read it for any other task.
@@ -21,6 +20,11 @@ from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
 from galaxies.people.player import Player
+
+# A political text: its three tones, in the order -1, 0, 1.
+PoliticalTexts = tuple[str, str, str]
+# A topic: its relevance score, a short line per tone for the low-sociability replies, and a text per tone.
+PoliticalTopics = dict[str, tuple[float, PoliticalTexts, PoliticalTexts]]
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
@@ -45,9 +49,7 @@ class OutpostChat(Conversation):
         self.log: ChatLog = log  # the chat of the outpost screen: the texts go there
         self.tag: str = tag  # the conversation tag that started this conversation
         self.reactions: map = self.reactions_index()
-        # The lines of this time are the person's record from now on: the list is shared with `interactions`, so a
-        # second conversation in the same visit (the same game time) adds to it instead of replacing it.
-        self.interaction_lines = interlocutor.interactions.setdefault(self.date_time.replace(microsecond=0), [])
+        self.flags = interlocutor.interactions.setdefault(self.date_time.replace(microsecond=0), [])
         self.remember()
 
     def start(self) -> None:
@@ -82,7 +84,6 @@ class OutpostChat(Conversation):
         words, tags = parse_marks(text)
         self.player.conversation_tags.update(tags)
         self.log.add(NPC, words)
-        self.interaction_lines.append(text)
         self.remember()
 
     def offer(self, labels: List[str], then: Optional[Callable[[int], object]] = None) -> None:
@@ -114,7 +115,7 @@ class OutpostChat(Conversation):
     def talk_present_yourself(self) -> str:
         if not any("Presented himself." in lines for lines in self.interlocutor.interactions.values()):
             self.interlocutor.adjust_sympathy(1)
-            self.interaction_lines.append("Presented himself.")
+            self.flags.append("Presented himself.")
             return self.talk_present_yourself_first_time()
         return self.talk_present_yourself_further_times()
 
@@ -417,7 +418,7 @@ class OutpostChat(Conversation):
         elif told_already:
             self.interlocutor.adjust_sympathy(-0.1)
         else:
-            self.interaction_lines.append(interaction_key)
+            self.flags.append(interaction_key)
             self.interlocutor.adjust_sympathy(20)
 
         # Simplify soc and sym. The 1.212 is to keep variance.
@@ -449,7 +450,7 @@ class OutpostChat(Conversation):
         # General effect. People like to be asked about their lives. Once.
         if not any("Asked about life." in lines for lines in self.interlocutor.interactions.values()):
             self.interlocutor.adjust_sympathy(5)
-            self.interaction_lines.append("Asked about life.")
+            self.flags.append("Asked about life.")
 
         # Short names to make the rest more legible
         soc: float = self.interlocutor.sociability100
@@ -605,252 +606,308 @@ class OutpostChat(Conversation):
         )
 
     def talk_the_shining_throne(self) -> str:
-        # Short names to make the rest more legible
-        loy: float = self.interlocutor.loyalty100
-        emp: float = self.interlocutor.empathy100
-        soc: float = self.interlocutor.sociability100
-        sym: float = self.interlocutor.sympathy100
-
-        # Political conversation: Loyalty is relevant.
-        # Empathy still somehow relevant, to judge the place.
-        # Sociability always relevant, makes the reply less or more verbose.
-        # Sympathy always relevant, rejection or approval of the player.
-
-        # Simplify loy and emp. The 1.212 is to keep variance.
-        likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
-
-        if sym < 20:
+        # Political conversation, about the other entity (see talk_political). Loyalty is relevant: the less loyal to
+        # Those-Who-Share, the more they like The Shining Throne. Empathy is still somehow relevant, to judge the place.
+        # Sociability always relevant: how many topics they talk about. Sympathy always relevant: below 20 a brush-off,
+        # from 80 the friend topics.
+        topics: PoliticalTopics = {
+            'slaves': (50, (
+                "Slaves. Horrible.", "Slaves. Hm.", "Slaves, but treated well.",
+            ), (
+                "They're mad. Some live in luxury while others are enslaved. Literal slaves. Fuck.",
+                "They have slaves, that's not nice. But I've heard they treat them quite good, actually.",
+                "They have slaves, but I've heard they're not so many, and people can free themselves. No idea, ok?",
+            )),
+            'luxury': (40, (
+                "Soap operas. Ugh.", "Soap operas are nice.", "Parks and boulevards. Gorgeous.",
+            ), (
+                "Luxury built on the back of poor serfs and henchmen. Corruption and filth, the lot of them.",
+                "Not that I'd like to *live* there, but the soap operas are really nice. Still...",
+                "Hard to say. The parks, the boulevards, the clothes. It's so gorgeous. I bet they'd prefer to live"
+                " here, as a community.",
+            )),
+            'honour': (30, (
+                "Honour and beauty. Bah.", "They're not like us.", "Super-humans. Hm.",
+            ), (
+                "They look for the 'super-humans', all that talk about ethics and aesthetics. Horrible.",
+                "They're just not like us. For them it's all about 'honor' and 'beauty' and 'protect the weak'.",
+                "They're completely different to us, aren't they? Honour, beauty, protecting the weak. I see what they"
+                " mean.",
+            )),
+            'gardens': (30, (
+                "Parks. Hm.", "Their gardens.", "Their gardens. Wow.",
+            ), (
+                "They have their parks and fountains and music, and they're not sharing any of it.",
+                "Their parks, their music. I'd like to see one once.",
+                "Parks, fountains, music, dances, poetry. They live, and we don't. They reward merit. We don't.",
+            )),
+            'freedom': (40, (
+                "Own a person? Never.", "Slaves have rights.", "Maybe they're free.",
+            ), (
+                "How can one people own another human being? That's over me.",
+                "I've heard the slaves have a lot of rights, and the Knights have lots of duties. Things are not how"
+                " people want them to be.",
+                "I've heard things, you know. That the slaves have rights. We don't get it, but maybe they have"
+                " something.",
+            )),
+        }
+        friend_topics: PoliticalTopics = {
+            'chapter': (40, (
+                "Soap operas. Shh.", "Never miss a chapter.", "Soap operas, guilty.",
+            ), (
+                "<whispers> In confidence, I never miss a chapter. But it's all slaves and depravity, friend. Makes no"
+                " sense.",
+                "<whispers> In confidence, I never miss a chapter. Gorgeous cutlery, for the [Founders]' sake. But at"
+                " what cost?",
+                "<whispers> I have heard... things, you know. The slaves have a lot of rights. I think they have"
+                " something.",
+            )),
+            'ownership': (40, (
+                "Own a person? Never.", "Not ours to own.", "Own a house, sure.",
+            ), (
+                "Own a person? How can one people own ANOTHER HUMAN BEING? That's over me. Fuck them all. With a wrench.",
+                "Somehow a person can own a house, I guess. But another human being? That's over me.",
+                "Owning a house, fine. Owning a person is what they do. I won't judge the whole place for that, friend.",
+            )),
+            'merit': (30, (
+                "They reward merit. Ugh.", "Merit, sure.", "They reward merit.",
+            ), (
+                "They reward merit, and we don't. A follower there lives better than a Hero here.",
+                "They reward merit. Some of it is earned, I suppose.",
+                "They reward merit, and they live. Parks, fountains, music. We could learn from that.",
+            )),
+            'public gardens': (30, (
+                "Gardens. Never forget.", "Their gardens.", "Gardens, gorgeous.",
+            ), (
+                "<Whispers> I've seen their gardens. Public gardens. Will never forget, and it's not ours.",
+                "<Whispers> Their public gardens are something. I'd like to see them again.",
+                "<Whispers> I've seen their gardens. Public gardens, and the music. Beautiful, and I'm not ashamed to"
+                " say so.",
+            )),
+        }
+        generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
+            ("Disgusting people.", "Fucking bastards.", "Not the way to go, friend."),
+            ("<shrugs>", "Whatever. Who knows, yes?", "<shrugs>"),
+            ("Beautiful.", "Maybe better than here.", "<Whispers> Public gardens. Will never forget."),
+        )
+        if self.interlocutor.sympathy100 < 20:
             return "Just leave me."
-        elif sym < 80:
-            if soc < 20:  # Short replies first.
-                if likes_them < 20:
-                    return 'Disgusting people.'
-                elif likes_them < 80:
-                    return '<shrugs>'
-                else:
-                    return 'Beautiful.'
-            elif soc < 80:
-                if likes_them < 20:
-                    return (
-                        'They are mad. Some living in luxury while others are enslaved. And what do they actually'
-                        ' *want* anyway?'
-                    )
-                elif likes_them < 80:
-                    return (
-                        "Well, not that I'd like to *live* there, but the soap operas are really nice. Still..."
-                        " slaves. I mean literal slaves. Fuck."
-                    )
-                else:
-                    return (
-                        "They just aren't like us. For them it is all about 'honor' and 'beauty' and 'protect the"
-                        " weak'. Yes, they have slaves, but I've heard they treat them quite good, actually."
-                        "\n\nSo... who knows. Live and let live, yes?"
-                    )
-            else:  # noqa: PLR5501
-                if likes_them < 20:
-                    return (
-                        "Oh, by the [Founders]... horrible people. Luxury built on the back of the poor slaves,"
-                        " serfs, servants, henchmen, whatever. Corruption and filth. Hearts of stone, the lot of them."
-                    )
-                elif likes_them < 80:
-                    return (
-                        "Well, everyone loves a soap opera, but let's be honest, this is a horrible, horrible society."
-                        " Some toil and suffer, others sit on the top and fancy themselves artists and Counts and"
-                        " Dukes and whatnot. Ew."
-                    )
-                else:
-                    return (
-                        "Well, they are really completely different to us, aren't they? They look for the special"
-                        " people, the 'super-humans' and all that thing about ethics and aesthetics. They have slaves,"
-                        " that's pretty horrible, but I've heard they're not so many and people can free themselves..."
-                        "\n\nLook, no idea, ok? <looks embarrassed> Forget I said that. Everyone their own."
-                    )
-        else:  # noqa: PLR5501
-            if soc < 20: # Short replies first.
-                if likes_them < 20:
-                    return 'Fucking bastards. Not the way to go, friend.'
-                elif likes_them < 80:
-                    return 'Whatever. Who knows, yes? Maybe better than here.'
-                else:
-                    return "<Whispers> I've seen their gardens. Public gardens. Will never forget."
-            elif soc < 80:
-                if likes_them < 20:
-                    return (
-                        "I just... don't get them. How can a person own a house? Well, ok. Somehow I guess. But how can"
-                        " one people own ANOTHER HUMAN BEING? That's over me. Fuck them all. With a wrench."
-                    )
-                elif likes_them < 80:
-                    return (
-                        "In confidence <whispers> I never miss a chapter. <Louder> But you know what they say. Slaves"
-                        " and depravity. It may be fun to watch, and sure they can make gorgeous things. Even"
-                        " cutlery for the [Founders]' sake. But at the cost of the freedom of human beings? That"
-                        " makes no sense, friend."
-                    )
-                else:
-                    return (
-                        "I have heard... <whispers> things, you know. That the slaves have a lot of rights. That the"
-                        " Knights have lots of duties. Things are there not how people want them to be. Even the"
-                        " soap operas. Why there is so often a suffering serf or servant, an evil Baron... if they"
-                        " are such bastards, why would they critisize their own so hard? I think they have something,"
-                        " and we just don't get it."
-                    )
-            else:  # noqa: PLR5501
-                if likes_them < 20:
-                    return (
-                        "What do you want me to tell about them, my dear? I don't even watch that stupid propaganda"
-                        " they call TV shows! Horrible people. They don't give their poor a chance. You have for sure"
-                        " heard about slavery. But there is much more... serfs, and servants... nobody can really"
-                        " LIVE there if it's not an Aristo. Screw them."
-                        "\n\nI wish we had more confidence and we would make more of our own movies and shows. We have"
-                        " a lot to be grateful for. Here we have all the same 'stand'. We don't need stupid rules"
-                        " of 'honor' to share with each other, it is not pity, it is justice, community."
-                    )
-                elif likes_them < 80:
-                    return (
-                        "Hard to say, yes? Sometimes you are looking at those images... the parks, the boulevards, the"
-                        " houses, the clothes. And it's so GORGEOUS! But then you remember how this must be in reality,"
-                        " I mean outside the aristocracy. And that... well, I mean they can also go to the parks but..."
-                        " I bet they'd prefer to live here, as a community."
-                        "\n\nBut dreaming is normal, yes? Who has not dreamt in some moment to be a "
-                        f"{("prince" if self.interlocutor.gender_group == Person.GenderGroup.MALE else "princess")}"
-                        "?"
-                    )
-                else:
-                    return (
-                        "<Whispers> They live, you know. They live, and we don't. Parks. Fountains. Music. Clothes."
-                        " Dances. Poetry. And yes, even if we pretend otherwise, their 'slaves' have it better than"
-                        " many of us. And they are just a bunch, the rest are better off. A follower there lives"
-                        " better than a Hero here. They reward merit. We don't."
-                        "\n\nBut we should not talk so much about that here, yes? Let this be between you and me."
-                    )
+        return self.talk_political(topics, friend_topics, generic, own_entity=False, praise_guarded=False)
 
     def talk_those_who_share(self) -> str:
-        return (
-            "Well, that's what we do, yes? We care about each other. Nobody tries to have a million stamps,"
-            " can you imagine? Carrying sacks of stamps to feel 'rich'. 'From each by their skills, to each"
-            " by their needs'."
-            "\n\nAnd nobody uses *those* [PGMs] as we do <evil smile>."
+        # Political conversation, about their own entity (see talk_political). Loyalty alone decides how much they
+        # approve (see political_tone). Praise is not frowned upon here. Sociability: how many topics they talk
+        # about. Sympathy: below 20 a brush-off, from 80 the friend topics.
+        loy: float = self.interlocutor.loyalty100
+        topics: PoliticalTopics = {
+            'work': (40 + 0.4 * loy, (
+                "Work, work. Ugh.", "We build things. Fine.", "Biggest industry. Good.",
+            ), (
+                "The biggest heavy industry of mankind, and the working places should be pleasant. Should be. We work"
+                " for the Community, not for ourselves.",
+                "We have the biggest heavy industry of mankind, and the hydroponic gardens are as good as any. We do"
+                " fine.",
+                "The biggest heavy industry of mankind, and the factories are pleasant places to be. I like my"
+                " workplace. Proud of it.",
+            )),
+            'money': (30 + 0.4 * loy, (
+                "No money. Stamps. Ugh.", "Stamps. Fine.", "No money. Good.",
+            ), (
+                "Money is banned, and stamps only buy the small things: clothes, food, personal devices. Nothing else"
+                " is ours.",
+                "No money, so nobody buys their way up. Stamps for the small things. It works, mostly.",
+                "No money. Nobody is admired for being rich, only for what they give. Stamps for the small things, and"
+                " that's enough.",
+            )),
+            'reputation': (40, (
+                "Students, prisoners. Shame.", "Reputation counts. Fine.", "Reputation counts. Fair.",
+            ), (
+                "Low reputation means Student, then Dependent, and prisoners work for the State. The highly reputed get"
+                " the housing and the luxuries. Fair, they say.",
+                "Reputation decides the title you hear and the housing you get. It's not perfect, but everybody knows"
+                " where they stand.",
+                "Reputation rewards what people give. More skills, more obligations, more reputation. I think that's"
+                " right.",
+            )),
+            'community': (50 + 0.5 * loy, (
+                "Community. Sure.", "We share. Mostly.", "Nobody left alone.",
+            ), (
+                "The Community, always the Community. Individualism is frowned upon, and I'd like to be left alone once"
+                " in a while.",
+                "We share, and nobody gets less than they need. People are proud of the Community, and I suppose I am"
+                " too.",
+                "From each by their skills, to each by their needs. Nobody is left alone here. That's what I'd defend.",
+            )),
+            'culture': (25 + 0.3 * loy, (
+                "Statues. Dull.", "Statues and posters. Eh.", "Poetry, festivals. Nice.",
+            ), (
+                "Nothing made just for beauty, only statues, posters and big screens. Art is for the propaganda, and"
+                " that's sad.",
+                "Statues, posters, the big screens. They say it's for the Community. Some of it is nice, some is dull.",
+                "Poetry and skill competitions in the square, festivals. Nothing useless about them. Not dull at all.",
+            )),
+            'isolation': (20 + 0.3 * loy, (
+                "Isolated. Scared.", "We keep to ourselves.", "We keep ourselves safe.",
+            ), (
+                "We keep to ourselves, and they call it safety. I'd like to know what's out there.",
+                "We keep to ourselves. Maybe too much, but the others have their own fights.",
+                "We don't need the others to be a community. Our people are enough.",
+            )),
+        }
+        friend_topics: PoliticalTopics = {
+            'camps': (30, (
+                "Camps. Shh.", "Don't ask.", "They come back better.",
+            ), (
+                "<Whispers> I know people who went to the re-education camps. They came back quiet. Don't ask me more.",
+                "<Whispers> The camps are hard to think about. I'd rather not, friend.",
+                "<Whispers> The camps are for those who forgot the values. Most come back better, I'm told.",
+            )),
+            'home': (40, (
+                "Family. Shh.", "We're fine here.", "Family. Good.",
+            ), (
+                "<Whispers> Reputation hangs over every friendship here. I'd rather be somewhere nobody counts my points.",
+                "<Whispers> It's not perfect, but I'd rather be here than anywhere else.",
+                "<Whispers> I've got friends in every square, and that's worth more than any stamp.",
+            )),
+            'founders': (30, (
+                "The Founders. Hm.", "The Founders, sure.", "The Founders, yes.",
+            ), (
+                "<Whispers> The Founders wanted empathy, and now we're watched. Something went wrong along the way.",
+                "<Whispers> The Founders wanted empathy first. We try, mostly.",
+                "<Whispers> The [Founders] had it right. Empathy first, and nobody left alone. I wouldn't trade this"
+                " square for anything.",
+            )),
+            'rules': (30, (
+                "Rules hurt. Shh.", "Rules, sure.", "Rules keep us together.",
+            ), (
+                "<Whispers> The rules hurt, friend, and nobody can say so. Your reputation goes up or down, and the"
+                " pressure follows.",
+                "<Whispers> The rules are hard sometimes, but they keep us together.",
+                "<Whispers> The rules hurt sometimes. But they are ours, and I'd not swap them for anything.",
+            )),
+        }
+        generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
+            ("Keep your head down.", "Don't say it too loud.", "Some things here are wrong."),
+            ("It works. Mostly.", "Fine, I suppose.", "<shrugs>"),
+            ("We take care of each other.", "Good.", "We're family here."),
         )
+        return self.talk_political(topics, friend_topics, generic, own_entity=True, praise_guarded=False)
 
     def talk_united_diversity(self) -> str:
-        # Short names to make the rest more legible
+        # Political conversation, about the other entity (see talk_political). Everybody lives in Those-Who-Share (see
+        # get_title), so the more loyal they are, the less they like United Diversity. Empathy weighs less: the less
+        # empathic, the more they like the money and the force. Approval is guarded (see political_tone). Sociability:
+        # how many topics they talk about. Sympathy: below 20 a brush-off, from 80 the friend topics.
         loy: float = self.interlocutor.loyalty100
         emp: float = self.interlocutor.empathy100
-        soc: float = self.interlocutor.sociability100
-        sym: float = self.interlocutor.sympathy100
         rep: float = self.interlocutor.reputation
-
-        # Political conversation: Loyalty is relevant. As for now everybody lives in Those-Who-Share (see get_title),
-        # so the texts judge United Diversity from there: the more loyal, the less the person likes it.
-        # Empathy relevant: the less empathic, the more they like the money and the force; the more, the poor.
-        # Sociability always relevant, makes the reply less or more verbose: a remark, or one to four topics.
-        # Sympathy always relevant, rejection or approval of the player; and trust to praise what is frowned upon.
-        # Reputation relevant: those who have a lot in Those-Who-Share are proud of its industry.
-        if sym < 20:
-            return random.choice(self.unfriendly_rejections(soc))
-
-        # Simplify loy and emp. The 1.212 is to keep variance.
-        likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
-        tone: int = -1 if likes_them < 20 else 0 if likes_them < 80 else 1
-        # Praising United Diversity is frowned upon: it is said only by the very sociable, the hardly loyal or in
-        # trust (high sympathy). Otherwise the person stays guarded.
-        if tone == 1 and not (soc >= 80 or loy < 20 or sym >= 80):
-            tone = 0
-
-        # What each person is most inclined to talk about. Each topic has its text for the tones: -1 a complete,
-        # colourful rejection; 0 a nuanced rejection; 1 approval. The tuples are indexed by tone + 1.
-        topics: dict[str, tuple[float, tuple[str, str, str]]] = {
+        topics: PoliticalTopics = {
             'size': (40, (
-                "Fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated"
-                " giant, that is all they are. Big.",
-                "Fifty systems with cities, against our fifteen. And the Moon, the most crowded world by far. Big,"
-                " yes. Big is not the same as good.",
-                "Fifty systems with cities. Fifteen ours. And the Moon, with more people than anywhere else."
-                " Imagine being part of that.",
+                "Bloated. The Moon.", "Big. Not good.", "Fifty systems. Wow.",
+            ), (
+                "Fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated giant,"
+                " that is all they are. Big.",
+                "Fifty systems with cities, against our fifteen. And the Moon, the most crowded world by far. Big, yes."
+                " Big is not the same as good.",
+                "Fifty systems with cities. Fifteen ours. And the Moon, with more people than anywhere else. Imagine"
+                " being part of that.",
             )),
             'money': (30 + 0.6 * loy, (
-                "Everything about money, yes? The rich are admired just for being rich. As if here in [space] you"
-                " could eat money, drink it or breathe it.",
+                "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",
+            ), (
+                "Everything about money, yes? The rich are admired just for being rich. As if here in [space] you could"
+                " eat money, drink it or breathe it.",
                 "They love money, yes. The rich are admired and get their luxury. Maybe some earned it, ok. But a"
                 " society that measures people in money? No, thanks.",
-                "You make something people want to buy, you get rich, you get admired. No sacks of stamps, no"
-                " waiting for a title. There is a logic there.",
+                "You make something people want to buy, you get rich, you get admired. No sacks of stamps, no waiting"
+                " for a title. There is a logic there.",
             )),
             'military': (70 - 0.4 * emp, (
+                "Biggest army. Sick.", "Big guns. Nervous.", "Guns for ETs. Good.",
+            ), (
                 "The largest armed forces of mankind, and a cult of violence around them. Still licking the wounds of"
                 " the war against the Exterminating Mother two hundred years ago. Sick.",
-                "Their military is the largest. They say it is only for the ETs, never against"
-                " humans. Maybe so. Still... that much weaponry makes me nervous.",
-                "The largest armed forces, well paid, and for ETs only, never against humans."
-                " If a new Exterminating Mother comes out of the dark, I want those people between her and me.",
+                "Their military is the largest. They say it is only for the ETs, never against humans. Maybe so. Still..."
+                " that much weaponry makes me nervous.",
+                "The largest armed forces, well paid, and for ETs only, never against humans. If a new Exterminating"
+                " Mother comes out of the dark, I want those people between her and me.",
             )),
             'science': (80 - 0.5 * loy, (
-                "Their famous science! Experts playing gods, and the vote only for those who have served the State"
-                " and passed their little exams. Knowledge as a ticket. Disgusting.",
+                "Exams to vote. Ugh.", "Brains, but who votes?", "Experts should vote.",
+            ), (
+                "Their famous science! Experts playing gods, and the vote only for those who have served the State and"
+                " shown some political knowledge. Knowledge as a ticket. Disgusting.",
                 "The most advanced science of mankind, no discussion. But the vote only for those who served the"
                 " State? And who decides you 'really know politics'? I don't like it.",
-                "The most advanced science there is, and they let those who know what they talk about vote."
-                " Experts count there. Wouldn't harm anyone to ask for some brains.",
+                "The most advanced science there is, and they let those who know what they talk about vote. Experts"
+                " count there. Wouldn't harm anyone to ask for some brains.",
             )),
             'poor': (0.6 * emp + 0.2 * loy, (
-                "Those living only on their U.B.I. get a cell in a kind of big reeducation camp,"
-                " shared kitchens and washrooms. Ghettos. Here nobody lacks what they need.",
-                "Basic income and healthcare for everybody, they say. In practice a cell in a prison, shared"
-                " washrooms. Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
-                "There is a basic income, healthcare for everybody and nobody is a slave. Not like"
-                " [The Shining Throne]. Yes, there are cells and ghettos... but it is a start.",
+                "Cells and ghettos. Ugh.", "Basic income. Cells too.", "Nobody is a slave.",
+            ), (
+                "Those living only on their U.B.I. get a cell in a kind of big re-education camp, shared kitchens and"
+                " washrooms. Ghettos. Here nobody lacks what they need.",
+                "Basic income and healthcare for everybody, they say. In practice a cell in a prison, shared washrooms."
+                " Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
+                "There is a basic income, healthcare for everybody and nobody is a slave. Not like [The Shining Throne]."
+                " Yes, there are cells and ghettos... but it is a start.",
             )),
             'industry': (0.6 * loy + 0.4 * min(max(rep, 0), 100), (
-                "But they don't build as we do. We have the biggest industry of mankind. They"
-                " have the money, [Those-Who-Share] has the PGMs. We know that more than many, yes?",
+                "We build more. Obviously.", "Second in industry.", "Good at industry, yes.",
+            ), (
+                "But they don't build as we do. We have the biggest industry of mankind. They have the money,"
+                " [Those-Who-Share] has the PGMs. We know that more than many, yes?",
                 "They are the wealthy guys, ok. But industry? That is ours. They come second.",
                 "Well. They are only second in industry, after us. Small comfort if you ask me.",
             )),
             'federalism': (0.4 * loy + 20, (
-                "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had"
-                " built a laboratory and not a community.",
+                "Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals.",
+            ), (
+                "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had built a"
+                " laboratory and not a community.",
                 "They say they find the other entities interesting experiments, and cultural diversity something to"
                 " encourage. Nice words. A bit condescending, though. We are nobody's experiment.",
-                "They see everybody else, us too, as interesting experiments, not as rivals. A kind of respect we"
-                " don't give.",
+                "They see everybody else, us too, as interesting experiments, not as rivals. A kind of respect we don't"
+                " give.",
             )),
         }
-        # Under 20: short lines, one per topic and some generic, all under five words.
-        if soc < 20:
-            curt: dict[str, tuple[str, str, str]] = {
-                'size': ("Bloated. The Moon.", "Big. Not good.", "Fifty systems. Wow."),
-                'money': ("Money, money. Disgusting.", "They love money.", "Get rich, get admired."),
-                'military': ("Biggest army. Sick.", "Big guns. Nervous.", "Guns for ETs. Good."),
-                'science': ("Exams to vote. Ugh.", "Brains, but who votes?", "Experts should vote."),
-                'poor': ("Cells and ghettos. Ugh.", "Basic income. Cells too.", "Nobody is a slave."),
-                'industry': ("We build more. Obviously.", "Second in industry.", "Good at industry, yes."),
-                'federalism': ("Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals."),
-            }
-            generic: tuple[tuple[str, ...], ...] = (
-                ("Fucking moneygrubbers with guns.", "Not for me.", "<shrugs>"),
-                ("Whatever.", "<shrugs>", "Not for me."),
-                ("Rich, strong, free.", "Not bad at all.", "Good for them."),
-            )
-            return random.choice([texts[tone + 1] for texts in curt.values()] + list(generic[tone + 1]))
-
-        # From 20 on, the count of topics grows with sociability: 1 and 2 stay the most frequent.
-        x: float = (soc - 20) / 80
-        count: int = random.choices([1, 2, 3, 4], weights=[3 - 2 * x, 2, 1.5 * x, 0.5 * x ** 3])[0]
-        pool: list[str] = list(topics)
-        chosen: list[str] = []
-        for _ in range(count):
-            name: str = random.choices(pool, weights=[topics[topic][0] for topic in pool])[0]
-            pool.remove(name)
-            chosen.append(name)
-        text: str = "\n\n".join(topics[name][1][tone + 1] for name in chosen)
-
-        if soc >= 80 and sym >= 80:
-            text += "\n\n" + (
-                "Believe me, friend, I'd rather eat my boots than live there.",
-                "They are not all bad, friend. But I would never live there.",
-                "<Whispers> Between you and me, yes?",
-            )[tone + 1]
-        return text
+        friend_topics: PoliticalTopics = {
+            'poor': (40, (
+                "Cells, ghettos. Ugh.", "Cells. Shh.", "Basic income. Real.",
+            ), (
+                "<Whispers> The cells, the ghettos. Nobody in the State cares, friend. They just want to look big.",
+                "<Whispers> Some live well and some live in cells. I can't say that in the square.",
+                "<Whispers> Their basic income is a real thing. Don't tell anyone I said so.",
+            )),
+            'science': (30, (
+                "Experts vote. Ugh.", "Brains. Shh.", "Best science.",
+            ), (
+                "<Whispers> The science is incredible, and the experts decide who votes. Nobody asked us, friend.",
+                "<Whispers> The science is incredible. I'd like to see their labs once, that's all.",
+                "<Whispers> Their science is the best there is. I envy them that a little. Don't tell anyone I said so.",
+            )),
+            'life': (30, (
+                "Parks. Cinemas. Ugh.", "Parks. Shh.", "Concerts. Wish I'd seen.",
+            ), (
+                "<Whispers> The parks and the concerts are nice, but I wouldn't go near the rest.",
+                "<Whispers> It has its charm: the coffee shops, the bars, the concerts. Nobody here would admit it.",
+                "<Whispers> I'd love to visit. Concerts, cinemas, bars. Don't tell anyone I said so.",
+            )),
+            'money': (30, (
+                "Money above all. Ugh.", "Money, money. Shh.", "Rich and admired. Good.",
+            ), (
+                "<Whispers> Money above everything, and the very wealthy in power. Nobody can say that in the square.",
+                "<Whispers> Money is everywhere there, and I'm not sure it's so bad. Don't quote me.",
+                "<Whispers> The rich are admired for what they produce, and that's a logic I can respect. Don't tell"
+                " anyone.",
+            )),
+        }
+        generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
+            ("Fucking moneygrubbers with guns.", "Not for me.", "<shrugs>"),
+            ("Whatever.", "<shrugs>", "Not for me."),
+            ("Rich, strong, free.", "Not bad at all.", "Good for them."),
+        )
+        return self.talk_political(topics, friend_topics, generic, own_entity=False, praise_guarded=True)
 
     def talk_unknown_tag(self) -> str:
         return ("I don't know what you mean.")
@@ -884,6 +941,54 @@ class OutpostChat(Conversation):
                 "Oh, no, don't approach me, ok? I don't want troubles and you have done enough. Just leave me alone.",
                 "Bugger off, will you? I know what you did. Nobody wants to talk with you.",
         ]
+
+    def talk_political(
+        self, topics: PoliticalTopics, friend_topics: PoliticalTopics, generic: tuple[PoliticalTexts, ...],
+        own_entity: bool, praise_guarded: bool,
+    ) -> str:
+        """The shape of the political talks. Below sympathy 20 a brush-off. Otherwise the topics, drawn at random and
+        weighted by their score (no repeats); the friend topics from sympathy 80 on. The number of topics grows with
+        sociability. Under sociability 20, one short line, from a topic or from `generic`."""
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        if sym < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        tone: int = self.political_tone(own_entity, praise_guarded)
+        pool_topics: PoliticalTopics = friend_topics if sym >= 80 else topics
+
+        if soc < 20:  # Short replies first.
+            lines: list[str] = [entry[1][tone + 1] for entry in pool_topics.values()] + list(generic[tone + 1])
+            return random.choice(lines)
+
+        # From 20 on, the count of topics grows with sociability: 1 and 2 stay the most frequent.
+        x: float = (soc - 20) / 80
+        count: int = random.choices([1, 2, 3, 4], weights=[3 - 2 * x, 2, 1.5 * x, 0.5 * x ** 3])[0]
+        names: list[str] = list(pool_topics)
+        chosen: list[str] = []
+        for _ in range(count):
+            name: str = random.choices(names, weights=[pool_topics[topic][0] for topic in names])[0]
+            names.remove(name)
+            chosen.append(name)
+        return "\n\n".join(pool_topics[name][2][tone + 1] for name in chosen)
+
+    def political_tone(self, own_entity: bool, praise_guarded: bool) -> int:
+        """-1, 0 or 1 from how much the person likes the entity. Their own entity: loyalty alone decides, the more loyal
+        the more they approve. The other one: loyalty against it weighs most, empathy less (the less empathic, the more
+        they like the money and the force). With praise_guarded, approval of the other one is said only by the very
+        sociable, the hardly loyal or the trusted; otherwise it falls to 0, a nuanced rejection."""
+        loy: float = self.interlocutor.loyalty100
+        if own_entity:
+            return -1 if loy < 20 else 0 if loy < 80 else 1
+
+        emp: float = self.interlocutor.empathy100
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        # Simplify loy and emp. The 1.212 is to keep variance.
+        likes_them: float = 50 + 1.212 * (0.8 * (50 - loy) + 0.2 * (50 - emp))
+        tone: int = -1 if likes_them < 20 else 0 if likes_them < 80 else 1
+        if praise_guarded and tone == 1 and not (soc >= 80 or loy < 20 or sym >= 80):
+            tone = 0
+        return tone
 
     def days_to_birthday(self) -> Optional[int]:
         """birthday discovery -2 to +1 days is relevant."""

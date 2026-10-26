@@ -9,7 +9,7 @@ DEVELOPER'S DIARY
   * Promotion gives more autonomy, needed for asteroid missions.
   * Outpost dialog rewire.
 
-### 2026-10-21 (10/10)
+### 2026-10-22 (10/10)
 
   * Types of ships per level.
   * Extra: Seed generation re-done.
@@ -27,7 +27,7 @@ DEVELOPER'S DIARY
   * Extra: No more PAUSED mode.
   * Extra: 120 chars in code.
 
-### 2026-10-22 (1/11)
+### 2026-10-23 (1/11)
 
 * INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
   * Entering and leaving spends time.
@@ -55,6 +55,9 @@ DEVELOPER'S DIARY
   * "life" > "happy birthday" path
   * Notification panel for outpost dialog. "The Community thinks you have enough stuff." when wants mines,
     "Your ship is not ready for more of this" when other things.
+
+### 2026-10-24 (2/11)
+
   * More full dialogs... now Those-Who-Share :)
   * External mines and ore fields.
   * Generate the jovian planet, astronomically.
@@ -62,19 +65,25 @@ DEVELOPER'S DIARY
   * Extra: "Bring water" mission. Uses the scoop.
   * Reduce the prize of the asteroid, but not much.
 
+### 2026-10-25 (2/11)
+### 2026-10-26 (3/11)
+
 > STARTED:
 
-### 2026-10-22 (2/11)
+  * Long-distance travel advisor improvements.
+  * Extra: Dialogs: The Shining Throne, United Diversity.
 
-Extra time: 126h30' + 1:45 - 3:30 + 5:00  + 6:00 - 7:15 + 10:30 - 13:30 + 15:00 - 
+
+Extra time: 132h45' + 5:15
 
 > BACKLOG
 * INTERSTELLAR TRAVEL VIA BASE (50-100)
+  * Keep testing long travel advisor.
+  * Test the scoop sounds.
   * Base
   * Portal
   * New level brings scoop, solar panels and heat shield. Hide them else.
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
-  * Extra: More full dialogs... now The Shining Throne :)
 
 THE TRAITORS WAY (Rep 50-100)
   * Extra: Gravity. Evaluate, at least... for realism's sake.

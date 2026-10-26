@@ -22,7 +22,7 @@ class Conversation(ABC):
         self.player: Player = player
         self.interlocutor: Person = interlocutor.meet()
         self.date_time: datetime = gem.current_environment.date_time
-        self.interaction_lines: List[str] = []
+        self.flags: List[str] = []
         self.show: ShowMessage = show
         self.is_closed: bool = False
 
@@ -39,13 +39,12 @@ class Conversation(ABC):
          return ''
 
     def close(self) -> None:
-        """Ends the conversation: the interlocutor remembers it, with its interaction_lines. Closing it again does
-        nothing, so whoever shows it can close it too when it is left half way."""
+        """Ends the conversation: the interlocutor the fact and its flags."""
         if self.is_closed:
             return
         self.is_closed = True
         self.interlocutor.last_communication_at = self.date_time
-        self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = self.interaction_lines
+        self.interlocutor.interactions[self.date_time.replace(microsecond=0)] = self.flags
         self.interlocutor.record()
         self.interlocutor.log_description()
         logger.debug("Finished.")
