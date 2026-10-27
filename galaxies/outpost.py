@@ -79,6 +79,9 @@ class Outpost(Settlement):
         logger.info(f"- Seed {self.seed}")
         return self
 
+    def get_max_maintenance(self) -> float:
+        return 0.8
+
     # region Alterations
     def get_alterations_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)

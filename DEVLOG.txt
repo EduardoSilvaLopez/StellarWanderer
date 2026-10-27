@@ -81,10 +81,11 @@ DEVELOPER'S DIARY
     * Include role in the list of people.
   * Warnings when approaching the Portal. Get arrested, game over.
   * Entering the hangar.
+  * "Life", "Job", "Hobby"
+  * Portal
 
 STARTED:
 
-  * "Life", "Job"
   * Long-distance travel advisor improvements. Test.
   * Portraits without uniform: Black, Latino, White
   
@@ -93,7 +94,6 @@ Extra time: 141h30' + 5:00 - 10:00 + 11:00-13:30 + 15:00-16:30 + 17:00-
 > BACKLOG
 
 * BASE AND RING (50-100)
-  * Portal
   * New level brings scoop, solar panels and heat shield. Hide them else.
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
 

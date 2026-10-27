@@ -22,6 +22,8 @@ class OutpostLeaving(Conversation):
         self.on_decided: Callable[[bool], object] = on_decided
 
         entity: PoliticalEntity = self.player.those_who_share.entity
+        if self.outpost.player_reputation_on_entering is None:
+            raise Exception("No reputation recorded on entering.")
         self.old_rep: float = self.outpost.player_reputation_on_entering
         self.new_rep: float = self.player.those_who_share.reputation
         old_title: str = entity.title_for(self.old_rep)
@@ -39,6 +41,8 @@ class OutpostLeaving(Conversation):
 
         title_improved_text: str = self._higher_title_effects(self.old_rep) if self.title_has_improved else ''
 
+        if self.outpost.dockmaster is None:
+            raise Exception("No dockmaster.")
         not_ready_text: str = '' if self.outpost.handling_due_at is None \
             else (
                 f"{self.outpost.dockmaster.role.name} {self.outpost.dockmaster.surname} says"
@@ -88,10 +92,11 @@ class OutpostLeaving(Conversation):
                 "People were asking why you still have to go around with that piece of..."
                 f" no offense intended, {self.interlocutor.get_player_title()}.\n\n"
                 "We consulted and the community thinks you deserve a modern THS miner.\n\n"
-                "You should now be able to scan asteroids and so on. If you dare.\n\n"
+                "It has a thing for solar panels, you can recharge around the sun. If you dare.\n\n"
                 "Take care of it, will you?\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
+        return ""
 
     def _answered(self, chosen_button: Optional[int]) -> None:
         self._decide(chosen_button == 0)

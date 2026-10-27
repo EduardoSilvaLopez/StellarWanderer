@@ -73,6 +73,9 @@ class PortalBase(Body, Settlement):
     def _generate_name(self, rnd: random.Random) -> str:
         return "Protecting-" + rnd.choice(self._stellar_system.political_entity.portal_base_names)
 
+    def get_max_maintenance(self) -> float:
+        return 0.9
+
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, self.height)
 

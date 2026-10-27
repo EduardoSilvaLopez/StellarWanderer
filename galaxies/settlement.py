@@ -4,6 +4,7 @@ ship, what the mission board offers, and what is due at the shift changes. Each 
 saved (see Outpost, PortalBase)."""
 
 from __future__ import annotations
+from abc import abstractmethod
 import random
 import logging
 from datetime import datetime, timedelta
@@ -44,7 +45,6 @@ class Settlement(Updatable):
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
     UNLOAD_RAW_WATER_PER_SECOND = 0.5  # Kg a second, a separate rate for caution: the same number for now
-    MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
     READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
     # What each kind has: each role with the number of teams that work it at once (each team has its shift members and
@@ -121,6 +121,9 @@ class Settlement(Updatable):
     def full_keys(self) -> str:
         """The keys that find this settlement from the galaxy: each kind has its own (see Outpost, PortalBase)."""
         raise NotImplementedError
+
+    @abstractmethod
+    def get_max_maintenance(self) -> float:
 
     @property
     def body(self) -> Body:
@@ -310,7 +313,7 @@ class Settlement(Updatable):
 
     def get_time_to_handle(self, ship: Ship) -> int:
         time_to_charge = (ship.energy_max - ship.energy) / Settlement.CHARGE_PER_SECOND
-        time_to_repair = (Settlement.MAX_MAINTENANCE - ship.maintenance) / Settlement.MAINTENANCE_PER_SECOND
+        time_to_repair = (self.get_max_maintenance() - ship.maintenance) / Settlement.MAINTENANCE_PER_SECOND
         if time_to_repair < 0:
             time_to_repair = 0.0
         time_to_unload = (ship.cargo_hold.ore / Settlement.UNLOAD_ORE_PER_SECOND
@@ -332,7 +335,7 @@ class Settlement(Updatable):
         on is not judged: it still brings the ship to full."""
         full = 1 - self.READY_MARGIN
         return (self.handling_due_at is None and ship.cargo_hold.ore == 0 and ship.cargo_hold.raw_water == 0
-                and ship.energy >= ship.energy_max * full and ship.maintenance >= self.MAX_MAINTENANCE * full)
+                and ship.energy >= ship.energy_max * full and ship.maintenance >= self.get_max_maintenance() * full)
 
     def start_handle(self, ship: Ship, extra_seconds: float = 0.0) -> Settlement:
         """The settlement starts working on the pilot's `ship`, from the state it is in now: it will be ready after
@@ -358,11 +361,11 @@ class Settlement(Updatable):
             ship.energy += energy_change
             gpp.current_player.those_who_share.adjust_reputation_by_supply("energy", -energy_change)
 
-            if ship.maintenance < self.MAX_MAINTENANCE:
-                if self.MAX_MAINTENANCE - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
+            if ship.maintenance < self.get_max_maintenance():
+                if self.get_max_maintenance() - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
                     # Avoid epsilon changes.
-                    maintenance_change = self.MAX_MAINTENANCE - ship.maintenance
-                    ship.maintenance = self.MAX_MAINTENANCE
+                    maintenance_change = self.get_max_maintenance() - ship.maintenance
+                    ship.maintenance = self.get_max_maintenance()
                 else:
                     maintenance_change = self.MAINTENANCE_PER_SECOND * seconds
                     ship.maintenance += maintenance_change

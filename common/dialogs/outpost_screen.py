@@ -63,6 +63,7 @@ if TYPE_CHECKING:
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 SECOND_GROUP = ('Heat Shield', 'Mines', 'Scoop', 'Solar Panels')  # the rows right of the levels, in alphabetical order
+THS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')  # the rows only a THS miner (ThsMiner) is offered; the others on every ship
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
 HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
@@ -196,9 +197,10 @@ class OutpostScreenDialog(Dialog):
     for more than the room left turns the room line red, until a − is pressed or Cargo is left. A take that is refused
     shows a notification: the Community's when a mine goes over the reputation limit, else the ship's.
     The second group, right of the levels, in alphabetical order: Heat Shield (a combo box: None, Heat Shield I costing
-    10 reputation, Heat Shield II costing 50), Mines, Scoop and Solar Panels (toggles, Yes or No). An attachment that
-    costs more than the reputation the pilot has now over the title's floor (the floor of the title held on entering)
-    is refused with the Community's message. The cost is charged to the reputation at once, and refunded when it is
+    10 reputation, Heat Shield II costing 50), Mines, Scoop and Solar Panels (toggles, Yes or No). The Heat Shield and the
+    Solar Panels are offered only on a THS miner, so their rows are not there on the other ships (_second_group). An
+    attachment that costs more than the reputation the pilot has now over the title's floor (the floor of the title held
+    on entering) is refused with the Community's message. The cost is charged to the reputation at once, and refunded when it is
     given back. They are the ship's fields (heat_shield, has_scoop, has_solar_panels), saved with the ship.
 
     Missions (selected, and shown from the reputation the board needs or while a taken mission is open here, see
@@ -365,11 +367,19 @@ class OutpostScreenDialog(Dialog):
             self._ship_image_size = size
         return self._ship_image
 
+    def _second_group(self) -> Tuple[str, ...]:
+        """The rows of the second group that the ship is offered (SECOND_GROUP): the Heat Shield and the Solar Panels
+        only on a THS miner (THS_MINER_ATTACHMENTS), the others on every ship."""
+        from spaceships.ship_configurations import ThsMiner  # local: the ship configurations are the game's
+        if isinstance(self.ship, ThsMiner):
+            return SECOND_GROUP
+        return tuple(name for name in SECOND_GROUP if name not in THS_MINER_ATTACHMENTS)
+
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The cargo: the ship's picture, the levels and the room left in the hold, and a row for each supply (SUPPLIES,
         in the hold's module), with − and + to give and take one unit, and ++ to fill it to its maximum. The second
-        group, right of the levels from the height of Maintenance, holds the Mines row and the attachments (SECOND_GROUP).
-        There is no conversation here."""
+        group, right of the levels from the height of Maintenance, holds the Mines row and the attachments the ship is
+        offered (_second_group). There is no conversation here."""
         from spaceships.cargo_hold import SUPPLIES  # local: the ship's hold is the game's, not the dialogs'
         margin = _margin(height)
         font = body_font(max(14, height // 48))
@@ -411,7 +421,7 @@ class OutpostScreenDialog(Dialog):
         # the second group, to the right of the first: its rows start at the levels, in alphabetical order
         group_left = left + width + margin
         group_width = min(width, right.right - margin - group_left)
-        for i, name in enumerate(SECOND_GROUP):
+        for i, name in enumerate(self._second_group()):
             row = pygame.Rect(group_left, levels_top + i * (row_height + gap), group_width, row_height)
             if name == "Mines":
                 mines = next(k for k, supply in enumerate(SUPPLIES) if supply.key == "mines")
@@ -1091,7 +1101,7 @@ class OutpostScreenDialog(Dialog):
             for k in range(len(SUPPLIES)):
                 if k != mines:
                     targets += [('cargo', k, -1), ('cargo', k, 1), ('fill', k)]
-            for name in SECOND_GROUP:  # the Mines row is in the second group, among the attachments
+            for name in self._second_group():  # the Mines row is in the second group, among the attachments
                 if name == "Mines":
                     targets += [('cargo', mines, -1), ('cargo', mines, 1), ('fill', mines)]
                 else:
