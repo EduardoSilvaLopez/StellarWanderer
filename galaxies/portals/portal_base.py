@@ -18,6 +18,7 @@ from common.vector3 import Vector3
 from galaxies import seeds
 from galaxies.body import Body
 from galaxies.people.role import (COM_OFFICER, DOCKMASTER, GUNNER, JANITOR, KOMISAR, RINGMASTER, SECURITY, STEVEDORE)
+from galaxies.portals.portal_base_solid import PortalBaseSolid
 from galaxies.settlement import Settlement
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world import World
@@ -39,12 +40,15 @@ class PortalBase(Body, Settlement):
     kind = SettlementKind.PORTAL_BASE
     MOUTH_DEPTH = 48.0  # m, from the ring's centre to the mouth of the hangar, at the reference radius (100 m)
     BERTH_CLEARANCE = 200.0  # m, how far in front of the mouth the ship is put when the pilot leaves
-    DOCK_MAX_SPEED = 1.0  # m/s relative to the base: the ship docks only below this
+    DOCK_MAX_SPEED = 1.0  # m/s relative to the base: the ship docks only below this, inside the docking place
     # The hangar, at the reference radius (see graphics/portal_base_shape.py): its outer width and height, and the hub's
-    # length, which is where the hangar meets the ring's spokes.
+    # length, which is where the hangar meets the ring's spokes; the mouth, and the docking place behind it.
     HANGAR_WIDTH = 12.0
     HANGAR_HEIGHT = 10.0
     HUB_LENGTH = 8.0
+    MOUTH_WIDTH = 10.0
+    MOUTH_HEIGHT = 8.0
+    DOCKING_DEPTH = 19.0
 
     HEAT_RADIUS_MULTIPLE = 10  # how far over the star it hangs, in the star's heat radii
     RING_RADIUS_MIN = 100.0  # m, the outer radius of the ring: the body's radius, drawn in steps of 5 m
@@ -59,6 +63,7 @@ class PortalBase(Body, Settlement):
 
         self.radius: float = float(my_random.randrange(int(self.RING_RADIUS_MIN), int(self.RING_RADIUS_MAX) + 1, 5))
         self.height: float = float(PortalBase.HEAT_RADIUS_MULTIPLE * stellar_system.star.default_heat_radius)  # m
+        self.solid: PortalBaseSolid = PortalBaseSolid(self.radius)  # what a ship cannot fly through
         self.name: str = self._generate_name(my_random)
         Settlement.__init__(self, self.seed)
         if saved is not None:  # what the settlement saved in its system (see StellarSystem.get_alterations)
@@ -143,6 +148,15 @@ class PortalBase(Body, Settlement):
         half_width = self.HANGAR_WIDTH / 2.0 * scale
         half_height = self.HANGAR_HEIGHT / 2.0 * scale
         return abs(relative_x) < half_width and abs(relative_y) < half_height and mouth_z <= relative_z <= hub_front_z
+
+    def in_docking_place(self, position: Vector3) -> bool:
+        """Whether the stellar-frame `position` is in the docking place: through the mouth, before the door at its back.
+        It is where a ship stops to dock."""
+        scale = self.radius / self.RING_RADIUS_MIN
+        mouth_z = -self.MOUTH_DEPTH * scale
+        relative_z = position.z - self.height
+        return (abs(position.x) < self.MOUTH_WIDTH / 2.0 * scale and abs(position.y) < self.MOUTH_HEIGHT / 2.0 * scale
+                and mouth_z <= relative_z <= mouth_z + self.DOCKING_DEPTH * scale)
 
     def place_after_leaving(self, ship: Ship) -> None:
         """The ship is put in front of the hangar, at rest, looking at the base (forward along +z, up along +y)."""

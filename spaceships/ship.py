@@ -37,7 +37,8 @@ class Ship(Updatable):
     `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
     east, y up, z north) or free in the star's frame.
 
-    HEIGHT is the eye height above the ground while bound (4 m): the altitude never goes below it, and the spawn
+    The hull is a box of WIDTH, HEIGHT and DEPTH metres, centred on the camera (its middle, as the legs are retracted in
+    space). HEIGHT is also the eye height above the ground while bound: the altitude never goes below it, and the spawn
     height and the descent limit use it too. Rotation acceleration, braking and speed limit (ANGULAR_ACC,
     ANGULAR_BRAKE, MAX_ANGULAR_SPEED) are the same on every axis.
     """
@@ -46,8 +47,6 @@ class Ship(Updatable):
         HeatShieldNone = 0
         HeatShieldOne = 1
         HeatShieldTwo = 2
-
-    HEIGHT = 4  # meters, up to the camera
 
     UP_DOWN_ACC = 5.0  # m/s^2
     RIGHT_LEFT_ACC = 10  # m/s^2
@@ -81,6 +80,9 @@ class Ship(Updatable):
     BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]
     NAME: ClassVar[str]  # the kind of ship, as the pilot knows it (ShipSpecificationsDialog)
+    WIDTH: ClassVar[float]  # m, of the hull
+    HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
+    DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
 
     # Every configuration, by qualified name.
     by_name: ClassVar[dict[str, type[Ship]]] = {}
@@ -136,7 +138,7 @@ class Ship(Updatable):
         central_km2 = next(km2 for km2 in environment.fixed_world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = central_km2.longitude + 500
-        self.position.y = Ship.HEIGHT
+        self.position.y = self.HEIGHT
         self.position.z = central_km2.latitude + 500
         return self
     # endregion

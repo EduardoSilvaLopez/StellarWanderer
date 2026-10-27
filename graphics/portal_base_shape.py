@@ -5,7 +5,8 @@ At a ring radius of 100 m (`REFERENCE_RADIUS`) the parts are, from the outside i
   * the ring: 10 m thick (radially) and 15 m wide, spinning. The floor is just inside its outer wall.
   * four spokes, 2.5 x 2.5 m, at 0, 90, 180 and 270 degrees, from the hub to the ring (the lifts go along them).
   * the hub: a cylinder of 9 m of radius and 8 m long, spinning, where the spokes meet. Behind the hangar.
-  * the hangar: a box of 12 m wide, 10 high and 44 deep that does not spin. Its rear end is the hub's front end, so it
+  * the hangar: a box of 12 m wide, 10 high and 44 deep, its four long edges cut (an octagon with four short sides
+    in the corners), that does not spin. Its rear end is the hub's front end, so it
     sticks out in front of the ring (toward the star). Its mouth, 10 x 8 m, opens on the docking place, 19 m deep
     (the interior is only drawn from the outside, `interior`), and behind it the hangar is closed: the parking of
     other ships, only suggested.
@@ -40,6 +41,7 @@ SIDE_TILE = 32.0  # m that the side texture covers, along the wall (its band is 
 HANGAR_WIDTH = 12.0
 HANGAR_HEIGHT = 10.0
 HANGAR_DEPTH = 44.0
+HANGAR_CHAMFER = 1.0  # m cut off each of the four long edges of the hangar, along each side of the corner
 MOUTH_WIDTH = 10.0
 MOUTH_HEIGHT = 8.0
 DOCKING_DEPTH = 19.0  # the docking place, from the mouth
@@ -74,6 +76,7 @@ LEFT_SIDE = (0, 0, 880, 200)
 RIGHT_SIDE = (0, 208, 880, 200)
 TOP = (896, 0, 240, 880)
 BOTTOM = (1152, 0, 240, 880)
+CHAMFER = (1408, 0, 32, 880)  # a cut corner: across it runs from the side face to the top or bottom one
 
 Vector = tuple[float, float, float]
 
@@ -129,6 +132,15 @@ class Builder:
             self._positions.append(points[index])
             self._uvs.append(uvs[index])
             self._colours.append(colour)
+
+    def polygon(self, points: list[Vector], uvs: list[tuple[float, float]], normal: Vector) -> None:
+        """A convex polygon (corners in order) as a fan of triangles."""
+        colour = self.shade(normal)
+        for index in range(1, len(points) - 1):
+            for corner in (0, index, index + 1):
+                self._positions.append(points[corner])
+                self._uvs.append(uvs[corner])
+                self._colours.append(colour)
 
     def build(self) -> Mesh:
         if not self._positions:
@@ -292,15 +304,28 @@ def make_model(radius: float, sun_colour: tuple[int, int, int] = (255, 255, 255)
                              (half_h - a_coord) / (2.0 * half_h))
         return _atlas_uv(TOP if high else BOTTOM, (a_coord + half_w) / (2.0 * half_w), (b_coord - mouth_z) / length)
 
-    oriented_box(hangar, (x_axis, y_axis, z_axis), ((-half_w, half_w), (-half_h, half_h), (mouth_z, hub_front)),
-                 hull_tile, skip=(4, 5), uv_of=hangar_uv)
+    cut = HANGAR_CHAMFER * a
+    oriented_box(hangar, (x_axis, y_axis, z_axis), ((-half_w, half_w), (-(half_h - cut), half_h - cut),
+                                                    (mouth_z, hub_front)), hull_tile, skip=(2, 3, 4, 5), uv_of=hangar_uv)
+    oriented_box(hangar, (x_axis, y_axis, z_axis), ((-(half_w - cut), half_w - cut), (-half_h, half_h),
+                                                    (mouth_z, hub_front)), hull_tile, skip=(0, 1, 4, 5), uv_of=hangar_uv)
+    for sx, sy in ((-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)):  # the cut corners, with their lights
+        ends = [(sx * half_w, sy * (half_h - cut), mouth_z), (sx * (half_w - cut), sy * half_h, mouth_z),
+                (sx * (half_w - cut), sy * half_h, hub_front), (sx * half_w, sy * (half_h - cut), hub_front)]
+        hangar.quad(ends, [_atlas_uv(CHAMFER, across, (z - mouth_z) / length)
+                           for across, z in ((0.0, mouth_z), (1.0, mouth_z), (1.0, hub_front), (0.0, hub_front))],
+                    (sx * math.sqrt(0.5), sy * math.sqrt(0.5), 0.0))
     mouth_w, mouth_h = MOUTH_WIDTH * a / 2.0, MOUTH_HEIGHT * a / 2.0
-    for x0, x1, y0, y1 in ((-half_w, half_w, mouth_h, half_h), (-half_w, half_w, -half_h, -mouth_h),
-                           (-half_w, -mouth_w, -mouth_h, mouth_h), (mouth_w, half_w, -mouth_h, mouth_h)):
-        corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-        fixed.quad([(x, y, mouth_z) for x, y in corners],
-                   [(x / hull_tile, PLAIN_PLATING + (1.0 - PLAIN_PLATING) * (y - y0) / (y1 - y0)) for x, y in corners],
-                   (0.0, 0.0, -1.0))
+    for outline, y0, y1 in (
+            ([(-half_w, mouth_h), (half_w, mouth_h), (half_w, half_h - cut), (half_w - cut, half_h),
+              (-half_w + cut, half_h), (-half_w, half_h - cut)], mouth_h, half_h),
+            ([(-half_w, -mouth_h), (-half_w, -half_h + cut), (-half_w + cut, -half_h), (half_w - cut, -half_h),
+              (half_w, -half_h + cut), (half_w, -mouth_h)], -half_h, -mouth_h),
+            ([(-half_w, -mouth_h), (-mouth_w, -mouth_h), (-mouth_w, mouth_h), (-half_w, mouth_h)], -mouth_h, mouth_h),
+            ([(mouth_w, -mouth_h), (half_w, -mouth_h), (half_w, mouth_h), (mouth_w, mouth_h)], -mouth_h, mouth_h)):
+        fixed.polygon([(x, y, mouth_z) for x, y in outline],
+                      [(x / hull_tile, PLAIN_PLATING + (1.0 - PLAIN_PLATING) * (y - y0) / (y1 - y0))
+                       for x, y in outline], (0.0, 0.0, -1.0))
 
     # The docking place seen from the mouth: a box whose faces look inward, with the light of the lamps baked in.
     interior = Builder(sun_colour, AMBIENT_INTERIOR)
@@ -353,8 +378,8 @@ def make_model(radius: float, sun_colour: tuple[int, int, int] = (255, 255, 255)
 
     fixed_marks = Builder(sun_colour)
     stripe_u0, stripe_v0, stripe_u1, stripe_v1 = marks_rect(STRIPES)
-    for x0, x1, y0, y1, length in ((-half_w, half_w, mouth_h, half_h, HANGAR_WIDTH * a),
-                                   (-half_w, half_w, -half_h, -mouth_h, HANGAR_WIDTH * a),
+    for x0, x1, y0, y1, length in ((cut - half_w, half_w - cut, mouth_h, half_h, HANGAR_WIDTH * a),
+                                   (cut - half_w, half_w - cut, -half_h, -mouth_h, HANGAR_WIDTH * a),
                                    (-half_w, -mouth_w, -mouth_h, mouth_h, MOUTH_HEIGHT * a),
                                    (mouth_w, half_w, -mouth_h, mouth_h, MOUTH_HEIGHT * a)):
         long_side_is_x = (x1 - x0) > (y1 - y0)

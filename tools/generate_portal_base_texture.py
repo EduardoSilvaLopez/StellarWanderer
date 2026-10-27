@@ -37,6 +37,7 @@ LEFT_SIDE = (0, 0, 880, 200)
 RIGHT_SIDE = (0, 208, 880, 200)
 TOP = (896, 0, 240, 880)
 BOTTOM = (1152, 0, 240, 880)
+CHAMFER = (1408, 0, 32, 880)  # a cut corner: across it is the 1.4 m between the two faces it joins
 SPOKE_SIZE = 256
 FREE_LIGHTS_FROM = 480  # on the sides, the first column of lights: the flag and the stencil are left of it
 EMBLEM_SIZE = (96, 90)  # the emblem on the flag, in pixels
@@ -348,6 +349,19 @@ def paint_face(surface: pygame.Surface, glow: pygame.Surface, region: tuple[int,
                 pygame.draw.rect(glow, (120, 22, 16), (x0 + across + 22, y0 + along + 26, 12, 4))
 
 
+def paint_chamfer(surface: pygame.Surface, glow: pygame.Surface, region: tuple[int, int, int, int]) -> None:
+    """A cut corner of the hangar, seen from afar as an outline: dark plating with a yellow stripe along each edge
+    and a row of amber running lights down the middle, a dim line joining them."""
+    x0, y0, width, height = region
+    face = surface.subsurface(pygame.Rect(region))
+    face.fill((34, 22, 24))
+    for edge in (0, width - 5):
+        pygame.draw.rect(face, HAZARD_YELLOW, (edge, 0, 5, height))
+    pygame.draw.line(glow, (90, 52, 14), (x0 + width // 2, y0), (x0 + width // 2, y0 + height), 2)
+    for row in range(12, height, 40):
+        pygame.draw.circle(glow, (255, 176, 48), (x0 + width // 2, y0 + row), 4)
+
+
 def bolts(surface: pygame.Surface, left: int, top: int, width: int, height: int, step: int) -> None:
     """Bolts round a rectangle, every `step` pixels."""
     for column in range(left + step // 2, left + width, step):
@@ -399,7 +413,7 @@ def paint_flag(surface: pygame.Surface, region: tuple[int, int, int, int]) -> No
 
 def make_hangar(rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
     """The atlas of the hangar's outer sides: plating, the flag on the right side, the launch pads on the top and the
-    bottom, and the lasers on the sides. The lamps are in the glow."""
+    bottom, the lasers on the sides and the lights of the cut corners. The lamps are in the glow."""
     surface = pygame.Surface(HANGAR_SIZE)
     surface.fill(STEEL)
     glow = pygame.Surface(HANGAR_SIZE)
@@ -409,6 +423,7 @@ def make_hangar(rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
     paint_face(surface, glow, TOP, False)
     paint_face(surface, glow, BOTTOM, False)
     paint_flag(surface, RIGHT_SIDE)
+    paint_chamfer(surface, glow, CHAMFER)
     diffuse = to_array(surface)
     diffuse = np.clip(weather(diffuse, rng), 0, 255)
     return diffuse, with_halo(to_array(glow), 0.25)

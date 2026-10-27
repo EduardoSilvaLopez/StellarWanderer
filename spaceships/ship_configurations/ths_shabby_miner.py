@@ -5,7 +5,7 @@ from spaceships.ship import Ship
 
 
 class ShabbyThsMiner(Ship):
-    """The ship a Those-Who-Share pilot starts with. Its hull is a box of 4 m high, 4 m wide and 8 m deep.
+    """The ship a Those-Who-Share pilot starts with. Its hull is a box of 4 m high, 4 m wide and 6 m deep.
     Its cargo hold grows with the reputation: first repaired (no longer shabby), then extended."""
 
     NAME = 'Shabby THS miner'
@@ -14,6 +14,9 @@ class ShabbyThsMiner(Ship):
     TEMP_SHIELD_REDUCTION = 1  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC = 10.0  # meters per second squared
     BRAKE_ACC = 10.0  # m/s^2, never less than the acceleration
+    HEIGHT = 4
+    WIDTH = 4
+    DEPTH = 6
 
     class ShabbyHold(CargoHold):
         CAPACITY = 2000

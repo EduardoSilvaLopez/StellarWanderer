@@ -432,10 +432,12 @@ def main() -> None:
                         player.enter_settlement(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                         audio.play(OutpostScreenDialog.OPEN_SOUND)
-                    elif ship.scanner.targeted_base is not None:
-                        base = ship.scanner.targeted_base
+                    elif ship.scanner.in_base_zone():  # fixed to the base: SPACE docks when stopped inside
+                        base = gem.current_environment.nearest_system.portal_base
                         speed = (ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()).length()
-                        if speed >= PortalBase.DOCK_MAX_SPEED:
+                        if not base.in_docking_place(ship.position.as_vector()):
+                            ship.notification.set("[Com. Officer] To dock, fly into the hangar and stop there.")
+                        elif speed >= PortalBase.DOCK_MAX_SPEED:
                             ship.notification.set(
                                 f"[Com. Officer] Slow down to under {PortalBase.DOCK_MAX_SPEED:g} m/s to dock"
                                 f" (now {speed:.2f} m/s).")

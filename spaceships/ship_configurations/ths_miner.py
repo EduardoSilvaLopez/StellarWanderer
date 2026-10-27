@@ -5,7 +5,7 @@ from spaceships.ship import Ship
 
 
 class ThsMiner(Ship):
-    """The standard miner of Those-Who-Share. Its hull is a box of 4 m high, 6 m wide and 12 m deep."""
+    """The standard miner of Those-Who-Share. Its hull is a box of 4 m high, 4 m wide and 8 m deep."""
 
     NAME = 'THS miner'
     ENERGY_MAX = 1500e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
@@ -13,6 +13,9 @@ class ThsMiner(Ship):
     TEMP_SHIELD_REDUCTION = 1  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC = 15.0  # meters per second squared
     BRAKE_ACC = 15.0  # m/s^2, never less than the acceleration
+    HEIGHT = 4
+    WIDTH = 4
+    DEPTH = 8
 
     class StandardHold(CargoHold):
         CAPACITY = 10000

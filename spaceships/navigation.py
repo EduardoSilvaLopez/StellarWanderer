@@ -232,6 +232,7 @@ class Navigation:
         ship = self.ship
         ship.position.add_vector(ship.velocity.as_vector() * delta_time)
         if not ship.is_bound:
+            self._collide_with_portal_base()
             return
 
         half_turn = math.pi * gem.current_environment.fixed_world.radius  # half the equator
@@ -243,6 +244,28 @@ class Navigation:
         ship.position.z = max(-half_turn / 2, min(half_turn / 2, ship.position.z))  # between the poles
         # no descent faster than the altitude left
         ship.velocity.y = max(-(ship.position.y - ship.HEIGHT), ship.velocity.y)
+
+    def _collide_with_portal_base(self) -> None:
+        """Unbound, near the portal base: the ship's hull comes to rest against what is solid in it (see
+        PortalBaseSolid). The base is at rest in the stellar frame, so the ship's velocity is also relative to it."""
+        ship = self.ship
+        if ship.is_docked:
+            return
+        environment = gem.current_environment
+        base = environment.nearest_system.portal_base
+        centre = base.calculate_stellar_position(environment.date_time)
+        offset = ship.position.as_vector() - centre
+        half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)  # right, up, forward: the hull's halves
+        if offset.length() > base.solid.reach(half_sizes):
+            return
+        velocity = ship.velocity.as_vector()
+        attitude = ship.attitude
+        resolved = base.solid.resolve((offset.x, offset.y, offset.z), (velocity.x, velocity.y, velocity.z),
+                                      tuple(attitude.right), tuple(attitude.up), tuple(attitude.forward), half_sizes)
+        if resolved is not None:
+            (x, y, z), velocity_after = resolved
+            ship.position.set_vector((centre.x + x, centre.y + y, centre.z + z))
+            ship.velocity.set_vector(velocity_after)
     # endregion
 
     # region Binding to a world

@@ -85,10 +85,8 @@ STARTED:
 
   * Long-distance travel advisor improvements. Test.
   * Portraits without uniform.
-  * Octagon
-  * Reentry.
+  * Entering the hangar.
   * "Life", "Job"
-  * "polischool"
 
 Extra time: 141h30' + 5:00 - 
 
@@ -127,6 +125,7 @@ THE TRAITORS WAY (Rep 50-100)
   * Terrain elevation / sinkage.
   * Mountains.
   * Extra: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: Collision damage, also from rocks.
 
 * ABANDONING THOSE-WHO-SHARE
   * Conversion mechanics.
