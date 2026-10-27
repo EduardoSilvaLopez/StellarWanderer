@@ -55,6 +55,7 @@ JANITOR = Role(
     'Janitor',
     shifts=3,
     vacation=0.33,
+    portrait="hydroponic",
     )
 SECURITY = Role(
     'security',
@@ -72,6 +73,7 @@ STEVEDORE = Role(
     loyalty_bonus=-5,
     shifts=3,
     vacation=0.33,
+    portrait="hydroponic",
     )
 
 # Leaders are always available but work when they please.
@@ -92,6 +94,7 @@ KOMISAR = Role(
     loyalty_bonus=50,
     shifts=1,
     vacation=0.0,
+    portrait="hydroponic",
     )
 RINGMASTER = Role(
     'ringmaster',
@@ -101,4 +104,5 @@ RINGMASTER = Role(
     loyalty_bonus=25,
     shifts=1,
     vacation=0.0,
+    portrait="hydroponic",
     )

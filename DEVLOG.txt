@@ -84,11 +84,11 @@ DEVELOPER'S DIARY
 
 STARTED:
 
-  * Long-distance travel advisor improvements. Test.
-  * Portraits without uniform.
   * "Life", "Job"
-
-Extra time: 141h30' + 5:00 - 
+  * Long-distance travel advisor improvements. Test.
+  * Portraits without uniform: Black, Latino, White
+  
+Extra time: 141h30' + 5:00 - 10:00 + 11:00-13:30 + 15:00-
 
 > BACKLOG
 
