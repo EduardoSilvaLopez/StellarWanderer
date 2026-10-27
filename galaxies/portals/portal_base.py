@@ -185,8 +185,7 @@ class PortalBase(Body, Settlement):
         """Markdown of the base: where it hangs and how big it is."""
         AU: float = 1.496e11  # m. The text is for players, like the planets' entries.
         return (
-            f"### {self.name}\n"
+            f"### Portal base {self.name}\n"
             f"* Fixed over the star, {self.height / AU:.2f} AU along its pole\n"
-            f"* Ring of {self.radius:.0f} m of radius, spinning for a tenth of the gravity of the Earth "
-            f"({math.sqrt(0.1 * 9.81 / (self.radius - 2.0)) * 60.0 / math.tau:.2f} turns per minute)\n"
+            f"* Crew: {len(self.staff)}"
         )

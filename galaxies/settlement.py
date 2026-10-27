@@ -124,6 +124,7 @@ class Settlement(Updatable):
 
     @abstractmethod
     def get_max_maintenance(self) -> float:
+        pass
 
     @property
     def body(self) -> Body:
