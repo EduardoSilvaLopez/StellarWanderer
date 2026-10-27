@@ -201,18 +201,16 @@ class Person:
 
     def _load_icon(self, my_random: random.Random) -> None:
         """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the
-        seed."""
+        seed. In a settlement the occupation is the role's `portrait`, or 'uniform' when the role has none for them."""
         age_group: str = 'young' if self.age < 30\
             else 'adult' if self.age < 45\
             else 'mature' if self.age < 65\
             else 'old'
 
         from galaxies.settlement import Settlement
-        occupation: str = 'outpost' if isinstance(self.residency, Settlement)\
-            else 'generic'
-
-        filename_prefix: str = (occupation + "." + str(self.race.name).lower() + "." + age_group + "."
-                                + str(self.gender_group.name).lower())
+        occupations: list[str] = [self.role.portrait, 'uniform'] if isinstance(self.residency, Settlement)\
+            else ['generic']
+        suffix: str = "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
         portraits_dir = resource_path('portraits')
         try:
             names = os.listdir(portraits_dir)
@@ -220,9 +218,13 @@ class Person:
             names = []
 
         # Sorted, so the same seed always picks the same portrait whatever order the OS lists the files in.
-        candidates = sorted(name for name in names if name.startswith(filename_prefix))
+        candidates: list[str] = []
+        for occupation in occupations:
+            candidates = sorted(name for name in names if name.startswith(occupation + suffix))
+            if candidates:
+                break
         if not candidates:
-            print(f"Warning: No person portrait starting with {filename_prefix} in {portraits_dir}")
+            print(f"Warning: No person portrait starting with {occupations[0] + suffix} in {portraits_dir}")
             return
         filename: str = my_random.choice(candidates)
 

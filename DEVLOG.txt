@@ -80,12 +80,12 @@ DEVELOPER'S DIARY
     * "Unknown person" in the list of people.
     * Include role in the list of people.
   * Warnings when approaching the Portal. Get arrested, game over.
+  * Entering the hangar.
 
 STARTED:
 
   * Long-distance travel advisor improvements. Test.
   * Portraits without uniform.
-  * Entering the hangar.
   * "Life", "Job"
 
 Extra time: 141h30' + 5:00 - 

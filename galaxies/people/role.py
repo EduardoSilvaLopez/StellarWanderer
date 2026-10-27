@@ -22,6 +22,7 @@ class Role:
     age_raise: int = 0  # years added to both ends of the age range
     reputation_bonus: float = 0.0  # added to the reputation of each person if positive, multiplied if negative
     loyalty_bonus: float = 0.0  # added to the loyalty of each person.
+    portrait: str = 'uniform'  # the part of the portrait file names (common/resources/portraits) that the role uses
 
 
 # The seed kind is still 'person', as before the roles: the communication officers are the same people as in the saves.
