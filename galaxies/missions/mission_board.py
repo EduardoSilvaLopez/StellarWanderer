@@ -3,10 +3,10 @@ the outpost's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), 
 A pilot below MIN_REPUTATION sees no offers, but still the missions they took from here (the Taken column), so that the
 option is there while one is open here (see OutpostScreenDialog._shows_option).
 
-The board belongs to its outpost (`Outpost.mission_board`), and so do its offers: they stay on the board while the
-outpost is in memory. They are not saved: an offer is drawn from its outpost, kind and day alone, and lives at most
-the longest deadline of its terms (`LOOK_BACK_DAYS`), so `update_missions` finds every offer that can still be alive by
-looking back that far,
+The board belongs to its settlement (`Settlement.mission_board`), and so do its offers: they stay on the board while the
+settlement is in memory. They are not saved: an offer is drawn from its settlement, kind and day alone, and lives at
+most the longest deadline of its terms (`LOOK_BACK_DAYS`), so `update_missions` finds every offer that can still be
+alive by looking back that far,
 however the board was visited, saved or loaded. Each offer can be taken, and each mission the player has taken can be
 delivered. An offer's deadline is fixed when the offer is made, so taking it late does not give more time. An offer can
 also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
@@ -25,7 +25,7 @@ from galaxies.missions.terms import check_terms
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.player import Player
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,8 @@ check_terms(KINDS)  # every kind has terms for every kind of settlement: stop he
 
 class MissionBoard:
 
-    def __init__(self, outpost: Outpost) -> None:
-        self.outpost: Outpost = outpost
+    def __init__(self, outpost: Settlement) -> None:
+        self.outpost: Settlement = outpost
         self.offers: List[Mission] = []
         self.updated_at: Optional[datetime] = None  # not saved: only so that the days already asked are not asked again
 

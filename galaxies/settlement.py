@@ -52,6 +52,7 @@ class Settlement(Updatable):
     roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
+    name: str  # each kind sets its own name
 
     def __init__(self, seed: int) -> None:
         self.seed: int = seed
@@ -88,7 +89,8 @@ class Settlement(Updatable):
             alterations['player_reputation_on_entering'] = self.player_reputation_on_entering
         if self.handling_due_at is not None:
             alterations['handling_due_at'] = self.handling_due_at.strftime(DATE_FORMAT)
-            alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)
+            if self.handling_checked_at:
+                alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)
             alterations['handling_unloads'] = self.handling_unloads
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime(DATE_FORMAT)
@@ -114,6 +116,10 @@ class Settlement(Updatable):
     @property
     def stellar_system(self) -> StellarSystem:
         """The stellar system the settlement is in."""
+        raise NotImplementedError
+
+    def full_keys(self) -> str:
+        """The keys that find this settlement from the galaxy: each kind has its own (see Outpost, PortalBase)."""
         raise NotImplementedError
 
     @property
@@ -346,7 +352,7 @@ class Settlement(Updatable):
             return self
         import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
         until = min(now, self.handling_due_at)
-        seconds = (until - self.handling_checked_at).total_seconds()
+        seconds = (until - self.handling_checked_at).total_seconds() if self.handling_checked_at else 0
         if seconds > 0:
             energy_change = min(ship.energy_max - ship.energy, self.CHARGE_PER_SECOND * seconds)
             ship.energy += energy_change
@@ -366,7 +372,7 @@ class Settlement(Updatable):
                 # The dockmaster unloads the ore first, then the raw water, with the time the ore did not take.
                 hold = ship.cargo_hold
                 ore_change = min(hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
-                hold.ore -= ore_change
+                hold.ore -= int(ore_change)
                 water_time = seconds - ore_change / self.UNLOAD_ORE_PER_SECOND
                 water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * water_time)
                 hold.raw_water -= water_change
@@ -397,6 +403,8 @@ class Settlement(Updatable):
 
     def _finish_handling(self, ship: Ship, now: datetime) -> Settlement:
         """The handling is done: whatever had to be done, is done."""
+        if self.dockmaster is None:
+            raise Exception("Dockmaster is none.")
         from common.dialogs.messages import Message, show_message
         self.stop_handle(ship, now)
         ship.owner.time_scale = 1

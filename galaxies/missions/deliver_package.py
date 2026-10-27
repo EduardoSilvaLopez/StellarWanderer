@@ -13,11 +13,10 @@ from galaxies.settlement_kind import SettlementKind
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.person import Person
     from galaxies.people.player import Player
     from galaxies.body import Body
-    from galaxies.settlement import Settlement
 
 @register
 class DeliverPackage(Mission):
@@ -74,7 +73,7 @@ class DeliverPackage(Mission):
             if recipient_seed is None else self._staff_member(self.destination_settlement, recipient_seed)
 
     @staticmethod
-    def _staff_member(outpost: Outpost, seed: int) -> Person:
+    def _staff_member(outpost: Settlement, seed: int) -> Person:
         """The staff member of `outpost` with that seed: it must be one of them."""
         person = outpost.person_with_seed(seed)
         if person is None:
@@ -83,7 +82,7 @@ class DeliverPackage(Mission):
 
     # region Offer
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverPackage]:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[DeliverPackage]:
         # The destinations: every other outpost of the system, in the order the worlds list them.
         candidates = [other for other in outpost.stellar_system.settlements() if other is not outpost]
         if not candidates:

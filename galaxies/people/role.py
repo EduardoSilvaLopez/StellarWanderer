@@ -19,6 +19,7 @@ class Role:
     name: str  # the title, as shown to the player
     shifts: int  # 8-hour shifts; 1 means on duty all the time
     vacation: float  # the chance that the substitute is on duty instead of a shift member
+    ideal_for: tuple # Ideal for loyalty, empathy, sociability.
     age_raise: int = 0  # years added to both ends of the age range
     reputation_bonus: float = 0.0  # added to the reputation of each person if positive, multiplied if negative
     loyalty_bonus: float = 0.0  # added to the loyalty of each person.
@@ -31,6 +32,7 @@ COM_OFFICER = Role(
     'Communication Officer',
     reputation_bonus=5,
     loyalty_bonus=5,
+    ideal_for=(60, 50, 60),
     shifts=3,
     vacation=0.33,
     )
@@ -39,6 +41,7 @@ DOCKMASTER = Role(
     'Dockmaster',
     reputation_bonus=10,
     loyalty_bonus=-10,
+    ideal_for=(65, 45, 50),
     shifts=3,
     vacation=0.33,
     )
@@ -47,12 +50,14 @@ GUNNER = Role(
     'Gunner',
     age_raise=-2,
     loyalty_bonus=10,
+    ideal_for=(70, 30, 30),
     shifts=3,
     vacation=0.0,
     )
 JANITOR = Role(
     'janitor',
     'Janitor',
+    ideal_for=(30, 20, 30),
     shifts=3,
     vacation=0.33,
     portrait="hydroponic",
@@ -63,6 +68,7 @@ SECURITY = Role(
     age_raise=-2,
     reputation_bonus=5,
     loyalty_bonus=5,
+    ideal_for=(60, 45, 50),
     shifts=3,
     vacation=0.33,
     )
@@ -71,6 +77,7 @@ STEVEDORE = Role(
     'Stevedore',
     reputation_bonus=-0.8,
     loyalty_bonus=-5,
+    ideal_for=(30, 30, 20),
     shifts=3,
     vacation=0.33,
     portrait="hydroponic",
@@ -83,6 +90,7 @@ COORDINATOR = Role(
     age_raise=10,
     reputation_bonus=100.0,
     loyalty_bonus=5,
+    ideal_for=(70, 50, 60),
     shifts=1,
     vacation=0.0,
     )
@@ -92,6 +100,7 @@ KOMISAR = Role(
     age_raise=5,
     reputation_bonus=50.0,
     loyalty_bonus=50,
+    ideal_for=(80, 50, 80),
     shifts=1,
     vacation=0.0,
     portrait="hydroponic",
@@ -102,6 +111,7 @@ RINGMASTER = Role(
     age_raise=10,
     reputation_bonus=2000.0,
     loyalty_bonus=25,
+    ideal_for=(90, 40, 65),
     shifts=1,
     vacation=0.0,
     portrait="hydroponic",

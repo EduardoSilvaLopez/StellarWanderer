@@ -25,7 +25,7 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.player import Player
 
 logger = logging.getLogger(__name__)
@@ -122,14 +122,14 @@ class ScanAsteroid(Mission):
 
     # region Offer
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> ScanAsteroid | None:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> ScanAsteroid | None:
         mission = cls.generate(day, outpost)
         if mission.asteroid_site is None:
             return None  # no asteroid could be found for it
         return mission
 
     @staticmethod
-    def generate(created_at: datetime, outpost: Outpost) -> ScanAsteroid:
+    def generate(created_at: datetime, outpost: Settlement) -> ScanAsteroid:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanAsteroid.KIND} {created_at.date().isoformat()}")
         days = random.Random(seed).randint(ScanAsteroid.terms_at(outpost.kind).deadline_days_min,

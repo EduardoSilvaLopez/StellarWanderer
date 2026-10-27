@@ -13,6 +13,8 @@ import pygame
 
 if TYPE_CHECKING:
     from galaxies.people.player import Player
+    from galaxies.settlement import Settlement
+
 from galaxies.politics import political_entity
 from galaxies.people.role import Role
 import game_environment as gem
@@ -57,11 +59,19 @@ class Person:
         FEMALE = 2
 
     # region Generation
-    def __init__(self, seed: int, residency: Any, social_factor: float, role: Role, age_min: int = 15,
-                 age_max: int = 70) -> None:
+    def __init__(
+            self, seed: int,
+            residency: Settlement,
+            social_factor: float,
+            role: Role,
+            age_min: int = 15,
+            age_max: int = 70
+            ) -> None:
         my_random = random.Random(seed)
         self.seed: int = seed
         self.role: Role = role
+
+        self.entity: political_entity.PoliticalEntity = residency.stellar_system.political_entity
 
         self.race: Ethnicity = Ethnicity.ASIAN
         rnd: float = my_random.random()
@@ -104,14 +114,19 @@ class Person:
         self.planet_of_birth, self.place_of_birth = self._generate_place_of_birth(my_random)
         self.childhood: str = self._generate_childhood(my_random)
         self.hobby: str = self._generate_hobby(my_random)
-        for _ in range(1, 10): # Space for further characteristics.
+        self.ideal_role_dimensions: tuple = (
+            self.loyalty100 + my_random.gauss(0, 10),
+            self.empathy100 + my_random.gauss(0, 10),
+            self.sociability100 + my_random.gauss(0, 10)
+            )
+        for _ in range(1, 7): # Space for further characteristics.
             my_random.random()
 
         self.residency: Any = residency
         self.last_communication_at: Optional[datetime] = None
 
         self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
-        self._load_icon(my_random)
+        self._load_icon(my_random)  # Claude: no need to warn me if changes in code change this for existing people.
 
         self.interactions: dict = {}
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
@@ -166,6 +181,12 @@ class Person:
         ))
 
     def _generate_hobby(self, my_random: random.Random) -> str:
+        """A hobby from the entity's lists: the asocial ones below 20 sociability, else the sociable ones, if any."""
+        if self.sociability100 < 20 and len(self.entity.hobbies_asocial):
+            return my_random.choice(self.entity.hobbies_asocial)
+        if len(self.entity.hobbies_sociable):
+            return my_random.choice(self.entity.hobbies_sociable)
+
         return my_random.choice((
             "I like to walk in the parks.",
             "I enjoy people-watching in the transit hubs. Don't tell anyone.",
@@ -276,6 +297,37 @@ class Person:
             result.append(('Residency', self.residency.residency_line()))
         return result
 
+    def how_happy_with_role(self) -> int:
+        '''Returns 0, 1 or 2 for not happy, content, really happy.'''
+        HAPPY_MAX_DIST: float = 20
+        CONTENT_MAX_DIST: float = 40
+
+        dist: float = math.sqrt(
+            (self.role.ideal_for[0] - self.ideal_role_dimensions[0])**2 + \
+            (self.role.ideal_for[1] - self.ideal_role_dimensions[1])**2 + \
+            (self.role.ideal_for[2] - self.ideal_role_dimensions[2])**2
+            )
+
+        return 2 if dist < HAPPY_MAX_DIST else 1 if dist < CONTENT_MAX_DIST else 0
+
+    def main_problem_with_role(self) -> str:
+        '''Return + or - loy, soc or emp: they wish for something with...
+        Example: ideal for loy = 0. NPC has loy = 100 (a bit randomly modified). The result will be +loy, "something
+        which required more loy".
+        '''
+        diff_loy: float = self.ideal_role_dimensions[0] - self.role.ideal_for[0]
+        diff_emp: float = self.ideal_role_dimensions[1] - self.role.ideal_for[1]
+        diff_soc: float = self.ideal_role_dimensions[2] - self.role.ideal_for[2]
+        dimension: str = ''
+        if abs(diff_loy) > abs(diff_emp) and abs(diff_loy) > abs(diff_soc):
+            dimension = "loy"
+        elif abs(diff_emp) > abs(diff_soc):
+            dimension = "emp"
+        else:
+            dimension = "soc"
+        diff = diff_loy if dimension == "loy" else diff_emp if dimension == "emp" else diff_soc
+        return ("+" if diff>= 0 else "-") + dimension
+
     def matches_search(self, query: str, labels: Optional[Tuple[str, ...]] = None) -> bool:
         """Whether the search text is in the value of one of the person's description fields, in their name or in their
         comment, ignoring case and the spaces at the ends of the text (the labels do not count). `labels` limits the
@@ -298,11 +350,11 @@ class Person:
             )
         return self
 
-    def get_title(self) -> str:
+    def get_title(self) -> Optional[str]:
         # Find out where this person is... as for now, guess Those-Who-Share
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
 
-    def get_player_title(self) -> str:
+    def get_player_title(self) -> Optional[str]:
         # Subjective.
         import galaxies.people.player as gpp
         player_rep = gpp.current_player.those_who_share.reputation
@@ -310,7 +362,7 @@ class Person:
         final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
         return political_entity.THOSE_WHO_SHARE.title_for(final_rep)
 
-    def address(self, player: Player, to_player: bool) -> str:
+    def address(self, player: Player, to_player: bool) -> Optional[str]:
         """How the pilot and this person address each other once they have met, by their relative reputation: the
         form this person uses for the pilot (`to_player`), or the one the pilot uses for this person.
         Whoever is more than twice above the speaker is addressed with respect ("Pilot Surname", "Role Surname"); then

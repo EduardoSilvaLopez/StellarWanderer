@@ -28,7 +28,6 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.body import Body
-    from galaxies.outpost import Outpost
     from galaxies.people.player import Player
     from galaxies.rock import Rock
 
@@ -93,7 +92,7 @@ class Mission(Updatable):
         return type(self).terms_at(self.issuer_kind)
 
     @classmethod
-    def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
+    def offered_on(cls, day: datetime, outpost: Settlement) -> Optional[Mission]:
         """The offer `outpost` makes on the day of `day`, or None when it makes none that day (its frequency there is 0,
         or the day's chance does not come up). Drawn from the outpost and the day only, so it is the same however the
         board was visited."""
@@ -107,7 +106,7 @@ class Mission(Updatable):
 
     @classmethod
     @abstractmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[Mission]:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[Mission]:
         """The offer itself, once the day's chance has come up: its kind decides what it asks, with `chance` if it needs
         more."""
 

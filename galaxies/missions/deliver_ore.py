@@ -10,7 +10,7 @@ from galaxies.missions.terms import Terms
 from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.player import Player
 
 logger = logging.getLogger(__name__)
@@ -62,11 +62,11 @@ class DeliverOre(Mission):
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverOre]:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[DeliverOre]:
         return cls.generate(day, outpost)
 
     @staticmethod
-    def generate(created_at: datetime, outpost: Outpost) -> DeliverOre:
+    def generate(created_at: datetime, outpost: Settlement) -> DeliverOre:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__

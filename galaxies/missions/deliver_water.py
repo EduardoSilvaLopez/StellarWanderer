@@ -14,7 +14,7 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.player import Player
     from galaxies.rocky_world import RockyWorld
 
@@ -65,13 +65,13 @@ class DeliverWater(Mission):
         self._asteroid: Asteroid | None = None  # made when needed, not saved
 
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverWater]:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[DeliverWater]:
         if not outpost.needs_water():  # an outpost on an icy world does not need this.
             return None
         return cls.generate(day, outpost)
 
     @staticmethod
-    def generate(created_at: datetime, outpost: Outpost) -> DeliverWater:
+    def generate(created_at: datetime, outpost: Settlement) -> DeliverWater:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverWater.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__

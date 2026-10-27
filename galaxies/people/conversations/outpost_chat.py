@@ -80,7 +80,7 @@ class OutpostChat(Conversation):
         import game_environment as gem
         gem.current_environment.date_time += timedelta(seconds=60)
 
-        text: str = generator()
+        text: str = generator(self)
         words, tags = parse_marks(text)
         self.player.conversation_tags.update(tags)
         self.log.add(NPC, words)
@@ -100,6 +100,7 @@ class OutpostChat(Conversation):
             'belt': self.talk_belt,
             'founders': self.talk_founders,
             'happy birthday': self.talk_happy_birthday,
+            'job': self.talk_job,
             'life': self.talk_life,
             'noobie': self.talk_noobie,
             'paladin xi': self.talk_paladin_xi,
@@ -452,11 +453,38 @@ class OutpostChat(Conversation):
             else:
                 return f"Huh? {correction_text} And this was weird."
 
+    def talk_job(self) -> str:
+        if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 80:
+            if self.interlocutor.main_problem_with_role().startswith("+"):
+                if self.interlocutor.main_problem_with_role().endswith("loy"):
+                    return "I wish I worked in something more relevant."
+                elif self.interlocutor.main_problem_with_role().endswith("emp"):
+                    return "I wish I worked in something more helpful for people."
+                else:
+                    return "I wish I worked more with people."
+            else:  # noqa: PLR5501
+                if self.interlocutor.main_problem_with_role().endswith("loy"):
+                    return "I wish I worked in something less demanding."
+                elif self.interlocutor.main_problem_with_role().endswith("emp"):
+                    return "I wish I had more time for myself."
+                else:
+                    return "I wish I would work more with people."
+        elif self.interlocutor.how_happy_with_role() == 1:
+            return "My job is ok."
+        else:
+            return "I really like my job."
+
+
+
     def talk_life(self) -> str:
-        # General effect. People like to be asked about their lives. Once.
+        # General effect. People like to be asked about their lives. Once per day max, though.
+        date_str: str = self.date_time.date().isoformat()
         if not any("Asked about life." in lines for lines in self.interlocutor.interactions.values()):
             self.interlocutor.adjust_sympathy(5)
             self.flags.append("Asked about life.")
+        elif not any(f"Asked about life {date_str}" in lines for lines in self.interlocutor.interactions.values()):
+            self.interlocutor.adjust_sympathy(0.1)
+            self.flags.append(f"Asked about life {date_str}")
 
         # Short names to make the rest more legible
         soc: float = self.interlocutor.sociability100
@@ -486,20 +514,26 @@ class OutpostChat(Conversation):
             elif sym < 80:
                 if days_to_birthday == 0:
                     return "Life's ok. Birthday."
+                if self.interlocutor.how_happy_with_role() == 2:
+                    return "[Job]'s good. Life's ok."
                 return "Life's ok."
             else:
                 if days_to_birthday == 0:
                     return "Doing ok. My birthday today."
-                return "Doing ok."
+                if self.interlocutor.how_happy_with_role() == 1:
+                    return "[Job]'s ok. Doing ok. Thanks."
+                return "Doing ok. Thanks."
         elif soc < 80:
             if sym < 20:
+                job: str = " I don't have enough with my [job]?" if self.interlocutor.how_happy_with_role() == 0 else ""
                 if days_to_birthday == 0:
-                    return "On my birthday, for fuck's sake. Leave me alone."
-                return "Oh, no, leave me alone."
+                    return f"On my birthday, for fuck's sake.{job} Leave me alone."
+                return f"Oh, no.{job} Leave me alone."
             elif sym < 80:
                 text = (
                     f"Me? I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
-                    f" I work here as a {self.interlocutor.role.name}. People say I'm {self_description}."
+                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
+                    f" People say I'm {self_description}."
                 )
                 if days_to_birthday == -2:
                     text += "\n\nI had my birthday two days ago."
@@ -540,7 +574,7 @@ class OutpostChat(Conversation):
                     f"Me? I was born in {self.interlocutor.place_of_birth},"
                     f" I had {self.interlocutor.childhood}, I would say."
                     f" I am {self.interlocutor.age} years old."
-                    f" I work here as a {self.interlocutor.role.name}."
+                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
                     f" People say I'm {self_description}."
                 )
                 if days_to_birthday == -2:
@@ -558,7 +592,7 @@ class OutpostChat(Conversation):
                     f" Well... ok, I was born in {self.interlocutor.place_of_birth}. I really miss home sometimes."
                     f" I had {self.interlocutor.childhood}, I would say. But that's the past."
                     f" I am {self.interlocutor.age} years old. I know, I know."
-                    f" I work here as a {self.interlocutor.role.name}. I like it."
+                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
                     f" People say I'm {self_description}."
                     f"\n\nOh... and {self.interlocutor.hobby}"
                 )

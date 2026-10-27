@@ -88,7 +88,7 @@ STARTED:
   * Long-distance travel advisor improvements. Test.
   * Portraits without uniform: Black, Latino, White
   
-Extra time: 141h30' + 5:00 - 10:00 + 11:00-13:30 + 15:00-
+Extra time: 141h30' + 5:00 - 10:00 + 11:00-13:30 + 15:00-16:30 + 17:00-
 
 > BACKLOG
 

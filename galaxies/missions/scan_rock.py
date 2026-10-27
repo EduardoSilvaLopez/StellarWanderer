@@ -21,7 +21,7 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.player import Player
     from galaxies.rock import Rock
     from galaxies.rocky_world import RockyWorld
@@ -140,7 +140,7 @@ class ScanRock(Mission):
 
     # region Offer
     @classmethod
-    def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[ScanRock]:
+    def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[ScanRock]:
         object_types = ['rock']  # Later: worlds, outposts (spionage!), mines, ore fields.
         object_type = chance.choice(object_types)
         mission = cls.generate(day, object_type, outpost)
@@ -149,7 +149,7 @@ class ScanRock(Mission):
         return mission
 
     @staticmethod
-    def generate(created_at: datetime, object_type: str, outpost: Outpost) -> ScanRock:
+    def generate(created_at: datetime, object_type: str, outpost: Settlement) -> ScanRock:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
