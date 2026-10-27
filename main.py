@@ -50,7 +50,8 @@ from common.dialogs import (
     PendingMissionsDialog, OutpostScreenDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.outpost import Outpost
-from galaxies.portal_base import PortalBase
+from galaxies.portals.portal_base import PortalBase
+from galaxies.portals.portal_defence import PortalDefence
 from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
@@ -552,6 +553,7 @@ def main() -> None:
         frame_watch.mark('ship')
         update_queue.update(gem.current_environment.date_time)
         LongDistanceAdvisor.update(player, gem.current_environment)
+        elapsed = min(elapsed + PortalDefence.update(player, gem.current_environment), MAX_ELAPSED)  # a forced return
         frame_watch.mark('queue and advice')
 
         gui.draw(screen, fonts, gem.current_environment, player)  # the outpost screen, if the pilot is inside one

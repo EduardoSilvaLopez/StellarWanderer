@@ -265,6 +265,7 @@ class Person:
             ('ID', f"{self.seed}."),
             ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
             ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({self.age} y.o.)"),
+            ('Role', self.role.name),
             ('Last time met', self.last_time_met_text()),
         ]
 
@@ -272,6 +273,17 @@ class Person:
         if isinstance(self.residency, Settlement):
             result.append(('Residency', self.residency.residency_line()))
         return result
+
+    def matches_search(self, query: str, labels: Optional[Tuple[str, ...]] = None) -> bool:
+        """Whether the search text is in the value of one of the person's description fields, in their name or in their
+        comment, ignoring case and the spaces at the ends of the text (the labels do not count). `labels` limits the
+        fields to those shown with these labels (None: all of them). An empty search matches everyone."""
+        query = query.strip().casefold()
+        if not query:
+            return True
+        texts = [value for label, value in self.description_fields() if labels is None or label in labels]
+        texts += [self.get_full_name(), self.comment]
+        return any(query in text.casefold() for text in texts)
 
     def log_description(self) -> Person:
         """Logs the person's characteristics, one ' - ' line each."""

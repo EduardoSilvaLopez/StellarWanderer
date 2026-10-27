@@ -59,7 +59,6 @@ class Ship(Updatable):
     SCOOP_RANGE = 100.0  # metres: the ground the scoop shows, and what it takes from it (graphics/scoop_view.py)
     SCOOP_WATER_KG_PER_SECOND = 100.0  # Kg per second scooped
     SCOOP_VIEW_HALF_ANGLE = 40.0  # degrees from straight down: the scoop's view is a square of twice this (scoop_view)
-    # The scoop's notifications. TODO texts: placeholders that say what each one is for, to be flavoured.
     SCOOP_OPENED = "Scoop opened. Hull integrity compromised."
     SCOOP_CLOSED = "Scoop closed. Hull integrity restored."
     SCOOP_CLOSED_FAST = (f"Speed over {SCOOP_MAX_SPEED:.0f} m/s. Scoop blocked.")

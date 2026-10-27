@@ -4,17 +4,24 @@ outpost_screen.py). Who is listed is Outpost.available_staff: not on vacation, n
 Each card has the portrait on the left, then the name and the role, the last time the pilot met the person, and the
 comment (read-only here, cut to COMMENT_LINES lines). A click selects a card: it is outlined with the accent colour, and
 the selection goes when its person is no longer listed. The list is drawn in the rectangle `place` gives, with its
-scroll bar beside it, and scrolls with the wheel, Page Up and Page Down, and the scroll bar."""
+scroll bar beside it, and scrolls with the wheel, Page Up and Page Down, and the scroll bar.
+
+A search box at the top of that rectangle shows only the cards whose person matches the text in what the card shows: the
+name, the role, the last time met and the comment (Person.matches_search with SEARCH_LABELS, unlike the People dialog,
+which searches all the fields). A person filtered out keeps the selection: only leaving the listing clears it. While the box
+is focused, the typed text goes into it and the keys do not reach the options (see search_event)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple
 import pygame
 
 from common import audio
+from .dialog import is_cancel
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
 from .mission_board_dialog import DIM_COLOR, LABEL_COLOR, PAGE_KEYS, ROW_FILL, SCROLL_BAR_GAP, SCROLL_STEP
 from .scroll_bar import ScrollBar
+from . import search_box
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -29,6 +36,9 @@ PORTRAIT_RATIO = 1.5  # height over width, as the portraits (512 x 768)
 PORTRAIT_FILL = (16, 52, 56)  # the box of a person whose portrait cannot be loaded
 COMMENT_LINES = 3  # the most lines of a comment a card shows; a longer one ends with an ellipsis
 EMPTY_TEXT = 'Nobody is available.'
+SEARCH_GAP = 8  # between the search box and the first card
+# The description fields a card shows, by label (see Person.description_fields): the search looks only at these.
+SEARCH_LABELS = ('Role', 'Last time met')
 
 
 class StaffList:
@@ -37,25 +47,65 @@ class StaffList:
     def __init__(self, outpost: Outpost) -> None:
         self.outpost: Outpost = outpost
         self.selected: Optional[Person] = None  # the card that is outlined; None for none
-        self.persons: List[Person] = []  # the people listed at the last `available` call, in card order
-        self.text_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # set by place
+        self.persons: List[Person] = []  # the people shown at the last `available` call, in card order
+        self.query: str = ''  # what the search box holds
+        self.search_focused: bool = False  # whether the typed text goes into the search box
+        self.search_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # set by place
+        self.text_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # the cards, below the search box; set by place
         self.scroll_bar: ScrollBar = ScrollBar(pygame.Rect(0, 0, ScrollBar.MIN_WIDTH, 0), ACCENT)
         self.scroll: int = 0
         self.content_height: int = 0
         self._cards: List[Tuple[pygame.Rect, Person]] = []  # where each card was last drawn, and its person
 
     def place(self, rect: pygame.Rect) -> None:
-        """Puts the cards in `rect`, and the scroll bar SCROLL_BAR_GAP to its right: the rect must leave room for it."""
-        self.text_rect = rect
-        self.scroll_bar.track = pygame.Rect(rect.right + SCROLL_BAR_GAP, rect.top, ScrollBar.MIN_WIDTH, rect.height)
+        """Puts the search box at the top of `rect`, and the cards below it, with the scroll bar SCROLL_BAR_GAP to their
+        right: the rect must leave room for it."""
+        self.search_rect = pygame.Rect(rect.left, rect.top, rect.width, search_box.HEIGHT)
+        self.text_rect = pygame.Rect(rect.left, self.search_rect.bottom + SEARCH_GAP, rect.width,
+                                     rect.bottom - self.search_rect.bottom - SEARCH_GAP)
+        self.scroll_bar.track = pygame.Rect(self.text_rect.right + SCROLL_BAR_GAP, self.text_rect.top,
+                                            ScrollBar.MIN_WIDTH, self.text_rect.height)
 
     def available(self) -> List[Person]:
-        """The people listed now, in card order. The selection goes when its person is no longer among them."""
+        """The people shown now, in card order: those listed (Outpost.available_staff) that match the search. The
+        selection goes when its person is no longer listed, not when the search leaves them out."""
         import game_environment as gem  # local: the game's environment, not needed by the rest of this module
-        self.persons = self.outpost.available_staff(gem.current_environment.date_time)
-        if self.selected not in self.persons:
+        listed = self.outpost.available_staff(gem.current_environment.date_time)
+        if self.selected not in listed:
             self.selected = None
+        self.persons = [person for person in listed if person.matches_search(self.query, SEARCH_LABELS)]
         return self.persons
+
+    def set_search_focus(self, focused: bool) -> None:
+        """Focuses the search box (the typed text goes into it) or lets go of it. The text input is on only while
+        focused."""
+        if focused == self.search_focused:
+            return
+        self.search_focused = focused
+        if focused:
+            pygame.key.start_text_input()
+        else:
+            pygame.key.stop_text_input()
+
+    def search_event(self, event: pygame.event.Event) -> bool:
+        """The search box's events: a click on it focuses it, and a click elsewhere, or Esc, lets go of it. While it is
+        focused, the typed text edits the search and Enter and the space do not press anything: True when the event was
+        used so. Other events, and a click on a card, go on to the list (False)."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            inside = self.search_rect.collidepoint(event.pos)
+            self.set_search_focus(inside)
+            return inside
+        if not self.search_focused:
+            return False
+        if is_cancel(event):
+            self.set_search_focus(False)
+            return False
+        query = search_box.edit(self.query, event)
+        if query is not None:
+            self.query = query
+            self.scroll = 0
+            return True
+        return search_box.swallows(event)
 
     def select_at(self, index: int) -> None:
         """Selects the card `index` of the last `available` call (the keyboard's way to a card)."""
@@ -142,7 +192,9 @@ class StaffList:
         self.scroll = max(0, min(self._max_scroll(), self.scroll + pixels))
 
     def draw(self, surface: pygame.Surface, focus: Optional[int] = None) -> None:
-        """The cards in the rectangle of `place`. `focus` is the index of the card the keyboard is on, if any."""
+        """The search box and the cards in the rectangle of `place`. `focus` is the index of the card the keyboard is on,
+        if any."""
+        search_box.draw(surface, self.search_rect, self.query, self.search_focused)
         cards = [(self._card(person, self.text_rect.width, person is self.selected, index == focus), person)
                  for index, person in enumerate(self.available())]
         self.content_height = sum(card.get_height() + CARD_GAP for card, _ in cards) - CARD_GAP if cards else 0
@@ -151,7 +203,8 @@ class StaffList:
         previous_clip = surface.get_clip()
         surface.set_clip(self.text_rect)
         if not cards:
-            surface.blit(body_font(BODY_SIZE).render(EMPTY_TEXT, True, DIM_COLOR), self.text_rect.topleft)
+            text = f'Nobody matches "{self.query.strip()}".' if self.query.strip() else EMPTY_TEXT
+            surface.blit(body_font(BODY_SIZE).render(text, True, DIM_COLOR), self.text_rect.topleft)
         y = 0
         for card, person in cards:
             top = self.text_rect.top + y - self.scroll

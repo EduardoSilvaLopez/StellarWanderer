@@ -14,8 +14,8 @@ from galaxies.asteroid_belt import AsteroidBelt
 from galaxies.body import Body
 from galaxies.orbit import Orbit
 from galaxies.orbit_layout import OrbitKind, OrbitLayout
-from galaxies.portal import Portal
-from galaxies.portal_base import PortalBase
+from galaxies.portals.portal import Portal
+from galaxies.portals.portal_base import PortalBase
 from galaxies.politics import political_entity
 from galaxies.star import Star
 from galaxies.world import World

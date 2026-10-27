@@ -72,12 +72,23 @@ DEVELOPER'S DIARY
   * Test the scoop sounds.
   * I disabled the sounds of Python in Windows > Settings > Voice mixer. If I need them later...
 
-> STARTED:
-
-  * Long-distance travel advisor improvements.
-  * Portal Bases. Missions. Test. Birthdays. Hang around them. Enjoy.
-
 ### 2026-10-26 (4/11)
+
+  * Portal Bases. Missions. Test. Birthdays. Hang around them. Enjoy.
+  * List of people:
+    * Search in list of people.
+    * "Unknown person" in the list of people.
+    * Include role in the list of people.
+  * Warnings when approaching the Portal. Get arrested, game over.
+
+STARTED:
+
+  * Long-distance travel advisor improvements. Test.
+  * Portraits without uniform.
+  * Octagon
+  * Reentry.
+  * "Life", "Job"
+  * "polischool"
 
 Extra time: 141h30' + 5:00 - 
 

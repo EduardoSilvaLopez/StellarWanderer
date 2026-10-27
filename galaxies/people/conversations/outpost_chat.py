@@ -96,6 +96,7 @@ class OutpostChat(Conversation):
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
             'asteroids': self.talk_asteroid,
+            'base': self.talk_base,
             'belt': self.talk_belt,
             'founders': self.talk_founders,
             'happy birthday': self.talk_happy_birthday,
@@ -103,10 +104,9 @@ class OutpostChat(Conversation):
             'noobie': self.talk_noobie,
             'paladin xi': self.talk_paladin_xi,
             'pgms': self.talk_pgms,
+            'portal': self.talk_portal,
             'space': self.talk_space,
-            'the base': self.talk_the_base,
             'the network': self.talk_the_network,
-            'the portal': self.talk_the_portal,
             'the shining throne': self.talk_the_shining_throne,
             'those-who-share': self.talk_those_who_share,
             'united diversity': self.talk_united_diversity,
@@ -196,7 +196,7 @@ class OutpostChat(Conversation):
                 else:
                     return (
                         f"Nice to meet you, {you}! How are you doing? How is [space] being to you?"
-                        f"\n\nMe, I prefer to remain between the outpost and [the base]. Less risky, you know?"
+                        f"\n\nMe, I prefer to remain between the outpost and the [base]. Less risky, you know?"
                         f" And people are nice here."
                     )
             else:  # noqa: PLR5501 - High soc
@@ -373,6 +373,12 @@ class OutpostChat(Conversation):
         return (
             "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
             " simply fucking far away. Others are... in the [belt]. And those are worse."
+        )
+    def talk_base(self) -> str:
+        return (
+            "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
+            " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's [life]."
+            " Almost like a planet."
         )
     def talk_belt(self) -> str:
         return (
@@ -574,6 +580,11 @@ class OutpostChat(Conversation):
             "Well, that's... no offense intended. [Paladin Xi] finished your training recently, yes? So..."
             " that's it."
         )
+    def talk_portal(self) -> str:
+        return (
+            "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
+            " you are simply travelling through. But one side is light years from the other side. Damn."
+        )
     def talk_paladin_xi(self) -> str:
         return (
             "He trained you, yes? Of course 'Paladin' is not a real thing. I think he is considered a"
@@ -588,22 +599,12 @@ class OutpostChat(Conversation):
         return (
             "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"
             " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
-            " Just don't. Use [the portal], go to [the base], remain in [the network]"
-        )
-    def talk_the_base(self) -> str:
-        return (
-            "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
-            " uniform, I tell you. My shorts and cocktail looking at the trees. That's [life]. Almost like a planet."
+            " Just don't. Go to the [base]s, use the [portal]s, remain in [the network]"
         )
     def talk_the_network(self) -> str:
         return (
             "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
             " [Those-Who-Share]. Sure, '[United Diversity]', UniDiv, has more. [The Shining Throne], no idea."
-        )
-    def talk_the_portal(self) -> str:
-        return (
-            "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
-            " you are simply travelling through. But one side is light years from the other side. Damn."
         )
 
     def talk_the_shining_throne(self) -> str:
@@ -645,7 +646,7 @@ class OutpostChat(Conversation):
                 "Own a person. Disgusting.", "Slaves. I don't get it.", "Heard slaves have rights.",
             ), (
                 "How can one people own another human being? That's fucking disgusting.",
-                "They *say* even slaves have rights, but who knows what happens behind closed doors.",
+                "They *say* the lower classes have rights, but who knows what happens behind closed doors.",
                 "I've heard the slaves have rights, and the Knights have lots of duties. Things are not how"
                 " people want them to be.",
             )),
@@ -748,8 +749,7 @@ class OutpostChat(Conversation):
             ), (
                 "Nothing made just for beauty, only statues, posters and big screens. Art is for the propaganda, and"
                 " that's sad.",
-                "Statues, posters, the big screens. They say it's for the Community. I guess so, we must be reminded"
-                " of what we have.",
+                "Statues, posters, the big screens. For the Community, yes? To remember what we have.",
                 "Poetry and skill competitions in the square, songs, festivals. Nothing useless about them."
                 " Art for the normal people. Feeds the soul.",
             )),

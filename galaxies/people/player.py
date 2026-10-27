@@ -8,7 +8,7 @@ from common.dialogs.messages import Message, show_message
 from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
 from galaxies.people.person import Person
-from galaxies.portal_base import PortalBase
+from galaxies.portals.portal_base import PortalBase
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue

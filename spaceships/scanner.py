@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
-    from galaxies.portal_base import PortalBase
+    from galaxies.portals.portal_base import PortalBase
     from galaxies.asteroid import Asteroid
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ class Scanner:
 
     @property
     def targeted_base(self) -> Optional[PortalBase]:
-        from galaxies.portal_base import PortalBase
+        from galaxies.portals.portal_base import PortalBase
         return self.target if isinstance(self.target, PortalBase) else None
 
     @property

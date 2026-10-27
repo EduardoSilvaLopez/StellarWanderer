@@ -6,8 +6,8 @@ The systems are those of the player's knowledge (knowledge.py), each shown with 
 which ends with the asteroids that matter (see `Asteroid.markdown`): its markdown headings and bullets are drawn as
 headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones the player has talked to,
 and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
-`Person.description_fields()`, and a comment box that the player can write in (saved with the person, see
-Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
+`Person.description_fields()`, and under both a comment box across the card that the player can write in (saved with
+the person, see Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -16,6 +16,7 @@ import pygame
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
 from .dialog import DialogResult
+from . import search_box
 from .messages import Message
 from .outpost_screen import HEAT_SHIELD_OPTIONS
 
@@ -39,6 +40,7 @@ COMMENT_PLACEHOLDER_COLOUR = (110, 120, 120)
 # The keys that edit the comment being typed in. Letters and the space come as TEXTINPUT; Esc is left to close the
 # dialog.
 TYPING_KEYS = (pygame.K_BACKSPACE, pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
+SEARCH_WIDTH = 240  # the search box at the right of the People dialog's title (see search_box.py)
 
 
 class _ListDialog(MessageDialog):
@@ -148,13 +150,19 @@ class KnownPeopleDialog(_ListDialog):
     into it (Enter starts a new line) until another box or the outside is clicked. Esc, a right-click, or the Close
     button, closes the dialog; the comments are already saved as they are typed. Same results as KnownSystemsDialog. The
     box that has the focus stays focused when the list is scrolled away (wheel, keys or scroll bar), and typing scrolls
-    it back into view."""
+    it back into view.
+
+    A search box at the right of the title filters the cards: only the people with the text in one of their fields'
+    values (not the labels), in their name or in their comment are shown, ignoring case. The box is focused by a click
+    and typed into like a comment. A comment that makes its card stop matching drops the focus with the card."""
 
     def __init__(self) -> None:
         self._people: dict = {}  # seed -> Person, for each card that could be found again
         # (seed, index of the card's block, box inside that block)
         self._boxes: List[Tuple[float, int, pygame.Rect]] = []
         self._focus: Optional[float] = None  # the seed of the person whose comment is being typed
+        self._query: str = ''  # what the search box holds
+        self._search_focused: bool = False  # whether the keys write into the search box
         super().__init__('People')
 
     # region Cards
@@ -163,26 +171,48 @@ class KnownPeopleDialog(_ListDialog):
         from galaxies.people import knowledge
 
         galaxy = gem.current_environment.galaxy
-        outposts = [
-            outpost
+        settlements = [
+            settlement
             for key in knowledge.current_knowledge.bodies
             if (system := galaxy.system_of_key(key)) is not None
-            for world in system.get_all_worlds()
-            for outpost in world.outposts.values()
+            for settlement in system.settlements()
         ]
         self._people = {}
         self._boxes = []
         blocks: List[Tuple[pygame.Surface, int]] = []
         for seed, alterations in gem.current_environment.persons.items():
             person: Optional[Person] = next(
-                (found for outpost in outposts if (found := outpost.person_with_seed(seed)) is not None), None)
+                (found for settlement in settlements if (found := settlement.person_with_seed(seed)) is not None), None)
             if person is not None:
                 self._people[seed] = person
+            if not self._matches(person, seed, alterations['first_met_at']):
+                continue
             card, box = self._card(person, seed, alterations['first_met_at'], width)
             if box is not None:
                 self._boxes.append((seed, len(blocks), box))
             blocks.append((card, SECTION_GAP))
-        return blocks or self._message('You have not talked to anybody yet.', width)
+        if blocks:
+            return blocks
+        if self._query.strip():
+            return self._message(f'Nobody matches "{self._query.strip()}".', width)
+        return self._message('You have not talked to anybody yet.', width)
+
+    @staticmethod
+    def _fields(person: Optional[Person], seed: int, first_met_at: Optional[str]) -> List[Tuple[str, str]]:
+        """The (label, value) fields of a card: the person's, or the ID and the first meeting of one not found again."""
+        if person is not None:
+            return person.description_fields()
+        return [('ID', f"{seed}."), ('First met at', "Not met yet" if first_met_at is None else first_met_at)]
+
+    def _matches(self, person: Optional[Person], seed: int, first_met_at: Optional[str]) -> bool:
+        """Whether a card is shown for the search: the query is in one of its field values, its name or its comment (the
+        labels do not count)."""
+        if person is not None:
+            return person.matches_search(self._query)
+        query = self._query.strip().casefold()
+        if not query:
+            return True
+        return any(query in value.casefold() for _, value in self._fields(person, seed, first_met_at))
 
     @staticmethod
     def _comment_lines(text: str, width: int) -> List[str]:
@@ -192,30 +222,27 @@ class KnownPeopleDialog(_ListDialog):
 
     def _card(self, person: Optional[Person], seed: int, first_met_at: Optional[str],
               width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
-        """One person: the portrait on the left, the name and the fields beside it, and under them the comment box (when
-        the person could be found again). Returns the card and the box's rectangle inside it."""
+        """One person: the portrait on the left, the name and the fields beside it, and under both, across the whole card,
+        the comment box (when the person could be found again). Returns the card and the box's rectangle inside it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
         name = person.get_full_name() if person is not None else 'Unknown person'
-        fields = person.description_fields() if person is not None else [('ID', f"{seed}."),
-                                                                         ('First met at',
-                                                                          "Not met yet" if first_met_at is None
-                                                                          else first_met_at)]
+        fields = self._fields(person, seed, first_met_at)
 
         name_surface = title_font(20).render(name, True, ACCENT)
         lines: List[pygame.Surface] = []
         for label, value in fields:
             lines += _ListDialog._field(label, value, text_width)
         fields_bottom = name_surface.get_height() + 8 + sum(line.get_height() + 2 for line in lines)
+        row_bottom = max(PORTRAIT_SIZE[1], fields_bottom)
 
         box: Optional[pygame.Rect] = None
-        text_height = fields_bottom
+        text_height = row_bottom
         if person is not None:
             font = body_font(FIELD_SIZE)
-            comment_lines = self._comment_lines(person.comment, text_width - 2
+            comment_lines = self._comment_lines(person.comment, width - 2
                                                 * COMMENT_PADDING) if person.comment else []
             rows = max(COMMENT_MIN_LINES, len(comment_lines))
-            box = pygame.Rect(PORTRAIT_SIZE[0] + PORTRAIT_GAP, fields_bottom + COMMENT_GAP, text_width,
-                              2 * COMMENT_PADDING + rows * font.get_linesize())
+            box = pygame.Rect(0, row_bottom + COMMENT_GAP, width, 2 * COMMENT_PADDING + rows * font.get_linesize())
             text_height = box.bottom
 
         card = pygame.Surface((width, max(PORTRAIT_SIZE[1], text_height)), pygame.SRCALPHA)
@@ -271,19 +298,34 @@ class KnownPeopleDialog(_ListDialog):
 
     def _set_focus(self, seed: Optional[int]) -> None:
         """Focuses the comment box of `seed` (None for none): the keys type into it. The text input is on only while
-        focused."""
+        a box or the search is focused."""
         if seed == self._focus:
             return
         self._focus = seed
-        if seed is None:
-            pygame.key.stop_text_input()
-        else:
+        self._update_text_input()
+        self._layout_text()
+
+    def _set_search_focus(self, focused: bool) -> None:
+        self._search_focused = focused
+        self._update_text_input()
+
+    def _update_text_input(self) -> None:
+        if self._focus is not None or self._search_focused:
             pygame.key.start_text_input()
+        else:
+            pygame.key.stop_text_input()
+
+    def _change_query(self, query: str) -> None:
+        """The search changed: the list is built again, from the top."""
+        self._query = query
+        self.scroll = 0
         self._layout_text()
 
     def _change_comment(self, text: str) -> None:
         self._people[self._focus].set_comment(text)
         self._layout_text()
+        if self._focus not in (seed for seed, _, _ in self._boxes):
+            self._set_focus(None)  # the card no longer matches the search: its box is gone, so is the typing
         self._reveal_focused_box()
 
     def _reveal_focused_box(self) -> None:
@@ -298,6 +340,13 @@ class KnownPeopleDialog(_ListDialog):
                 break
 
     def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
+        if self._search_focused:
+            query = search_box.edit(self._query, event)
+            if query is not None:
+                self._change_query(query)
+                return None
+            if search_box.swallows(event):
+                return None  # Enter and the space do not press the Close button while the search is typed in
         if self._focus is not None and event.type == pygame.TEXTINPUT:
             self._change_comment(self._people[self._focus].comment + event.text)
             return None
@@ -311,11 +360,30 @@ class KnownPeopleDialog(_ListDialog):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             on_scroll_bar = self._max_scroll > 0 and self.scroll_bar.track.collidepoint(event.pos)
             if not on_scroll_bar:  # a press on the scroll bar keeps the focus: typing brings the box back into view
-                self._set_focus(self._box_at(event.pos))
+                if self._search_rect.collidepoint(event.pos):
+                    self._set_focus(None)
+                    self._set_search_focus(True)
+                else:
+                    self._set_search_focus(False)
+                    self._set_focus(self._box_at(event.pos))
         result = super().handle_event(event)
         if result is not None:
+            self._set_search_focus(False)
             self._set_focus(None)  # the text input stops with the dialog
         return result
+
+    def draw(self, surface: pygame.Surface) -> None:
+        super().draw(surface)
+        self._draw_search(surface)
+
+    @property
+    def _search_rect(self) -> pygame.Rect:
+        """The search box: at the right of the title, on its line."""
+        top = self.MARGIN - 4 + (self._title_surface.get_height() - search_box.HEIGHT) // 2
+        return pygame.Rect(self.WIDTH - self.MARGIN - SEARCH_WIDTH, top, SEARCH_WIDTH, search_box.HEIGHT)
+
+    def _draw_search(self, surface: pygame.Surface) -> None:
+        search_box.draw(surface, self._search_rect, self._query, self._search_focused)
     # endregion
 
 

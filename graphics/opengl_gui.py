@@ -22,6 +22,7 @@ from .fixed_world import FixedWorld
 from .orbit_path import OrbitPath
 from .asteroids import Asteroids
 from .portal_base_gl import PortalBaseGl
+from .portal_gl import PortalGl
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
@@ -127,6 +128,7 @@ class OpenGLGui:
         Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
         frame_watch.mark('cockpit')
         Starlight.tint_cockpit(self.overlay_surface, environment, ship)
+        PortalGl.tint_cockpit(self.overlay_surface, environment, ship)
         frame_watch.mark('cockpit tint')
         HeatVignette.draw(self.overlay_surface, width, height, ship)
         FrostVignette.draw(self.overlay_surface, width, height, ship)
@@ -147,7 +149,15 @@ class OpenGLGui:
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
         if not ship.is_bound:
+            # The Portal's glare hides the sky (the stars and the planets), not the base nor the asteroids, which come
+            # after it; the Portal and the base are drawn the farthest first, as each is drawn over what is behind it.
+            PortalGl.draw_glare(width, height, ship, environment)
+            portal_first = PortalGl.is_behind_base(environment, ship)
+            if portal_first:
+                PortalGl.draw(width, height, ship, environment)
             PortalBaseGl.draw(width, height, ship, environment)
+            if not portal_first:
+                PortalGl.draw(width, height, ship, environment)
         sightings = [] if ship.is_bound else Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
         # Nothing is seen beyond MAX_DEPTH, so above it there is no ground and no rocks to draw; and a ship that outruns

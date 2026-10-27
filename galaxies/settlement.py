@@ -15,7 +15,7 @@ from common.vector3 import Vector3
 import game_environment as gem
 from galaxies import seeds
 from galaxies.settlement_kind import SettlementKind
-from galaxies.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, ROLES, STAFF_AGE_MAX, STAFF_AGE_MIN, Role
+from galaxies.people.role import (COM_OFFICER, COORDINATOR, DOCKMASTER, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
 
 if TYPE_CHECKING:
     from galaxies.body import Body
@@ -47,15 +47,16 @@ class Settlement(Updatable):
     MAX_MAINTENANCE = 0.8 # maximum maintenance this place can offer
     READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
-    # What each kind has. Outposts have every role; the portal base has what is listed for it (its first version).
-    roles: tuple = ROLES
+    # What each kind has: each role with the number of teams that work it at once (each team has its shift members and
+    # a substitute). Outposts have one team of each role; the portal base has what is listed for it (its first version).
+    roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
 
     def __init__(self, seed: int) -> None:
         self.seed: int = seed
         self.is_altered: bool = False
-        self.staff: List[Person] = []  # every member of every role, in the order of ROLES
+        self.staff: List[Person] = []  # every member of every role, in the order of roles
         self.on_duty: Dict[Role, List[Person]] = {}  # the members on duty of each role, one for each team
         self.last_visited: Optional[datetime] = None
         self.player_reputation_on_entering: Optional[float] = None
@@ -151,7 +152,7 @@ class Settlement(Updatable):
         """Creates the staff, once: later calls change nothing, so the same people are always returned."""
         if not self.staff:
             self.staff = [self._generate_member(role, index) for role in self.roles
-                          for index in range(role.headcount)]
+                          for index in range(self.roles[role] * self._team_size(role))]
         return self
 
     def roster(self, role: Role) -> List[Person]:
@@ -228,7 +229,7 @@ class Settlement(Updatable):
         members = self.roster(role)
         size = self._team_size(role)
         on_duty: List[Person] = []
-        for team in range(role.teams):
+        for team in range(self.roles[role]):
             team_members = members[team * size:(team + 1) * size]
             if self._substitute_covers(role, shift_start, team):
                 on_duty.append(team_members[role.shifts])

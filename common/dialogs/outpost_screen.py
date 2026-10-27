@@ -71,7 +71,7 @@ SOLAR_PANELS_COST = 10  # reputation
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button
 FULL_HOLD_COLOUR = (240, 96, 96)  # the room left in the hold, while a load has found none
 def _is_portal_base(settlement: Settlement) -> bool:
-    from galaxies.portal_base import PortalBase  # local: the portal base's module loads the people, and so this one
+    from galaxies.portals.portal_base import PortalBase  # local: the portal base loads the people, and so this module
     return isinstance(settlement, PortalBase)
 
 
@@ -209,7 +209,9 @@ class OutpostScreenDialog(Dialog):
     select options.
 
     Chat (selected): the people listed now (Outpost.available_staff, see StaffList), in a dark panel on the right of
-    the block. A click selects a card; Tab goes over the cards and Enter or Space selects the focused one. The
+    the block, under a search box that filters them as the People dialog's does (typing goes there while it is focused,
+    and Enter and the space do not press the options then). A click selects a card; Tab goes over the cards and Enter
+    or Space selects the focused one. The
     conversation tags are on the left, the chat log in the middle (ChatView): a click on a tag starts an OutpostChat
     with the selected person, in the same log, and a click on an open reply chooses it. Tags and replies are also
     reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
@@ -937,7 +939,9 @@ class OutpostScreenDialog(Dialog):
 
     def _close_option(self) -> None:
         """Ends the conversation of the option, if one is going, and clears the messages of the panel. The chat's
-        conversation ends too, and its log is cleared."""
+        conversation ends too, and its log is cleared. The chat's search box lets go of the typing."""
+        if self._chat is not None:
+            self._chat.set_search_focus(False)
         if self.conversation is not None:
             self.conversation.close()
             self.conversation = None
@@ -1060,7 +1064,10 @@ class OutpostScreenDialog(Dialog):
     def _chat_event(self, event: pygame.event.Event) -> bool:
         """The events of Chat's three lists: the tags, the log (its replies) and the people. A click goes to the list it
         is in, the wheel to the list under the mouse, and Page Up and Page Down to all of them; the scroll bars drag on
-        their own. The arrow keys stay with the options. True if a list took the event."""
+        their own. The arrow keys stay with the options. The search box of the people takes the typing first. True if a
+        list took the event."""
+        if self._chat.search_event(event):
+            return True
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
             return False
         self._sync_chat_log()

@@ -10,13 +10,14 @@ from it, in a direction round the axis that is drawn from the seed (so it is alw
 in a plane that contains the z direction: a ship arriving from the stars along the axis sees it edge-on, and has to
 decelerate and turn to face it. The ring's normal is the horizontal direction from the axis to the Portal.
 
-The Portal is not targeted: the base is. Nothing here stops a ship from flying through it yet.
+The Portal is not targeted: the base is. What the base does about a ship that approaches it is in PortalDefence.
 """
 
 from __future__ import annotations
 import math
 import random
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
@@ -24,7 +25,7 @@ from common.vector3 import Vector3
 from galaxies import seeds
 
 if TYPE_CHECKING:
-    from galaxies.portal_base import PortalBase
+    from galaxies.portals.portal_base import PortalBase
 
 # Physical constants, SI (CODATA 2018).
 SPEED_OF_LIGHT = 299792458.0  # m/s
@@ -59,6 +60,11 @@ class Portal:
                                        base.height + self.BEYOND_BASE)
         self.normal: Vector3 = out  # horizontal, from the axis to the Portal: the ring's face looks along it
         self.tangent: Vector3 = Vector3(-out.y, out.x, 0.0)  # in the ring's plane, with the z direction
+        # What PortalDefence remembers (not saved): the last warning given, where they start again, the last check
+        self.warning_stage: int = 0
+        self.stage_distance: float = 0.0  # m: where the last warning was given
+        self.rearm_distance: float = 0.0  # m: the warnings start again when the ship is farther than this
+        self.checked_at: Optional[datetime] = None
 
     def ring_points(self, count: int) -> np.ndarray:
         """`count` points on the ring's centre line, in the stellar frame (m): (count, 3)."""
@@ -67,3 +73,19 @@ class Portal:
         tangent = np.array(tuple(self.tangent))
         axis = np.array([0.0, 0.0, 1.0])
         return centre + self.RADIUS * (np.cos(angle)[:, None] * axis + np.sin(angle)[:, None] * tangent)
+
+    def arrival_time(self, position: Vector3, velocity: Vector3, radius: float) -> Optional[float]:
+        """The seconds until a ship at the stellar-frame `position`, moving in a straight line at `velocity`, is within
+        `radius` of the Portal's centre: 0 for a ship that is already inside and is not moving away, None for one that
+        never gets there."""
+        relative = position - self.centre
+        along = relative.dot(velocity)
+        if relative.dot(relative) <= radius * radius:
+            return 0.0 if along <= 0.0 else None
+        speed_squared = velocity.dot(velocity)
+        if speed_squared == 0.0 or along >= 0.0:
+            return None
+        discriminant = along * along - speed_squared * (relative.dot(relative) - radius * radius)
+        if discriminant < 0.0:
+            return None
+        return (-along - math.sqrt(discriminant)) / speed_squared

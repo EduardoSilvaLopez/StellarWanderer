@@ -34,7 +34,7 @@ from .instruments.common import view_geometry
 from .portal_base_shape import BaseModel, Mesh, make_model
 
 if TYPE_CHECKING:
-    from galaxies.portal_base import PortalBase
+    from galaxies.portals.portal_base import PortalBase
     from game_environment import GameEnvironment
     from spaceships.ship import Ship
 

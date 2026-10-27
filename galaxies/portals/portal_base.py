@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Optional
 from common.vector3 import Vector3
 from galaxies import seeds
 from galaxies.body import Body
-from galaxies.people.role import BASE_ROLES
+from galaxies.people.role import (COM_OFFICER, DOCKMASTER, GUNNER, JANITOR, KOMISAR, RINGMASTER, SECURITY, STEVEDORE)
 from galaxies.settlement import Settlement
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world import World
@@ -34,7 +34,8 @@ class PortalBase(Body, Settlement):
 
     is_world = False
     is_base = True  # serviced like an outpost: the long distance advice keeps the same reserve for it
-    roles = BASE_ROLES
+    # the chief (Komisar) and the ring's master (Ringmaster) are on duty all the time; the stevedores work in two teams
+    roles = {COM_OFFICER: 1, DOCKMASTER: 1, STEVEDORE: 2, GUNNER: 1, JANITOR: 1, SECURITY: 1, KOMISAR: 1, RINGMASTER: 1}
     kind = SettlementKind.PORTAL_BASE
     MOUTH_DEPTH = 48.0  # m, from the ring's centre to the mouth of the hangar, at the reference radius (100 m)
     BERTH_CLEARANCE = 200.0  # m, how far in front of the mouth the ship is put when the pilot leaves

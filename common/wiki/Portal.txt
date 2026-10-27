@@ -25,6 +25,4 @@ HOW IT LOOKS
 - Intense white light, so strong that it hides the stars and the planets on the screen when enough of the ring is in view.
 
 DEFENCE OF THE PORTAL
-1. Layered warnings, which grow in urgency as the ship gets closer. Their number and their text are still to be designed.
-2. If the pilot ignores them, the station takes the ship by remote control and brings it to a total stop. All THS ships can be controlled in that way from the stations.
-3. Trying to cross the Portal unauthorised is a severe crime in all political entities in charge of one.
+The portal base is heavily is armed with lasers and missiles. Unauthorised ships are warned, then stopped remotely if possible, and destroyed if not.  Trying to cross the Portal unauthorised is a severe crime in all political entities in charge of one.
