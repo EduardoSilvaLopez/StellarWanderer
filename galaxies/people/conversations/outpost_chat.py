@@ -100,6 +100,7 @@ class OutpostChat(Conversation):
             'belt': self.talk_belt,
             'founders': self.talk_founders,
             'happy birthday': self.talk_happy_birthday,
+            'hobby': self.talk_hobby,
             'job': self.talk_job,
             'life': self.talk_life,
             'noobie': self.talk_noobie,
@@ -391,6 +392,9 @@ class OutpostChat(Conversation):
             "Well, the ones who founded Those-Who-Share, you know?"
         )
 
+    def talk_hobby(self) -> str:
+        return self.interlocutor.hobby
+
     def talk_happy_birthday(self) -> str:
         # Short names to make the rest more legible
         soc: float = self.interlocutor.sociability100
@@ -551,7 +555,7 @@ class OutpostChat(Conversation):
                     f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
                     f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}"
+                    f"\n\nOh... and {self.interlocutor.hobby}, that's my [hobby]"
                 )
                 if days_to_birthday == -2:
                     text += "\n\nMy birthday was two days ago."
@@ -595,7 +599,7 @@ class OutpostChat(Conversation):
                     f" I am {self.interlocutor.age} years old. I know, I know."
                     f" I work here as a {self.interlocutor.role.name}, that's my [job]."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}"
+                    f"\n\nOh... and {self.interlocutor.hobby}. My [hobby]"
                 )
                 if days_to_birthday == -2:
                     text += "\n\nBTW, I had my birthday two days ago."
