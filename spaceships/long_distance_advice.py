@@ -16,11 +16,12 @@ from the state of the ship, so it follows the target as it moves and corrects wh
    that arriving at rest in it is arriving at rest with respect to the target. In that frame the ship starts with the
    velocity `u` that it has relative to the target: its part along the line to the aim point is `u_r` (positive:
    coming closer) and the part across it is `u_perp` (the drift). The plan ends where the advice does, at rest with
-   respect to the target and `FAR_DISTANCE` from its surface, so that the braking is finished while the advice is
-   still given: it covers the distance `d` to that point. The advice ends there too: when the ship is within
-   `END_TOLERANCE` of the point, at no more than `END_SPEED` with respect to the target (the braking may start a
-   little late or end a little short: the point is soft). The last leg, from there to the target, is the pilot's:
-   the plan keeps back what a leg of `FAR_DISTANCE` from rest costs (`_final_leg`) in energy and in time.
+   respect to the target and `PLAN_END_DISTANCE` from its surface, further than `FAR_DISTANCE` so that the advice is
+   still given while the braking finishes: it covers the distance `d` to that point. The advice ends there too: when
+   the ship is within `END_TOLERANCE` of the point, at no more than `END_SPEED` with respect to the target (the
+   braking may start a little late or end a little short: the point is soft). The last leg, from there to the target,
+   is the pilot's: the plan keeps back what a leg of `PLAN_END_DISTANCE` from rest costs (`_final_leg`) in energy and
+   in time.
 
 2. The constraints, for a peak speed `v` (acceleration `a`, the ship's forward and backward one, and braking `b`,
    its brake's, which is never less):
@@ -31,7 +32,7 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      enough that going flat out would eat into the energy reserve (below) is slower than this and coasts, to spare
      the energy, the way a long-haul trip eases off its top speed to spare fuel.
    - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
-     `RESERVE_WITH_OUTPOST` (20 %) if the target has an outpost. A change of speed costs
+     `RESERVE_WITH_SERVICES` (20 %) if the target has an outpost or is a base. A change of speed costs
      `Navigation.ENERGY_PER_SPEED` per m/s that the speed changes by, not per m/s of velocity: thrust across the
      velocity turns the ship at no cost. Changing the velocity from `u` to `v` along the line (the drift cancelled on
      the way) and then stopping costs `energy_cost`, which for no drift is `2 * v - u_r` (as before). The plan cannot
@@ -169,7 +170,7 @@ def make_plan(distance: float, radial: float, drift: float, acceleration: float,
     peak = min(no_coast, energy_limit)
     speed = max(peak, radial)  # a ship that is faster than the plan stays at its speed
     covered = (speed * speed - radial * radial) / (2.0 * acceleration) + speed * speed / (2.0 * brake)
-    if distance < covered:
+    if distance < covered * (1.0 - 1e-9):  # a plan with no coast covers the distance to rounding: that is no shortfall
         return Plan(peak, None)
     return Plan(peak, (speed - radial) / acceleration + speed / brake + (distance - covered) / speed)
 
@@ -178,8 +179,9 @@ class LongDistanceAdvisor:
     """Works out the advice every frame (see the module docstring) and keeps it in `current` for the instruments."""
 
     FAR_DISTANCE = 1.0e9  # m, a million km: the advice is given beyond it
+    PLAN_END_DISTANCE = 3.0e9  # m: the plan ends here, at rest with respect to the target, with room left for braking
     RESERVE_WITHOUT_OUTPOST = 0.60
-    RESERVE_WITH_OUTPOST = 0.20
+    RESERVE_WITH_SERVICES = 0.20
     BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft
     END_TOLERANCE = 2.0e7  # m: the plan has reached its end when the ship is this near it...
     END_SPEED = 100.0  # m/s: ...and moves slower than this with respect to the target
@@ -237,7 +239,8 @@ class LongDistanceAdvisor:
         position = np.array(tuple(navigation.stellar_position(date)))
         velocity = np.array(tuple(ship.velocity.as_vector()))
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
-        reserve = advisor.RESERVE_WITH_OUTPOST if getattr(body, 'outposts', None) else advisor.RESERVE_WITHOUT_OUTPOST
+        reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
+            else advisor.RESERVE_WITHOUT_OUTPOST
         spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
         leg_speed_change, leg_time = advisor._final_leg(accelerations)
         budget = spare_energy / Navigation.ENERGY_PER_SPEED - leg_speed_change
@@ -267,9 +270,9 @@ class LongDistanceAdvisor:
 
     @staticmethod
     def _final_leg(accelerations: tuple[float, float]) -> tuple[float, float]:
-        """What the pilot's last leg costs, kept back by the plan: a trip of FAR_DISTANCE from rest, flown flat out
-        (it is short). The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
-        leg = make_plan(LongDistanceAdvisor.FAR_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12)
+        """What the pilot's last leg costs, kept back by the plan: a trip of PLAN_END_DISTANCE from rest, flown flat out.
+        The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
+        leg = make_plan(LongDistanceAdvisor.PLAN_END_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12)
         return 2.0 * leg.peak_speed, leg.eta
 
     @staticmethod
@@ -277,10 +280,10 @@ class LongDistanceAdvisor:
               accelerations: tuple[float, float], budget: float, trip_time: float,
               iterations: int | None = None) -> tuple:
         """The plan of the trip from `position` at `velocity` to the body, and what it was made from: the target's
-        position, the unit direction to the aim point, the distance from there to where the advice ends (FAR_DISTANCE
-        short of the surface), the velocity relative to
-        the target on arrival and its parts along and across the direction. `trip_time` is where the search for the
-        arrival starts; a few `iterations` (INTERCEPT_ITERATIONS by default) refine it."""
+        position, the unit direction to the aim point, the distance from there to where the plan ends (PLAN_END_DISTANCE
+        short of the surface), the velocity relative to the target on arrival and its parts along and across the
+        direction. `trip_time` is where the search for the arrival starts; a few `iterations` (INTERCEPT_ITERATIONS by
+        default) refine it."""
         advisor = LongDistanceAdvisor
         plan: Plan | None = None
         for _ in range(advisor.INTERCEPT_ITERATIONS if iterations is None else iterations):
@@ -292,7 +295,7 @@ class LongDistanceAdvisor:
             offset = aim - position
             centre_distance = float(np.linalg.norm(offset))
             direction = offset / max(centre_distance, 1.0)
-            distance = max(centre_distance - body.radius - advisor.FAR_DISTANCE, 1.0)
+            distance = max(centre_distance - body.radius - advisor.PLAN_END_DISTANCE, 1.0)
             relative = velocity - target_velocity
             radial = float(relative @ direction)
             drift = float(np.linalg.norm(relative - radial * direction))
@@ -312,7 +315,8 @@ class LongDistanceAdvisor:
         centre = np.array(tuple(body.calculate_stellar_position(date)))
         if float(np.linalg.norm(centre - position)) - body.radius <= advisor.FAR_DISTANCE:
             return None
-        reserve = advisor.RESERVE_WITH_OUTPOST if getattr(body, 'outposts', None) else advisor.RESERVE_WITHOUT_OUTPOST
+        reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
+            else advisor.RESERVE_WITHOUT_OUTPOST
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         leg_speed_change, leg_time = advisor._final_leg(accelerations)
         budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / Navigation.ENERGY_PER_SPEED

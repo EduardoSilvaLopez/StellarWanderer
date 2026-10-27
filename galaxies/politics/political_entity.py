@@ -22,6 +22,7 @@ class PoliticalEntity:
             exchange_reputation_changes: dict,
             settlements: List[(str, Ethnicity)],
             planets: List[(str)],
+            portal_base_names: List[(str)],
             ) -> None:
         self.name: str = name
         self.color: tuple = color
@@ -33,6 +34,7 @@ class PoliticalEntity:
         self.exchange_reputation_changes: dict = exchange_reputation_changes
         self.settlements = settlements
         self.planets = planets
+        self.portal_base_names = portal_base_names
 
     def title_for(self, reputation: float) -> Optional[str]:
         return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
@@ -166,5 +168,32 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             'Tuánjié',
             'Guānhái',
             'Bānzhù',
+        ]
+        , portal_base_names= [
+            "Affection",
+            "Altruism",
+            "Benignity",
+            "Benignacy",
+            "Compassion",
+            "Consideration",
+            "Cordiality",
+            "Decency",
+            "Empathy",
+            "Forgiveness",
+            "Goodwill",
+            "Hospitality",
+            "Humanism",
+            "Humility",
+            "Kindness",
+            "Patience",
+            "Philanthropy",
+            "Softness",
+            "Solicitude",
+            "Sympathy",
+            "Sweetness",
+            "Tenderness",
+            "Tolerance",
+            "Understanding",
+            "Unselfishness",
         ]
     )

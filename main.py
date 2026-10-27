@@ -50,6 +50,7 @@ from common.dialogs import (
     PendingMissionsDialog, OutpostScreenDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.outpost import Outpost
+from galaxies.portal_base import PortalBase
 from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
 from graphics.orbit_path import OrbitPath
@@ -414,7 +415,7 @@ def main() -> None:
                     running = result[0] != 'exit'
                     if result[0] == 'close':  # the Leave button: the pilot is back in the cockpit, which takes time too
                         leaving_seconds = outpost_screen.outpost.leave(player.ship, gem.current_environment.date_time)
-                        player.leave_outpost()
+                        player.leave_settlement()
                         audio.play(OutpostScreenDialog.CLOSE_SOUND)
                         elapsed = min(elapsed + leaving_seconds, MAX_ELAPSED)
             elif event.type == pygame.KEYDOWN:
@@ -427,9 +428,21 @@ def main() -> None:
                             f"[Com. Officer] Land the ship first, {outpost.com_officer.get_player_title()}."
                             )
                     elif outpost is not None:
-                        player.enter_outpost(outpost)
+                        player.enter_settlement(outpost)
                         elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                         audio.play(OutpostScreenDialog.OPEN_SOUND)
+                    elif ship.scanner.targeted_base is not None:
+                        base = ship.scanner.targeted_base
+                        speed = (ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()).length()
+                        if speed >= PortalBase.DOCK_MAX_SPEED:
+                            ship.notification.set(
+                                f"[Com. Officer] Slow down to under {PortalBase.DOCK_MAX_SPEED:g} m/s to dock"
+                                f" (now {speed:.2f} m/s).")
+                        else:
+                            base.prepare()  # its staff on duty, and its place in the queue
+                            player.enter_settlement(base)
+                            elapsed = min(elapsed + base.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
+                            audio.play(OutpostScreenDialog.OPEN_SOUND)
                 elif event.key == pygame.K_KP_5:
                     player.ship.toggle_scoop(player.time_scale)
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)

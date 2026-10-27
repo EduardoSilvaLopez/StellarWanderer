@@ -117,6 +117,8 @@ class Savefile:
             )
         if player_data['asteroid'] is not None:  # a mission's asteroid was the last fixed body
             body = gem.current_environment.nearest_system.asteroid_from_site(player_data['asteroid'])
+        elif player_data['is_last_fixed_portal_base']:
+            body = gem.current_environment.nearest_system.portal_base
         elif player_data['orbit'] is None:  # the star was the last fixed body
             body = gem.current_environment.nearest_system.star
         else:
@@ -138,13 +140,18 @@ class Savefile:
             world.update_surroundings(position_data['y'], position_data['x'], position_data['z'], game_date_time)
 
         pem.current_player = pem.Player.deserialize(load_object['player'])
-        # The pilot saved inside an outpost: they are back inside it, and a repair going on there goes on (main opens
-        # its screen).
-        if player_data['inside_outpost'] is not None:
-            outpost = galaxy.outpost_of(player_data['inside_outpost'])
-            if outpost.dockmaster is None:  # nobody on duty yet: its staff and its place in the queue (prepare)
-                outpost.prepare()
-            pem.current_player.resume_inside(outpost)
+        # The pilot saved inside a settlement: they are back inside it, and a repair going on there goes on (main opens
+        # its screen). The portal base is the one of the system; an outpost is found by its key.
+        if player_data['inside_settlement'] == 'portal_base':
+            settlement = gem.current_environment.nearest_system.portal_base
+        elif player_data['inside_settlement'] is not None:
+            settlement = galaxy.outpost_of(player_data['inside_settlement'])
+        else:
+            settlement = None
+        if settlement is not None and settlement.dockmaster is None:  # nobody on duty yet: staff and queue (prepare)
+            settlement.prepare()
+        if settlement is not None:
+            pem.current_player.resume_inside(settlement)
         # The target is the body at the saved place in the Tab order, which depends on the ship and its missions, so
         # it is read only now. While fixed, the target is the fixed body (already set above).
         target_index: int = load_object['environment']['target_index']

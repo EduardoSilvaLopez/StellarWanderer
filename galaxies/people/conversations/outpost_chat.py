@@ -616,7 +616,7 @@ class OutpostChat(Conversation):
                 "Slaves. Horrible.", "Slaves. Hm.", "Slaves, but treated well.",
             ), (
                 "They're mad. Some live in luxury while others are enslaved. Literal slaves. Fuck.",
-                "They have slaves, that's not nice. But I've heard they treat them quite good, actually.",
+                "They have slaves. Maybe they don't torture them or so. But... slaves. Ugh.",
                 "They have slaves, but I've heard they're not so many, and people can free themselves. No idea, ok?",
             )),
             'luxury': (40, (

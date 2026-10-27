@@ -22,6 +22,9 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 from common import audio
 from common.updating import Updatable, update_queue
 from galaxies.seeds import of_text
+from galaxies.missions.terms import Terms
+from galaxies.settlement import Settlement
+from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.body import Body
@@ -49,9 +52,8 @@ class Mission(Updatable):
     status. Subclasses add the objective."""
 
     KIND: str = ''
-    CHANCES_PER_DAY: float = 0.0  # the chance a kind makes an offer on a given day; a kind that makes none keeps 0
-    # the most days an offer of the kind lasts (its deadline): how far back the board looks for its offers
-    DEADLINE_DAYS_MAX: int = 0
+    # The terms of the kind at each kind of settlement (see terms.py): a frequency of 0 means it is not offered there.
+    TERMS: Dict[SettlementKind, Terms] = {}
 
     def __init__(self,
                  seed: int,
@@ -59,6 +61,8 @@ class Mission(Updatable):
                  created_at: datetime,
                  deadline: datetime,
                  destination: str,
+                 issuer_kind: SettlementKind,
+                 destination_kind: SettlementKind,
                  accepted_at: Optional[datetime] = None,
                  status: str = OPEN,
                  ) -> None:
@@ -67,6 +71,8 @@ class Mission(Updatable):
         self.created_at: datetime = created_at  # the day the offer was made
         self.issuer: str = issuer  # Outpost.full_keys() of the outpost that asked for it
         self.destination: str = destination  # Outpost.full_keys() of the outpost it is for
+        self.issuer_kind: SettlementKind = issuer_kind  # the kind of settlement that asked: its terms apply
+        self.destination_kind: SettlementKind = destination_kind
 
         self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
@@ -77,11 +83,25 @@ class Mission(Updatable):
 
     # region Offers
     @classmethod
+    def terms_at(cls, settlement_kind: SettlementKind) -> Terms:
+        """The terms of this kind at a kind of settlement. A kind with no entry for it is a bug (see check_terms)."""
+        return cls.TERMS[settlement_kind]
+
+    @property
+    def terms(self) -> Terms:
+        """The terms of this mission: those of the settlement that asked for it."""
+        return type(self).terms_at(self.issuer_kind)
+
+    @classmethod
     def offered_on(cls, day: datetime, outpost: Outpost) -> Optional[Mission]:
-        """The offer `outpost` makes on the day of `day`, or None when it makes none that day. Drawn from the outpost
-        and the day only, so it is the same however the board was visited."""
+        """The offer `outpost` makes on the day of `day`, or None when it makes none that day (its frequency there is 0,
+        or the day's chance does not come up). Drawn from the outpost and the day only, so it is the same however the
+        board was visited."""
+        terms = cls.terms_at(outpost.kind)
+        if terms.frequency == 0:
+            return None
         chance = random.Random(of_text(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
-        if chance.random() >= cls.CHANCES_PER_DAY:
+        if chance.random() >= terms.frequency:
             return None
         return cls.offer(day, outpost, chance)
 
@@ -98,16 +118,16 @@ class Mission(Updatable):
 
     # region Outposts
     @property
-    def issuer_outpost(self) -> Outpost:
-        """The outpost that asked for it, found from its keys."""
+    def issuer_settlement(self) -> Settlement:
+        """The settlement that asked for it, found from its keys."""
         import game_environment as gem
-        return gem.current_environment.galaxy.outpost_of(self.issuer)
+        return gem.current_environment.galaxy.settlement_of(self.issuer)
 
     @property
-    def destination_outpost(self) -> Outpost:
-        """The outpost it is for, found from its keys."""
+    def destination_settlement(self) -> Settlement:
+        """The settlement it is for, found from its keys."""
         import game_environment as gem
-        return gem.current_environment.galaxy.outpost_of(self.destination)
+        return gem.current_environment.galaxy.settlement_of(self.destination)
     # endregion
 
     # region Life of a mission
@@ -174,9 +194,9 @@ class Mission(Updatable):
         if body is None:
             return None
         date = gem.current_environment.date_time
-        outpost = self.issuer_outpost
-        position = np.array(tuple(outpost.stellar_position(date)))
-        velocity = np.array(tuple(outpost.planet.calculate_stellar_velocity(date)))
+        settlement = self.issuer_settlement
+        position = np.array(tuple(settlement.stellar_position(date)))
+        velocity = np.array(tuple(settlement.stellar_velocity(date)))
         import galaxies.people.player as player_module
         lacking = LongDistanceAdvisor.shortage(player_module.current_player.ship, body, date, position, velocity)
         return None if lacking is None else f"Your ship may lack the necessary {lacking} for this trip."
@@ -218,6 +238,8 @@ class Mission(Updatable):
             'seed': self.seed,
             'issuer': self.issuer,
             'destination': self.destination,
+            'issuer_kind': self.issuer_kind.value,
+            'destination_kind': self.destination_kind.value,
             'created_at': self.created_at.isoformat(),
             'deadline': self.deadline.isoformat(),
             'accepted_at': None if self.accepted_at is None else self.accepted_at.isoformat(),
@@ -240,6 +262,8 @@ class Mission(Updatable):
             'seed': source['seed'],
             'issuer': source['issuer'],
             'destination': source['destination'],
+            'issuer_kind': SettlementKind(source['issuer_kind']),
+            'destination_kind': SettlementKind(source['destination_kind']),
             'created_at': datetime.fromisoformat(source['created_at']),
             'deadline': datetime.fromisoformat(source['deadline']),
             'accepted_at': None if source['accepted_at'] is None else datetime.fromisoformat(source['accepted_at']),

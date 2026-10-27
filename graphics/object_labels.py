@@ -1,5 +1,5 @@
-"""Labels for visible objects (star, all worlds, and the asteroids of the ongoing missions) showing name and compact
-distance."""
+"""Labels for visible objects (star, portal base, all worlds, and the asteroids of the ongoing missions) showing name
+and compact distance."""
 
 from __future__ import annotations
 from typing import Dict, Tuple, TYPE_CHECKING
@@ -93,7 +93,8 @@ class ObjectLabels:
     @staticmethod
     def _draw_body_labels(surface: pygame.Surface, label_font: FallbackFont, w: int, h: int, horizon_y: int,
                           focal_length_px: float, environment: GameEnvironment, ship: Ship) -> None:
-        """The star, every world, and the asteroids of the ongoing missions, of the targeted body's system (unbound)."""
+        """The star, the portal base, every world, and the asteroids of the ongoing missions, of the targeted body's
+        system (unbound)."""
         body = environment.targeted_body
         system = body.stellar_system
 
@@ -105,6 +106,16 @@ class ObjectLabels:
             label_surf, rect = ObjectLabels._render_label(
                 label_font, system.star.name, format_compact_distance(star_vector.length()),
                 int(screen_x), int(screen_y)
+            )
+            surface.blit(label_surf, rect)
+
+        base = system.portal_base
+        base_vector = base.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
+        projected = project_to_camera(ship, base_vector, w, horizon_y, focal_length_px)
+        if projected is not None and ObjectLabels._in_windshield(projected, w, h):
+            label_surf, rect = ObjectLabels._render_label(
+                label_font, base.name, format_compact_distance(base_vector.length()),
+                int(projected[0]), int(projected[1])
             )
             surface.blit(label_surf, rect)
 

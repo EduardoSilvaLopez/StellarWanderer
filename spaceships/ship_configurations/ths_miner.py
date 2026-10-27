@@ -5,7 +5,7 @@ from spaceships.ship import Ship
 
 
 class ThsMiner(Ship):
-    """The standard miner of Those-Who-Share."""
+    """The standard miner of Those-Who-Share. Its hull is a box of 4 m high, 6 m wide and 12 m deep."""
 
     NAME = 'THS miner'
     ENERGY_MAX = 1500e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)

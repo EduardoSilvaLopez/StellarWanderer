@@ -6,6 +6,8 @@ import random
 import logging
 from galaxies.seeds import of_text
 from .mission import Mission, register
+from galaxies.missions.terms import Terms
+from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -21,20 +23,34 @@ class DeliverOre(Mission):
     save) gives back the days, the quantity and whether, and when, somebody else takes the offer."""
 
     KIND = 'deliver_ore'
-    CHANCES_PER_DAY = 0.3
+    # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
+    # start at a frequency of 0 (no offers yet).
+    TERMS = {
+        SettlementKind.OUTPOST: Terms(
+            frequency=0.3,
+            taken_by_others=0.1,
+            deadline_days_min=5,
+            deadline_days_max=15,
+            reward=0.01,
+            failure_penalty=-5.0
+            ),
+        SettlementKind.PORTAL_BASE: Terms(
+            frequency=0.0,  # Nope.
+            taken_by_others=1.0,
+            deadline_days_min=5,
+            deadline_days_max=15,
+            reward=0.01,
+            failure_penalty=-5.0
+            ),
+    }
     QUANTITY_MIN_1E2 = 1
     QUANTITY_MAX_1E2 = 10
-    DEADLINE_DAYS_MIN = 5
-    DEADLINE_DAYS_MAX = 15
-    BASIC_REWARD = 0.010  # Per Kg
-    FAILURE_PENALTY = -5.0
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1
 
     def __init__(self, quantity: Optional[int] = None, **common: Any) -> None:
         super().__init__(**common)
         # Drawn in this order every time, from the seed: the days (generate draws them first, for the deadline), the
         # quantity.
-        days = self.my_random.randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DEADLINE_DAYS_MAX)
+        days = self.my_random.randint(self.terms.deadline_days_min, self.terms.deadline_days_max)
         amount = self.my_random.randint(DeliverOre.QUANTITY_MIN_1E2, DeliverOre.QUANTITY_MAX_1E2) * 100
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
@@ -42,7 +58,7 @@ class DeliverOre(Mission):
         moment = self.my_random.random()
         self.quantity: int = amount if quantity is None else quantity
         taken_day = next((index for index, roll in enumerate(rolls)
-                          if roll < DeliverOre.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+                          if roll < self.terms.taken_by_others), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
     @classmethod
@@ -54,13 +70,16 @@ class DeliverOre(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverOre.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverOre.DEADLINE_DAYS_MIN, DeliverOre.DEADLINE_DAYS_MAX)
+        days = random.Random(seed).randint(DeliverOre.terms_at(outpost.kind).deadline_days_min,
+                                       DeliverOre.terms_at(outpost.kind).deadline_days_max)
         return DeliverOre(
             seed=seed,
             issuer=outpost.full_keys(),
             created_at=created_at,
             deadline=created_at + timedelta(days=days),
             destination=outpost.full_keys(),
+            issuer_kind=outpost.kind,
+            destination_kind=outpost.kind,
         )
 
     def title(self) -> str:
@@ -68,7 +87,7 @@ class DeliverOre(Mission):
 
     def description(self) -> str:
         return (f"A factory needs {self.quantity} Kg of PGM ore. "
-                f"It is to be delivered here, at {self.issuer_outpost.address()}. "
+                f"It is to be delivered here, at {self.issuer_settlement.address()}. "
                 f"Please bring them in time, Pilot.")
 
     def can_complete(self, player: Player) -> bool:
@@ -81,7 +100,7 @@ class DeliverOre(Mission):
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = DeliverOre.BASIC_REWARD * self.quantity
+        reputation_change: float = self.terms.reward * self.quantity
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")
@@ -92,7 +111,7 @@ class DeliverOre(Mission):
         return f"Thank you Pilot {player.surname}, this {mineral}-rich ore will help the Community."
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = DeliverOre.FAILURE_PENALTY # If you did not have the time don't accept the mission.
+        reputation_change: float = self.terms.failure_penalty # If you did not have the time don't accept the mission.
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: Ore not brought. Reputation {reputation_change} = "
         f"{player.those_who_share.reputation}")

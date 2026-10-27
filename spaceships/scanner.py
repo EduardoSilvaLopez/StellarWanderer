@@ -1,9 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Union
 
+import logging
 import math
 
-import logging
+import numpy as np
 
 from common import audio
 
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from galaxies.rock import Rock
     from galaxies.ore_mine import OreMine
     from galaxies.outpost import Outpost
+    from galaxies.portal_base import PortalBase
     from galaxies.asteroid import Asteroid
 
 logger = logging.getLogger(__name__)
@@ -36,8 +38,8 @@ class Scanner:
 
     Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned and
     within scan range: it is `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it
-    can): too fast or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no problem, the scan
-    advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays off until SPACE
+    can): too fast or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no
+    problem, the scan advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays off until SPACE
     is released. The time scale is capped at its minimum then, and stays there: the progress of the first frame at the
     old scale does not count. When it reaches 1, the ship says so.
     """
@@ -72,6 +74,11 @@ class Scanner:
         return self.target if isinstance(self.target, OreMine) else None
 
     @property
+    def targeted_base(self) -> Optional[PortalBase]:
+        from galaxies.portal_base import PortalBase
+        return self.target if isinstance(self.target, PortalBase) else None
+
+    @property
     def targeted_outpost(self) -> Optional[Outpost]:
         from galaxies.outpost import Outpost
         return self.target if isinstance(self.target, Outpost) else None
@@ -100,6 +107,7 @@ class Scanner:
             self.end_x, self.end_y, self.end_z = (
                 o + f * self.MAX_LENGTH - u * offset for o, f, u in zip(origin, forward, up)
             )
+            self._look_for_base()
             return
 
         # Bound, the beam slopes down to the ground MAX_LENGTH metres ahead.
@@ -128,6 +136,37 @@ class Scanner:
             return
         self.target = target
         self.end_x, self.end_y, self.end_z = hit_x, hit_y, hit_z
+    # endregion
+
+    # region Portal base
+    def _look_for_base(self) -> None:
+        """Sets `target` to the portal base of the system when the beam enters its sphere, within reach, and the ship
+        is in its fixed zone (unbound: the beam is relative to the ship, as the base's position is)."""
+        import game_environment as gem
+        environment = gem.current_environment
+        base = environment.nearest_system.portal_base
+        if not self.ship.navigation.in_fixed_zone(base):
+            return
+        if base.contains_hangar(self.ship.position.as_vector()):  # flown in through the mouth: at the base
+            self.target = base
+            return
+        centre = np.array(tuple(base.calculate_stellar_position(environment.date_time)))
+        centre -= np.array(tuple(self.ship.position.as_vector()))
+        start = np.array([self.start_x, self.start_y, self.start_z])
+        direction = np.array([self.end_x, self.end_y, self.end_z]) - start
+        offset = start - centre
+        a = float(direction @ direction)
+        b = 2.0 * float(direction @ offset)
+        c = float(offset @ offset) - base.radius ** 2
+        discriminant = b * b - 4.0 * a * c
+        if discriminant < 0.0:
+            return
+        t = (-b - math.sqrt(discriminant)) / (2.0 * a)  # the entry, along the beam
+        if not 0.0 <= t <= 1.0:
+            return
+        hit = start + t * direction
+        self.target = base
+        self.end_x, self.end_y, self.end_z = (float(value) for value in hit)
     # endregion
 
     # region Asteroids
@@ -178,7 +217,10 @@ class Scanner:
         On a rock with an adjective,
         the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch
         the beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so
-        it does not search again."""
+        it does not search again. Inside the fixed zone of a portal base the beam never switches on (the base is ours)."""
+        if self.in_base_zone():
+            self.ship.laser.cease_fire()
+            return self
 
         if self.targeted_mine is not None:
             mine: OreMine = self.targeted_mine
@@ -236,6 +278,11 @@ class Scanner:
         self._scan_held = False
         audio.set_loop('scan', False)
         return self
+
+    def in_base_zone(self) -> bool:
+        """Whether the ship is in the fixed zone of the portal base of its system."""
+        import game_environment as gem
+        return self.ship.navigation.in_fixed_zone(gem.current_environment.nearest_system.portal_base)
 
     def deactivate(self) -> Scanner:
         self.ship.laser.cease_fire()

@@ -1,0 +1,30 @@
+The Portal is a ring of intense white light that opens a passage between two stellar systems by bending space with a wormhole. Every inhabited system has a portal base and an armed station hanging over its star to protect it.
+
+WHERE PORTALS COME FROM
+In 500 PosDis the Exterminating Mother started to build one. Mankind discovered the ship one year later, and the construction of the Portal towards the end of the subsequent war (501-513). They had sabotaged the obtention of resources by the Mother, unknowingly sabotaging its construction too. That Portal, never finished, is the only one that mankind has been able to analyse. From it, mankind learned to make its own Portals. Mankind has not learned yet how to modify the design. This is why every Portal is exactly the same size, in every system.
+
+HOW THEY WORK
+- It connects two systems with a wormhole, a passage made by bending space.
+- A human Portal is made of two parts. Once created, it opens. Then, one part is sent conventionally to the other system while the other part remains in place.
+- Travelling conventionally between the stars, without Portals, takes years.
+
+SIZE
+- Shape: a ring (a torus of light), seen as a bright band round an opening.
+- Radius: 19.97 m, the same for all Portals. The circumference is 125.5 m.
+- Thickness of the band: the fine-structure constant times the radius, about 14.6 cm.
+
+The Portal radius is measures 1.2356 x 10^36 Planck lengths, and that number is the ratio between the electric repulsion and the gravitational attraction of two protons. The ratio does not depend on how far apart the protons are, and nothing in it is chosen: it is the famous reason why gravity is so weak compared to electricity. A radius of 19.97 m is the result of writing it in metres.
+
+Nobody has an explanation of why the aliens chose it. Some scientists think the Portal only works at that size, others that the aliens simply built what their physics gave them. Mankind has not been able to change it, so it counts as a law.
+
+LOCATION
+- Each Portal is next to the portal base of its system. It is "beyond" the base, further from the star than the base, and 1 km away from the axis. It is far enough from the base so that its light does not affect it. Its ring is oriented perpendicular to the z axis.
+- All this is intentional. A ship arriving from the stars along the axis sees the ring from the side and cannot just go through it: it has to decelerate, change its attitude and then approach the ring, which takes time. That time is the time the base has to shoot unauthorised and unresponsive ships down.
+
+HOW IT LOOKS
+- Intense white light, so strong that it hides the stars and the planets on the screen when enough of the ring is in view.
+
+DEFENCE OF THE PORTAL
+1. Layered warnings, which grow in urgency as the ship gets closer. Their number and their text are still to be designed.
+2. If the pilot ignores them, the station takes the ship by remote control and brings it to a total stop. All THS ships can be controlled in that way from the stations.
+3. Trying to cross the Portal unauthorised is a severe crime in all political entities in charge of one.

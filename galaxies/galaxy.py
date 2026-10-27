@@ -11,6 +11,7 @@ from galaxies.stellar_system import StellarSystem
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
 
 
 class Galaxy:
@@ -45,6 +46,15 @@ class Galaxy:
             return existing
         star: Optional[Star] = self.fixed_stars.get(tuple(int(c) for c in key.split()))
         return self.add_stellar_system(star) if star is not None else None
+
+    def settlement_of(self, full_keys: str) -> Settlement:
+        """The settlement with these keys: a portal base (its system's key and 'portal_base'), or an outpost."""
+        if full_keys.endswith('|portal_base'):
+            system = self.system_of_key(full_keys.partition('|')[0])
+            if system is None:
+                raise KeyError(f"No stellar system {full_keys} in this galaxy.")
+            return system.portal_base
+        return self.outpost_of(full_keys)
 
     def outpost_of(self, full_keys: str) -> Outpost:
         """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then the outpost's own

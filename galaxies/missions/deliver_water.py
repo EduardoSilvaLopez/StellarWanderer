@@ -9,6 +9,8 @@ import logging
 from galaxies.seeds import of_text
 from galaxies.world_surface import SurfaceType
 from .mission import OPEN, Mission, register
+from galaxies.missions.terms import Terms
+from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
@@ -22,23 +24,37 @@ logger = logging.getLogger(__name__)
 @register
 class DeliverWater(Mission):
     KIND = 'deliver_water'
-    CHANCES_PER_DAY = 0.2 # Still testing. Later 0.05
-    DEADLINE_DAYS_MIN = 5
-    DEADLINE_DAYS_MAX = 10
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.2
-    MINIMUM_REWARD = 1.0  # reputation and sympathy in the outpost
+    # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
+    # start at a frequency of 0 (no offers yet).
+    TERMS = {
+        SettlementKind.OUTPOST: Terms(
+            frequency=0.2,
+            taken_by_others=0.2,
+            deadline_days_min=5,
+            deadline_days_max=10,
+            reward=1.0,
+            failure_penalty=-20
+            ),
+        SettlementKind.PORTAL_BASE: Terms(
+            frequency=0.1,
+            taken_by_others=0.05,
+            deadline_days_min=5,
+            deadline_days_max=10,
+            reward=1.0,
+            failure_penalty=-20
+            ),
+    }
     REWARD_PER_KG_PLANETARY_ICE = 0.001  # per Kg when the planet's system (its moons) has an icy world: a short trip
     REWARD_PER_KG_STELLAR_ICE = 0.005  # an icy world elsewhere in the star's system
-    REWARD_PER_KG_ASTEROID = 0.01  # no icy world in the star's system: the water is from an asteroid
-    FAILURE_PENALTY = -20 # Promising water and not delivering is a SERIOUS problem.
+    REWARD_PER_KG_ASTEROID_OR_BASE = 0.01  # no icy world in the star's system: the water is from an asteroid
 
     def __init__(self, asteroid_site: dict | None = None, loaded: bool = False, **common: Any) -> None:
         super().__init__(**common)
-        days = self.my_random.randint(DeliverWater.DEADLINE_DAYS_MIN, DeliverWater.DEADLINE_DAYS_MAX)
+        days = self.my_random.randint(self.terms.deadline_days_min, self.terms.deadline_days_max)
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
         taken_day = next((index for index, roll in enumerate(rolls)  # rolled per day from creation until now.
-                          if roll < DeliverWater.TAKEN_BY_OTHERS_CHANCE_PER_DAY), None)
+                          if roll < self.terms.taken_by_others), None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
         self.delivered: float = 0.0  # Kg the last delivery took, for the reward given right after it (not saved)
         # The asteroid the offer shows (an optional source of the water). Drawn only for a new offer: a loaded one keeps
@@ -50,7 +66,7 @@ class DeliverWater(Mission):
 
     @classmethod
     def offer(cls, day: datetime, outpost: Outpost, chance: random.Random) -> Optional[DeliverWater]:
-        if outpost.planet.surface_type is SurfaceType.ICE:  # an outpost on an icy world does not need this.
+        if not outpost.needs_water():  # an outpost on an icy world does not need this.
             return None
         return cls.generate(day, outpost)
 
@@ -59,30 +75,33 @@ class DeliverWater(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverWater.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverWater.DEADLINE_DAYS_MIN, DeliverWater.DEADLINE_DAYS_MAX)
+        days = random.Random(seed).randint(DeliverWater.terms_at(outpost.kind).deadline_days_min,
+                                       DeliverWater.terms_at(outpost.kind).deadline_days_max)
         return DeliverWater(
             seed=seed,
             issuer=outpost.full_keys(),
             created_at=created_at,
             deadline=created_at + timedelta(days=days),
             destination=outpost.full_keys(),
+            issuer_kind=outpost.kind,
+            destination_kind=outpost.kind,
         )
 
     # region The asteroid
     def _choose_asteroid_site(self) -> dict | None:
         """The asteroid the offer shows, from the seed: in the belt nearest the planet's orbit, the quarter of it
-        nearest that orbit. A system with no belt has a free-living one, made for the offer. None when the sector drawn has no
+        nearest that orbit. A system with no belt has a free-living one, made for the offer. None when the sector drawn
+        has no
         asteroid of the tier: the water can come from elsewhere."""
         from galaxies.asteroid import Asteroid
         from galaxies.asteroid_belt import AsteroidBelt
-        planet = self.issuer_outpost.planet
-        system = planet.parent_orbit.parent_stellar_system
+        system = self.issuer_settlement.stellar_system
         site = {'system': system.get_alterations_key(), 'belt': None, 'key': None, 'seed': None}
         belts = [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
         if not belts:
             site['seed'] = self.seed
             return site
-        planet_distance = planet.parent_orbit.distance_from_star
+        planet_distance = self.issuer_settlement.plane_distance
         belt = min(belts, key=lambda candidate: abs(candidate.distance_from_star - planet_distance))
         nearest = min(max(planet_distance, belt.inner), belt.outer)  # the belt's part nearest the planet's orbit
         quarter = (belt.outer - belt.inner) / 4.0
@@ -172,14 +191,16 @@ class DeliverWater(Mission):
     def icy_worlds(self) -> List[RockyWorld]:
         """The icy worlds of the planetary system of the issuer's planet: the planet and its moons."""
         from galaxies.rocky_world import RockyWorld
-        planet = self.issuer_outpost.planet
+        planet = self.issuer_settlement.planet
+        if planet is None:  # a portal base has no planet, so no planetary ice
+            return []
         return [world for world in [planet, *planet.moons]
                 if isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE]
 
     def icy_stellar_worlds(self) -> List[RockyWorld]:
         """The icy worlds of the whole star's system: every planet and moon of it."""
         from galaxies.rocky_world import RockyWorld
-        system = self.issuer_outpost.planet.parent_orbit.parent_stellar_system
+        system = self.issuer_settlement.stellar_system
         return [world for world in system.get_all_worlds()
                 if isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE]
 
@@ -189,14 +210,14 @@ class DeliverWater(Mission):
             return DeliverWater.REWARD_PER_KG_PLANETARY_ICE
         if self.icy_stellar_worlds():
             return DeliverWater.REWARD_PER_KG_STELLAR_ICE
-        return DeliverWater.REWARD_PER_KG_ASTEROID
+        return DeliverWater.REWARD_PER_KG_ASTEROID_OR_BASE
 
     def title(self) -> str:
-        return f"Deliver Water to {self.issuer_outpost.name}."
+        return f"Deliver Water to {self.issuer_settlement.name}."
 
     def description(self) -> str:
         return (
-            f"The water reserves are running low here at {self.issuer_outpost.address()}."
+            f"The water reserves are running low here at {self.issuer_settlement.address()}."
             "We need ships with scoop to retrieve and deliver us raw water. Only reliable pilots, please."
             )
 
@@ -225,10 +246,10 @@ class DeliverWater(Mission):
         return "You carry no raw water."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = DeliverWater.MINIMUM_REWARD + self.reward_per_kg() * self.delivered
+        reputation_change: float = self.terms.reward + self.reward_per_kg() * self.delivered
 
         player.those_who_share.reputation += reputation_change
-        for crew in self.issuer_outpost.staff:
+        for crew in self.issuer_settlement.staff:
             crew.adjust_sympathy(reputation_change)
 
         logger.info(
@@ -240,10 +261,10 @@ class DeliverWater(Mission):
         return f"We thanks Pilot {player.surname} for the raw water, we start its processing immediately."
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = DeliverWater.FAILURE_PENALTY
+        reputation_change: float = self.terms.failure_penalty
 
         player.those_who_share.reputation += reputation_change
-        for crew in self.issuer_outpost.staff:
+        for crew in self.issuer_settlement.staff:
             crew.adjust_sympathy(reputation_change)
 
         logger.info(

@@ -1,4 +1,5 @@
-"""A body of a stellar system: the star or a world. What navigation needs from any of them."""
+"""A body of a stellar system: the star, the portal base, a world or an asteroid. What navigation needs from any of
+them."""
 
 from __future__ import annotations
 from datetime import datetime

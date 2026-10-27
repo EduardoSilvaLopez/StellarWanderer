@@ -33,13 +33,15 @@ conversation.
 """
 
 from __future__ import annotations
-import os
 import random
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import pygame
 
 from common import audio
 from common.paths import resource_path
+from common.dialogs.area_pictures import (
+    PORTAL_BASE_AREA_PREFIXES, cover as _cover, darken as _darken, faded as _faded, pictures_of as _pictures,
+)
 from graphics.constants import CONSOLE_TOP
 from graphics.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult
@@ -53,7 +55,7 @@ from .scroll_bar import ScrollBar
 from .staff_list import StaffList
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.conversation import Conversation
     from galaxies.people.conversations.outpost_chat import OutpostChat
     from galaxies.people.person import Person
@@ -68,6 +70,16 @@ SCOOP_COST = 10  # reputation
 SOLAR_PANELS_COST = 10  # reputation
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button
 FULL_HOLD_COLOUR = (240, 96, 96)  # the room left in the hold, while a load has found none
+def _is_portal_base(settlement: Settlement) -> bool:
+    from galaxies.portal_base import PortalBase  # local: the portal base's module loads the people, and so this one
+    return isinstance(settlement, PortalBase)
+
+
+def _area_prefixes(settlement: Settlement) -> dict:
+    """The picture prefixes of each area of the settlement's screen: the portal base's, or the outposts'."""
+    return PORTAL_BASE_AREA_PREFIXES if _is_portal_base(settlement) else AREA_PICTURE_PREFIXES
+
+
 AREA_PICTURE_PREFIXES = {  # the picture of each area: a file of common/resources/backgrounds named <prefix>*
     'Dockmaster': 'outpost.dockmaster.',
     'Cargo': 'outpost.cargo.',
@@ -93,34 +105,6 @@ ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour whil
 CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of the window's height
 CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the people (the chat takes the rest)
 NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
-
-
-def _pictures(prefix: str) -> List[str]:
-    """The files of common/resources/backgrounds whose names start with `prefix`, in a fixed order."""
-    folder = resource_path('backgrounds')
-    return sorted(
-        os.path.join(folder, name) for name in os.listdir(folder)
-        if name.startswith(prefix) and name.lower().endswith(('.jpg', '.jpeg', '.png'))
-    )
-
-
-def _cover(image: pygame.Surface, size: Tuple[int, int]) -> pygame.Surface:
-    """`image` scaled to fill `size` (keeping its proportions), cropped to its middle."""
-    width, height = size
-    scale = max(width / image.get_width(), height / image.get_height())
-    scaled = pygame.transform.smoothscale(image, (round(image.get_width() * scale), round(image.get_height() * scale)))
-    crop = pygame.Rect(0, 0, width, height)
-    crop.center = scaled.get_rect().center
-    return scaled.subsurface(crop).copy()
-
-
-def _darken(image: pygame.Surface, fraction: float) -> pygame.Surface:
-    """`image` with `fraction` of it covered by black (0 leaves it as it is, 1 makes it black)."""
-    shade = pygame.Surface(image.get_size())
-    shade.fill((0, 0, 0))
-    shade.set_alpha(round(255 * fraction))
-    image.blit(shade, (0, 0))
-    return image
 
 
 def _wrap(text: str, font: pygame.font.Font, width: int) -> List[str]:
@@ -234,12 +218,11 @@ class OutpostScreenDialog(Dialog):
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
 
-    def __init__(self, outpost: Outpost) -> None:
+    def __init__(self, outpost: Settlement) -> None:
         super().__init__(NOMINAL_SIZE, NOMINAL_SIZE)
-        self.outpost: Outpost = outpost
+        self.outpost: Settlement = outpost
         self.outpost_name: str = outpost.name
-        system = outpost.planet.parent_orbit.parent_stellar_system
-        self.details: List[str] = [outpost.planet.name, system.star.name, system.political_entity.name]
+        self.details: List[str] = outpost.place_details()
         # The dockmaster on duty when the screen opens, who is the one that talks: their name and age are read at each
         # draw, but the shift changing while the screen is open does not change who is shown.
         self.officer: Optional[Person] = outpost.dockmaster
@@ -254,7 +237,8 @@ class OutpostScreenDialog(Dialog):
         self._knowledge_rects: List[Tuple[str, pygame.Rect]] = []  # the knowledge buttons shown: name and where drawn
         # one picture per area, chosen from the outpost's seed among the files named outpost.<area>.*
         self._area_pictures: Dict[str, Optional[str]] = {}
-        for area, prefix in AREA_PICTURE_PREFIXES.items():
+        self._fallback: Optional[str] = 'Dockmaster' if not _is_portal_base(outpost) else None
+        for area, prefix in _area_prefixes(outpost).items():
             pictures = _pictures(prefix)
             self._area_pictures[area] = random.Random(outpost.seed).choice(pictures) if pictures else None
         self._picture: Optional[pygame.Surface] = None  # the faded picture, made for _picture_key
@@ -316,11 +300,11 @@ class OutpostScreenDialog(Dialog):
         """The picture of the area on show (the Leave while it is being decided, else the selected option), covering
         `size`, darkened, made once per file and size. An area with no picture file keeps the Dockmaster's."""
         area = 'Leave' if self._leave_conversation is not None else BUTTON_LABELS[self.selected]
-        file = self._area_pictures[area] or self._area_pictures['Dockmaster']
-        if file is None or size[0] <= 0 or size[1] <= 0:
-            return None
+        file = self._area_pictures[area] or (self._area_pictures[self._fallback] if self._fallback else None)
+        if size[0] <= 0 or size[1] <= 0 or (file is None and self._fallback is not None):
+            return None  # an outpost's area with no picture, not even the Dockmaster's: none is drawn
         if self._picture is None or self._picture_key != (file, size):
-            self._picture = _darken(_cover(pygame.image.load(file).convert(), size), PICTURE_FADE)
+            self._picture = _faded(file, size, PICTURE_FADE)  # black, when the base has no file for the area
             self._picture_key = (file, size)
         return self._picture
 

@@ -14,6 +14,8 @@ from galaxies.asteroid_belt import AsteroidBelt
 from galaxies.body import Body
 from galaxies.orbit import Orbit
 from galaxies.orbit_layout import OrbitKind, OrbitLayout
+from galaxies.portal import Portal
+from galaxies.portal_base import PortalBase
 from galaxies.politics import political_entity
 from galaxies.star import Star
 from galaxies.world import World
@@ -45,6 +47,9 @@ class StellarSystem:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
+        # Every system has one for now. Made after its saved state, which holds the base's visits and handling.
+        self.portal_base: PortalBase = PortalBase(self, (self.saved_alterations or {}).get('portal_base'))
+        self.portal: Portal = Portal(self.portal_base)  # its Portal: nothing about it is saved
 
         self.orbits: list[Orbit] = self._generate_orbits(my_random)
 
@@ -118,9 +123,9 @@ class StellarSystem:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
     def get_all_bodies(self) -> list[Body]:
-        """The star first, then every world (each planet before its moons), then the asteroids of the ongoing
-        missions."""
-        return [self.star] + self.get_all_worlds() + self.mission_asteroids()
+        """The star first, then the portal base, then every world (each planet before its moons), then the asteroids of
+        the ongoing missions."""
+        return [self.star, self.portal_base] + self.get_all_worlds() + self.mission_asteroids()
 
     def mission_asteroids(self) -> list[Asteroid]:
         """The asteroids of the pilot's accepted, not yet finished scan missions whose target is in this system. They
@@ -155,6 +160,11 @@ class StellarSystem:
                   for asteroid in orbit.relevant.values()]
         return result + list(self.free_asteroids.values())
 
+    def settlements(self) -> list:
+        """Every settlement of the system: its outposts, world by world, then the portal base."""
+        outposts = [outpost for world in self.get_all_worlds() for outpost in world.outposts.values()]
+        return outposts + [self.portal_base]
+
     def get_all_worlds(self) -> list[World]:
         result: list[World] = []
         for orbit in self.orbits:
@@ -177,6 +187,9 @@ class StellarSystem:
     def get_alterations(self) -> dict | None:
         alterations = {}
         if self.is_altered:
+            base_alterations = self.portal_base.get_alterations()
+            if base_alterations:
+                alterations['portal_base'] = base_alterations
             for orbit in self.orbits:
                 if orbit.is_altered:
                     orbit_alterations: dict | None = orbit.get_alterations()
@@ -199,6 +212,7 @@ class StellarSystem:
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )
         text += self.star.markdown()
+        text += self.portal_base.markdown()
         AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
         text += "### Orbits\n" + ''.join(
             f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"

@@ -9,7 +9,7 @@ from common.vector3 import Vector3
 from ..constants import (
     ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR, RADAR_MOON_COLOR,
     RADAR_STAR_DOT_RADIUS, RADAR_WORLD_DOT_RADIUS, RADAR_MOON_DOT_RADIUS,
-    RADAR_ASTEROID_COLOR, RADAR_ASTEROID_DOT_RADIUS,
+    RADAR_ASTEROID_COLOR, RADAR_ASTEROID_DOT_RADIUS, RADAR_BASE_COLOR, RADAR_BASE_DOT_RADIUS,
 )
 
 if TYPE_CHECKING:
@@ -17,15 +17,15 @@ if TYPE_CHECKING:
 
 
 class Radar:
-    """Ellipse in the ship's forward/right plane, one bar per object (the star, every world, and the asteroids of the
-    ongoing missions).
+    """Ellipse in the ship's forward/right plane, one bar per object (the star, the portal base, every world, and the
+    asteroids of the ongoing missions).
 
     Forward is the top of the ellipse and right is its right side. An object's foot on the
     ellipse is its projection onto that plane: the angle is its bearing, the distance from
     the centre is logarithmic in its in-plane distance. The bar runs from the foot along the
     ship's up axis, upwards (white) when the object is above the plane, downwards (gray) when
     below, with a logarithmic length. A dot at the end of the bar marks the object; the dot is the star's own colour,
-    light brown for a world, or lilac for an asteroid of an ongoing mission.
+    light brown for a world, green for the portal base, or lilac for an asteroid of an ongoing mission.
 
     Shown only while unbound, in the centre console panel where the world map is drawn while bound. It lists the star
     and every world of the system within 100 AU, and the asteroids of the ongoing missions in it.
@@ -47,12 +47,14 @@ class Radar:
 
     @staticmethod
     def objects(date_time: datetime) -> List[Tuple[Vector3, Tuple[int, int, int], int]]:
-        """Stellar-frame position, dot colour and dot radius of the star, of every world in its system, and of the
-        asteroids of the ongoing missions. Moons get a different colour and a smaller dot than planets."""
+        """Stellar-frame position, dot colour and dot radius of the star, of the portal base, of every world in its
+        system, and of the asteroids of the ongoing missions. Moons get a different colour and a smaller dot than
+        planets."""
         import game_environment as gem
         system = gem.current_environment.targeted_body.stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
-            (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS)
+            (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS),
+            (system.portal_base.calculate_stellar_position(date_time), RADAR_BASE_COLOR, RADAR_BASE_DOT_RADIUS),
         ]
         for world in system.get_all_worlds():
             colour, radius = (RADAR_MOON_COLOR, RADAR_MOON_DOT_RADIUS) if world.parent_planet \

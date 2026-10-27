@@ -8,6 +8,7 @@ from common.dialogs.messages import Message, show_message
 from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
 from galaxies.people.person import Person
+from galaxies.portal_base import PortalBase
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue
@@ -16,7 +17,7 @@ from spaceships.ship_configurations import ShabbyThsMiner
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class Player:
     their standing with the political entities. The identity is empty until the new-game dialog asks for it
     (PilotIdentityDialog); a saved game always has it.
 
-    The game has two states, equally important: the pilot is in the cockpit, or inside an outpost (`inside`, see
-    `enter_outpost`). Both are saved, and a load puts the pilot back where they were.
+    The game has two states, equally important: the pilot is in the cockpit, or inside a settlement (`inside`, see
+    `enter_settlement`). Both are saved, and a load puts the pilot back where they were.
 
     The ship holds where it is and how it moves (position, velocity, attitude); see Ship.
     """
@@ -52,7 +53,7 @@ class Player:
         self.those_who_share: PersonalStatus = PersonalStatus(political_entity.THOSE_WHO_SHARE)
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
-        self.inside: Optional[Outpost] = None  # the outpost the pilot is in, if any (not the cockpit)
+        self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
         # The conversation tags of the chat (see outpost_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
 
@@ -93,22 +94,25 @@ class Player:
     # endregion
 
     # region Inside an outpost
-    def enter_outpost(self, outpost: Outpost) -> Player:
-        """The pilot goes into `outpost`: the game is in its other state, and the ship is docked (Ship.dock)."""
+    def enter_settlement(self, settlement: Settlement) -> Player:
+        """The pilot goes into `settlement`: the game is in its other state, and the ship is docked (Ship.dock)."""
         self.ship.dock()
-        self.inside = outpost
+        self.inside = settlement
         return self
 
-    def leave_outpost(self) -> Player:
-        """The pilot goes back to the cockpit, and the ship is undocked."""
+    def leave_settlement(self) -> Player:
+        """The pilot goes back to the cockpit, and the ship is undocked and put where the settlement says (see
+        Settlement.place_after_leaving)."""
         self.ship.undock()
+        if self.inside is not None:
+            self.inside.place_after_leaving(self.ship)
         self.inside = None
         return self
 
-    def resume_inside(self, outpost: Outpost) -> Player:
-        """A load puts the pilot back inside `outpost`. The saved ship was docked, and its time up to the save has been
-        lived through as such, so it is only marked docked again, without settling anything."""
-        self.inside = outpost
+    def resume_inside(self, settlement: Settlement) -> Player:
+        """A load puts the pilot back inside `settlement`. The saved ship was docked, and its time up to the save has
+        been lived through as such, so it is only marked docked again, without settling anything."""
+        self.inside = settlement
         self.ship.is_docked = True
         return self
     # endregion
@@ -148,7 +152,7 @@ class Player:
         if isinstance(body, Asteroid):
             asteroid_site = body.site()
             orbit_number = planet_index = moon_index = None
-        elif not body.is_world:  # the star: it has no orbit, planet or moon
+        elif not body.is_world:  # the star or the portal base: no orbit, planet or moon
             orbit_number = planet_index = moon_index = None
         elif body.parent_planet:
             orbit_number = body.parent_orbit.number
@@ -169,9 +173,10 @@ class Player:
             'planet': planet_index,
             'moon': moon_index,
             'asteroid': asteroid_site,
+            'is_last_fixed_portal_base': isinstance(body, PortalBase),
             'ship': self.ship.serialize(),
             'credits': self.credits,
-            'inside_outpost': self.inside.full_keys() if self.inside is not None else None,
+            'inside_settlement': self.inside.inside_key() if self.inside is not None else None,
             'missions': [mission.serialize() for mission in self.missions],
             'conversation_tags': sorted(self.conversation_tags),
             'political_status': {

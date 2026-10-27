@@ -9,6 +9,7 @@ from ..constants import ACCENT, ACCENT_LABEL, AMBER
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
 from ..rock_shape import rock_meshes, rotate
 from ..special_rocks import special_mesh
+from ..portal_base_hero import PortalBaseHero
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
 
 if TYPE_CHECKING:
@@ -81,7 +82,9 @@ class Scanner:
         rock = ship.scanner.targeted_rock
         mine = ship.scanner.targeted_mine
         outpost = ship.scanner.targeted_outpost
-        asteroid = ship.scanner.scan_asteroid if outpost is None and rock is None and mine is None else None
+        base = ship.scanner.targeted_base if outpost is None and rock is None and mine is None else None
+        asteroid = (ship.scanner.scan_asteroid
+                    if outpost is None and rock is None and mine is None and base is None else None)
         # What the square shows (outposts first, then rocks, then mines), and the title above it. An ore rich rock
         # shows its purity, a mine its content, in place of the title.
         ore_rock = rock if outpost is None and rock is not None and rock.is_ore_rich() else None
@@ -91,6 +94,8 @@ class Scanner:
         elif shown_mine is not None:
             title = label_font.render('Not ours' if shown_mine.is_external else f'Content: {int(shown_mine.content)} Kg Ore',
                                       True, ACCENT)
+        elif base is not None:
+            title = label_font.render(base.name, True, ACCENT)
         elif asteroid is not None:
             title = label_font.render(asteroid.name, True, ACCENT)
         else:
@@ -99,6 +104,8 @@ class Scanner:
         surface.blit(title, title_rect)
         if outpost is not None:
             Scanner._draw_scanned_outpost(surface, rect, outpost)
+        elif base is not None:
+            surface.blit(PortalBaseHero.picture(base, min(rect.width, rect.height)), rect.topleft)
         elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, ship, rock)
             if rock.temperature > 0.0:

@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING, Any
 from galaxies.seeds import of_text
 
 from .mission import DONE, FAILED, OPEN, Mission, register
+from galaxies.missions.terms import Terms
+from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
@@ -32,13 +34,27 @@ logger = logging.getLogger(__name__)
 class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
-    CHANCES_PER_DAY = 0.05
-    DEADLINE_DAYS_MIN = 45
-    DEADLINE_DAYS_MAX = 90
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.01
-    BASIC_REWARD = 50.0 # Only if completed at time of creation.
+    # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
+    # start at a frequency of 0 (no offers yet).
+    TERMS = {
+        SettlementKind.OUTPOST: Terms(
+            frequency=0.03,
+            taken_by_others=0.01,
+            deadline_days_min=45,
+            deadline_days_max=90,
+            reward=50.0,
+            failure_penalty=-2.0
+            ),
+        SettlementKind.PORTAL_BASE: Terms(
+            frequency=0.06,
+            taken_by_others=0.01,
+            deadline_days_min=45,
+            deadline_days_max=90,
+            reward=50.0,
+            failure_penalty=-2.0
+            ),
+    }
     REPUTATION_BELT_MEAN_DISTANCE = 4.0e11  # Earh belt taken as reference, for the reward.
-    FAILURE_PENALTY = -2.0  # Those missions are hard and dangerous. There is understanding.
     FREE_LIVING_CHANCE = 0.10  # Of the offers in a system with a belt: the target belongs to no belt
 
     def __init__(
@@ -47,12 +63,12 @@ class ScanAsteroid(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DEADLINE_DAYS_MAX)
+        days = self.my_random.randint(self.terms.deadline_days_min, self.terms.deadline_days_max)
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
         taken_day = next(
-            (index for index, roll in enumerate(rolls) if roll < ScanAsteroid.TAKEN_BY_OTHERS_CHANCE_PER_DAY),
+            (index for index, roll in enumerate(rolls) if roll < self.terms.taken_by_others),
             None
             )
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
@@ -69,7 +85,7 @@ class ScanAsteroid(Mission):
         """The target, from the mission's seed: None if the belt has no asteroid in the place drawn (no offer then)."""
         from galaxies.asteroid import Asteroid  # local: these modules need the galaxy package to load first
         from galaxies.asteroid_belt import AsteroidBelt
-        system = self.issuer_outpost.planet.parent_orbit.parent_stellar_system
+        system = self.issuer_settlement.stellar_system
         belts = [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
         is_free_living = not belts or self.my_random.random() < ScanAsteroid.FREE_LIVING_CHANCE
         tier = self.my_random.choices(
@@ -116,7 +132,8 @@ class ScanAsteroid(Mission):
     def generate(created_at: datetime, outpost: Outpost) -> ScanAsteroid:
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanAsteroid.KIND} {created_at.date().isoformat()}")
-        days = random.Random(seed).randint(ScanAsteroid.DEADLINE_DAYS_MIN, ScanAsteroid.DEADLINE_DAYS_MAX)
+        days = random.Random(seed).randint(ScanAsteroid.terms_at(outpost.kind).deadline_days_min,
+                                       ScanAsteroid.terms_at(outpost.kind).deadline_days_max)
              # the first draw of the seed, as in __init__
         return ScanAsteroid(
             seed=seed,
@@ -124,6 +141,8 @@ class ScanAsteroid(Mission):
             created_at=created_at,
             deadline=created_at + timedelta(days=days),
             destination=outpost.full_keys(),
+            issuer_kind=outpost.kind,
+            destination_kind=outpost.kind,
         )
     # endregion
 
@@ -149,7 +168,8 @@ class ScanAsteroid(Mission):
         if self.status == FAILED:
             return f"The asteroid {self.asteroid().name} was not scanned in time."
         if self.asteroid().scan_progress >= 1.0:
-            return f"The asteroid {self.asteroid().name} is scanned: bring the results to {self.issuer_outpost.name}."
+            return (f"The asteroid {self.asteroid().name} is scanned: bring the results to "
+                    f"{self.issuer_settlement.name}.")
         return f"The asteroid {self.asteroid().name} is scanned {self.asteroid().scan_progress:.0%}."
 
     def target_body(self) -> Asteroid:
@@ -163,7 +183,7 @@ class ScanAsteroid(Mission):
             f"We have found an interesting asteroid, {self.asteroid().name}."
             f"\n\nWe need somebody to take the risk and go to scan it."
             f"\n\nMake sure you have the experience and autonomy for this mission."
-            f"\n\nBring the results to here, at {self.issuer_outpost.address()}."
+            f"\n\nBring the results to here, at {self.issuer_settlement.address()}."
             )
 
     def can_forget(self, player: Player) -> bool:
@@ -206,7 +226,7 @@ class ScanAsteroid(Mission):
 
     def give_reward(self, player: Player) -> None:
         import game_environment as gem
-        reputation_change: float = ScanAsteroid.BASIC_REWARD
+        reputation_change: float = self.terms.reward
         reputation_change *= self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
         reputation_change *= (gem.current_environment.date_time - self.created_at).total_seconds() \
                             / (self.deadline - self.created_at).total_seconds()
@@ -222,7 +242,7 @@ class ScanAsteroid(Mission):
             )
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = ScanAsteroid.FAILURE_PENALTY
+        reputation_change: float = self.terms.failure_penalty
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: asteroid not scanned. "
                     f"Reputation {reputation_change} = {player.those_who_share.reputation}"

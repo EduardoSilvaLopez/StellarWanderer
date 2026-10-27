@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from functools import cache
 import logging
+import math
 import os
 import random
 from typing import TYPE_CHECKING, Any, Optional, Tuple
@@ -84,12 +85,18 @@ class Person:
 
         self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
         self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
-        self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) + role.reputation_bonus
+        if role.reputation_bonus >= 0:
+            self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) + role.reputation_bonus
+        else:
+            self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) * -role.reputation_bonus
 
         self.empathy100: float = my_random.random() * 100
         self.sociability100: float = my_random.random() * 100
+
         self.loyalty100: float = my_random.random() * 100
-        self.loyalty100 = _nudged(self.loyalty100, self.reputation - 5)
+        self.loyalty100 = _nudged(self.loyalty100, math.sqrt(self.reputation))
+        self.loyalty100 = _nudged(self.loyalty100, role.loyalty_bonus)
+
         self.sympathy100: float = 50.0
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
@@ -200,8 +207,8 @@ class Person:
             else 'mature' if self.age < 65\
             else 'old'
 
-        from galaxies.outpost import Outpost
-        occupation: str = 'outpost' if isinstance(self.residency, Outpost)\
+        from galaxies.settlement import Settlement
+        occupation: str = 'outpost' if isinstance(self.residency, Settlement)\
             else 'generic'
 
         filename_prefix: str = (occupation + "." + str(self.race.name).lower() + "." + age_group + "."
@@ -245,10 +252,10 @@ class Person:
         from galaxies.outpost import SHIFT_HOURS
         if self.role.shifts == 1 and self.role.vacation == 0:
             return "24/7, as usual"
-        index: int = self.residency.roster(self.role).index(self)
-        if index == self.role.shifts:
+        shift: int = self.residency.shift_of(self)
+        if shift == self.role.shifts:
             return "from time to time"
-        start: int = index * SHIFT_HOURS
+        start: int = shift * SHIFT_HOURS
         return f"from {start} to {start + SHIFT_HOURS}"
 
     def description_fields(self) -> list[tuple[str, str]]:
@@ -261,13 +268,9 @@ class Person:
             ('Last time met', self.last_time_met_text()),
         ]
 
-        from galaxies.outpost import Outpost
-        if isinstance(self.residency, Outpost):
-            result.append((
-                'Residency',
-                f"Outpost {self.residency.name}, planet {self.residency.planet.name}"
-                f", {self.residency.planet.parent_orbit.parent_stellar_system.name}"
-            ))
+        from galaxies.settlement import Settlement
+        if isinstance(self.residency, Settlement):
+            result.append(('Residency', self.residency.residency_line()))
         return result
 
     def log_description(self) -> Person:
@@ -353,8 +356,8 @@ class Person:
         they were first met at, which is written once. For now the residence is always an outpost (on a planet, or a
         moon with its planet): a person with any other residence has no place yet."""
         if self.first_met_at is None:
-            from galaxies.outpost import Outpost
-            self.first_met_at = self.residency.address() if isinstance(self.residency, Outpost) else ''
+            from galaxies.settlement import Settlement
+            self.first_met_at = self.residency.address() if isinstance(self.residency, Settlement) else ''
             self.record()
         return self
 

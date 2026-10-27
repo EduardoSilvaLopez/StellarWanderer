@@ -6,5 +6,16 @@ CARGO
 
 Inside a futuristic but a bit gritty warehouse with no windows. An asian man in Soviet-style uniform moves big boxes around. The room has big racks with big and small boxes and pressure bottles, which also lie around. The warehouse has no windows.
 
-MISSION
+RING BASE: Cargo
 
+A gritty sci-fi setting. A huge, enclosed warehouse with no windows whatsoever and burgundy walls, full of metallic boxes and metallic barrels and some pressure bottles. A mature slender black woman in red shorts, small in comparison, drives a futuristic full pallet jack.There is a communist-style propaganda poster on a wall with the face of a man.
+
+RING BASE: Dockmaster
+
+A gritty sci-fi setting. The inside of a big space hangar. A big, rectangular spaceship is inside. The spaceship is not aerodynamic, it looks bulky and heavy. The hangar is burgundy with yellow details.
+
+RING BASE: Mission
+
+A gritty sci-fi setting. A dark picture. A big, rectangular burgundy-and-yellow spaceship. The spaceship is not aerodynamic, it looks bulky and heavy. There is an asteroid nearby. The background is pitch black, there are no stars.
+
+RING BASE: Chat

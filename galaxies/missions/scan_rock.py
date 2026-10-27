@@ -16,6 +16,8 @@ import random
 
 from galaxies.seeds import of_text
 from .mission import Mission, OPEN, register
+from galaxies.missions.terms import Terms
+from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
@@ -31,12 +33,26 @@ logger = logging.getLogger(__name__)
 class ScanRock(Mission):
     """Scan an object somewhere, then come back."""
     KIND = 'scan_rock'
-    CHANCES_PER_DAY = 0.25
-    DEADLINE_DAYS_MIN = 8
-    DEADLINE_DAYS_MAX = 24
-    BASIC_REWARD = 1.5
-    FAILURE_PENALTY = -5.0
-    TAKEN_BY_OTHERS_CHANCE_PER_DAY = 0.1
+    # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
+    # start at a frequency of 0 (no offers yet).
+    TERMS = {
+        SettlementKind.OUTPOST: Terms(
+            frequency=0.25,
+            taken_by_others=0.1,
+            deadline_days_min=8,
+            deadline_days_max=24,
+            reward=1.5,
+            failure_penalty=-5.0
+            ),
+        SettlementKind.PORTAL_BASE: Terms(
+            frequency=0.0,
+            taken_by_others=0.1,
+            deadline_days_min=8,
+            deadline_days_max=24,
+            reward=1.5,
+            failure_penalty=-5.0
+            ),
+    }
 
     def __init__(
             self, object_type: str = '',
@@ -47,14 +63,14 @@ class ScanRock(Mission):
         super().__init__(**common)
 
         # Drawn in this order every time, from the seed.
-        days = self.my_random.randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DEADLINE_DAYS_MAX)
+        days = self.my_random.randint(self.terms.deadline_days_min, self.terms.deadline_days_max)
 
         # One roll for each day of the offer's life, the first success being the day somebody else takes it, and a
         # moment in that day. The same draws every time, whatever the outcome.
         rolls = [self.my_random.random() for _ in range(days)]
         moment = self.my_random.random()
 
-        taken_day = next((index for index, roll in enumerate(rolls) if roll < ScanRock.TAKEN_BY_OTHERS_CHANCE_PER_DAY),
+        taken_day = next((index for index, roll in enumerate(rolls) if roll < self.terms.taken_by_others),
                          None)
         self.taken_by_others_at = None if taken_day is None else self.created_at + timedelta(days=taken_day + moment)
 
@@ -77,7 +93,7 @@ class ScanRock(Mission):
         tried: None if that place has no rock left, or has an outpost (the people there would have scanned it
         themselves)."""
         from galaxies.km2 import Km2
-        planet = self.issuer_outpost.planet
+        planet = self.issuer_settlement.planet
         index = self.my_random.randrange(len(planet.moons) + 1) - 1  # -1 is the planet itself
         world = planet if index < 0 else planet.moons[index]
         half_turn = math.pi * world.radius  # the surface's coordinates, as Navigation keeps them
@@ -110,7 +126,7 @@ class ScanRock(Mission):
 
     def _world(self) -> RockyWorld:
         """The world the rock is on: the planet of the outpost, or one of its moons."""
-        planet = self.issuer_outpost.planet
+        planet = self.issuer_settlement.planet
         index = self.rock_site['world']
         return planet if index is None else planet.moons[index]
 
@@ -137,7 +153,8 @@ class ScanRock(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {ScanRock.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(ScanRock.DEADLINE_DAYS_MIN, ScanRock.DEADLINE_DAYS_MAX)
+        days = random.Random(seed).randint(ScanRock.terms_at(outpost.kind).deadline_days_min,
+                                       ScanRock.terms_at(outpost.kind).deadline_days_max)
         return ScanRock(
             object_type=object_type,
             seed=seed,
@@ -145,6 +162,8 @@ class ScanRock(Mission):
             created_at=created_at,
             deadline=created_at + timedelta(days=days),
             destination=outpost.full_keys(),
+            issuer_kind=outpost.kind,
+            destination_kind=outpost.kind,
         )
     # endregion
 
@@ -179,7 +198,7 @@ class ScanRock(Mission):
             return ''
         if self.was_scanned:
             return (f"The {self.adjective} {self.object_type} is scanned: "
-                    f"bring the results to {self.issuer_outpost.name}.")
+                    f"bring the results to {self.issuer_settlement.name}.")
         return f"The {self.adjective} {self.object_type} is not scanned yet."
 
     def title(self) -> str:
@@ -191,7 +210,7 @@ class ScanRock(Mission):
         return (
             f"We have found an interesting {self.adjective} {self.object_type} in ({longitude}, {latitude}) on "
             f"{world.name}."
-            f" Scan it, please, and bring the results to here, at {self.issuer_outpost.address()}."
+            f" Scan it, please, and bring the results to here, at {self.issuer_settlement.address()}."
         )
 
     def can_complete(self, player: Player) -> bool:
@@ -204,7 +223,7 @@ class ScanRock(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = ScanRock.BASIC_REWARD
+        reputation_change: float = self.terms.reward
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
         f"{player.those_who_share.reputation}")
@@ -216,7 +235,7 @@ class ScanRock(Mission):
         )
 
     def fail(self, player: Player) -> None:
-        reputation_change: float = ScanRock.FAILURE_PENALTY # If you did not have the time don't accept the mission.
+        reputation_change: float = self.terms.failure_penalty # If you did not have the time don't accept the mission.
         player.those_who_share.reputation += reputation_change
         logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = "
         f"{player.those_who_share.reputation}")

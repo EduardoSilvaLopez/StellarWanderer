@@ -68,19 +68,22 @@ DEVELOPER'S DIARY
 ### 2026-10-25 (2/11)
 ### 2026-10-26 (3/11)
 
+  * Extra: Dialogs: The Shining Throne, United Diversity.
+  * Test the scoop sounds.
+  * I disabled the sounds of Python in Windows > Settings > Voice mixer. If I need them later...
+
 > STARTED:
 
   * Long-distance travel advisor improvements.
-  * Extra: Dialogs: The Shining Throne, United Diversity.
+  * Portal Bases. Missions. Test. Birthdays. Hang around them. Enjoy.
 
+### 2026-10-26 (4/11)
 
-Extra time: 132h45' + 5:15
+Extra time: 141h30' + 5:00 - 
 
 > BACKLOG
-* INTERSTELLAR TRAVEL VIA BASE (50-100)
-  * Keep testing long travel advisor.
-  * Test the scoop sounds.
-  * Base
+
+* BASE AND RING (50-100)
   * Portal
   * New level brings scoop, solar panels and heat shield. Hide them else.
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
@@ -103,21 +106,33 @@ THE TRAITORS WAY (Rep 50-100)
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
-* INTERSTELLAR TRAVEL DIRECTLY (200-500 in THS)
-  * Base
-  * Directly? Try the current ship configurations.
-  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+* INTERSTELLAR TRAVEL VIA BASE (200-500 in THS)
+  * Cities
+  * Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
+  * Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * OROGRAPHY
   * Craters
   * Terrain elevation / sinkage.
   * Mountains.
   * Extra: Strange rocks can be collected proactively and brought to the outpost.
+
+* ABANDONING THOSE-WHO-SHARE
+  * Conversion mechanics.
+  * United Diversity
+  * The Shining Throne
+
 * INCIDENTS
   * Get sealing equipment in the outposts.
   * Randome events, particularly in the asteroid belts, damage the hull (maintenance).
   * Seal to repair.
+
+* INTERSTELLAR DIRECT TRAVEL
+  * Base
+  * Directly? Try the current ship configurations.
+  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?
 * KUIPER: Drawf planets, land on big asteoids.

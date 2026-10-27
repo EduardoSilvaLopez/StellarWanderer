@@ -21,6 +21,7 @@ from .outpost_markers import OutpostMarkers
 from .fixed_world import FixedWorld
 from .orbit_path import OrbitPath
 from .asteroids import Asteroids
+from .portal_base_gl import PortalBaseGl
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
@@ -75,6 +76,7 @@ class OpenGLGui:
         OreMines._get_mine_texture()
         OreMines._get_mine_texture(inactive=True)
         Outposts._get_texture()
+        PortalBaseGl.preload_textures()
 
     # region Frame
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
@@ -144,6 +146,8 @@ class OpenGLGui:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
+        if not ship.is_bound:
+            PortalBaseGl.draw(width, height, ship, environment)
         sightings = [] if ship.is_bound else Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
         # Nothing is seen beyond MAX_DEPTH, so above it there is no ground and no rocks to draw; and a ship that outruns
