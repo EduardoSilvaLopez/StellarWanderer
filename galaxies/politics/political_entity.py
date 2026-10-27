@@ -40,8 +40,9 @@ class PoliticalEntity:
         self.hobbies_sociable: List[str] = hobbies_sociable  # what the people do for fun (see Person._generate_hobby)
         self.hobbies_asocial: List[str] = hobbies_asocial  # the same, for people with sociability below 20
 
-    def title_for(self, reputation: float) -> Optional[str]:
-        return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), None)
+    def title_for(self, reputation: float) -> str:
+        # The lowest title has no limit (-inf), so there is always one: the default is never used.
+        return next((self.titles[k] for k in sorted(self.titles, reverse=True) if reputation >= k), '')
 
     def title_floor(self, reputation: float) -> float:
         """The lowest reputation that keeps the title `reputation` gives: its threshold (-inf for the lowest one)."""

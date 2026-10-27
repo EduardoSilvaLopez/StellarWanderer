@@ -350,7 +350,7 @@ class Person:
             )
         return self
 
-    def get_title(self) -> Optional[str]:
+    def get_title(self) -> str:
         # Find out where this person is... as for now, guess Those-Who-Share
         return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
 
@@ -362,7 +362,7 @@ class Person:
         final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
         return political_entity.THOSE_WHO_SHARE.title_for(final_rep)
 
-    def address(self, player: Player, to_player: bool) -> Optional[str]:
+    def address(self, player: Player, to_player: bool) -> str:
         """How the pilot and this person address each other once they have met, by their relative reputation: the
         form this person uses for the pilot (`to_player`), or the one the pilot uses for this person.
         Whoever is more than twice above the speaker is addressed with respect ("Pilot Surname", "Role Surname"); then

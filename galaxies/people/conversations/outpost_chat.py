@@ -48,7 +48,7 @@ class OutpostChat(Conversation):
         super().__init__(player, interlocutor)
         self.log: ChatLog = log  # the chat of the outpost screen: the texts go there
         self.tag: str = tag  # the conversation tag that started this conversation
-        self.reactions: map = self.reactions_index()
+        self.reactions: dict[str, Callable[[], str]] = self.reactions_index()
         self.flags = interlocutor.interactions.setdefault(self.date_time.replace(microsecond=0), [])
         self.remember()
 
@@ -74,13 +74,13 @@ class OutpostChat(Conversation):
         self.interlocutor.last_communication_at = self.date_time
         self.interlocutor.record()
 
-    def say(self, generator: Callable[[OutpostChat], str]) -> None:
+    def say(self, generator: Callable[[], str]) -> None:
         """The person says `text` in the chat. Its [marks] become the pilot's conversation tags, from now on. Time
         passes."""
         import game_environment as gem
         gem.current_environment.date_time += timedelta(seconds=60)
 
-        text: str = generator(self)
+        text: str = generator()
         words, tags = parse_marks(text)
         self.player.conversation_tags.update(tags)
         self.log.add(NPC, words)
@@ -92,7 +92,7 @@ class OutpostChat(Conversation):
         self.log.offer(labels, then)
 
     # region Talk
-    def reactions_index(self) -> map:
+    def reactions_index(self) -> dict[str, Callable[[], str]]:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
             'asteroids': self.talk_asteroid,
@@ -454,7 +454,7 @@ class OutpostChat(Conversation):
                 return f"Huh? {correction_text} And this was weird."
 
     def talk_job(self) -> str:
-        if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 80:
+        if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 20:
             if self.interlocutor.main_problem_with_role().startswith("+"):
                 if self.interlocutor.main_problem_with_role().endswith("loy"):
                     return "I wish I worked in something more relevant."
@@ -468,12 +468,13 @@ class OutpostChat(Conversation):
                 elif self.interlocutor.main_problem_with_role().endswith("emp"):
                     return "I wish I had more time for myself."
                 else:
-                    return "I wish I would work more with people."
+                    return "I wish I could concentrate more, focus."
         elif self.interlocutor.how_happy_with_role() == 1:
-            return "My job is ok."
+            return "My [job] is ok."
+        elif self.interlocutor.how_happy_with_role() == 2:
+            return "I really like my [job]."
         else:
-            return "I really like my job."
-
+            return "A [job]'s a [job]."
 
 
     def talk_life(self) -> str:
@@ -762,7 +763,7 @@ class OutpostChat(Conversation):
                 "Reputation matters. Fair.",
             ), (
                 "People speak low of you, you are sent to study. Or worse, you get a chaperone. People like"
-                " you, you can get anything you want, a better apartment, a better job. Fair, they say.",
+                " you, you can get anything you want, a better apartment, a better [job]. Fair, they say.",
                 "How you behave decides how they call you, and at the end even the housing you get. It's not"
                 " perfect, but everybody knows where they stand.",
                 "The Community rewards those who give. More skills, more obligations, better reputation."
@@ -888,9 +889,8 @@ class OutpostChat(Conversation):
                 " Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
                 (
                     "There is a basic income, healthcare for everybody and nobody is a slave."
-                    " Not like [The Shining Throne]."
+                    " Not like [The Shining Throne]. Yes, there are cells and ghettos... but it is a start."
                 ),
-                " Yes, there are cells and ghettos... but it is a start.",
             )),
             'industry': (0.6 * loy + 0.4 * min(max(rep, 0), 100), (
                 "We build more. Obviously.", "Second in industry.", "Good at industry, yes.",

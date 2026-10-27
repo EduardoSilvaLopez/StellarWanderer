@@ -167,3 +167,4 @@ https://docs.python.org/3.14/tutorial/modules.html
 Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns into a list of signatures.
 Fold All Regions (Ctrl+K Ctrl+8)
 Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
+Mode for checking: python.analysis.typeCheckingMode
