@@ -68,6 +68,7 @@ DEVELOPER'S DIARY
 ### 2026-10-25 (2/11)
 ### 2026-10-26 (3/11)
 
+* BASE AND RING (50-100)
   * Extra: Dialogs: The Shining Throne, United Diversity.
   * Test the scoop sounds.
   * I disabled the sounds of Python in Windows > Settings > Voice mixer. If I need them later...
@@ -83,35 +84,39 @@ DEVELOPER'S DIARY
   * Entering the hangar.
   * "Life", "Job", "Hobby"
   * Portal
+  * Long-distance travel advisor improvements. Test.
+  * New level brings scoop, solar panels and heat shield. Hide them else.
 
 STARTED:
 
-  * Long-distance travel advisor improvements. Test.
-  * Portraits without uniform: Black, Latino, White
-  
-Extra time: 141h30' + 5:00 - 10:00 + 11:00-13:30 + 15:00-16:30 + 17:00-
+### 2026-10-26 (5/11)
+
+THE TRAITORS WAY (Rep 50-100)
+
+Extra time: 151h45'
+  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
+  * Visitors in the settlements? Some of them shady?
 
 > BACKLOG
 
-* BASE AND RING (50-100)
-  * New level brings scoop, solar panels and heat shield. Hide them else.
-  * Extra: "Scan the sun" mission. Solar panels, heat shield.
-
 THE TRAITORS WAY (Rep 50-100)
+  * Extra: Binding slowly.
+  * Extra: Portraits without uniform: Black, Latino, White
   * Extra: Gravity. Evaluate, at least... for realism's sake.
-  * Extra: Improve the sounds for real.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * JOVIAN PLANETS II (current one) (100-200)
   * Mission to jovian planet.
   * Next step is to draw it.
   * Generate the moons.
+  * Extra: "Scan the sun" mission. Solar panels, heat shield.
+  * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
     Use INITIAL_TEMP_SHIELD_REDUCTION
   * Extra: Arabs.
   * Extra: Retirement.
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
