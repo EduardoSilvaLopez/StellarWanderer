@@ -1,9 +1,10 @@
 """The chat of an outpost: what has been said with the person selected in the Chat option, as data (the lines, and the
 replies the player is offered). common/dialogs/chat_view.py draws it; outpost_chat.py writes into it.
 
-A text written for the chat marks its conversation tags with square brackets: "I came with my [family]". The marked
-words are shown in the accent colour, and the tag ("family", lowercased) is one of the pilot's tags from then on
-(`parse_marks`). A log belongs to one person: selecting another person starts a new log.
+An expression of a text written for the chat is a conversation tag if, and only if, it is one of the known tags, present
+case-insensitively as whole words: "I came with my family" has the tag "family" if that is known. The tag words are shown
+in the accent colour, and the tag (lowercased) is one of the pilot's tags from then on (`parse_marks`). A log belongs to
+one person: selecting another person starts a new log.
 
 Replies are offered with a callback: `offer(labels, then)` shows the labels, and `choose(index)` keeps the chosen one as
 a line of the pilot's, drops the other replies, and calls `then(index)`. Only one set of replies is open at a time."""
@@ -11,38 +12,42 @@ a line of the pilot's, drops the other replies, and calls `then(index)`. Only on
 from __future__ import annotations
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from galaxies.people.person import Person
 
 PLAYER = 'player'
 NPC = 'npc'
-MARK = re.compile(r'\[([^\[\]]+)\]')
+TOKEN = re.compile(r'\S+')
 
 Word = Tuple[str, Optional[str]]  # a word, and the conversation tag it is (lowercased), None if it is not one
 
 
-def parse_marks(text: str) -> Tuple[List[List[Word]], List[str]]:
-    """The paragraphs of `text` (split at blank lines), each as its words, each with the tag it is if it was inside square
-    brackets; and the tags it marks: lowercased and stripped, one for each mark, in the order written. The brackets are
-    not words."""
+def parse_marks(text: str, tags: Iterable[str]) -> Tuple[List[List[Word]], List[str]]:
+    """The paragraphs of `text` (split at blank lines), each as its words, each with the tag it is if it is part of one of
+    `tags` (case-insensitively, as whole words, the longest first); and the tags it says: lowercased, one for each
+    occurrence, in the order written."""
+    expressions: List[str] = sorted({tag.lower() for tag in tags}, key=len, reverse=True)
     paragraphs: List[List[Word]] = []
-    tags: List[str] = []
+    found: List[str] = []
     for paragraph in text.split('\n\n'):
+        spans: List[Tuple[int, int, str]] = []  # start, end and tag of each occurrence in `paragraph`
+        for tag in expressions:
+            pattern = r'(?<![\w-])' + r'\s+'.join(re.escape(part) for part in tag.split()) + r'(?![\w-])'
+            for match in re.finditer(pattern, paragraph, re.IGNORECASE):
+                if not any(match.start() < end and start < match.end() for start, end, _ in spans):
+                    spans.append((match.start(), match.end(), tag))
+        spans.sort()
+        found += [tag for _, _, tag in spans]
+
         words: List[Word] = []
-        position = 0
-        for match in MARK.finditer(paragraph):
-            words += [(word, None) for word in paragraph[position:match.start()].split()]
-            tag = match.group(1).strip()
-            if tag:
-                tags.append(tag.lower())
-                words += [(word, tag.lower()) for word in tag.split()]  # shown as written, the tag is the lowercase one
-            position = match.end()
-        words += [(word, None) for word in paragraph[position:].split()]
+        for token in TOKEN.finditer(paragraph):
+            tag = next((tag for start, end, tag in spans if start < token.end() and token.start() < end), None)
+            words.append((token.group(), tag))
         if words:
             paragraphs.append(words)
-    return paragraphs, tags
+    return paragraphs, found
 
 
 @dataclass(frozen=True)

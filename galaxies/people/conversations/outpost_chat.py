@@ -1,7 +1,7 @@
 """A conversation of the outpost's chat (the Chat option of the outpost screen): started by a conversation tag, with the
 person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
 
-The texts are written with `say` (the person's line, with its [marks] that make new tags) and the replies with `offer`
+The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and the replies with `offer`
 (the callback gets the index of the reply the player chose). The conversation dies out when it offers nothing more: the
 player then starts the next one from a tag, in the same log. `start` says the tag as the pilot's line, then the answer
 (for the presentation tag, the pilot's line is Player.present_yourself).
@@ -75,13 +75,13 @@ class OutpostChat(Conversation):
         self.interlocutor.record()
 
     def say(self, generator: Callable[[], str]) -> None:
-        """The person says `text` in the chat. Its [marks] become the pilot's conversation tags, from now on. Time
-        passes."""
+        """The person says `text` in the chat. The expressions of `text` that are tags of the reactions become the pilot's
+        conversation tags, from now on. Time passes."""
         import game_environment as gem
         gem.current_environment.date_time += timedelta(seconds=60)
 
         text: str = generator()
-        words, tags = parse_marks(text)
+        words, tags = parse_marks(text, self.reactions.keys())
         self.player.conversation_tags.update(tags)
         self.log.add(NPC, words)
         self.remember()
@@ -161,25 +161,25 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return "You. What do you want?"
                 elif sym < 80:
-                    return "The [noobie]. We will see how much you last."
+                    return "The noobie. We will see how much you last."
                 else:
                     return (
-                        "I know, [Paladin Xi]'s last discovery. Eager to kill yourself, yeah, [noobie]?"
-                        "[Space] is hard. You will see <smiles a wicked smile>."
+                        "I know, Paladin Xi's last discovery. Eager to kill yourself, yeah, noobie?"
+                        "Space is hard. You will see <smiles a wicked smile>."
                     )
             else:  # noqa: PLR5501
                 if sym < 20:
                     return "You. What do you want? Don't you think you have done enough?"
                 elif sym < 80:
                     return (
-                        "Yeah, I know. The [noobie]. We will see how much you last, noobie. [Space] is hard."
-                        " [Paladin Xi] wants to rush things, wants everybody on board. He has killed already some."
+                        "Yeah, I know. The noobie. We will see how much you last, noobie. Space is hard."
+                        " Paladin Xi wants to rush things, wants everybody on board. He has killed already some."
                         " Noobs like you."
                     )
                 else:
                     return (
-                        "I know, [Paladin Xi]'s last discovery. Eager to kill yourself, yeah, [noobie]?"
-                        " [Space] is hard. You will see <smiles a wicked smile>."
+                        "I know, Paladin Xi's last discovery. Eager to kill yourself, yeah, noobie?"
+                        " Space is hard. You will see <smiles a wicked smile>."
                         "\n\nYou should not move away from orbit. Moon and planet. Ore and rocks. Don't be stupid."
                     )
         elif emp < 80:
@@ -194,32 +194,32 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return "You. Look, I don't want problems, ok? Just leave me alone. You've done enough."
                 elif sym < 80:
-                    return f"Hello, Pilot, I am {self_present}. How are you? How's [life] going?"
+                    return f"Hello, Pilot, I am {self_present}. How are you? How's life going?"
                 else:
                     return (
-                        f"Nice to meet you, {you}! How are you doing? How is [space] being to you?"
-                        f"\n\nMe, I prefer to remain between the outpost and the [base]. Less risky, you know?"
+                        f"Nice to meet you, {you}! How are you doing? How is space being to you?"
+                        f"\n\nMe, I prefer to remain between the outpost and the portal base. Less risky, you know?"
                         f" And people are nice here."
                     )
             else:  # noqa: PLR5501 - High soc
                 if sym < 20:
                     return (
-                        "Oh, no, [noobie], don't approach me, ok? I don't want troubles and you have done enough,"
-                        " just leave me alone. You should think about your [life]."
+                        "Oh, no, noobie, don't approach me, ok? I don't want troubles and you have done enough,"
+                        " just leave me alone. You should think about your life."
                     )
                 elif sym < 80:
                     return (
-                        "So here we have you, [Paladin Xi]'s last discovery. He wants everybody on [space]."
+                        "So here we have you, Paladin Xi's last discovery. He wants everybody on space."
                         " Take care. It is unforgiving. No beacon signal can save you if you are too far away,"
-                        " drifting between planets. [Noobie]s get killed."
+                        " drifting between planets. Noobies get killed."
                     )
                 else:
                     return (
                         f"Nice to meet you, {you}! How are you doing?"
-                        " Be careful in [space]. It is hard. You can get yourself killed. Avoid the asteroid [belt]s."
+                        " Be careful in space. It is hard. You can get yourself killed. Avoid the asteroid belts."
                         "\n\nBut if you build yourself a good basis of mines and then do some science work on rocks,"
                         " everything will be ok. Safe way to build up some reputation and then back home, yes?"
-                        "\n\n[Life]'s too precious to loose it so soon."
+                        "\n\nLife's too precious to loose it so soon."
                     )
         else:  # noqa: PLR5501 - High emp
             if soc < 20:
@@ -232,40 +232,41 @@ class OutpostChat(Conversation):
             elif soc < 80:
                 if sym < 20:
                     return (
-                        "Yes, I know who you are. And I know what you have done. Look... [space] is hard. I know."
+                        "Yes, I know who you are. And I know what you have done. Look... space is hard. I know."
                         " But... no. Just leave me alone, ok? Sorry."
                     )
                 elif sym < 80:
                     return (
-                        f"Hello, Pilot, I am {self_present}. How are you? How has [space] treated you lately?"
-                        f"\n\nIs [Paladin Xi] already proud of you? Ha!"
+                        f"Hello, Pilot, I am {self_present}. How are you? How has space treated you lately?"
+                        f"\n\nHow was crossing the portal, was it the first time?"
                         f"\n\nDo you need a coffee? I need a coffee!"
                     )
                 else:
                     return (
                         f"Nice to meet you, {you}! Heard good things about you."
-                        f"\n\nHow is [space] treating you? [Paladin Xi] is not a bad guy, but he is ruthless. I see"
-                        f" the ships you start with. Ugh."
+                        f"\n\nHow is space treating you? Paladin Xi is not a bad guy, but he is ruthless. I see"
+                        f" the ships you people start with. Ugh."
                     )
             else:  # noqa: PLR5501 - High soc
                 if sym < 20:
                     return (
                         "DON'T YOU DARE! Oh, don't you dare to approach me, no, no, I know the likes of you!"
-                        " Just leave me alone, [life] here is hard enough, just go away and let me have my meal"
-                        " in peace. By the [Founders] I don't need this right now!"
+                        " Just leave me alone, life here is hard enough, just go away and let me have my meal"
+                        " in peace. By the Founders I don't need this right now!"
                     )
                 elif sym < 80:
                     return (
-                        "So here we have you, [Paladin Xi]'s last discovery! He wants everybody on [space].\n\n"
-                        " I get, we need the [PGMs], and more valuable [asteroids], but the belts are dangerous."
+                        "So here we have you, Paladin Xi's last discovery! He wants everybody on space.\n\n"
+                        " I get, we need the PGMs, and more valuable asteroids, but the belts are dangerous."
                         " People have been killed. No beacon signal can save you if you are too far away,"
-                        " drifting between planets. Be careful, [noobie], ok? [Life] is a precious thing."
+                        " drifting between planets. Be careful, noobie, ok? Life is a precious thing."
                     )
                 else:
                     return (
                         f"Nice to meet you, {you}! How are you doing?"
                         "\n\nI have heard about you. Good things! Do you want a coffee? Or maybe something... stronger?"
-                        "\n\nHow is [space] treating you? Making our [Paladin Xi] proud? Tell me!"
+                        "\n\nHow is space treating you? Have you seen the portal?"
+                        "Making our Paladin Xi proud? Tell me!"
                     )
 
     def talk_present_yourself_further_times(self) -> str:
@@ -362,7 +363,7 @@ class OutpostChat(Conversation):
                     )
                 elif sym < 80:
                     return (
-                        f"Hey, {you}, how are you? Alive, I see! I'm glad. How is good old [space]"
+                        f"Hey, {you}, how are you? Alive, I see! I'm glad. How is good old space"
                         f" treating you lately? Friend, I miss {self.interlocutor.planet_of_birth}. And you, do"
                         f" you miss home?"
                     )
@@ -374,12 +375,12 @@ class OutpostChat(Conversation):
     def talk_asteroid(self) -> str:
         return (
             "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
-            " simply fucking far away. Others are... in the [belt]. And those are worse."
+            " simply fucking far away. Others are... in the belt. And those are worse."
         )
     def talk_base(self) -> str:
         return (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
-            " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's [life]."
+            " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's life."
             " Almost like a planet."
         )
     def talk_belt(self) -> str:
@@ -474,11 +475,11 @@ class OutpostChat(Conversation):
                 else:
                     return "I wish I could concentrate more, focus."
         elif self.interlocutor.how_happy_with_role() == 1:
-            return "My [job] is ok."
+            return "My job is ok."
         elif self.interlocutor.how_happy_with_role() == 2:
-            return "I really like my [job]."
+            return "I really like my job."
         else:
-            return "A [job]'s a [job]."
+            return "A job's a job."
 
 
     def talk_life(self) -> str:
@@ -520,24 +521,24 @@ class OutpostChat(Conversation):
                 if days_to_birthday == 0:
                     return "Life's ok. Birthday."
                 if self.interlocutor.how_happy_with_role() == 2:
-                    return "[Job]'s good. Life's ok."
+                    return "Job's good. Life's ok."
                 return "Life's ok."
             else:
                 if days_to_birthday == 0:
                     return "Doing ok. My birthday today."
                 if self.interlocutor.how_happy_with_role() == 1:
-                    return "[Job]'s ok. Doing ok. Thanks."
+                    return "Job's ok. Doing ok. Thanks."
                 return "Doing ok. Thanks."
         elif soc < 80:
             if sym < 20:
-                job: str = " I don't have enough with my [job]?" if self.interlocutor.how_happy_with_role() == 0 else ""
+                job: str = " I don't have enough with my job?" if self.interlocutor.how_happy_with_role() == 0 else ""
                 if days_to_birthday == 0:
                     return f"On my birthday, for fuck's sake.{job} Leave me alone."
                 return f"Oh, no.{job} Leave me alone."
             elif sym < 80:
                 text = (
                     f"Me? I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
-                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
+                    f" I work here as a {self.interlocutor.role.name}, that's my job."
                     f" People say I'm {self_description}."
                 )
                 if days_to_birthday == -2:
@@ -555,7 +556,7 @@ class OutpostChat(Conversation):
                     f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
                     f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}, that's my [hobby]"
+                    f"\n\nOh... and {self.interlocutor.hobby}, that's my hobby"
                 )
                 if days_to_birthday == -2:
                     text += "\n\nMy birthday was two days ago."
@@ -579,17 +580,17 @@ class OutpostChat(Conversation):
                     f"Me? I was born in {self.interlocutor.place_of_birth},"
                     f" I had {self.interlocutor.childhood}, I would say."
                     f" I am {self.interlocutor.age} years old."
-                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
+                    f" I work here as a {self.interlocutor.role.name}, that's my job."
                     f" People say I'm {self_description}."
                 )
                 if days_to_birthday == -2:
-                    text += "\n\nI had my birthday two days ago. Too late for [Happy birthday]! <laughs>."
+                    text += "\n\nI had my birthday two days ago. Too late for Happy birthday! <laughs>."
                 elif days_to_birthday == -1:
-                    text += "\n\nMy birthday was yesterday, you just missed my '[Happy birthday]!' <laughs>."
+                    text += "\n\nMy birthday was yesterday, you just missed my 'Happy birthday!' <laughs>."
                 elif days_to_birthday == 0:
-                    text += "\n\nToday is my birthday. You can still wish me '[happy birthday]' <smiles>."
+                    text += "\n\nToday is my birthday. You can still wish me 'happy birthday' <smiles>."
                 elif days_to_birthday == 1:
-                    text += "\n\nTomorrow is my birthday, if you want to wish me [happy birthday] <smiles>."
+                    text += "\n\nTomorrow is my birthday, if you want to wish me happy birthday <smiles>."
                 return text
             else:
                 text = (
@@ -597,16 +598,16 @@ class OutpostChat(Conversation):
                     f" Well... ok, I was born in {self.interlocutor.place_of_birth}. I really miss home sometimes."
                     f" I had {self.interlocutor.childhood}, I would say. But that's the past."
                     f" I am {self.interlocutor.age} years old. I know, I know."
-                    f" I work here as a {self.interlocutor.role.name}, that's my [job]."
+                    f" I work here as a {self.interlocutor.role.name}, that's my job."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}. My [hobby]"
+                    f"\n\nOh... and {self.interlocutor.hobby}. My hobby"
                 )
                 if days_to_birthday == -2:
                     text += "\n\nBTW, I had my birthday two days ago."
                 elif days_to_birthday == -1:
                     text += "\n\nBTW, my birthday was yesterday, if you want to know."
                 elif days_to_birthday == 0:
-                    text += "\n\nYou know something? Today is my birthday! Will you wish me [happy birthday]?"
+                    text += "\n\nYou know something? Today is my birthday! Will you wish me happy birthday?"
                 elif days_to_birthday == 1:
                     text += (
                         "\n\nLook, so... tomorrow is my birthday. You could come by. Even without a present."
@@ -616,7 +617,7 @@ class OutpostChat(Conversation):
 
     def talk_noobie(self) -> str:
         return (
-            "Well, that's... no offense intended. [Paladin Xi] finished your training recently, yes? So..."
+            "Well, that's... no offense intended. Paladin Xi finished your training recently, yes? So..."
             " that's it."
         )
     def talk_portal(self) -> str:
@@ -632,18 +633,18 @@ class OutpostChat(Conversation):
     def talk_pgms(self) -> str:
         return (
             "Did you find many out there? I think Iridium is the most important right now, but the whole"
-            " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold [space]."
+            " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
         )
     def talk_space(self) -> str:
         return (
             "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"
             " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
-            " Just don't. Go to the [base]s, use the [portal]s, remain in [the network]"
+            " Just don't. Go to the bases, use the portals, remain in the network"
         )
     def talk_the_network(self) -> str:
         return (
             "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
-            " [Those-Who-Share]. Sure, '[United Diversity]', UniDiv, has more. [The Shining Throne], no idea."
+            " Those-Who-Share. Sure, 'United Diversity', UniDiv, has more. The Shining Throne, no idea."
         )
 
     def talk_the_shining_throne(self) -> str:
@@ -696,7 +697,7 @@ class OutpostChat(Conversation):
             ), (
                 "<whispers> In confidence, I never miss a chapter. But it's all slaves and depravity, friend. Makes no"
                 " sense. That's why it's so interesting!",
-                "<whispers> In confidence, I never miss a chapter. Gorgeous *cutlery*, for the [Founders]' sake. But"
+                "<whispers> In confidence, I never miss a chapter. Gorgeous *cutlery*, for the Founders' sake. But"
                 " at what cost?",
                 "<whispers> I have heard... things, you know. The slaves have a lot of rights. The powerful have a lot"
                 " of duties. Protect the weak. There is some logic there.",
@@ -767,7 +768,7 @@ class OutpostChat(Conversation):
                 "Reputation matters. Fair.",
             ), (
                 "People speak low of you, you are sent to study. Or worse, you get a chaperone. People like"
-                " you, you can get anything you want, a better apartment, a better [job]. Fair, they say.",
+                " you, you can get anything you want, a better apartment, a better job. Fair, they say.",
                 "How you behave decides how they call you, and at the end even the housing you get. It's not"
                 " perfect, but everybody knows where they stand.",
                 "The Community rewards those who give. More skills, more obligations, better reputation."
@@ -819,12 +820,12 @@ class OutpostChat(Conversation):
                 "<Whispers> I've got friends in every square, and that's worth more than any stamp.",
             )),
             'founders': (30, (
-                "The [Founders]. Hm.", "The [Founders], sure.", "The [Founders], yes.",
+                "The Founders. Hm.", "The Founders, sure.", "The Founders, yes.",
             ), (
-                "<Whispers> The [Founders] wanted empathy, and now we watch each other."
+                "<Whispers> The Founders wanted empathy, and now we watch each other."
                 " Something went wrong along the way.",
-                "<Whispers> The [Founders] wanted empathy first. We try. That's more than others do.",
-                "<Whispers> The [Founders] had it right. Empathy first, and nobody left alone. I wouldn't trade this"
+                "<Whispers> The Founders wanted empathy first. We try. That's more than others do.",
+                "<Whispers> The Founders had it right. Empathy first, and nobody left alone. I wouldn't trade this"
                 " square for anything.",
             )),
         }
@@ -857,7 +858,7 @@ class OutpostChat(Conversation):
             'money': (30 + 0.6 * loy, (
                 "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",
             ), (
-                "Everything about money, yes? The rich are admired just for being rich. As if here in [space] you could"
+                "Everything about money, yes? The rich are admired just for being rich. As if here in space you could"
                 " eat money, drink it or breathe it.",
                 "They love money, yes. The rich are admired and get their luxury. Maybe some earned it, ok. But a"
                 " society that measures people in money? No, thanks.",
@@ -890,17 +891,17 @@ class OutpostChat(Conversation):
                 "Those living only on their U.B.I. get a cell in a kind of big re-education camp, shared kitchens and"
                 " washrooms. Ghettos. Here nobody lacks what they need.",
                 "Basic income and healthcare for everybody, they say. In practice a cell in a prison, shared washrooms."
-                " Ghettos. Better than slavery, I suppose. Not like [The Shining Throne].",
+                " Ghettos. Better than slavery, I suppose. Not like The Shining Throne.",
                 (
                     "There is a basic income, healthcare for everybody and nobody is a slave."
-                    " Not like [The Shining Throne]. Yes, there are cells and ghettos... but it is a start."
+                    " Not like The Shining Throne. Yes, there are cells and ghettos... but it is a start."
                 ),
             )),
             'industry': (0.6 * loy + 0.4 * min(max(rep, 0), 100), (
                 "We build more. Obviously.", "Second in industry.", "Good at industry, yes.",
             ), (
                 "But they don't build as we do. We have the biggest industry of mankind. They have the money,"
-                " [Those-Who-Share] has the PGMs. We know that more than many, yes?",
+                " Those-Who-Share has the PGMs. We know that more than many, yes?",
                 "They are the wealthy guys, ok. But industry? That is ours. They come second.",
                 "Well. They are only second in industry, after us. Small comfort if you ask me.",
             )),
@@ -908,7 +909,7 @@ class OutpostChat(Conversation):
                 "Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals.",
             ), (
                 (
-                    "You know what they think of us? An interesting experiment. EXPERIMENT. As if the [Founders] had"
+                    "You know what they think of us? An interesting experiment. EXPERIMENT. As if the Founders had"
                     " built a laboratory and not a community."
                 ),
                 "They say they find the other entities interesting experiments, and cultural diversity something to"
