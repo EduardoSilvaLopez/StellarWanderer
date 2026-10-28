@@ -48,7 +48,8 @@ class Navigation:
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
-    ENERGY_PER_SPEED = 5e4  # of energy (Wh) for each m/s the ship's speed changes by, thrusting or braking (not turning)
+    # of energy (Wh) for each m/s the ship's speed changes by, thrusting or braking (not turning)
+    ENERGY_PER_SPEED = 5e4
     # m: a ship that moves farther than this in a frame outruns the rocks
     ROCKS_TRAVEL_LIMIT = RockyWorld.SURROUNDINGS_RADIUS
 
@@ -80,7 +81,9 @@ class Navigation:
 
     def direction_to_star(self, body: Body, current_datetime: datetime) -> Vector3:
         if self.ship.is_bound:
-            return body.star_offset_from_ship(self.ship, current_datetime)  # bound: the body is a world
+            if not isinstance(body, World):
+                raise Exception("Body is not a world.")  # bound: the body is a world
+            return body.star_offset_from_ship(self.ship, current_datetime)
         return -self.ship.position.as_vector()
 
     def direction_to_body(self, target: Body, current_datetime: datetime) -> Vector3:
@@ -91,6 +94,8 @@ class Navigation:
         if not self.ship.is_bound:
             return point - self.ship.position.as_vector()
         world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
         relative = point - self.stellar_position(current_datetime)
         # the surface basis has Y opposite to the orbital motion
         relative = Vector3(relative.x, -relative.y, relative.z)
@@ -105,6 +110,8 @@ class Navigation:
         if not self.ship.is_bound:
             return Vector3(1.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0), Vector3(0.0, 0.0, 1.0)
         world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
         east_hat, up_hat, north_hat = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         # The surface basis has Y opposite to the orbital motion (see direction_to_point).
         flipped_x, flipped_y, flipped_z = Vector3(1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0), Vector3(0.0, 0.0, 1.0)
@@ -119,6 +126,8 @@ class Navigation:
         if not self.ship.is_bound:
             return self.ship.position.as_vector()
         world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
         basis = world.surface_basis(self.ship.position.x, self.ship.position.z, current_datetime)
         return self._stellar_position_from_surface(world, world.calculate_stellar_position(current_datetime), basis)
     # endregion
@@ -143,14 +152,19 @@ class Navigation:
             with frame_watch.timed('refresh fixed body'):
                 environment.refresh_fixed_body(ship.position.as_vector())
         body = environment.fixed_body  # None outside every fixed zone: then there is nothing to bind to
-        if ship.is_bound and ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
-            self._unbind_from(body)
-        elif (not ship.is_bound and body is not None and body.is_world  # the star is never bound to
+        if ship.is_bound:
+            if not isinstance(body, World):
+                raise Exception("Fixed body is not a world.")
+            if ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
+                self._unbind_from(body)
+        elif (isinstance(body, World)  # the star is never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
 
         if ship.is_bound:
             world = environment.fixed_world
+            if world is None:
+                raise Exception("Fixed world is none.")
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
             if not ship.position.y > RockyWorld.SURROUNDINGS_RADIUS and not self.outruns_rocks \
                     and (km2 is None or km2 != ship.position.km2):
@@ -207,8 +221,8 @@ class Navigation:
         engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
-        frame when the slowest engine is done. The energy is ENERGY_PER_SPEED per m/s that the speed relative to the frame
-        drops by, whichever engines do it."""
+        frame when the slowest engine is done. The energy is ENERGY_PER_SPEED per m/s that the speed relative to the
+        frame drops by, whichever engines do it."""
         ship = self.ship
         reference = self.velocity_reference_frame()
         relative = ship.velocity.as_vector() - reference
@@ -235,7 +249,10 @@ class Navigation:
             self._collide_with_portal_base()
             return
 
-        half_turn = math.pi * gem.current_environment.fixed_world.radius  # half the equator
+        world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
+        half_turn = math.pi * world.radius  # half the equator
         if ship.position.x < -half_turn:  # crossing the anti-meridian
             ship.position.x += half_turn * 2
         elif ship.position.x > half_turn:
@@ -261,7 +278,7 @@ class Navigation:
         velocity = ship.velocity.as_vector()
         attitude = ship.attitude
         resolved = base.solid.resolve((offset.x, offset.y, offset.z), (velocity.x, velocity.y, velocity.z),
-                                      tuple(attitude.right), tuple(attitude.up), tuple(attitude.forward), half_sizes)
+                                      attitude.right, attitude.up, attitude.forward, half_sizes)
         if resolved is not None:
             (x, y, z), velocity_after = resolved
             ship.position.set_vector((centre.x + x, centre.y + y, centre.z + z))

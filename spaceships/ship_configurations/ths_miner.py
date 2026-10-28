@@ -11,8 +11,10 @@ class ThsMiner(Ship):
     ENERGY_MAX = 1500e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 0.8  # The maximum is 1. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION = 1  # Maximum external temperature allowed, which brings TEMP_MAX inside the ship.
-    FORWARD_BACKWARD_ACC = 15.0  # meters per second squared
-    BRAKE_ACC = 15.0  # m/s^2, never less than the acceleration
+    FORWARD_BACKWARD_ACC = 20.0  # meters per second squared
+    UP_DOWN_ACC = 20.0  # m/s^2
+    RIGHT_LEFT_ACC = 7  # m/s^2
+    BRAKE_ACC = 25.0  # m/s^2, never less than the acceleration
     HEIGHT = 4
     WIDTH = 4
     DEPTH = 8

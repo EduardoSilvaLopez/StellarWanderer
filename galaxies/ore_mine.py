@@ -29,8 +29,8 @@ class OreMine(Updatable):
     def __init__(
             self,
             parent_field: OreField,
-            longitude: int = 0,
-            latitude: int = 0,
+            longitude: float = 0.0,
+            latitude: float = 0.0,
             orientation: float = 0.0,
             saved_attributes: Optional[dict] = None
             ) -> None:

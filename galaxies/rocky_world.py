@@ -26,19 +26,39 @@ class RockyWorld(World):
     '''A world with a surface the ship can land on: an earthlike planet or a moon. The generation is full of
     heuristic but playtested, hopefully realistic, factors. The orbits, the spin and the frames are the `World`'s (see
     world.py); the four values of the orbit's shape are drawn after the other values in the constructor, so adding them
-    changed no earlier value. Every rocky world has EARTH_DENSITY, so its `mass` follows from its radius, and a moon
-    orbits around its planet's mass. A planet's moons orbit inside the stable part of its Hill sphere (`moon_limit`,
-    see `moon_limit_in_radii`), and a planet too close to its star has none. The tides tie the spin of every moon, and
-    of the close planets, to the orbit (`is_tidally_locked`, see World).
+    changed no earlier value.
 
-    Surface: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and
-    `surface_colour` from it and the seed (see world_surface.py); they are drawn last, after the orbit's values. The
-    colour is what the graphics light (LitWorlds, SurfaceLight); the type and the temperature are in the knowledge base
-    (`markdown`).
+    Make-up, drawn first: `equilibrium_temperature` (K) from the star's light and the distance, then `surface_type` and
+    `surface_colour` from it and the seed (see world_surface.py). The surface type gives the composition, so the
+    density: an icy world is light, a rocky one heavy (`ROCK_DENSITY`, `ICE_DENSITY`), and its own weight squeezes it
+    (`COMPRESSION_MASS`). The `mass` is drawn (a planet's from `PLANET_MASS`, a moon's as a share of its planet's,
+    `MOON_MASS_SHARE`) and the `radius` follows from the mass and the density, so a heavier world is bigger, and
+    denser, and has more `surface_gravity`. A moon orbits around its planet's mass. A planet's moons orbit inside the
+    stable part of its Hill sphere (`moon_limit`, see `moon_limit_in_radii`), and a planet too close to its star has
+    none. The tides tie the spin of every moon, and of the close planets, to the orbit (`is_tidally_locked`, see
+    World).
+
+    The surface colour is what the graphics light (LitWorlds, SurfaceLight); the type, the temperature, the mass, the
+    density and the gravity are in the knowledge base (`markdown`).
     '''
 
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
-    EARTH_DENSITY = 5514.0  # kg/m^3, assumed for every rocky world (planets and moons alike)
+
+    # Bulk density, kg/m^3, before the world's weight squeezes it: mean and sigma of a normal draw, lowest, highest. A
+    # world of an icy surface is a mix of rock and ice (the icy moons of the giants, Pluto); the others are rock and
+    # metal (the Moon, Mars, Venus, the Earth, Mercury).
+    ROCK_DENSITY = (4600.0, 500.0, 3300.0, 5600.0)
+    ICE_DENSITY = (2200.0, 400.0, 1500.0, 3000.0)
+    MIN_DENSITY = ICE_DENSITY[2]  # the lowest a world can have, compression only raises it
+    # The weight squeezes a rock: its density grows with the mass as (1 + m / COMPRESSION_MASS) ** COMPRESSION_EXPONENT,
+    # which makes the radius grow as the mass to 0.27 for the heavy worlds (the mass-radius relation of rocky planets),
+    # and as its cube root for the small ones.
+    COMPRESSION_MASS = 6.0e24  # kg
+    COMPRESSION_EXPONENT = 0.19
+
+    # Mass, kg: median, sigma of its logarithm, lowest, highest. A moon's is a share of its planet's.
+    PLANET_MASS = (3.0e24, 0.75, 1.0e23, 2.0e25)
+    MOON_MASS_SHARE = (1.0e-3, 1.5, 1.0e-5, 2.0e-2)
 
     # Orbit tilt: |N(0, sigma)|, capped. A moon's distance is never below 3 planet radii, so with the eccentricity
     # capped at 0.3 its periapsis stays above 2.1 planet radii.
@@ -48,17 +68,19 @@ class RockyWorld(World):
     MOON_MAX_INCLINATION_DEGREES = 20.0
 
     # Moons: the closest is MOON_MIN_DISTANCE_RADII planet radii away (outside the Roche limit, 2.44 radii for worlds of
-    # one density, and clear of the planet's bind zone). The farthest is inside the planet's Hill sphere: the region
-    # around it, of radius a (m / 3M)^(1/3) (a: its distance to its star, m: its mass, M: the star's), where its pull
-    # wins over the star's. A prograde moon orbit stays stable out to about half of it (Domingos et al. 2006).
+    # one density, which grows with the cube root of the planet's density over the moon's, and clear of the planet's
+    # bind zone). The farthest is inside the planet's Hill sphere: the region around it, of radius a (m / 3M)^(1/3) (a:
+    # its distance to its star, m: its mass, M: the star's), where its pull wins over the star's. A prograde moon orbit
+    # stays stable out to about half of it (Domingos et al. 2006).
     MOON_MIN_DISTANCE_RADII = 3.0
     MOON_STABLE_HILL_FRACTION = 0.5
     # A planet has moons only if their stable region reaches at least this far, planet radii: a band wider than the
-    # minimum distance, or its moons would crowd at one distance.
-    MOON_MIN_ROOM_RADII = 6.0
+    # minimum distance (up to 5 planet radii, for the lightest moon of the densest planet), or its moons would crowd at
+    # one distance.
+    MOON_MIN_ROOM_RADII = 8.0
 
     # Tidal locking: the parent's tides slow a world's spin until it is tied to its orbit. The time is the standard
-    # estimate (Gladman et al. 1996) for a world of EARTH_DENSITY, from its drawn spin, with these constants. A world is
+    # estimate (Gladman et al. 1996) for the world's density, from its drawn spin, with these constants. A world is
     # tied if that time is within TIDAL_LOCK_TIME_LIMIT (a few billion years). It is tied to a 1:1 lock (one turn per
     # orbit, the same side to its parent), or, for a planet of an eccentric orbit, sometimes to a 3:2 resonance (three
     # turns for two orbits, as Mercury): the tides capture it there (Goldreich and Peale 1966).
@@ -72,15 +94,14 @@ class RockyWorld(World):
 
     # region Generation
     @staticmethod
-    def moon_limit_in_radii(distance_to_star: float, star_mass: float) -> float:
+    def moon_limit_in_radii(distance_to_star: float, star_mass: float, density: float) -> float:
         """The farthest a moon's orbit (semi-major axis) can be from a planet, in planet radii, when it is
-        `distance_to_star` metres from a star of `star_mass` kilograms: MOON_STABLE_HILL_FRACTION of its Hill sphere.
-        The sphere is taken at the planet's periapsis and the moon's apoapsis at the largest eccentricities
-        (MAX_ECCENTRICITY), as neither is known yet. Every world has EARTH_DENSITY, so a planet's mass grows with
-        its radius cubed, and the Hill sphere in planet radii does not depend on its size: the limit is linear in the
-        distance."""
+        `distance_to_star` metres from a star of `star_mass` kilograms and has `density` kg/m^3:
+        MOON_STABLE_HILL_FRACTION of its Hill sphere. The sphere is taken at the planet's periapsis and the moon's apoapsis at the largest
+        eccentricities (MAX_ECCENTRICITY), as neither is known yet. A planet's mass grows with its radius cubed, so the
+        Hill sphere in planet radii depends on the density and not on the size: the limit is linear in the distance."""
         hill_in_radii = distance_to_star * (1.0 - RockyWorld.MAX_ECCENTRICITY) \
-            * (4.0 * math.pi * RockyWorld.EARTH_DENSITY / (9.0 * star_mass)) ** (1.0 / 3.0)
+            * (4.0 * math.pi * density / (9.0 * star_mass)) ** (1.0 / 3.0)
         return RockyWorld.MOON_STABLE_HILL_FRACTION * hill_in_radii / (1.0 + RockyWorld.MAX_ECCENTRICITY)
 
     def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
@@ -104,19 +125,21 @@ class RockyWorld(World):
             if self.parent_planet\
             else self._generate_planet_name(my_random)
 
-        self.radius =\
-            self._generate_moon_radius(my_random)\
-            if self.parent_planet\
-            else self._generate_planet_radius(my_random)
+        # The make-up first: temperature (a moon is as far from the star as its planet), surface, density, mass, radius.
+        planet = self.parent_planet if self.parent_planet else self
+        if not self.parent_planet:
+            self.distance_to_parent = int(parent_orbit.distance_from_star)
+        self.equilibrium_temperature = equilibrium_temperature(self.stellar_system.star, planet.distance_to_parent)
+        self.surface_type: SurfaceType
+        self.surface_colour: Tuple[int, int, int]
+        self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
+        self.density: float
+        self._generate_mass_density_and_radius(my_random)
 
         if self.parent_planet:
             self.distance_to_parent = self._generate_moon_distance(my_random)
-        else:
-            self.distance_to_parent = int(parent_orbit.distance_from_star)
 
         self.initial_degrees_in_orbit = my_random.random() * 360.0
-
-        self.mass = 4.0 / 3.0 * math.pi * self.radius ** 3 * RockyWorld.EARTH_DENSITY
 
         # Kepler's third law around the parent, a planet or the star (two-body: both masses count).
         parent_mass: float = self.parent_planet.mass if self.parent_planet else self.stellar_system.star.mass
@@ -127,8 +150,8 @@ class RockyWorld(World):
         # The farthest a moon's orbit can be from this planet: inside its Hill sphere (see moon_limit_in_radii).
         self.moon_limit: float = 0.0
         if not self.parent_planet:
-            self.moon_limit = RockyWorld.moon_limit_in_radii(self.distance_to_parent,
-                                                             self.stellar_system.star.mass) * self.radius
+            self.moon_limit = RockyWorld.moon_limit_in_radii(self.distance_to_parent, self.stellar_system.star.mass,
+                                                             self.density) * self.radius
 
         self.rotation_period = self._generate_rotation_period(my_random)
         self.is_tidally_locked = self._is_tidally_locked(parent_mass)
@@ -207,14 +230,6 @@ class RockyWorld(World):
             sigma, limit = RockyWorld.PLANET_INCLINATION_SIGMA_DEGREES, RockyWorld.PLANET_MAX_INCLINATION_DEGREES
         self._generate_orbit_orientation(my_random, sigma, limit)  # no value drawn above depends on it
 
-        # Drawn after the orbit, so adding them changed no earlier value. A moon is as far from the star as its planet.
-        planet = self.parent_planet if self.parent_planet else self
-        self.equilibrium_temperature = equilibrium_temperature(self.stellar_system.star,
-                                                               planet.distance_to_parent)
-        self.surface_type: SurfaceType
-        self.surface_colour: Tuple[int, int, int]
-        self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
-
         # Drawn last, so no value above changed: a tied planet may be in the 3:2 resonance instead of the 1:1 lock.
         self.is_resonant = self._is_resonant(my_random)
         if self.is_resonant:
@@ -230,24 +245,40 @@ class RockyWorld(World):
             and (self.stellar_system.x, self.stellar_system.y,
                  self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
 
-    def _generate_planet_radius(self, my_random: random.Random) -> int:
-        result: float = 0.0
-        while result < RockyWorld.WORLD_MIN_RADIUS:
-            result = my_random.gauss(5000000, 1000000)
-        return int(result)
+    def _generate_mass_density_and_radius(self, my_random: random.Random) -> None:
+        """Sets `density`, `mass` and `radius`. The density before compression is drawn by the surface type (icy or
+        not); the mass is a planet's own or a moon's share of its planet's (drawn again while the world would be
+        smaller than WORLD_MIN_RADIUS, as it would be no more than a rock); the weight then squeezes the density
+        (COMPRESSION_MASS) and the sphere of that mass and density gives the radius."""
+        mean, sigma, lowest, highest = \
+            RockyWorld.ICE_DENSITY if self.surface_type is SurfaceType.ICE else RockyWorld.ROCK_DENSITY
+        uncompressed_density = min(highest, max(lowest, my_random.gauss(mean, sigma)))
+        if self.parent_planet:
+            median, sigma, lowest, highest = RockyWorld.MOON_MASS_SHARE
+            scale = self.parent_planet.mass
+        else:
+            median, sigma, lowest, highest = RockyWorld.PLANET_MASS
+            scale = 1.0
+        radius = 0.0
+        while radius < RockyWorld.WORLD_MIN_RADIUS:
+            self.mass = scale * min(highest, max(lowest, math.exp(my_random.gauss(math.log(median), sigma))))
+            self.density = uncompressed_density \
+                * (1.0 + self.mass / RockyWorld.COMPRESSION_MASS) ** RockyWorld.COMPRESSION_EXPONENT
+            radius = (3.0 * self.mass / (4.0 * math.pi * self.density)) ** (1.0 / 3.0)
+        self.radius = int(radius)
 
-    def _generate_moon_radius(self, my_random: random.Random) -> int:
-        result: float = 0.0
-        while result < RockyWorld.WORLD_MIN_RADIUS:
-            result = 2 ** my_random.gauss(1.0, 1.0) * self.parent_planet.radius / 100.0
-        return int(result)
+    @property
+    def surface_gravity(self) -> float:
+        """m/s^2, at the surface of the sphere."""
+        return RockyWorld.GRAVITATIONAL_CONSTANT * self.mass / self.radius ** 2
 
     def _generate_moon_distance(self, my_random: random.Random) -> int:
         """The moon's distance to its planet: a draw of a few hundred moon radii, never under MOON_MIN_DISTANCE_RADII
-        planet radii and never beyond the planet's moon_limit (its Hill sphere). A draw beyond the limit is placed
-        inside the stable region with the fractional part of the same draw, so no draw is added and every later value of
-        the moon stays what it was, and moons do not pile up at the limit."""
-        lowest = RockyWorld.MOON_MIN_DISTANCE_RADII * self.parent_planet.radius
+        planet radii (more for a moon lighter than its planet, as the Roche limit says) and never beyond the planet's
+        moon_limit (its Hill sphere). A draw beyond the limit is placed inside the stable region with the fractional
+        part of the same draw, so moons do not pile up at the limit."""
+        lowest = RockyWorld.MOON_MIN_DISTANCE_RADII * self.parent_planet.radius \
+            * max(1.0, (self.parent_planet.density / self.density) ** (1.0 / 3.0))
         highest = self.parent_planet.moon_limit
         result = 0.0
         draw = 0.0
@@ -275,7 +306,7 @@ class RockyWorld(World):
         TIDAL_LOCK_TIME_LIMIT. The time grows with the sixth power of the distance, so close planets and every moon are
         locked, and far ones are not."""
         initial_spin: float = math.tau / self.rotation_period
-        density_term: float = 4.0 / 3.0 * math.pi * RockyWorld.EARTH_DENSITY  # m / R^3, the same for every world
+        density_term: float = 4.0 / 3.0 * math.pi * self.density  # m / R^3
         lock_time: float = (
             RockyWorld.MOMENT_OF_INERTIA_FACTOR * initial_spin * self.distance_to_parent ** 6 * density_term
             * RockyWorld.TIDAL_QUALITY_FACTOR
@@ -418,6 +449,8 @@ class RockyWorld(World):
             f"{parent_info}"
             f"{orbit_shape}"
             f"* Radius: {int(self.radius/1000)} Km\n"
+            f"* Mass: {self.mass:.2e} Kg (density {self.density:.0f} Kg/m3)\n"
+            f"* Surface gravity: {self.surface_gravity:.2f} m/s² ({self.surface_gravity / 9.80665:.2f} g)\n"
             f"{day}"
             f"* Surface: {self.surface_type.label}\n"
             f"* Average temperature: {self.equilibrium_temperature - 273.15:.0f} °C\n"
@@ -440,6 +473,8 @@ class RockyWorld(World):
         if not self.parent_planet:
             logger.info(f" - Farthest stable moon orbit (Hill sphere): {f'{int(self.moon_limit):,}'}")
         logger.info(f" - Radius: {f'{int(self.radius):,}'}")
+        logger.info(f" - Mass: {self.mass:.4g} kg, density: {self.density:.0f} kg/m3, "
+                    f"surface gravity: {self.surface_gravity:.2f} m/s2")
         spin_state: str = "3:2 resonance" if self.is_resonant \
             else ("1:1 tidal lock" if self.is_tidally_locked else "free")
         logger.info(f" - Spin: {spin_state}, rotation period {self.rotation_period:.3g} s")

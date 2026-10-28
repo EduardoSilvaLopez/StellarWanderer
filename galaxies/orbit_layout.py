@@ -290,20 +290,21 @@ class OrbitLayout:
     def _can_start(entries: List[Entry], star: Star) -> bool:
         """True if the orbit INITIAL_ORBIT_NUMBER is an earthlike planet where the game can start: outside the star's
         death radius, and with room for a stable moon (RockyWorld.MOON_MIN_ROOM_RADII, see
-        RockyWorld.moon_limit_in_radii)."""
+        RockyWorld.moon_limit_in_radii), even for the lightest planet (RockyWorld.MIN_DENSITY)."""
         index = OrbitLayout.INITIAL_ORBIT_NUMBER - 1
         if len(entries) <= index:
             return False
         distance, kind = entries[index]
         return (kind is OrbitKind.EARTHLIKE
                 and distance >= star.default_death_radius
-                and RockyWorld.moon_limit_in_radii(distance, star.mass) >= RockyWorld.MOON_MIN_ROOM_RADII)
+                and RockyWorld.moon_limit_in_radii(distance, star.mass, RockyWorld.MIN_DENSITY)
+                >= RockyWorld.MOON_MIN_ROOM_RADII)
 
     @staticmethod
     def _fallback(star: Star, scales: SystemScales) -> List[Entry]:
         """Four earthlike planets, the third where the game can start (see _can_start): for a star whose zones left
         no layout."""
-        room = RockyWorld.MOON_MIN_ROOM_RADII / RockyWorld.moon_limit_in_radii(1.0, star.mass)
+        room = RockyWorld.MOON_MIN_ROOM_RADII / RockyWorld.moon_limit_in_radii(1.0, star.mass, RockyWorld.MIN_DENSITY)
         third = max(star.default_death_radius, room, OrbitLayout.ROCKY_OUTER_MIN_INNER_EDGES * scales.inner_edge)
         return [(third * ratio, OrbitKind.EARTHLIKE) for ratio in OrbitLayout.FALLBACK_RATIOS]
     # endregion

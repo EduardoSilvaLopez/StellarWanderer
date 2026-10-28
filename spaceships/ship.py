@@ -18,6 +18,7 @@ from .navigation import Navigation
 from common import audio
 from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
+    from galaxies.asteroid import Asteroid
     from galaxies.people.player import Player
     from galaxies.star import Star
 
@@ -48,8 +49,6 @@ class Ship(Updatable):
         HeatShieldOne = 1
         HeatShieldTwo = 2
 
-    UP_DOWN_ACC = 5.0  # m/s^2
-    RIGHT_LEFT_ACC = 10  # m/s^2
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
@@ -77,6 +76,8 @@ class Ship(Updatable):
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, used for TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
+    UP_DOWN_ACC: ClassVar[float]  # meters per second squared
+    RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared
     BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]
     NAME: ClassVar[str]  # the kind of ship, as the pilot knows it (ShipSpecificationsDialog)
@@ -134,8 +135,11 @@ class Ship(Updatable):
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Ship:
         """Place the ship, bound, in the first place found on the fixed world."""
         self.is_bound = True
-        environment.fixed_world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
-        central_km2 = next(km2 for km2 in environment.fixed_world.km2s if km2.longitude == 0 and km2.latitude == 0)
+        world = environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
+        world.update_surroundings(10, 0, 0, gem.GameEnvironment.EPOCH)
+        central_km2 = next(km2 for km2 in world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = central_km2.longitude + 500
         self.position.y = self.HEIGHT
@@ -172,9 +176,9 @@ class Ship(Updatable):
         has taken all of it, and it is gone (no scan mission may need it). A bigger one stays, and the water fills the
         hold as from ice. Returns whether the scoop has SPACE, so that it does not reach the scanner or the laser. A
         full hold closes the scoop."""
-        from galaxies.asteroid import Asteroid
         from galaxies.rocky_world import RockyWorld
         from galaxies.world_surface import SurfaceType
+        from galaxies import asteroid as asteroid_module
         environment = gem.current_environment
         asteroid: Optional[Asteroid] = None
         if not self.scoop_open:
@@ -187,10 +191,11 @@ class Ship(Updatable):
                 audio.set_loop('scoop', False)
                 return False
         else:
-            asteroid = environment.targeted_body
-            if not (isinstance(asteroid, Asteroid) and self._in_scoop_view(asteroid)):
+            targeted = environment.targeted_body
+            if not (isinstance(targeted, asteroid_module.Asteroid) and self._in_scoop_view(targeted)):
                 audio.set_loop('scoop', False)
                 return False
+            asteroid = targeted
         self.laser.cease_fire()
         hold = self.cargo_hold
         if hold.free_capacity() < hold.RAW_WATER_WEIGHT:
@@ -256,6 +261,8 @@ class Ship(Updatable):
 
     # region Updating
     def get_next_update(self) -> datetime:
+        if self.next_update_at is None:
+            raise Exception("Next update is none.")
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
@@ -290,6 +297,8 @@ class Ship(Updatable):
     def _settle(self) -> Ship:
         """Lives through the time since the last update, so that a change of state starts at this very moment."""
         now = gem.current_environment.date_time
+        if self.last_update_at is None:
+            raise Exception("Last update is none.")
         self._live_through((now - self.last_update_at).total_seconds() / (24 * 60 * 60))
         self.last_update_at = now
         return self
@@ -449,7 +458,10 @@ class Ship(Updatable):
         none is missed, and this needs no search of the whole world.'''
         spot_lon, spot_lat = self._mine_spot()
         spacing = OreMine.MINE_MIN_DISTANCE * OreMine.MINE_RADIUS
-        for km2 in gem.current_environment.fixed_world.km2s:
+        world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
+        for km2 in world.km2s:
             for ore_field in km2.ore_fields:
                 for mine in ore_field.mines:
                     if math.hypot(mine.longitude - spot_lon, mine.latitude - spot_lat) < spacing:
@@ -458,7 +470,10 @@ class Ship(Updatable):
 
     def _rock_in_front(self) -> bool:
         '''True if a rock stands less than 100 m away, within 45 degrees of the ship's yaw.'''
-        for km2 in gem.current_environment.fixed_world.km2s:
+        world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
+        for km2 in world.km2s:
             for rock in km2.rocks:
                 delta_x = rock.longitude - self.position.x
                 delta_z = rock.latitude - self.position.z
@@ -474,7 +489,10 @@ class Ship(Updatable):
         '''The ore field that holds the point, the one with the nearest centre if several do; None if none does.'''
         targeted_field: Optional[OreField] = None
         closest_distance = float('inf')
-        for km2 in gem.current_environment.fixed_world.km2s:
+        world = gem.current_environment.fixed_world
+        if world is None:
+            raise Exception("Fixed world is none.")
+        for km2 in world.km2s:
             for field in km2.ore_fields:
                 distance_to_field = math.hypot(field.longitude - longitude, field.latitude - latitude)
                 if distance_to_field < field.radius and distance_to_field < closest_distance:
@@ -485,6 +503,8 @@ class Ship(Updatable):
 
     # region Persistence
     def serialize(self) -> dict:
+        if self.last_update_at is None:
+            raise Exception("Last update is none.")
         return {
             'configuration': type(self).__qualname__,
             'is_bound': self.is_bound,
@@ -509,7 +529,10 @@ class Ship(Updatable):
         result.velocity = Velocity.deserialize(src['velocity'])
         result.attitude = Attitude.deserialize(result, src['attitude'])
         if result.is_bound:
-            result.position.km2 = gem.current_environment.fixed_world.get_km2_at(result.position.x, result.position.z)
+            world = gem.current_environment.fixed_world
+            if world is None:
+                raise Exception("Fixed world is none.")
+            result.position.km2 = world.get_km2_at(result.position.x, result.position.z)
         result.last_update_at = datetime.strptime(src['last_update_at'], '%Y-%m-%d %H:%M:%S')
         result.maintenance = src['maintenance']
         result.energy = src['energy']

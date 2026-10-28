@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, TypeVar
 
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
+
+_ComponentsT = TypeVar('_ComponentsT', bound='_Components')
 
 
 class _Components:
@@ -30,7 +32,7 @@ class _Components:
         return {'x': self.x, 'y': self.y, 'z': self.z}
 
     @classmethod
-    def deserialize(cls, src: dict) -> _Components:
+    def deserialize(cls: type[_ComponentsT], src: dict) -> _ComponentsT:
         return cls(x=src['x'], y=src['y'], z=src['z'])
 
 

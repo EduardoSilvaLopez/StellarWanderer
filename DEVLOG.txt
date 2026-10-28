@@ -91,15 +91,17 @@ STARTED:
 
 ### 2026-10-26 (5/11)
 
-THE TRAITORS WAY (Rep 50-100)
+GRAVITY OF TREASON (Rep 50-100)
+  * Gravity.
+  * Missions which can be resolved anywhere (scan...)
 
 Extra time: 151h45'
-  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
-  * Visitors in the settlements? Some of them shady?
 
 > BACKLOG
 
-THE TRAITORS WAY (Rep 50-100)
+GRAVITY OF TREASON (Rep 50-100)
+  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
+  * Visitors in the settlements? Some of them shady?
   * Extra: Binding slowly.
   * Extra: Portraits without uniform: Black, Latino, White
   * Extra: Gravity. Evaluate, at least... for realism's sake.

@@ -33,7 +33,10 @@ class Galaxy:
         existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.star.cell == star.cell), None)
         if existing is not None:
             return existing
-        new_system = StellarSystem(self, star, self.saved_alterations)
+        if self.saved_alterations is None:
+            new_system = StellarSystem(self, star, {})
+        else:
+            new_system = StellarSystem(self, star, self.saved_alterations)
         self.stellar_systems.append(new_system)
         return new_system
 
@@ -44,7 +47,8 @@ class Galaxy:
                                                  None)
         if existing is not None:
             return existing
-        star: Optional[Star] = self.fixed_stars.get(tuple(int(c) for c in key.split()))
+        cell_x, cell_y, cell_z = (int(c) for c in key.split())
+        star: Optional[Star] = self.fixed_stars.get((cell_x, cell_y, cell_z))
         return self.add_stellar_system(star) if star is not None else None
 
     def settlement_of(self, full_keys: str) -> Settlement:

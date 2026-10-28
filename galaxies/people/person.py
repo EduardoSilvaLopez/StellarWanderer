@@ -299,8 +299,8 @@ class Person:
 
     def how_happy_with_role(self) -> int:
         '''Returns 0, 1 or 2 for not happy, content, really happy.'''
-        HAPPY_MAX_DIST: float = 20
-        CONTENT_MAX_DIST: float = 40
+        HAPPY_MAX_DIST: float = 25
+        CONTENT_MAX_DIST: float = 50
 
         dist: float = math.sqrt(
             (self.role.ideal_for[0] - self.ideal_role_dimensions[0])**2 + \
