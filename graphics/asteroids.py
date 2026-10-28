@@ -3,7 +3,8 @@
 What is drawn: the asteroids of the ongoing missions of the system (see `StellarSystem.mission_asteroids`) at any
 distance, and the cosmetic asteroids of its belts that are worth it: near enough to be seen (`MIN_PIXELS` across) and
 slow enough relative to the ship (`MAX_COSMETIC_SPEED`), since a pilot does not see the belt's countless rocks passing
-at kilometres per second. A mission's asteroid too far to be `MIN_PIXELS` across is a point of its colour. The cosmetic
+at kilometres per second. A mission's asteroid too far to be `MIN_PIXELS` across is a point of its colour, while it is at least `MIN_VISIBLE_PX`
+across: smaller, it is not drawn. The cosmetic
 ones come from `AsteroidBelt.near`, asked again only every `REQUERY_SECONDS` or after the ship has moved
 `REQUERY_DISTANCE`, and moved along their velocity in between.
 
@@ -33,7 +34,7 @@ from galaxies.asteroid import AsteroidKey
 from galaxies.asteroid_sizes import AsteroidTier
 from .asteroid_looks import Look, corner_colours, look_of, shade
 from .asteroid_shape import asteroid_mesh, orientation
-from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS
+from .constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
 from .instruments.common import view_geometry
 
 if TYPE_CHECKING:
@@ -120,7 +121,7 @@ class Asteroids:
     """Draws the asteroids of the system around the ship (see the module docstring)."""
 
     MIN_PIXELS = 3.0  # an asteroid is a mesh from this apparent size, in pixels, up
-    POINT_SIZE = 3.0  # pixels: a mission's asteroid that is smaller than MIN_PIXELS
+    POINT_SIZE = 3.0  # pixels: a mission's asteroid that is smaller than MIN_PIXELS, and at least MIN_VISIBLE_PX across
     POINT_DISTANCE = 1000.0  # m: where a point is put, along its direction (only its direction matters)
     MAX_COSMETIC_SPEED = 50.0  # m/s relative to the ship: a faster cosmetic asteroid is not drawn
     MAX_COSMETIC = 40  # drawn at most, the nearest
@@ -177,7 +178,7 @@ class Asteroids:
         for distance, relative, sighting in sorted(ahead, key=lambda item: item[0], reverse=True):
             if sighting.diameter * focal / distance >= Asteroids.MIN_PIXELS:
                 Asteroids._draw_mesh(matrix, fov, sighting, relative, distance, aspect)
-            elif sighting.is_mission:
+            elif sighting.is_mission and sighting.diameter * focal / distance >= MIN_VISIBLE_PX:
                 Asteroids._draw_point(matrix, sighting, relative, aspect)
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glMatrixMode(GL.GL_MODELVIEW)

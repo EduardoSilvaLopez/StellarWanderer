@@ -90,13 +90,16 @@ DEVELOPER'S DIARY
 ### 2026-10-26 (5/11)
 
   * Missions which can be resolved anywhere (scan...)
+  * PLAN_END_DISTANCE to tune long trip advisor.
+  * Say Komisar: "They are good listeners" :D
+  * "I miss my childen."
 
 STARTED:
 
 GRAVITY OF TREASON (Rep 50-100)
   * Gravity.
 
-Extra time: 151h45'
+Extra time: 153h45' + 1h + 21:30-
 
 > BACKLOG
 

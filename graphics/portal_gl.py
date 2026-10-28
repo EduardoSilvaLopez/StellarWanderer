@@ -2,13 +2,14 @@
 
 The light it gives is what the ring's angular radius says (`intensity`): nothing far away, full when the ring is big in
 the sky. Three things follow from it, in the order of the frame:
-  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a white glow round the ring and
-    a black wash over the whole view, as strong as the light, whichever way the ship points: the eyes adapt, as
+  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a white glow round the ring, as
+    strong as the light and absent from afar, and a black wash over the whole view, as strong as the light, whichever
+    way the ship points: the eyes adapt, as
     behind sunglasses, and the stars and the planets (the sky) go dark. The portal base and the asteroids, which are
     drawn after it, are not darkened.
   * the ring (`draw`), in the 3D pass, with its own perspective as the base has: a band of white light with a halo,
-    whose halo never gets narrower than a few pixels, so that it shows from afar as a glowing point. Its opening is
-    drawn as the rest of the sky, from both sides.
+    whose band never gets narrower than a pixel, and which is not drawn at all while the ring is under a pixel across.
+    Its opening is drawn as the rest of the sky, from both sides.
   * the cockpit (`tint_cockpit`): white added to the opaque pixels of the cockpit, as the star's colour is
     (graphics/starlight.py).
 
@@ -25,7 +26,7 @@ import numpy as np
 import pygame
 from OpenGL import GL, GLU
 
-from .constants import NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
+from .constants import MIN_VISIBLE_PX, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
 from .instruments.common import view_geometry
 from .portal_base_gl import PortalBaseGl
 
@@ -41,11 +42,11 @@ class PortalGl:
     """Draws the Portal of the ship's system."""
 
     RING_SEGMENTS = 128
-    MIN_CORE_PIXELS = 1.5  # the ring's half width on the screen, however far
+    MIN_CORE_PIXELS = 0.5  # the ring's least half width on the screen (a pixel across), however far
     # The layers of the ring's light, from the core to the widest halo: half width, in core widths, and strength.
     LAYERS = ((2.5, 1.0), (7.0, 0.55), (20.0, 0.28), (60.0, 0.14))
     HALO_MAX_SHARE = 0.25  # of the ring's radius: a halo is never wider than this
-    GLOW_MIN_HALF_PX = 420.0  # the glow of a distant Portal, half of its size in pixels: a bright point
+    GLOW_MIN_HALF_PX = 420.0  # the glow's least half size in pixels, so that it stays round when the ring is small
     GLARE_SIZE_OF_RING = 45.0  # the glow's half size, in radii of the ring on the screen
     GLARE_MAX_HALF_SHARE = 4.0  # of the window's width
     ANGLE_START = 0.0058  # rad, the ring's angular radius where its light begins to dazzle (a third of a degree)
@@ -107,7 +108,7 @@ class PortalGl:
         up = float(relative @ np.array(tuple(ship.attitude.up)))
         forward = float(relative @ np.array(tuple(ship.attitude.forward)))
         glow = None
-        if forward > NEAR_CLIP:
+        if forward > NEAR_CLIP and level > 0.0:
             distance = float(np.linalg.norm(relative))
             ring_px = focal * portal.RADIUS / math.sqrt(max(distance * distance - portal.RADIUS ** 2, 1.0))
             half = min(max(PortalGl.GLOW_MIN_HALF_PX, PortalGl.GLARE_SIZE_OF_RING * ring_px),
@@ -141,7 +142,7 @@ class PortalGl:
             x, y, half = glow
             GL.glEnable(GL.GL_TEXTURE_2D)
             GL.glBindTexture(GL.GL_TEXTURE_2D, sprite)
-            alpha = PortalGl.GLOW_STRENGTH * (0.35 + 0.65 * level)
+            alpha = PortalGl.GLOW_STRENGTH * level
             GL.glColor4f(LIGHT_COLOUR[0] / 255.0, LIGHT_COLOUR[1] / 255.0, LIGHT_COLOUR[2] / 255.0, alpha)
             GL.glBegin(GL.GL_QUADS)
             for u, v, dx, dy in ((0, 0, -1, -1), (1, 0, 1, -1), (1, 1, 1, 1), (0, 1, -1, 1)):
@@ -172,6 +173,8 @@ class PortalGl:
             return  # all of it behind the ship
 
         view_height, _, focal = view_geometry(height)
+        if 2.0 * portal.RADIUS * focal / distance < MIN_VISIBLE_PX:
+            return
         # The depth along the view direction is less than the distance for what is off-axis, so the near plane is kept
         # close (nothing is depth tested here) and the far one clears the ring and its widest halo.
         far = distance + (2.0 + PortalGl.HALO_MAX_SHARE) * portal.RADIUS

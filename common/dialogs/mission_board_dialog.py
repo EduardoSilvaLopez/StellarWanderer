@@ -1,16 +1,4 @@
-"""The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules).
-
-The list shows each mission by its title and a line about time, under headings. A click on a mission opens its detail:
-the description, and the button that acts on it, if there is one. Esc (or a right-click) goes back from the detail to
-the list, and from the list closes the window. The lines scroll with the wheel and the arrow keys, and the scroll bar
-can be dragged (see ScrollBar).
-
-MissionList is the list and the detail themselves, drawn in a rectangle its owner gives it (`place`), with no frame and
-no keys of its own: the owner feeds it the events. MissionListDialog is a window over one MissionList.
-PendingMissionsDialog is the view away from any outpost: the missions taken and not yet done, with the time left, and
-nothing to act on. OutpostMissions is the Missions of the outpost's screen
-(outpost_screen.py), two columns side by side: "Available" on the left (the offers) and "Taken" on the right (the open
-missions taken here), both the latest deadline first."""
+"""The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -379,8 +367,8 @@ class PendingMissionsDialog(MissionListDialog):
 
 
 class AvailableColumn(MissionList):
-    """The offers of an outpost's board, the latest deadline first, for the "Available" column. None below the reputation
-    the board needs. An offer is accepted from its detail, as on the board."""
+    """The offers of an outpost's board, the latest deadline first, for the "Available" column. None below the
+    reputation the board needs. An offer is accepted from its detail, as on the board."""
 
     def __init__(self, board: MissionBoard) -> None:
         super().__init__()
@@ -395,29 +383,26 @@ class AvailableColumn(MissionList):
         return 'Accept', lambda: self._act(self.board.accept, mission)
 
 
-class TakenColumn(MissionList):
-    """The open missions the player took from this outpost, to deliver here, the latest deadline first, for the "Taken"
-    column. A taken mission is delivered from its detail, as on the board."""
+class CompleteHereColumn(MissionList):
+    """The open missions the player took from this outpost, to deliver here."""
 
     def __init__(self, board: MissionBoard) -> None:
         super().__init__()
         self.board: MissionBoard = board
 
     def _sections(self) -> List[Section]:
-        taken = sorted(self.board.mine(), key=lambda mission: mission.deadline, reverse=True)
-        return [('Taken', taken, 'None.')]
+        complete_here = sorted(self.board.mine(), key=lambda mission: mission.deadline, reverse=True)
+        return [('Complete here', complete_here, 'None.')]
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
         return 'Deliver', lambda: self._act(self.board.deliver, mission)
 
 
 class OutpostMissions:
-    """The missions of an outpost's screen (outpost_screen.py), side by side: "Available" on the left (AvailableColumn),
-    "Taken" on the right (TakenColumn). Each column scrolls and opens its own details, so a click or the wheel goes to
-    the column under the mouse. The keys go to both."""
+    """The missions of an outpost's screen (outpost_screen.py), side by side."""
 
     def __init__(self, board: MissionBoard) -> None:
-        self.columns: Tuple[MissionList, MissionList] = (AvailableColumn(board), TakenColumn(board))
+        self.columns: Tuple[MissionList, MissionList] = (AvailableColumn(board), CompleteHereColumn(board))
         self.areas: List[pygame.Rect] = [pygame.Rect(0, 0, 0, 0), pygame.Rect(0, 0, 0, 0)]  # where each column is
 
     def place(self, rect: pygame.Rect) -> None:
@@ -428,7 +413,9 @@ class OutpostMissions:
                       pygame.Rect(rect.left + column_width + COLUMN_GAP, rect.top,
                                   rect.width - column_width - COLUMN_GAP, rect.height)]
         for column, area in zip(self.columns, self.areas):
-            column.place(pygame.Rect(area.left, area.top, area.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH, area.height))
+            column.place(
+                pygame.Rect(area.left, area.top, area.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH, area.height)
+                )
 
     def draw_content(self, surface: pygame.Surface) -> None:
         for column in self.columns:
@@ -455,4 +442,4 @@ class OutpostMissions:
         if event.type == pygame.MOUSEWHEEL:
             column = self._column_at(pygame.mouse.get_pos())
             return column is not None and column.handle_content_event(event)
-        return any([column.handle_content_event(event) for column in self.columns])
+        return any(column.handle_content_event(event) for column in self.columns)

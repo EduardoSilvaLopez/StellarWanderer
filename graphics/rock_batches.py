@@ -17,7 +17,7 @@ Km2s still waiting show nothing (or their last batch, if only their rocks change
 ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals, see special_rocks.py). Rocks add
 their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on the dark side. A rock
 whose lowest point would float above the ground is lowered onto it, and one whose top would be hidden is raised to
-show (VISIBLE_TOP_SHARE).
+show (VISIBLE_TOP_SHARE). The faces wholly under the ground, which no view can see, are not stored at all.
 """
 
 from __future__ import annotations
@@ -69,8 +69,8 @@ def settle(centre: np.ndarray, points: np.ndarray, size: np.ndarray) -> None:
 
 
 class RockBatch:
-    """The rocks of one Km2 as arrays, those with an adjective or those without. Valid while that list of rocks is
-    unchanged (see `is_current`)."""
+    """The rocks of one Km2 as arrays, those with an adjective or those without, faces under the ground left out. Valid
+    while that list of rocks is unchanged (see `is_current`)."""
 
     def __init__(self, km2: Km2, special: bool = False) -> None:
         self.special: bool = special
@@ -99,10 +99,15 @@ class RockBatch:
         points = rotate(triangles.reshape(count, faces * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
         # The scanner's box is not lowered with the rock, which is close enough for aiming.
         settle(centre, points, size)
-        self.positions: np.ndarray = np.ascontiguousarray((centre + points).reshape(-1, 3), dtype=np.float32)
-        self.face_normals: np.ndarray = rotate(normals, tilt, orientation)
-        down = DOWNWARD_DARKENING * (1.0 - (self.face_normals[..., 1] + 1.0) / 2.0)
-        self.face_colours: np.ndarray = colours * (1.0 - down)[..., None]
+        corners = (centre + points).reshape(count, faces, 3, 3)
+        # The ground is flat at y = 0 (Rocks._draw_ground), so a face with no corner above it is never seen: left out.
+        visible = (corners[..., 1] > 0.0).any(axis=2)
+        self.face_rock: np.ndarray = np.nonzero(visible)[0]  # the rock of each kept face, for its glow
+        self.positions: np.ndarray = np.ascontiguousarray(corners[visible].reshape(-1, 3), dtype=np.float32)
+        face_normals = rotate(normals, tilt, orientation)
+        down = DOWNWARD_DARKENING * (1.0 - (face_normals[..., 1] + 1.0) / 2.0)
+        self.face_normals: np.ndarray = face_normals[visible]
+        self.face_colours: np.ndarray = (colours * (1.0 - down)[..., None])[visible]
         self.glow: np.ndarray = np.zeros((count, 3), dtype=np.int32)
         self._was_hot: List[bool] = [False] * count
         # The last colours computed for the sun and for the scoop's lamps (SurfaceLight.lamp): the colours, the light
@@ -149,9 +154,9 @@ class RockBatch:
         sun = np.array(sun_direction, dtype=np.float64)
         facing = self.face_normals @ sun
         brightness = SURFACE_STARLIGHT + (1.0 - SURFACE_STARLIGHT) * np.maximum(0.0, facing)
-        shaded = (self.face_colours * brightness[..., None]).astype(np.int32)  # truncates, like SurfaceLight.shade
-        lit = np.minimum(255, shaded + self.glow[:, None, :])
-        return np.ascontiguousarray(np.repeat(lit, 3, axis=1).reshape(-1, 3), dtype=np.uint8)
+        shaded = (self.face_colours * brightness[:, None]).astype(np.int32)  # truncates, like SurfaceLight.shade
+        lit = np.minimum(255, shaded + self.glow[self.face_rock])
+        return np.ascontiguousarray(np.repeat(lit, 3, axis=0), dtype=np.uint8)
 
     def draw(self, player_x: float, player_z: float, light: SurfaceLight) -> None:
         """Draw inside the camera setup of Rocks.draw. The translation is the Km2's offset from the camera, computed

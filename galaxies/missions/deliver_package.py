@@ -35,7 +35,7 @@ class DeliverPackage(Mission):
             failure_penalty=0.1
             ),
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.03,
+            frequency=0.06,
             taken_by_others=0.01,
             deadline_days_min=10,
             deadline_days_max=40,
@@ -153,17 +153,17 @@ class DeliverPackage(Mission):
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
         # The main people involved are very happy.
-        self.sender.adjust_sympathy(25)
-        self.recipient.adjust_sympathy(30)
+        self.sender.adjust_sympathy(30)
+        self.recipient.adjust_sympathy(40)
 
         # But also so the whole outpost.
-        from galaxies.outpost import Outpost
-        if isinstance(self.sender.residency, Outpost):
+        from galaxies.settlement import Settlement
+        if isinstance(self.sender.residency, Settlement):
             for s in self.sender.residency.staff:
-                s.adjust_sympathy(150 / self.sender.residency.staff.count())
-        if isinstance(self.recipient.residency, Outpost):
+                s.adjust_sympathy(200 / len(self.sender.residency.staff))
+        if isinstance(self.recipient.residency, Settlement):
             for s in self.recipient.residency.staff:
-                s.adjust_sympathy(100 / self.sender.residency.staff.count())
+                s.adjust_sympathy(150 / len(self.sender.residency.staff))
 
     def reward_text(self, player: Player) -> str:
         rnd = random.Random(self.seed)  # the same text each time it is shown
@@ -171,7 +171,7 @@ class DeliverPackage(Mission):
         return f"Thank you {self.recipient.get_player_title()}, this {package} was really expected."
 
     def fail(self, player: Player) -> None:
-        player.those_who_share -=  self.terms.failure_penalty
+        player.those_who_share.adjust_reputation(-self.terms.failure_penalty)
 
         # The main people involved are disappointed. But you tried.
         self.sender.adjust_sympathy(-5)

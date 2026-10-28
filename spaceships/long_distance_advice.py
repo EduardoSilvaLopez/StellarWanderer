@@ -179,7 +179,7 @@ class LongDistanceAdvisor:
     """Works out the advice every frame (see the module docstring) and keeps it in `current` for the instruments."""
 
     FAR_DISTANCE = 1.0e9  # m, a million km: the advice is given beyond it
-    PLAN_END_DISTANCE = 3.0e9  # m: the plan ends here, at rest with respect to the target, with room left for braking
+    PLAN_END_DISTANCE = 1.05e9  # m: the plan ends here, at rest with respect to the target, with room left for braking
     RESERVE_WITHOUT_OUTPOST = 0.60
     RESERVE_WITH_SERVICES = 0.20
     BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft

@@ -162,12 +162,13 @@ class PortalBase(Body, Settlement):
                 and mouth_z <= relative_z <= mouth_z + self.DOCKING_DEPTH * scale)
 
     def place_after_leaving(self, ship: Ship) -> None:
-        """The ship is put in front of the hangar, at rest, looking at the base (forward along +z, up along +y)."""
+        """The ship is put in front of the hangar, at rest, facing the star with the base behind it (forward along -z, up
+        along +y)."""
         position = self.approach_position()
         ship.position.set_vector((position.x, position.y, position.z))
         ship.velocity.set_vector((0.0, 0.0, 0.0))
-        ship.attitude.forward = Vector3(0.0, 0.0, 1.0)
-        ship.attitude.right = Vector3(1.0, 0.0, 0.0)
+        ship.attitude.forward = Vector3(0.0, 0.0, -1.0)
+        ship.attitude.right = Vector3(-1.0, 0.0, 0.0)
         ship.attitude.up = Vector3(0.0, 1.0, 0.0)
     # endregion
 

@@ -69,7 +69,7 @@ class OutpostLeaving(Conversation):
                 f"We decided to repair your cargo hold... {self.interlocutor.get_player_title()}.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 20:
+        elif old_rep < 20 or isinstance(self.player.ship.cargo_hold, ShabbyThsMiner.ShabbyHold):
             # The effect is the availability of missions.
             return (
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
@@ -78,7 +78,7 @@ class OutpostLeaving(Conversation):
                 f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
                    if self.interlocutor.loyalty100 > 5 else ''
                 )
-        elif old_rep < 50:
+        elif old_rep < 50 or isinstance(self.player.ship.cargo_hold, ShabbyThsMiner.StandardHold):
             self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
             return (
                 f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
@@ -86,7 +86,7 @@ class OutpostLeaving(Conversation):
                 f"Keep doing the good job.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 100:
+        elif old_rep < 100 or isinstance(self.player.ship, ShabbyThsMiner):
             self.player.ship.upgrade_to(ThsMiner)
             return  (
                 "People were asking why you still have to go around with that piece of..."

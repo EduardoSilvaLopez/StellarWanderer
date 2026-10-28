@@ -13,7 +13,8 @@ high time compression it strobes, as the ring is drawn once a frame.
 The plumes are camera-facing strips and sprites of light, added to the picture: nested, from violet and wide to white
 and thin, as long as the pull of the star asks (`plume_length`: a base at a red dwarf burns hard, one at a hot star
 gently), with a small flicker. They keep a minimum width in pixels, so that they show from far, and from where the
-whole base is only a few pixels across it is drawn as a point of the colour of the plumes."""
+whole base is only a few pixels across it is drawn as a point of the colour of the plumes, and under a pixel it is not
+drawn at all."""
 
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ from OpenGL import GL, GLU
 
 from common.frame_watch import frame_watch
 from common.paths import resource_path
-from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS
+from .constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
 from .instruments.common import view_geometry
 from .portal_base_shape import BaseModel, Mesh, make_model
 
@@ -94,6 +95,9 @@ class PortalBaseGl:
             return
 
         _, _, focal = view_geometry(height)
+        apparent = 2.0 * reach * focal / distance
+        if apparent < MIN_VISIBLE_PX:
+            return
         view_height = int(height * CONSOLE_TOP)
         aspect = width / view_height
         GL.glViewport(0, height - view_height, width, view_height)
@@ -102,7 +106,7 @@ class PortalBaseGl:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         matrix = ship.attitude.camera_matrix()
-        if 2.0 * reach * focal / distance < PortalBaseGl.MIN_PIXELS:
+        if apparent < PortalBaseGl.MIN_PIXELS:
             PortalBaseGl._draw_point(matrix, relative, aspect)
         else:
             PortalBaseGl._set_clock(base, environment.date_time)

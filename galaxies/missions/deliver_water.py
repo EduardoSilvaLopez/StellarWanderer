@@ -14,7 +14,9 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
+    from galaxies.asteroid_belt import AsteroidBelt
     from galaxies.settlement import Settlement
+    from galaxies.stellar_system import StellarSystem
     from galaxies.people.player import Player
     from galaxies.rocky_world import RockyWorld
 
@@ -66,6 +68,7 @@ class DeliverWater(Mission):
 
     @classmethod
     def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> Optional[DeliverWater]:
+        del chance  # the base's signature: the offer's seed is the outpost and the day, not the day's chance
         if not outpost.needs_water():  # an outpost on an icy world does not need this.
             return None
         return cls.generate(day, outpost)
@@ -116,14 +119,35 @@ class DeliverWater(Mission):
         site['key'] = str(key)
         return site
 
+    def _site(self) -> dict:
+        """The asteroid site of the offer. A mission that uses it always has one."""
+        if self.asteroid_site is None:
+            raise ValueError(f"{self.KIND} has no asteroid site")
+        return self.asteroid_site
+
+    def _system(self) -> StellarSystem:
+        """The system the asteroid site is in."""
+        import game_environment as gem
+        system = gem.current_environment.galaxy.system_of_key(self._site()['system'])
+        if system is None:
+            raise ValueError(f"{self.KIND}: the asteroid's system is not there")
+        return system
+
+    def _belt(self, system: StellarSystem) -> AsteroidBelt:
+        """The belt of the asteroid site."""
+        from galaxies.asteroid_belt import AsteroidBelt
+        belt = system.get_orbit(float(self._site()['belt']))
+        if not isinstance(belt, AsteroidBelt):
+            raise ValueError(f"{self.KIND}: the asteroid's belt is not there")
+        return belt
+
     def asteroid(self) -> Asteroid | None:
         """The asteroid the offer shows: the kept one, else one made for the moment, the same object each time. None
         when the offer has none, or when the scoop has taken it."""
         if self.asteroid_site is None:
             return None
-        import game_environment as gem
         from galaxies.asteroid import Asteroid, AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
+        system = self._system()
         if self.asteroid_site['belt'] is None:
             seed = self.asteroid_site['seed']
             if seed in system.consumed_free:
@@ -131,7 +155,7 @@ class DeliverWater(Mission):
             if self._asteroid is None:
                 self._asteroid = system.free_asteroids.get(seed) or Asteroid.free_living(system, seed)
             return self._asteroid
-        belt = system.get_orbit(float(self.asteroid_site['belt']))
+        belt = self._belt(system)
         key = AsteroidKey.from_ints(self.asteroid_site['key'].split())
         if key in belt.consumed:
             return None
@@ -144,14 +168,14 @@ class DeliverWater(Mission):
         super().accept(now)
         if self.asteroid() is None:
             return
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            self._asteroid = system.promote_free_asteroid(self.asteroid_site['seed'])
+        site = self._site()
+        system = self._system()
+        if site['belt'] is None:
+            self._asteroid = system.promote_free_asteroid(site['seed'])
         else:
-            belt = system.get_orbit(float(self.asteroid_site['belt']))
-            self._asteroid = belt.promote(AsteroidKey.from_ints(self.asteroid_site['key'].split()))
+            belt = self._belt(system)
+            self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()))
 
     def target_body(self) -> Optional[Asteroid]:
         """The asteroid is the target the long distance advice works for. The water does not have to come from it."""
@@ -168,32 +192,34 @@ class DeliverWater(Mission):
         return self._kept()
 
     def forget(self) -> None:
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            system.forget_free_asteroid(self.asteroid_site['seed'])
+        site = self._site()
+        system = self._system()
+        if site['belt'] is None:
+            system.forget_free_asteroid(site['seed'])
         else:
-            belt = system.get_orbit(float(self.asteroid_site['belt']))
-            belt.forget(AsteroidKey.from_ints(self.asteroid_site['key'].split()))
+            belt = self._belt(system)
+            belt.forget(AsteroidKey.from_ints(site['key'].split()))
 
     def _kept(self) -> bool:
         """Whether the asteroid is still kept: by its system (free-living) or its belt."""
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            return self.asteroid_site['seed'] in system.free_asteroids
-        belt = system.get_orbit(float(self.asteroid_site['belt']))
-        return AsteroidKey.from_ints(self.asteroid_site['key'].split()) in belt.relevant
+        site = self._site()
+        system = self._system()
+        if site['belt'] is None:
+            return site['seed'] in system.free_asteroids
+        belt = self._belt(system)
+        return AsteroidKey.from_ints(site['key'].split()) in belt.relevant
     # endregion
 
     def icy_worlds(self) -> List[RockyWorld]:
         """The icy worlds of the planetary system of the issuer's planet: the planet and its moons."""
         from galaxies.rocky_world import RockyWorld
-        planet = self.issuer_settlement.planet
-        if planet is None:  # a portal base has no planet, so no planetary ice
+        from galaxies.outpost import Outpost
+        settlement = self.issuer_settlement
+        if not isinstance(settlement, Outpost):  # a portal base has no planet, so no planetary ice
             return []
+        planet = settlement.planet
         return [world for world in [planet, *planet.moons]
                 if isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE]
 
@@ -243,6 +269,7 @@ class DeliverWater(Mission):
         player.ship.cargo_hold.raw_water = 0.0
 
     def shortfall(self, player: Player) -> str:
+        del player  # the base's signature: the text does not name the pilot
         return "You carry no raw water."
 
     def give_reward(self, player: Player) -> None:

@@ -12,8 +12,9 @@ delivered. An offer's deadline is fixed when the offer is made, so taking it lat
 also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
 board.
 
-The scan asteroid offers are the exception: they are made at the portal base only and live on its board (`OFFERED_AT_BASE`).
-An outpost shows them (`shown_offers`), takes them and delivers them through that board, so no offer is on two boards."""
+The scan asteroid offers are the exception: they are made at the portal base only and live on its board
+(`OFFERED_AT_BASE`). An outpost shows them (`shown_offers`), takes them and delivers them through that
+board, so no offer is on two boards."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta

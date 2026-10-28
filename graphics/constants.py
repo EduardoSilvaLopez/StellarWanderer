@@ -156,7 +156,8 @@ WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_c
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
 SURFACE_STARLIGHT = 0.30
 WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
-WORLD_MIN_RADIUS_PX = 2  # floor so a distant world stays visible as a small lit disc
+MIN_VISIBLE_PX = 1.0  # an object (world, ring, base, mission asteroid) whose diameter on screen is less is not drawn
+WORLD_MIN_RADIUS_PX = 0.5  # floor so a distant world stays a lit disc of a pixel across, never smaller
 OUTPOST_DOT_COLOR = (255, 250, 210)  # outposts on a planet's surface, drawn as tiny dots in the sky
 OUTPOST_DOT_RADIUS_PX = 2
 FIXED_STAR_DOT_RADIUS_PX = 1  # fixed stars are drawn in their own colour; they are far away, so tiny dots
