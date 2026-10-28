@@ -1,7 +1,7 @@
 """The base of every mission: what an outpost asks of the pilot (shown by mission_board.py).
 
-An outpost makes its offers on its board (`MissionBoard.update_missions`), which are kept while the outpost is in memory
-and not saved. The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE
+A settlement makes its offers on its board (`MissionBoard.update_missions`), which are kept while the settlement is in
+memory and not saved. The scan asteroid offers are the portal base's, so the other settlements of the system show them. The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE
 or FAILED): that list is the only place missions are saved.
 
 Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission
@@ -51,8 +51,9 @@ class Mission(Updatable):
     status. Subclasses add the objective."""
 
     KIND: str = ''
-    # The terms of the kind at each kind of settlement (see terms.py): a frequency of 0 means it is not offered there.
-    TERMS: Dict[SettlementKind, Terms] = {}
+    # The terms of the kind at each kind of settlement (see terms.py): a frequency of 0, or None, means it is not offered
+    # there.
+    TERMS: Dict[SettlementKind, Optional[Terms]] = {}
 
     def __init__(self,
                  seed: int,
@@ -83,8 +84,12 @@ class Mission(Updatable):
     # region Offers
     @classmethod
     def terms_at(cls, settlement_kind: SettlementKind) -> Terms:
-        """The terms of this kind at a kind of settlement. A kind with no entry for it is a bug (see check_terms)."""
-        return cls.TERMS[settlement_kind]
+        """The terms of this kind at a kind of settlement. A kind with no entry for it is a bug (see check_terms), and
+        one whose entry is None is never offered there: asking for its terms is an error."""
+        terms = cls.TERMS[settlement_kind]
+        if terms is None:
+            raise ValueError(f"{cls.KIND} is never offered at {settlement_kind.value}")
+        return terms
 
     @property
     def terms(self) -> Terms:
@@ -93,11 +98,11 @@ class Mission(Updatable):
 
     @classmethod
     def offered_on(cls, day: datetime, outpost: Settlement) -> Optional[Mission]:
-        """The offer `outpost` makes on the day of `day`, or None when it makes none that day (its frequency there is 0,
+        """The offer `outpost` makes on the day of `day`, or None when it makes none that day (it is not offered there, its entry is None or its frequency is 0,
         or the day's chance does not come up). Drawn from the outpost and the day only, so it is the same however the
         board was visited."""
-        terms = cls.terms_at(outpost.kind)
-        if terms.frequency == 0:
+        terms = cls.TERMS[outpost.kind]
+        if terms is None or terms.frequency == 0:
             return None
         chance = random.Random(of_text(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
         if chance.random() >= terms.frequency:

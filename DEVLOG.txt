@@ -87,13 +87,14 @@ DEVELOPER'S DIARY
   * Long-distance travel advisor improvements. Test.
   * New level brings scoop, solar panels and heat shield. Hide them else.
 
-STARTED:
-
 ### 2026-10-26 (5/11)
+
+  * Missions which can be resolved anywhere (scan...)
+
+STARTED:
 
 GRAVITY OF TREASON (Rep 50-100)
   * Gravity.
-  * Missions which can be resolved anywhere (scan...)
 
 Extra time: 151h45'
 

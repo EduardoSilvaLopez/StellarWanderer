@@ -66,9 +66,11 @@ class Player:
     # region Time scale
     def is_time_scale_dangerous(self) -> bool:
         """Whether the time compression is clearly dangerous at the ship's state (bound or unbound). Only while the ship
-        has a speed: a ship standing still is never dangerous (the same speed the console shows)."""
+        has a speed (the same speed the console shows) or hovers (it burns energy): a ship standing still on the ground
+        is never dangerous."""
         limit = self.TIME_SCALE_DANGER_BOUND if self.ship.is_bound else self.TIME_SCALE_DANGER_UNBOUND
-        return self.time_scale >= limit and self.ship.velocity.as_vector().length() > 0.0
+        return self.time_scale >= limit and (
+            self.ship.velocity.as_vector().length() > 0.0 or self.ship.navigation.is_hovering())
 
     def increase_time_scale(self) -> Player:
         """Faster, from TIME_SCALE_MIN up to TIME_SCALE_MAX."""

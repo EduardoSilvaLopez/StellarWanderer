@@ -388,7 +388,7 @@ class AvailableColumn(MissionList):
 
     def _sections(self) -> List[Section]:
         from galaxies.missions.mission_board import MissionBoard  # local: the board's module imports the player
-        offers = self.board.offers if MissionBoard.is_available(self.board.player) else []
+        offers = self.board.shown_offers() if MissionBoard.is_available(self.board.player) else []
         return [('Available', sorted(offers, key=lambda offer: offer.deadline, reverse=True), 'Nothing new.')]
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:

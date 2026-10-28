@@ -31,6 +31,7 @@ class Navigation:
     `GameEnvironment.targeted_body`: braking to rest with respect to the target is how a trip ends (see
     `velocity_reference_frame`).
     Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
+    Bound, the world's surface gravity pulls the ship down and the flight assist holds it up (see `_apply_gravity`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -181,14 +182,17 @@ class Navigation:
         attitude = ship.attitude
         if braking:
             self._brake(delta_time)
+            self._apply_gravity(delta_time, 0.0)
             return
         if ship.is_bound:
-            world_accel_x, world_accel_z = rotate_2d(longitude_accel_input, latitude_accel_input,
+            # each axis is scaled before the turn by the yaw, so that forward keeps its own acceleration
+            world_accel_x, world_accel_z = rotate_2d(longitude_accel_input * ship.RIGHT_LEFT_ACC,
+                                                     latitude_accel_input * ship.FORWARD_BACKWARD_ACC,
                                                      math.radians(attitude.yaw))
             accel = Vector3(
-                world_accel_x * ship.RIGHT_LEFT_ACC,
+                world_accel_x,
                 altitude_accel_input * ship.UP_DOWN_ACC,
-                world_accel_z * ship.FORWARD_BACKWARD_ACC,
+                world_accel_z,
             )
         else:
             accel = (
@@ -201,6 +205,35 @@ class Navigation:
         ship.velocity.add_vector(accel * delta_time)
         speed_after = (ship.velocity.as_vector() - reference).length()
         ship.energy -= Navigation.ENERGY_PER_SPEED * abs(speed_after - speed_before)
+        self._apply_gravity(delta_time, altitude_accel_input)
+
+    def gravity(self) -> float:
+        """m/s^2 that pulls the ship down: the surface gravity of the world it is bound to, the same at any altitude
+        (the bound geometry is flat). Zero unbound: there is no gravity out there yet."""
+        world = gem.current_environment.fixed_world
+        if not self.ship.is_bound or not isinstance(world, RockyWorld):
+            return 0.0
+        return world.surface_gravity
+
+    def is_hovering(self) -> bool:
+        """True while bound above the ground in a gravity: the flight assist is holding the ship up, which costs energy
+        whether it moves or not."""
+        return self.gravity() > 0.0 and self.ship.position.y > self.ship.HEIGHT + Navigation.BRAKED
+
+    def _apply_gravity(self, delta_time: float, altitude_accel_input: float) -> None:
+        """Pulls the bound ship down by the gravity. The flight assist, always on, holds it up while no climb or descent
+        is asked: it cancels the pull with the engines (all of it up to UP_DOWN_ACC, the engines' whole power; a world
+        pulling harder cannot be hovered over), at ENERGY_PER_SPEED per m/s of pull cancelled, so hovering costs energy
+        for as long as it lasts. With a vertical key held UP_DOWN_ACC is all the push there is, and the pull is not
+        cancelled: climbing nets UP_DOWN_ACC - gravity, descending UP_DOWN_ACC + gravity. On the ground, with no climb
+        asked, the ground holds the ship up."""
+        ship = self.ship
+        gravity = self.gravity()
+        if gravity == 0.0 or (ship.position.y <= ship.HEIGHT + Navigation.BRAKED and altitude_accel_input <= 0.0):
+            return
+        cancelled = min(gravity, ship.UP_DOWN_ACC) if altitude_accel_input == 0.0 else 0.0
+        ship.velocity.y -= (gravity - cancelled) * delta_time
+        ship.energy -= Navigation.ENERGY_PER_SPEED * cancelled * delta_time
 
     def is_landed(self) -> bool:
         """True when the ship rests on the surface of its world: bound, at the ground (the lowest altitude the ship can
@@ -451,10 +484,13 @@ class Navigation:
 
     def altitude_warning(self) -> bool:
         """True while bound and falling so fast that the ground comes before a stop, braking with only
-        COLLISION_BRAKE_FRACTION of BRAKE_ACC (the same judgement as collision_warning, on the vertical)."""
+        COLLISION_BRAKE_FRACTION of BRAKE_ACC (the same judgement as collision_warning, on the vertical), less the pull
+        the flight assist cannot cancel (what the gravity is over UP_DOWN_ACC)."""
         if not self.ship.is_bound or self.ship.velocity.y >= 0.0:
             return False
-        stopping_distance = self.ship.velocity.y ** 2 / (2.0 * self.ship.BRAKE_ACC
-                                                         * Navigation.COLLISION_BRAKE_FRACTION)
-        return self.ship.position.y <= stopping_distance
+        ship = self.ship
+        decel = ship.BRAKE_ACC * Navigation.COLLISION_BRAKE_FRACTION - max(0.0, self.gravity() - ship.UP_DOWN_ACC)
+        if decel <= 0.0:
+            return True  # the engines cannot stop this fall
+        return ship.position.y <= ship.velocity.y ** 2 / (2.0 * decel)
     # endregion

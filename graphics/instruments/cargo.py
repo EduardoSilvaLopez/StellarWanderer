@@ -18,8 +18,10 @@ def format_quantity(value: float) -> str:
 
 
 class Cargo:
-    """Draw the CARGO list: one line per hold element, name and quantity. In Those-Who-Share space, where credits are
-    illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the resource bars).
+    """Draw the CARGO list: one line per hold element, name and quantity. Mines, ore and raw water are left out when
+    there is none; air, water and food always show, as their warning matters at 0. In Those-Who-Share space, where
+    credits are illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the
+    resource bars).
     The title turns amber when less than 1 Kg of the hold's capacity is free."""
 
     @staticmethod
@@ -44,9 +46,13 @@ class Cargo:
         # the capacity is shown above, the rest is not cargo
         for element in ('air', 'water', 'food', 'mines', 'ore', 'raw_water'):
             quantity = getattr(ship.cargo_hold, element)
+            shown = format_quantity(quantity)
+            # Nothing of mines, ore or raw water: no line. Air, water and food keep theirs, as the warning matters at 0.
+            if shown == '0' and element not in warning_days:
+                continue
             # Red at or below the warning level, as the ship's notice says.
             warning = element in warning_days and quantity <= warning_days[element]
             colour = BINDING_MARK_RED if warning else ACCENT
-            line = label_font.render(f'{element.replace("_", " ").upper()}: {format_quantity(quantity)}', True, colour)
+            line = label_font.render(f'{element.replace("_", " ").upper()}: {shown}', True, colour)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

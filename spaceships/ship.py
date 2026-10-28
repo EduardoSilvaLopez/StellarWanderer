@@ -76,7 +76,7 @@ class Ship(Updatable):
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
     TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, used for TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
-    UP_DOWN_ACC: ClassVar[float]  # meters per second squared
+    UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included (Navigation._apply_gravity)
     RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared
     BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]

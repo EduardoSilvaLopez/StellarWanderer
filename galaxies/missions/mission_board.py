@@ -10,7 +10,10 @@ alive by looking back that far,
 however the board was visited, saved or loaded. Each offer can be taken, and each mission the player has taken can be
 delivered. An offer's deadline is fixed when the offer is made, so taking it late does not give more time. An offer can
 also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
-board."""
+board.
+
+The scan asteroid offers are the exception: they are made at the portal base only and live on its board (`OFFERED_AT_BASE`).
+An outpost shows them (`shown_offers`), takes them and delivers them through that board, so no offer is on two boards."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -34,9 +37,13 @@ MIN_REPUTATION = 20.0  # the board is for pilots the outposts trust (the same re
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
 KINDS = (DeliverOre, DeliverPackage, DeliverWater, ScanRock, ScanAsteroid)  # what a board offers: a new kind of mission
 # comes here
-LOOK_BACK_DAYS = max(terms.deadline_days_max for kind in KINDS for terms in kind.TERMS.values())  # an older offer
+LOOK_BACK_DAYS = max(terms.deadline_days_max for kind in KINDS for terms in kind.TERMS.values()
+                     if terms is not None)  # an older offer
 # has expired, whatever its kind and settlement
 check_terms(KINDS)  # every kind has terms for every kind of settlement: stop here, at start-up, if one is missing
+
+OFFERED_AT_BASE = (ScanAsteroid,)  # the kinds made at a system's portal base only: their offers live on its board
+LOCAL_KINDS = tuple(kind for kind in KINDS if kind not in OFFERED_AT_BASE)  # the others, made at every settlement
 
 class MissionBoard:
 
@@ -54,12 +61,33 @@ class MissionBoard:
         """The current player, looked up at each use: a new game or a load replaces the Player object."""
         return player_module.current_player
 
+    @property
+    def base(self) -> MissionBoard:
+        """The board of the system's portal base, where the scan asteroid offers live (this board, at the base)."""
+        return self.outpost.stellar_system.portal_base.mission_board
+
+    def shown_offers(self) -> List[Mission]:
+        """The offers this board shows: its own, and at an outpost the base's scan asteroid offers too."""
+        if self.base is self:
+            return self.offers
+        return self.offers + [offer for offer in self.base.offers if isinstance(offer, OFFERED_AT_BASE)]
+
+    def _holder(self, offer: Mission) -> MissionBoard:
+        """The board the offer is on: the portal base's for a scan asteroid."""
+        return self.base if isinstance(offer, OFFERED_AT_BASE) else self
+
     def mine(self) -> List[Mission]:
-        """The missions which can be completed here."""
+        """The missions which can be completed here: those for this settlement, and at any settlement of its system the
+        scan asteroid missions, which are issued at the portal base."""
         dest_keys = self.outpost.full_keys()
-        return [m for m in self.player.missions if m.destination == dest_keys and m.status == OPEN]
+        system_key = self.outpost.stellar_system.get_alterations_key()
+        return [m for m in self.player.missions if m.status == OPEN and (
+            m.destination == dest_keys
+            or (isinstance(m, OFFERED_AT_BASE) and m.destination.partition('|')[0] == system_key))]
 
     def update_missions(self, now: datetime) -> None:
+        if self.base is not self:
+            self.base.update_missions(now)  # the scan asteroid offers are made there
         logger.debug(f"Updating offers. {len(self.offers)} in the beginning.")
         self.offers = [offer for offer in self.offers if offer.deadline > now and not offer.is_taken_by_others(now)]
 
@@ -73,7 +101,7 @@ class MissionBoard:
             first_day = max(first_day, self.updated_at)
         day = first_day.replace(hour=0, minute=0, second=0, microsecond=0)
         while day < now:
-            for kind in KINDS:
+            for kind in (KINDS if self.base is self else LOCAL_KINDS):
                 offer = kind.offered_on(day, self.outpost)
                 if (offer is not None and offer.deadline > now and not offer.is_taken_by_others(now)
                         and offer.seed not in known):
@@ -86,13 +114,13 @@ class MissionBoard:
     def accept(self, offer: Mission) -> None:
         """The player takes an offer: it leaves the board for the player's missions. Too late if its deadline has
         passed (it is removed from the board at the next update)."""
-        if offer not in self.offers:
+        if offer not in self.shown_offers():
             return
         now = gem.current_environment.date_time
         if offer.deadline <= now:
             self.player.ship.notification.set(f"Too late: {offer.title()}.")
             return
-        self.offers.remove(offer)
+        self._holder(offer).offers.remove(offer)
         offer.accept(now)
         self.player.missions.append(offer)
         self.player.ship.notification.set(f"Mission taken: {offer.title()}.")

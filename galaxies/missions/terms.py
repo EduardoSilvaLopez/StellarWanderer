@@ -2,7 +2,8 @@
 
 Each kind of mission keeps a map, `TERMS`, from each `SettlementKind` to its `Terms`, next to its other constants.
 A kind
-with a frequency of 0 at a kind of settlement is not offered there. A settlement kind with no entry is a bug, and
+with a frequency of 0 at a kind of settlement is not offered there, and an entry of None means it is never offered there
+(its missions are issued elsewhere). A settlement kind with no entry is a bug, and
 `check_terms` stops the game at start-up when one is missing.
 
 The meaning of `reward` depends on the kind of mission (see its class); `failure_penalty` is what the mission
@@ -27,7 +28,8 @@ class Terms:
 
 
 def check_terms(kinds: Iterable[Type]) -> None:
-    """Stops with an error if a mission kind has no terms for a kind of settlement: that is a bug, not an absence."""
+    """Stops with an error if a mission kind has no entry for a kind of settlement: that is a bug, not an absence. An
+    entry of None is a deliberate one (see the module docstring)."""
     for kind in kinds:
         for settlement_kind in SettlementKind:
             if settlement_kind not in kind.TERMS:

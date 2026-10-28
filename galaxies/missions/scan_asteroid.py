@@ -7,7 +7,8 @@ FREE_LIVING_CHANCE of the offers, and always in a system without a belt, it is a
 (`Asteroid.free_living`), rebuilt from the system and the mission's seed; taking the mission keeps it in the system
 (`StellarSystem.promote_free_asteroid`), which saves its seed. The texts name only the asteroid. The pilot scans it
 with the scanner beam (see `Scanner`): the scan is kept by the asteroid (`Asteroid.scan_progress`), and the mission can
-be completed, back at the outpost, when it is done.
+be completed, at any settlement of the system, when it is done. The offers are made at the portal base only, and live
+on its board (see mission_board.py).
 """
 
 from __future__ import annotations
@@ -25,7 +26,9 @@ from galaxies.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
+    from galaxies.asteroid_belt import AsteroidBelt
     from galaxies.settlement import Settlement
+    from galaxies.stellar_system import StellarSystem
     from galaxies.people.player import Player
 
 logger = logging.getLogger(__name__)
@@ -34,19 +37,12 @@ logger = logging.getLogger(__name__)
 class ScanAsteroid(Mission):
     """Scan an asteroid, then come back."""
     KIND = 'scan_asteroid'
-    # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
-    # start at a frequency of 0 (no offers yet).
+    # The numbers that depend on the kind of settlement that asks. The offers are made at the portal base only, and
+    # live on its board (see MissionBoard.OFFERED_AT_BASE): an outpost never offers them, so it has no terms (None).
     TERMS = {
-        SettlementKind.OUTPOST: Terms(
-            frequency=0.03,
-            taken_by_others=0.01,
-            deadline_days_min=45,
-            deadline_days_max=90,
-            reward=50.0,
-            failure_penalty=-2.0
-            ),
+        SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.06,
+            frequency=0.6,
             taken_by_others=0.01,
             deadline_days_min=45,
             deadline_days_max=90,
@@ -103,19 +99,37 @@ class ScanAsteroid(Mission):
         site['key'] = str(key)
         return site
 
+    def _place(self, site: dict) -> tuple[StellarSystem, AsteroidBelt | None] | None:
+        """The system of the target and its belt (None for a free-living one). None if the galaxy has no such system, or
+        the system has no belt of that number."""
+        import game_environment as gem
+        from galaxies.asteroid_belt import AsteroidBelt
+        system = gem.current_environment.galaxy.system_of_key(site['system'])
+        if system is None:
+            return None
+        if site['belt'] is None:
+            return system, None
+        belt = system.get_orbit(float(site['belt']))
+        if not isinstance(belt, AsteroidBelt):
+            return None
+        return system, belt
+
     def asteroid(self) -> Asteroid:
         """The target. For an asteroid of a belt, the promoted one if it is, else one made for the moment
         (the belt is not changed)."""
         if self._asteroid is None:
-            import game_environment as gem
             from galaxies.asteroid import Asteroid, AsteroidKey
-            system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-            if self.asteroid_site['belt'] is None:
-                self._asteroid = system.free_asteroids.get(self.asteroid_site['seed']) \
-                    or Asteroid.free_living(system, self.asteroid_site['seed'])
+            site = self.asteroid_site
+            if site is None:
+                raise ValueError(f"{self.KIND} has no asteroid site")
+            place = self._place(site)
+            if place is None:
+                raise ValueError(f"{self.KIND}: the asteroid's system or belt is not there")
+            system, belt = place
+            if belt is None:
+                self._asteroid = system.free_asteroids.get(site['seed']) or Asteroid.free_living(system, site['seed'])
             else:
-                belt = system.get_orbit(float(self.asteroid_site['belt']))
-                key = AsteroidKey.from_ints(self.asteroid_site['key'].split())
+                key = AsteroidKey.from_ints(site['key'].split())
                 self._asteroid = belt.relevant.get(key) or belt.build(key)
         return self._asteroid
     # endregion
@@ -151,14 +165,18 @@ class ScanAsteroid(Mission):
         """The pilot takes the offer: the asteroid is promoted (kept and saved: by its belt, or by its system if it
         is free-living), so it is the one the mission asks for."""
         super().accept(now)
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            self._asteroid = system.promote_free_asteroid(self.asteroid_site['seed'])
+        site = self.asteroid_site
+        if site is None:
             return
-        belt = system.get_orbit(float(self.asteroid_site['belt']))
-        self._asteroid = belt.promote(AsteroidKey.from_ints(self.asteroid_site['key'].split()))
+        place = self._place(site)
+        if place is None:
+            return
+        system, belt = place
+        if belt is None:
+            self._asteroid = system.promote_free_asteroid(site['seed'])
+            return
+        self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()))
 
     def progress(self) -> str:
         if self.accepted_at is None:
@@ -168,8 +186,7 @@ class ScanAsteroid(Mission):
         if self.status == FAILED:
             return f"The asteroid {self.asteroid().name} was not scanned in time."
         if self.asteroid().scan_progress >= 1.0:
-            return (f"The asteroid {self.asteroid().name} is scanned: bring the results to "
-                    f"{self.issuer_settlement.name}.")
+            return (f"The asteroid {self.asteroid().name} is scanned: bring the results to a settlement.")
         return f"The asteroid {self.asteroid().name} is scanned {self.asteroid().scan_progress:.0%}."
 
     def target_body(self) -> Asteroid:
@@ -183,7 +200,7 @@ class ScanAsteroid(Mission):
             f"We have found an interesting asteroid, {self.asteroid().name}."
             f"\n\nWe need somebody to take the risk and go to scan it."
             f"\n\nMake sure you have the experience and autonomy for this mission."
-            f"\n\nBring the results to here, at {self.issuer_settlement.address()}."
+            f"\n\nBring the results to any settlement in the system."
             )
 
     def can_forget(self, player: Player) -> bool:
@@ -196,24 +213,32 @@ class ScanAsteroid(Mission):
         return self._kept()
 
     def forget(self) -> None:
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            system.forget_free_asteroid(self.asteroid_site['seed'])
+        site = self.asteroid_site
+        if site is None:
+            return
+        place = self._place(site)
+        if place is None:
+            return
+        system, belt = place
+        if belt is None:
+            system.forget_free_asteroid(site['seed'])
         else:
-            belt = system.get_orbit(float(self.asteroid_site['belt']))
-            belt.forget(AsteroidKey.from_ints(self.asteroid_site['key'].split()))
+            belt.forget(AsteroidKey.from_ints(site['key'].split()))
 
     def _kept(self) -> bool:
         """Whether the asteroid is still kept: by its system (free-living) or its belt."""
-        import game_environment as gem
         from galaxies.asteroid import AsteroidKey
-        system = gem.current_environment.galaxy.system_of_key(self.asteroid_site['system'])
-        if self.asteroid_site['belt'] is None:
-            return self.asteroid_site['seed'] in system.free_asteroids
-        belt = system.get_orbit(float(self.asteroid_site['belt']))
-        return AsteroidKey.from_ints(self.asteroid_site['key'].split()) in belt.relevant
+        site = self.asteroid_site
+        if site is None:
+            return False
+        place = self._place(site)
+        if place is None:
+            return False
+        system, belt = place
+        if belt is None:
+            return site['seed'] in system.free_asteroids
+        return AsteroidKey.from_ints(site['key'].split()) in belt.relevant
 
     def can_complete(self, player: Player) -> bool:
         return self.asteroid().scan_progress >= 1.0
