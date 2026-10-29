@@ -44,7 +44,8 @@ def _pick_name(my_random: random.Random, file_name: str) -> str:
 
 def _nudged(value: float, change: float) -> float:
     """
-    A 'personality' trait (0 to 100) after `change`: it moves slower the nearer it is to the extremes.
+    A 'personality' trait (0 to 100) after `change`: if it moves to the extremes, it moves slower the nearer
+    it is to them.
 
     Why a ruler: the rate is dv/dc = 2**(-|v - 50| / 10), so a trait halves its speed for every
     10 points away from 50. A change must not be applied at the rate of the starting value, or a
@@ -65,11 +66,18 @@ def _nudged(value: float, change: float) -> float:
         _nudged(50, -50) -> 28.4  (0)
         _nudged(90, 10)  -> 90.6  (90.6): near an extreme, both formulas agree
     """
+
+    # First take away the "towards the middle" part:
+    apply_directly = 0
+    if (value <= 50 and change > 0) or (value > 50 and change <= 0):
+        max_apply_now = abs(value - 50)
+        apply_directly = min(max_apply_now, change) if change >= 0 else -min(max_apply_now, -change)
+        change += -apply_directly if change >= 0 else +apply_directly
     offset: float = value - 50
     ruler: float = math.copysign((10 / math.log(2)) * (2 ** (abs(offset) / 10) - 1), offset)
     ruler += change
     offset = math.copysign(10 * math.log2(1 + abs(ruler) * math.log(2) / 10), ruler)
-    return max(0, min(100, 50 + offset))
+    return apply_directly + max(0, min(100, 50 + offset))
 
 class Ethnicity(Enum):
     ASIAN = 1
@@ -419,7 +427,8 @@ class Person:
             int_lines in self.interactions.items()
         }
 
-        result: dict = {'seed': self.seed, 'first_met_at': self.first_met_at}
+        # The name is written for whoever reads the savefile: loading generates it again from the seed and ignores it.
+        result: dict = {'seed': self.seed, 'name': self.get_full_name(), 'first_met_at': self.first_met_at}
         if self.comment:
             result['comment'] = self.comment
         if self.last_communication_at:

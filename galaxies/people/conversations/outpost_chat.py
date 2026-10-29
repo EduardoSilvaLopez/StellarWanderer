@@ -23,6 +23,7 @@ from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
+from galaxies.settlement import Settlement
 
 # A political text: its three tones, in the order -1, 0, 1.
 PoliticalTexts = tuple[str, str, str]
@@ -488,7 +489,11 @@ class OutpostChat(Conversation):
             text = "A job's a job."
 
         flags: set[str] = self.player.political_status[political_entity.THOSE_WHO_SHARE].flags
-        already_sold: bool = "sold mine codes" in flags
+        already_sold: bool = True
+        res = self.interlocutor.residency
+        if isinstance(res, Settlement):
+            seed = res.stellar_system.seed
+            already_sold = f"sold mine codes {seed}" in flags
         already_talked_openly: bool = any(
             "Dared talk openly." in lines for lines in self.interlocutor.interactions.values()
             )
@@ -1101,7 +1106,11 @@ class OutpostChat(Conversation):
     def traitor_ready(self, answer: int) -> None:
         self.interlocutor.adjust_sympathy(50)
         self.flags.append("Dared talk openly.")
-        self.player.political_status[political_entity.THOSE_WHO_SHARE].flags.add("sold mine codes")
+        res = self.interlocutor.residency
+        if isinstance(res, Settlement):
+            seed = res.stellar_system.seed
+            self.player.political_status[political_entity.THOSE_WHO_SHARE].flags\
+                .add(f"sold mine codes {seed}")
     # endregion
 
     # region Auxiliar methods

@@ -96,20 +96,22 @@ DEVELOPER'S DIARY
 
 ### 2026-10-29 (5/11)
 
+  * Offer of treason. Effects in the mines. 
+
 STARTED:
 
 GRAVITY OF TREASON (Rep 50-100)
   * Gravity.
-  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
 
-Extra time: 155h00' + 4:30-
-
+Extra time: 155h00' + 4:30-6:15 + 8:15-8:45 + 21:45-
 
 
 > BACKLOG
 
 GRAVITY OF TREASON (Rep 50-100)
-  * Visitors in the settlements? Some of them shady?
+  * Rat
+  * Selling ore
+  * Extra: A career as law enforcement, if "rat".
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
   * Extra: Binding slowly.
   * Extra: Portraits without uniform: Black, Latino, White

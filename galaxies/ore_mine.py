@@ -25,6 +25,10 @@ class OreMine(Updatable):
     MINE_RADIUS: float = 4.0  # metres
     MINE_HEIGHT: float = 8.0  # metres
     MINE_MIN_DISTANCE = 10 * MINE_RADIUS  # between mines.
+    # Once the mine codes of the system are sold (see _sells_for_credits), this share of each extraction becomes
+    # credits instead of ore, at CREDITS_PER_ORE per kg. Tunable.
+    CREDITS_SHARE: float = 0.75
+    CREDITS_PER_ORE: int = 100
 
     def __init__(
             self,
@@ -40,6 +44,7 @@ class OreMine(Updatable):
             self.latitude: float = latitude
             self.orientation: float = orientation
             self.content: int = 0
+            self.credits: int = 0
             self.last_updated_at: Optional[datetime] = None
             self.next_update_at: Optional[datetime] = None
         else:
@@ -47,6 +52,7 @@ class OreMine(Updatable):
             self.latitude: float = saved_attributes['latitude']
             self.orientation: float = saved_attributes['orientation']
             self.content: int = saved_attributes['content']
+            self.credits: int = saved_attributes.get('credits', 0)  # saved only when not 0
             self.last_updated_at: Optional[datetime] = \
                 datetime.strptime(saved_attributes['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f') \
                 if 'last_updated_at' in saved_attributes else None
@@ -72,6 +78,8 @@ class OreMine(Updatable):
             'orientation': self.orientation,
             'content': self.content
             }
+        if self.credits:
+            result['credits'] = self.credits
         if self.last_updated_at:
             result['last_updated_at'] = self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
         if self.next_update_at:
@@ -113,15 +121,30 @@ class OreMine(Updatable):
 
     def _extract_completed_periods(self, game_date_time: datetime) -> float:
         """Extracts the whole extraction periods since last_updated_at, and returns how many there were (0 if under
-        one). The part of a period still running is left for later."""
+        one). The part of a period still running is left for later. What is extracted is ore, except that with the
+        mine codes sold (see _sells_for_credits) CREDITS_SHARE of it becomes credits: the field loses the same, and no
+        credits come when nothing is extracted."""
         periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
         if periods_passed < 1.0:
             return 0
         self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
-        self.content += self.parent_field.extract(
+        extracted = self.parent_field.extract(
             self.EXTRACTION_POWER * periods_passed, OreMine.MAX_CAPACITY - self.content
             )
+        if self._sells_for_credits():
+            self.credits += int(extracted * self.CREDITS_SHARE * self.CREDITS_PER_ORE)
+            extracted *= 1 - self.CREDITS_SHARE
+        self.content += extracted
         return periods_passed
+
+    def _sells_for_credits(self) -> bool:
+        """Whether this mine sells its extraction for credits: the pilot has sold the mine codes of this mine's system
+        (the flag `sold mine codes <system seed>` of the Those-Who-Share standing, see outpost_chat.traitor_ready)."""
+        import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
+        from galaxies.politics import political_entity
+        system = self.parent_field.parent_km2.parent_world.stellar_system
+        flags = gpp.current_player.political_status[political_entity.THOSE_WHO_SHARE].flags
+        return f"sold mine codes {system.seed}" in flags
 
     def stop_updating(self) -> None:
         import game_environment as gem
@@ -153,6 +176,7 @@ class ExternalMine(OreMine):
         self.latitude: float = parent_field.latitude
         self.orientation: float = parent_field.orientation
         self.content: int = 0
+        self.credits: int = 0
         self.converted_at: datetime = converted_at
 
     @staticmethod

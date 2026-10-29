@@ -39,7 +39,8 @@ class Scanner:
     Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned and
     within scan range: it is `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it
     can): too fast or not in the crosshair (the limits are Asteroid's SCAN_*). While SPACE is held and there is no
-    problem, the scan advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays off until SPACE
+    problem, the scan advances in game time (`Asteroid.advance_scan`), with the 'scan' buzz and no laser, which stays
+    off until SPACE
     is released. The time scale is capped at its minimum then, and stays there: the progress of the first frame at the
     old scale does not count. When it reaches 1, the ship says so.
     """
@@ -212,19 +213,21 @@ class Scanner:
 
     # region Actions
     def activate(self, time_passed: int) -> Scanner:
-        """SPACE held. On a targeted ore mine, transfer its ore to the ship (the beam stays off). On a targeted outpost,
+        """SPACE held. On a targeted ore mine, transfer its ore to the ship and its credits to the pilot (the beam
+        stays off). On a targeted outpost,
         holding the key does nothing here: main.py enters it, once per press.
         On a rock with an adjective,
         the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch
         the beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so
-        it does not search again. Inside the fixed zone of a portal base the beam never switches on (the base is ours)."""
+        it does not search again. Inside the fixed zone of a portal base the beam never switches on (the base is
+        ours)."""
         if self.in_base_zone():
             self.ship.laser.cease_fire()
             return self
 
         if self.targeted_mine is not None:
             mine: OreMine = self.targeted_mine
-            if mine.content > 0:
+            if mine.content > 0 or mine.credits > 0:
                 self.ship.laser.cease_fire()
                 ore_transfer = int(min(self.ship.cargo_hold.free_capacity(), mine.content))
                 logger.debug(
@@ -236,6 +239,8 @@ class Scanner:
                     )
                 self.ship.cargo_hold.ore += ore_transfer
                 mine.content -= ore_transfer
+                self.ship.owner.credits += mine.credits
+                mine.credits = 0
                 if ore_transfer > 0:
                     audio.play('ore_collected')
             return self

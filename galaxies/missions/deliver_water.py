@@ -30,7 +30,7 @@ class DeliverWater(Mission):
     # start at a frequency of 0 (no offers yet).
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.2,
+            frequency=0.15,
             taken_by_others=0.2,
             deadline_days_min=5,
             deadline_days_max=10,

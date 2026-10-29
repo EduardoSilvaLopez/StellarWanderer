@@ -328,11 +328,10 @@ class Navigation:
         if pulling is self.compensating:
             return
         if self.compensating is not None and not ship.is_bound:
-            ship.notification.set(f"Out of the fixed zone of {self.compensating.name}: no gravity to compensate.")
+            ship.notification.set(f"{self.compensating.name}'s gravity neglegible. Stopped compensating.")
         if pulling is not None:
-            gravity = pulling.gravitational_parameter / pulling.radius ** 2
             ship.notification.set(
-                f"Fixed to {pulling.name}: compensate its gravity, {gravity:.2f} m/s² at the surface.")
+                f"Compensating {pulling.name}'s gravity.")
             self._warn_if_inescapable(pulling)
         self.compensating = pulling
 
