@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import random
 
 import logging
+from galaxies.politics import political_entity
 from galaxies.seeds import of_text
 from .mission import Mission, register
 from galaxies.missions.terms import Terms
@@ -147,9 +148,9 @@ class DeliverPackage(Mission):
             / (self.deadline - self.created_at).total_seconds()
 
         reputation_change: float = self.terms.reward * speed_factor
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: Package delivered at %{100*speed_factor:.0f} of time ahead of deadline. "
-        f"Reputation +{reputation_change} = {player.those_who_share.reputation}")
+        f"Reputation +{reputation_change} = {player.reputation}")
         # Unfair but realistic, if the offer was old, you cannot bring it *so* fast.
 
         # The main people involved are very happy.
@@ -171,7 +172,7 @@ class DeliverPackage(Mission):
         return f"Thank you {self.recipient.get_player_title()}, this {package} was really expected."
 
     def fail(self, player: Player) -> None:
-        player.those_who_share.adjust_reputation(-self.terms.failure_penalty)
+        player.adjust_reputation(-self.terms.failure_penalty)
 
         # The main people involved are disappointed. But you tried.
         self.sender.adjust_sympathy(-5)

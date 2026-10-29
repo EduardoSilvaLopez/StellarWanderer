@@ -5,7 +5,7 @@ from typing import Optional
 import logging
 
 from common.dialogs.messages import Message, ShowMessage, show_message
-from galaxies.outpost import Outpost
+from galaxies.settlement import Settlement
 from galaxies.people.player import Player
 from ..person import Person
 from ..conversation import Conversation
@@ -13,10 +13,10 @@ from ..conversation import Conversation
 logger = logging.getLogger(__name__)
 
 class OutpostReportFurther(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, outpost: Outpost, show: ShowMessage = show_message
+    def __init__(self, player: Player, interlocutor: Person, outpost: Settlement, show: ShowMessage = show_message
                  ) -> None:
         super().__init__(player, interlocutor, show)
-        self.outpost: Outpost = outpost
+        self.outpost: Settlement = outpost
         self.title: str = "Reporting Back"
 
     def start(self) -> None:

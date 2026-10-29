@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from galaxies.politics import political_entity
 from common.dialogs.messages import Message, show_message
 
 if TYPE_CHECKING:
@@ -107,8 +108,8 @@ class PortalDefence:
         """The base stops the ship. The pilot is brought back to the base (the seconds that takes are returned), or it
         is game over."""
         player.ship.velocity.set_vector((0.0, 0.0, 0.0))
-        player.those_who_share.adjust_reputation(-PortalDefence.REPUTATION_PENALTY)
-        if player.those_who_share.reputation < 0.0:
+        player.adjust_reputation(-PortalDefence.REPUTATION_PENALTY)
+        if player.reputation < 0.0:
             final_status: str = ''
             if player.get_title() == "Prisoner":
                 final_status = "you will spend long years of forced labour in the prisons of the capital"

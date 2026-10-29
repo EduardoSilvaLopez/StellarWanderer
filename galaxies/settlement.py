@@ -360,7 +360,7 @@ class Settlement(Updatable):
         if seconds > 0:
             energy_change = min(ship.energy_max - ship.energy, self.CHARGE_PER_SECOND * seconds)
             ship.energy += energy_change
-            gpp.current_player.those_who_share.adjust_reputation_by_supply("energy", -energy_change)
+            gpp.current_player.adjust_reputation_by_supply("energy", -energy_change)
 
             if ship.maintenance < self.get_max_maintenance():
                 if self.get_max_maintenance() - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
@@ -370,7 +370,7 @@ class Settlement(Updatable):
                 else:
                     maintenance_change = self.MAINTENANCE_PER_SECOND * seconds
                     ship.maintenance += maintenance_change
-                gpp.current_player.those_who_share.adjust_reputation_by_supply("maintenance", -maintenance_change)
+                gpp.current_player.adjust_reputation_by_supply("maintenance", -maintenance_change)
 
             if self.handling_unloads:
                 # The dockmaster unloads the ore first, then the raw water, with the time the ore did not take.
@@ -380,8 +380,8 @@ class Settlement(Updatable):
                 water_time = seconds - ore_change / self.UNLOAD_ORE_PER_SECOND
                 water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * water_time)
                 hold.raw_water -= water_change
-                gpp.current_player.those_who_share.adjust_reputation_by_supply("ore", ore_change)
-                gpp.current_player.those_who_share.adjust_reputation_by_supply("raw_water", water_change)
+                gpp.current_player.adjust_reputation_by_supply("ore", ore_change)
+                gpp.current_player.adjust_reputation_by_supply("raw_water", water_change)
 
             self.handling_checked_at = until
         return self

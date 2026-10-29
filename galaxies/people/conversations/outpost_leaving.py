@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Callable, List, Optional
 
 from common.dialogs.messages import Message, ShowMessage, show_message
-from galaxies.outpost import Outpost
+from galaxies.settlement import Settlement
 from galaxies.people.player import Player
 from galaxies.politics.political_entity import PoliticalEntity
 from spaceships.ship_configurations.ths_miner import ThsMiner
@@ -15,17 +15,20 @@ from ..conversation import Conversation
 
 
 class OutpostLeaving(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, outpost: Outpost, on_decided: Callable[[bool], object],
+    def __init__(self, player: Player, interlocutor: Person, outpost: Settlement, on_decided: Callable[[bool], object],
                  show: ShowMessage = show_message) -> None:
         super().__init__(player, interlocutor, show)
-        self.outpost: Outpost = outpost
+        self.outpost: Settlement = outpost
         self.on_decided: Callable[[bool], object] = on_decided
 
-        entity: PoliticalEntity = self.player.those_who_share.entity
+        standing = self.player._standing()
+        if standing is None:
+            raise Exception("No standing available.")
         if self.outpost.player_reputation_on_entering is None:
             raise Exception("No reputation recorded on entering.")
+        entity: PoliticalEntity = standing.entity
         self.old_rep: float = self.outpost.player_reputation_on_entering
-        self.new_rep: float = self.player.those_who_share.reputation
+        self.new_rep: float = self.player.reputation
         old_title: str = entity.title_for(self.old_rep)
         new_title: str = entity.title_for(self.new_rep)
         self.title_has_improved: bool = self.old_rep < self.new_rep and old_title != new_title

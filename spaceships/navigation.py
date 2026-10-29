@@ -2,13 +2,15 @@
 braking, directions."""
 
 from __future__ import annotations
-from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Tuple
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple
 import logging
 import math
 
+from common.dialogs.messages import Message, show_message
 from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
+from galaxies import kepler
 from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 import game_environment as gem
@@ -18,6 +20,17 @@ if TYPE_CHECKING:
     from .ship import Ship
 
 logger = logging.getLogger(__name__)
+
+
+class CoastState(NamedTuple):
+    """Where an unbound ship in a body's fixed zone was at the end of its last frame, relative to that body, with the
+    ship's stellar position and velocity then: what the next frame propagates from (see Navigation._move_unbound)."""
+    body: Body
+    date_time: datetime
+    relative_position: Vector3
+    relative_velocity: Vector3
+    position: Vector3
+    velocity: Vector3
 
 
 class Navigation:
@@ -32,6 +45,9 @@ class Navigation:
     `velocity_reference_frame`).
     Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
     Bound, the world's surface gravity pulls the ship down and the flight assist holds it up (see `_apply_gravity`).
+    Unbound inside the fixed zone of a body that pulls, the ship falls along the body's Kepler orbit (see
+    `_move_unbound`), the pilot is told to compensate its gravity on entering the zone and that it is over on leaving
+    (`_announce_compensation`), and the time scale is limited there (`coasting_time_limit`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -53,6 +69,8 @@ class Navigation:
     ENERGY_PER_SPEED = 5e4
     # m: a ship that moves farther than this in a frame outruns the rocks
     ROCKS_TRAVEL_LIMIT = RockyWorld.SURROUNDINGS_RADIUS
+    # share of the orbital period, at the ship's distance, that one frame may cover while falling in a fixed zone
+    COASTING_STEP_SHARE = 0.01
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -60,6 +78,10 @@ class Navigation:
         # seen in the next, so the rocks are neither generated (the Km2s around the ship are left as they are, and the
         # ship's own may be missing) nor drawn (see OpenGLGui.draw) until the ship slows down.
         self.outruns_rocks: bool = False
+        # Unbound in a pulling fixed zone: the state at the end of the last frame (None elsewhere).
+        self.coasting: Optional[CoastState] = None
+        # The body whose gravity the pilot was told to compensate, to stay fixed to it (None when none).
+        self.compensating: Optional[Body] = None
 
     # region Angles and directions
     def pitch_angle(self, body: Body, current_datetime: datetime) -> float:
@@ -161,6 +183,7 @@ class Navigation:
         elif (isinstance(body, World)  # the star is never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
+        self._announce_compensation()
 
         if ship.is_bound:
             world = environment.fixed_world
@@ -209,11 +232,11 @@ class Navigation:
 
     def gravity(self) -> float:
         """m/s^2 that pulls the ship down: the surface gravity of the world it is bound to, the same at any altitude
-        (the bound geometry is flat). Zero unbound: there is no gravity out there yet."""
+        (the bound geometry is flat). Zero unbound: out there the pull acts on the orbit (see `_move_unbound`)."""
         world = gem.current_environment.fixed_world
-        if not self.ship.is_bound or not isinstance(world, RockyWorld):
+        if not self.ship.is_bound or world is None:
             return 0.0
-        return world.surface_gravity
+        return world.gravitational_parameter / world.radius ** 2
 
     def is_hovering(self) -> bool:
         """True while bound above the ground in a gravity: the flight assist is holding the ship up, which costs energy
@@ -277,10 +300,11 @@ class Navigation:
 
     def _update_position(self, delta_time: float) -> None:
         ship = self.ship
-        ship.position.add_vector(ship.velocity.as_vector() * delta_time)
         if not ship.is_bound:
+            self._move_unbound(delta_time)
             self._collide_with_portal_base()
             return
+        ship.position.add_vector(ship.velocity.as_vector() * delta_time)
 
         world = gem.current_environment.fixed_world
         if world is None:
@@ -294,6 +318,83 @@ class Navigation:
         ship.position.z = max(-half_turn / 2, min(half_turn / 2, ship.position.z))  # between the poles
         # no descent faster than the altitude left
         ship.velocity.y = max(-(ship.position.y - ship.HEIGHT), ship.velocity.y)
+
+    def _announce_compensation(self) -> None:
+        """Tells the pilot when staying fixed to a body that pulls means compensating its gravity: on entering its fixed
+        zone, and on leaving it. Bound, the flight assist does it and nothing is said."""
+        ship = self.ship
+        body = gem.current_environment.fixed_body
+        pulling = body if not ship.is_bound and body is not None and body.gravitational_parameter > 0.0 else None
+        if pulling is self.compensating:
+            return
+        if self.compensating is not None and not ship.is_bound:
+            ship.notification.set(f"Out of the fixed zone of {self.compensating.name}: no gravity to compensate.")
+        if pulling is not None:
+            gravity = pulling.gravitational_parameter / pulling.radius ** 2
+            ship.notification.set(
+                f"Fixed to {pulling.name}: compensate its gravity, {gravity:.2f} m/s² at the surface.")
+            self._warn_if_inescapable(pulling)
+        self.compensating = pulling
+
+    def combined_thrust(self) -> float:
+        """m/s^2, the most the engines give at once: the three axes together, the way the thrust keys combine."""
+        ship = self.ship
+        return math.sqrt(ship.FORWARD_BACKWARD_ACC ** 2 + ship.UP_DOWN_ACC ** 2 + ship.RIGHT_LEFT_ACC ** 2)
+
+    def _warn_if_inescapable(self, body: Body) -> None:
+        """On fixing to a body whose surface pull is more than the engines give at once: a dialog that must be OK-ed
+        says the ship cannot climb away from it, given while it can still turn back. The pull at the surface is the
+        strongest the ship will meet there, so no climb from it can succeed."""
+        ship = self.ship
+        surface_pull = body.gravitational_parameter / body.radius ** 2
+        thrust = self.combined_thrust()
+        if surface_pull <= thrust:
+            return
+        player = ship.owner
+        player.time_scale = player.TIME_SCALE_MIN
+        show_message(Message(
+            title=f"DANGER: NO ESCAPE FROM {body.name.upper()}",
+            text=f"The surface pull of {body.name} is {surface_pull:.2f} m/s², more than the engines can overcome: at "
+                 f"most {thrust:.2f} m/s², with all axes at once. The ship cannot climb away from it.\n\n"
+                 f"Turn back now, {player.get_title()}.",
+            open_sound='alert',
+        ))
+
+    def _move_unbound(self, delta_time: float) -> None:
+        """Moves the unbound ship over the frame. Inside the fixed zone of a body that pulls, the path is the body's
+        Kepler orbit, exact for any step (`kepler.propagate`), and the frame's thrust is a kick at its start: the change
+        of velocity that `_update_velocity` made since the last frame. The state is kept relative to the body, as it
+        was at the end of the last frame, so that a frame does not ask for the body's position at an earlier date. The
+        first frame in such a zone, or one where something else moved the ship (binding, the portal base), starts from
+        where the ship was at the start of the frame, the body's place at that date. Elsewhere the ship moves in a
+        straight line, as there is no pull."""
+        ship = self.ship
+        environment = gem.current_environment
+        body = environment.fixed_body
+        if body is None or body.gravitational_parameter == 0.0:
+            self.coasting = None
+            ship.position.add_vector(ship.velocity.as_vector() * delta_time)
+            return
+
+        now = environment.date_time
+        mu = body.gravitational_parameter
+        previous = self.coasting
+        if previous is not None and previous.body is body and previous.position == ship.position.as_vector():
+            kick = ship.velocity.as_vector() - previous.velocity
+            seconds = (now - previous.date_time).total_seconds()
+            relative_position, relative_velocity = kepler.propagate(
+                mu, previous.relative_position, previous.relative_velocity + kick, seconds)
+        else:
+            start = now - timedelta(seconds=delta_time)
+            relative_position, relative_velocity = kepler.propagate(
+                mu, ship.position.as_vector() - body.calculate_stellar_position(start),
+                ship.velocity.as_vector() - body.calculate_stellar_velocity(start), delta_time)
+        centre = body.calculate_stellar_position(now)
+        centre_velocity = body.calculate_stellar_velocity(now)
+        ship.position.set_vector(centre + relative_position)
+        ship.velocity.set_vector(centre_velocity + relative_velocity)
+        self.coasting = CoastState(body, now, relative_position, relative_velocity,
+                                   ship.position.as_vector(), ship.velocity.as_vector())
 
     def _collide_with_portal_base(self) -> None:
         """Unbound, near the portal base: the ship's hull comes to rest against what is solid in it (see
@@ -461,9 +562,20 @@ class Navigation:
         approach = self.approach_speed(body)
         return math.sqrt(max(0.0, relative_velocity.dot(relative_velocity) - approach * approach))
 
+    def coasting_time_limit(self) -> float:
+        """Game seconds one frame may cover while the unbound ship is in the fixed zone of a body that pulls: a share of
+        the period of a circular orbit at its distance, so that a fall does not skip over the bind shell. Infinite
+        otherwise."""
+        body = gem.current_environment.fixed_body
+        if self.ship.is_bound or body is None or body.gravitational_parameter == 0.0:
+            return math.inf
+        distance = self.distance_to_body_centre(body)
+        return Navigation.COASTING_STEP_SHARE * math.tau * math.sqrt(distance ** 3 / body.gravitational_parameter)
+
     def collision_warning(self, body: Body) -> bool:
         """True if the ship, on its straight line relative to the body, would reach the surface even braking
-        with only COLLISION_BRAKE_FRACTION of BRAKE_ACC. Sideways dodging is not considered."""
+        with only COLLISION_BRAKE_FRACTION of BRAKE_ACC. Sideways dodging is not considered. Inside a fixed zone that
+        pulls the path curves, so this is then only a guide."""
         if self.ship.is_bound:
             return False
         relative_position, relative_velocity = self._relative_to_body(body)

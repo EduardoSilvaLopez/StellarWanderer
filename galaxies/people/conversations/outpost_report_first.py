@@ -6,7 +6,7 @@ from typing import Optional
 import logging
 
 from common.dialogs.messages import Message, ShowMessage, show_message
-from galaxies.outpost import Outpost
+from galaxies.settlement import Settlement
 from galaxies.people.player import Player
 from ..person import Person
 from ..conversation import Conversation
@@ -14,10 +14,10 @@ from ..conversation import Conversation
 logger = logging.getLogger(__name__)
 
 class OutpostReportFirst(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, outpost: Outpost, show: ShowMessage = show_message
+    def __init__(self, player: Player, interlocutor: Person, outpost: Settlement, show: ShowMessage = show_message
                  ) -> None:
         super().__init__(player, interlocutor, show)
-        self.outpost: Outpost = outpost
+        self.outpost: Settlement = outpost
         self.title: str = "Reporting"
         self.time_since_last_visit: Optional[float] = None if not self.outpost.last_visited\
             else (self.date_time - self.outpost.last_visited).total_seconds()

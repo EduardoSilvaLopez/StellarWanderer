@@ -43,8 +43,33 @@ def _pick_name(my_random: random.Random, file_name: str) -> str:
 
 
 def _nudged(value: float, change: float) -> float:
-    """A 'personality' trait (0 to 100) after `change`: it moves slower the nearer it is to the extremes."""
-    return max(0, min(100, value + change / (1 + abs(value - 50))))
+    """
+    A 'personality' trait (0 to 100) after `change`: it moves slower the nearer it is to the extremes.
+
+    Why a ruler: the rate is dv/dc = 2**(-|v - 50| / 10), so a trait halves its speed for every
+    10 points away from 50. A change must not be applied at the rate of the starting value, or a
+    big change jumps past the curve (50 + 50 would give 100 at once, and two changes of 25 would
+    not give the same as one of 50). Instead the change is walked along the curve: each point v
+    has a position c(v) = integral from 50 to v of 2**(|x - 50| / 10) dx, the change is added to
+    that position, and the result is the point that has that position. Splitting a change then
+    gives the same result as applying it at once, and the rate is exact for any size of change.
+
+    With c(v) = sign(v - 50) * (10 / ln 2) * (2**(|v - 50| / 10) - 1), the inverse is
+    v = 50 + sign(c) * 10 * log2(1 + |c| * ln 2 / 10). Near 50 the ruler is almost a straight
+    line, so small changes move as before. The ends 0 and 100 lie 447 units away, so the clamp
+    to 0..100 only acts for changes beyond that.
+
+    Examples (from 50, the old formula in brackets):
+        _nudged(50, 50)  -> 71.6  (100): one big change no longer jumps to the end
+        _nudged(50, 25)  -> 64.5, then _nudged(64.5, 25) -> 71.6: same as one change of 50
+        _nudged(50, -50) -> 28.4  (0)
+        _nudged(90, 10)  -> 90.6  (90.6): near an extreme, both formulas agree
+    """
+    offset: float = value - 50
+    ruler: float = math.copysign((10 / math.log(2)) * (2 ** (abs(offset) / 10) - 1), offset)
+    ruler += change
+    offset = math.copysign(10 * math.log2(1 + abs(ruler) * math.log(2) / 10), ruler)
+    return max(0, min(100, 50 + offset))
 
 class Ethnicity(Enum):
     ASIAN = 1
@@ -357,7 +382,7 @@ class Person:
     def get_player_title(self) -> Optional[str]:
         # Subjective.
         import galaxies.people.player as gpp
-        player_rep = gpp.current_player.those_who_share.reputation
+        player_rep = gpp.current_player.reputation
         mood_mod = random.gauss(0.5, 0.01)
         final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
         return political_entity.THOSE_WHO_SHARE.title_for(final_rep)
@@ -369,10 +394,10 @@ class Person:
         the person's sympathy decides: a low one only gets the title, a middle one the title and the name unless the
         addressee is far below the speaker, a high one the name alone."""
         if to_player:
-            addressee_reputation, speaker_reputation = player.those_who_share.reputation, self.reputation
+            addressee_reputation, speaker_reputation = player.reputation, self.reputation
             respectful, title, name = f"Pilot {player.surname}", player.get_title(), player.first_name
         else:
-            addressee_reputation, speaker_reputation = self.reputation, player.those_who_share.reputation
+            addressee_reputation, speaker_reputation = self.reputation, player.reputation
             respectful, title, name = f"{self.role.name} {self.surname}", self.get_title(), self.name
 
         if addressee_reputation > 2 * speaker_reputation:

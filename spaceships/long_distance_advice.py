@@ -5,7 +5,9 @@ frame), and so do the missions, to warn about a trip the ship may not manage (`L
 
 The algorithm
 -------------
-The ship feels no gravity, so it moves in straight lines at the speed it has, and only the pilot's thrust changes that.
+The ship feels no gravity outside the fixed zones, so it moves in straight lines at the speed it has, and only the
+pilot's thrust changes that. Inside the fixed zone of a body that pulls the ship falls along the body's orbit, which
+this does not follow, so the advice there is only a guide.
 The trip is one straight line, flown in three phases: accelerate (thrust towards the target), stay (no thrust, coast)
 and decelerate (thrust against the motion): the "bang-coast-bang" profile. Each frame the advice is worked out again
 from the state of the ship, so it follows the target as it moves and corrects whatever the pilot did.

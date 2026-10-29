@@ -275,13 +275,13 @@ class DeliverWater(Mission):
     def give_reward(self, player: Player) -> None:
         reputation_change: float = self.terms.reward + self.reward_per_kg() * self.delivered
 
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         for crew in self.issuer_settlement.staff:
             crew.adjust_sympathy(reputation_change)
 
         logger.info(
             f"MISSION COMPLETE: {self.delivered} Kg of raw water delivered. Reputation +{reputation_change} = "
-            f"{player.those_who_share.reputation}"
+            f"{player.reputation}"
             )
 
     def reward_text(self, player: Player) -> str:
@@ -290,13 +290,13 @@ class DeliverWater(Mission):
     def fail(self, player: Player) -> None:
         reputation_change: float = self.terms.failure_penalty
 
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         for crew in self.issuer_settlement.staff:
             crew.adjust_sympathy(reputation_change)
 
         logger.info(
             f"MISSION FAILED: Raw water not brought. Reputation {reputation_change} = "
-            f"{player.those_who_share.reputation}"
+            f"{player.reputation}"
             )
 
     def serialize(self) -> dict:

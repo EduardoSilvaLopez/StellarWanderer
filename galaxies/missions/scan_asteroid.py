@@ -255,9 +255,9 @@ class ScanAsteroid(Mission):
         reputation_change *= self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
         reputation_change *= (gem.current_environment.date_time - self.created_at).total_seconds() \
                             / (self.deadline - self.created_at).total_seconds()
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: asteroid scanned. "
-                    f"Reputation +{reputation_change} = {player.those_who_share.reputation}"
+                    f"Reputation +{reputation_change} = {player.reputation}"
                     )
 
     def reward_text(self, player: Player) -> str:
@@ -268,9 +268,9 @@ class ScanAsteroid(Mission):
 
     def fail(self, player: Player) -> None:
         reputation_change: float = self.terms.failure_penalty
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         logger.info(f"MISSION FAILED: asteroid not scanned. "
-                    f"Reputation {reputation_change} = {player.those_who_share.reputation}"
+                    f"Reputation {reputation_change} = {player.reputation}"
                     )
     # endregion
 

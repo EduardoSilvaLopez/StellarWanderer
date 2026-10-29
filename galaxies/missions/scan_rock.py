@@ -224,9 +224,9 @@ class ScanRock(Mission):
 
     def give_reward(self, player: Player) -> None:
         reputation_change: float = self.terms.reward
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
-        f"{player.those_who_share.reputation}")
+        f"{player.reputation}")
 
     def reward_text(self, player: Player) -> str:
         return (
@@ -236,9 +236,9 @@ class ScanRock(Mission):
 
     def fail(self, player: Player) -> None:
         reputation_change: float = self.terms.failure_penalty # If you did not have the time don't accept the mission.
-        player.those_who_share.reputation += reputation_change
+        player.reputation += reputation_change
         logger.info(f"MISSION FAILED: {self.object_type} not scanned. Reputation {reputation_change} = "
-        f"{player.those_who_share.reputation}")
+        f"{player.reputation}")
     # endregion
 
     # region Persistence

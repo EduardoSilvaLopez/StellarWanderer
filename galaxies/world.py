@@ -41,6 +41,7 @@ class World(Body):
     '''
 
     is_world = True
+    mass: float  # kg, drawn by the subclass
 
     WORLD_MIN_RADIUS = 300000  # Spherical celestial object.
     GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
@@ -167,6 +168,10 @@ class World(Body):
         """What the player changed in this world; None for a world that can not be changed."""
         return None
     # endregion
+
+    @property
+    def gravitational_parameter(self) -> float:
+        return World.GRAVITATIONAL_CONSTANT * self.mass
 
     # region Orbit
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:

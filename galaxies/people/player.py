@@ -9,6 +9,7 @@ from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
 from galaxies.people.person import Person
 from galaxies.portals.portal_base import PortalBase
+from galaxies.world import World
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue
@@ -50,17 +51,22 @@ class Player:
         self.time_scale: int = 1  # Default time scale
         self.ship: Ship = ShabbyThsMiner(self)
         self.credits: int = 0
-        self.those_who_share: PersonalStatus = PersonalStatus(political_entity.THOSE_WHO_SHARE)
+        self.citizenship: Optional[political_entity.PoliticalEntity] = political_entity.THOSE_WHO_SHARE
+        # The pilot's standing with each political entity, by entity (saved by the entity's name).
+        self.political_status: dict[political_entity.PoliticalEntity, PersonalStatus] = {
+            political_entity.THOSE_WHO_SHARE: PersonalStatus(political_entity.THOSE_WHO_SHARE)
+        }
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
         # The conversation tags of the chat (see outpost_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
+        self.flags: set[str] = set()
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
         self.ship.spawn_in_environment(environment)
-        self.those_who_share = PersonalStatus(political_entity.THOSE_WHO_SHARE)
+        self.political_status = {political_entity.THOSE_WHO_SHARE: PersonalStatus(political_entity.THOSE_WHO_SHARE)}
         return self
 
     # region Time scale
@@ -71,6 +77,12 @@ class Player:
         limit = self.TIME_SCALE_DANGER_BOUND if self.ship.is_bound else self.TIME_SCALE_DANGER_UNBOUND
         return self.time_scale >= limit and (
             self.ship.velocity.as_vector().length() > 0.0 or self.ship.navigation.is_hovering())
+
+    def limit_time_scale(self, frame_seconds: float, limit: float) -> None:
+        """Lowers the time scale, in its steps, until a frame of `frame_seconds` real seconds covers no more than
+        `limit` game seconds (see Navigation.coasting_time_limit). The clock shows the lower one."""
+        while self.time_scale > self.TIME_SCALE_MIN and frame_seconds * self.time_scale > limit:
+            self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
 
     def increase_time_scale(self) -> Player:
         """Faster, from TIME_SCALE_MIN up to TIME_SCALE_MAX."""
@@ -121,9 +133,57 @@ class Player:
 
     def get_title(self) -> str:
         if gem.current_environment.nearest_system.political_entity == political_entity.THOSE_WHO_SHARE:
-            return political_entity.THOSE_WHO_SHARE.title_for(self.those_who_share.reputation)
+            return political_entity.THOSE_WHO_SHARE.title_for(self.reputation)
         logger.warning("Unknown political entity.")
         return ''
+
+    @property
+    def reputation(self) -> float:
+        """The pilot's reputation where they are (see `_standing`). 0, with a warning, when they have no standing."""
+        standing = self._standing()
+        if standing is None:
+            logger.warning("The pilot has no standing for this place (see Player._standing).")
+            return 0.0
+        return standing.reputation
+
+    @reputation.setter
+    def reputation(self, value: float) -> None:
+        """Sets the standing's reputation (see `_standing`). Nothing happens, with a warning, when there is none."""
+        standing = self._standing()
+        if standing is None:
+            logger.warning("The pilot has no standing for this place (see Player._standing).")
+            return
+        standing.reputation = value
+
+    def _standing(self) -> Optional[PersonalStatus]:
+        """The pilot's standing with the entity of the system they are in. A system without an entity gives the entity
+        of the pilot's citizenship instead. None when there is no such entity, or the pilot has no standing with it."""
+        entity = gem.current_environment.nearest_system.political_entity
+        if entity is None:
+            entity = self.citizenship
+        return self.political_status.get(entity) if entity is not None else None
+
+    def adjust_reputation(self, change: float) -> None:
+        '''Adds `change` to the reputation: negative for a cost paid, positive for a refund.'''
+        old_rep: float = self.reputation
+        self.reputation = old_rep + change
+        standing = self._standing()
+        if standing is None:
+            return
+        else:
+            logger.info(
+                f"Reputation in {standing.entity.name} changed by {change}:"
+                f" {old_rep} + {change} = {self.reputation}."
+                )
+
+    def adjust_reputation_by_supply(self, key: str, quantity: float) -> None:
+        """Gives (positive `quantity`) or takes a supply with the standing of this place (see `_standing`). Nothing
+        happens, with a warning, when there is no standing."""
+        standing = self._standing()
+        if standing is None:
+            logger.warning("The pilot has no standing for this place (see Player._standing).")
+            return
+        standing.adjust_reputation_by_supply(key, quantity)
 
     def game_over(self, reason: str) -> None:
         """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
@@ -154,7 +214,7 @@ class Player:
         if isinstance(body, Asteroid):
             asteroid_site = body.site()
             orbit_number = planet_index = moon_index = None
-        elif not body.is_world:  # the star or the portal base: no orbit, planet or moon
+        elif not isinstance(body, World):  # the star or the portal base: no orbit, planet or moon
             orbit_number = planet_index = moon_index = None
         elif body.parent_planet:
             orbit_number = body.parent_orbit.number
@@ -181,9 +241,9 @@ class Player:
             'inside_settlement': self.inside.inside_key() if self.inside is not None else None,
             'missions': [mission.serialize() for mission in self.missions],
             'conversation_tags': sorted(self.conversation_tags),
-            'political_status': {
-                'Those-Who-Share': self.those_who_share.serialize()
-            }
+            'citizenship': self.citizenship.name if self.citizenship is not None else None,
+            'flags': sorted(self.flags),
+            'political_status': {entity.name: status.serialize() for entity, status in self.political_status.items()}
         }
 
     @staticmethod
@@ -201,13 +261,25 @@ class Player:
             mission.watch_deadline()
         result.ship = Ship.deserialize(result, loaded_attributes['ship'])
         result.conversation_tags = set(loaded_attributes['conversation_tags'])
+        result.flags = set(loaded_attributes['flags'])
 
+        # None when the pilot has no citizenship, or when no entity has the saved name (warned: it cannot happen yet).
+        citizenship_name: Optional[str] = loaded_attributes['citizenship']
+        result.citizenship = political_entity.ENTITIES.get(citizenship_name) if citizenship_name is not None else None
+        if citizenship_name is not None and result.citizenship is None:
+            logger.warning(f"Unknown citizenship in the save: {citizenship_name}.")
+
+        result.political_status = {}
         for entity_name, values in loaded_attributes['political_status'].items():
-            if entity_name == political_entity.THOSE_WHO_SHARE.name:
-                result.those_who_share = PersonalStatus.deserialize(values, political_entity.THOSE_WHO_SHARE.name)
+            entity = political_entity.ENTITIES.get(entity_name)
+            if entity is None:
+                logger.warning(f"Unknown political entity in the save: {entity_name}.")
+                continue
+            result.political_status[entity] = PersonalStatus.deserialize(values, entity_name)
 
         return result
     # endregion
 
 
-current_player: Player = None
+# Set when a game starts or loads (main, Savefile.load_from_file); None before that.
+current_player: Player = None  # type: ignore[assignment]

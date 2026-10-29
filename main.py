@@ -479,6 +479,8 @@ def main() -> None:
         frame_watch.begin()
 
         ship = player.ship
+        # Unbound in a fixed zone that pulls, a frame covers only a share of the orbit (Navigation.coasting_time_limit)
+        player.limit_time_scale(dt, ship.navigation.coasting_time_limit())
         delta_game_seconds = dt * player.time_scale
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)

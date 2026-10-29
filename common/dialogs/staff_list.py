@@ -8,8 +8,8 @@ scroll bar beside it, and scrolls with the wheel, Page Up and Page Down, and the
 
 A search box at the top of that rectangle shows only the cards whose person matches the text in what the card shows: the
 name, the role, the last time met and the comment (Person.matches_search with SEARCH_LABELS, unlike the People dialog,
-which searches all the fields). A person filtered out keeps the selection: only leaving the listing clears it. While the box
-is focused, the typed text goes into it and the keys do not reach the options (see search_event)."""
+which searches all the fields). A person filtered out keeps the selection: only leaving the listing clears it. While
+the box is focused, the typed text goes into it and the keys do not reach the options (see search_event)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple
@@ -24,7 +24,7 @@ from .scroll_bar import ScrollBar
 from . import search_box
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from galaxies.settlement import Settlement
     from galaxies.people.person import Person
 
 BODY_SIZE = 16
@@ -44,8 +44,8 @@ SEARCH_LABELS = ('Role', 'Last time met')
 class StaffList:
     """The available people of `outpost`, one card each (see the module docstring)."""
 
-    def __init__(self, outpost: Outpost) -> None:
-        self.outpost: Outpost = outpost
+    def __init__(self, outpost: Settlement) -> None:
+        self.outpost: Settlement = outpost
         self.selected: Optional[Person] = None  # the card that is outlined; None for none
         self.persons: List[Person] = []  # the people shown at the last `available` call, in card order
         self.query: str = ''  # what the search box holds
@@ -192,8 +192,8 @@ class StaffList:
         self.scroll = max(0, min(self._max_scroll(), self.scroll + pixels))
 
     def draw(self, surface: pygame.Surface, focus: Optional[int] = None) -> None:
-        """The search box and the cards in the rectangle of `place`. `focus` is the index of the card the keyboard is on,
-        if any."""
+        """The search box and the cards in the rectangle of `place`. `focus` is the index of the card the keyboard is
+        on, if any."""
         search_box.draw(surface, self.search_rect, self.query, self.search_focused)
         cards = [(self._card(person, self.text_rect.width, person is self.selected, index == focus), person)
                  for index, person in enumerate(self.available())]

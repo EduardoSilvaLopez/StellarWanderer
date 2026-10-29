@@ -55,7 +55,7 @@ class MissionBoard:
 
     @staticmethod
     def is_available(player: Player) -> bool:
-        return player.those_who_share.reputation >= MIN_REPUTATION
+        return player.reputation >= MIN_REPUTATION
 
     @property
     def player(self) -> Player:

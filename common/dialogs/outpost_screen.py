@@ -12,7 +12,8 @@ the same order: systems, people, ship, missions; a click opens the same dialog, 
 group of five buttons (Dockmaster, Cargo, Missions, Chat, Leave; Missions only from the reputation the board needs, or
 while a taken mission is open here): one is always selected, and Dockmaster is the one selected when the screen opens,
 unless the ship is ready (Outpost.is_ready): then it is Cargo. The selected one is filled with the accent colour. What
-it does is what the right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo, Missions the outpost's
+it does is what the right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo,
+Missions the outpost's
 missions (OutpostMissions,
 drawn over the picture), and Chat the outpost's chat (chat_view.py): the conversation tags on the left, the chat in the
 middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the area on
@@ -37,6 +38,7 @@ import random
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import pygame
 
+from galaxies.politics import political_entity
 from common import audio
 from common.paths import resource_path
 from common.dialogs.area_pictures import (
@@ -63,7 +65,8 @@ if TYPE_CHECKING:
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 SECOND_GROUP = ('Heat Shield', 'Mines', 'Scoop', 'Solar Panels')  # the rows right of the levels, in alphabetical order
-THS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')  # the rows only a THS miner (ThsMiner) is offered; the others on every ship
+# The rows only a THS miner (ThsMiner) is offered; the others on every ship.
+THS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
 HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
@@ -108,7 +111,7 @@ CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the pe
 NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
 
 
-def _wrap(text: str, font: pygame.font.Font, width: int) -> List[str]:
+def _wrap(text: str, font: pygame.font.Font | FallbackFont, width: int) -> List[str]:
     """`text` split at its spaces into lines of at most `width` pixels (a word longer than that stays whole)."""
     lines: List[str] = []
     line = ''
@@ -197,11 +200,12 @@ class OutpostScreenDialog(Dialog):
     for more than the room left turns the room line red, until a − is pressed or Cargo is left. A take that is refused
     shows a notification: the Community's when a mine goes over the reputation limit, else the ship's.
     The second group, right of the levels, in alphabetical order: Heat Shield (a combo box: None, Heat Shield I costing
-    10 reputation, Heat Shield II costing 50), Mines, Scoop and Solar Panels (toggles, Yes or No). The Heat Shield and the
-    Solar Panels are offered only on a THS miner, so their rows are not there on the other ships (_second_group). An
-    attachment that costs more than the reputation the pilot has now over the title's floor (the floor of the title held
-    on entering) is refused with the Community's message. The cost is charged to the reputation at once, and refunded when it is
-    given back. They are the ship's fields (heat_shield, has_scoop, has_solar_panels), saved with the ship.
+    10 reputation, Heat Shield II costing 50), Mines, Scoop and Solar Panels (toggles, Yes or No). The Heat Shield
+    and the Solar Panels are offered only on a THS miner, so their rows are not there on the other ships
+    (_second_group). An attachment that costs more than the reputation the pilot has now over the title's floor (the
+    floor of the title held on entering) is refused with the Community's message. The cost is charged to the
+    reputation at once, and refunded when it is given back. They are the ship's fields (heat_shield, has_scoop,
+    has_solar_panels), saved with the ship.
 
     Missions (selected, and shown from the reputation the board needs or while a taken mission is open here, see
     _shows_option): the outpost's
@@ -246,7 +250,8 @@ class OutpostScreenDialog(Dialog):
             pictures = _pictures(prefix)
             self._area_pictures[area] = random.Random(outpost.seed).choice(pictures) if pictures else None
         self._picture: Optional[pygame.Surface] = None  # the faded picture, made for _picture_key
-        self._picture_key: Optional[Tuple[str, Tuple[int, int]]] = None  # the file and the size it was made from
+        # the file (None: black) and the size it was made from
+        self._picture_key: Optional[Tuple[Optional[str], Tuple[int, int]]] = None
         self._left: Optional[pygame.Surface] = None  # the cockpit texture covering the left block, made for _left_size
         self._left_size: Optional[Tuple[int, int]] = None
 
@@ -256,9 +261,9 @@ class OutpostScreenDialog(Dialog):
         self._answer_rects: List[pygame.Rect] = []  # where the answers of the shown message were last drawn
         self._answer_hover: Optional[int] = None  # the answer under the mouse at the last draw, if any
         # The button the keyboard is on (Tab), as a token: ('option', index), ('cargo', row, -1 or 1) for a row's − or
-        # +, ('fill', row) for its ++, ('attach', name) for an attachment's control, or ('answer', index). See _focus_targets. It is drawn only while the keyboard is
-        # the one in use.
-        self._focus: tuple = ('option', 0)
+        # +, ('fill', row) for its ++, ('attach', name) for an attachment's control, or ('answer', index). See
+        # _focus_targets. It is drawn only while the keyboard is the one in use.
+        self._focus: Tuple[Any, ...] = ('option', 0)
         # the −, + and ++ of each cargo row, and the row
         self._cargo_rects: List[Tuple[pygame.Rect, pygame.Rect, pygame.Rect, int]] = []
         self._attachment_rects: List[Tuple[pygame.Rect, str]] = []  # the controls, where last drawn
@@ -285,7 +290,7 @@ class OutpostScreenDialog(Dialog):
             self.selected = BUTTON_LABELS.index('Cargo')
             self._focus = ('option', self.selected)
         self._open_option(True)
-        self.outpost.player_reputation_on_entering = current_player.those_who_share.reputation
+        self.outpost.player_reputation_on_entering = current_player.reputation
 
     def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
         """The whole window, at its own scale: nothing is centred or scaled down."""
@@ -500,6 +505,8 @@ class OutpostScreenDialog(Dialog):
     def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """Chat: three areas in the block, inside its margin: the tags and the chat log share the left, in dark panels,
         and the people are on the right, CHAT_PEOPLE_FRACTION of the height wide."""
+        if self._chat_tags is None or self._chat_view is None or self._chat is None:
+            raise Exception("The chat's panels are not made.")
         margin = _margin(height)
         top = right.top + margin
         area = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
@@ -529,6 +536,8 @@ class OutpostScreenDialog(Dialog):
     def _sync_chat_log(self) -> None:
         """The chat log is the chat with the person selected: another person, or none, ends the conversation and
         starts a new log, so each person has their own chat."""
+        if self._chat is None:
+            raise Exception("The chat's list is not made.")
         person = self._chat.selected
         if self._chat_log is not None and self._chat_log.person is person:
             return
@@ -549,6 +558,8 @@ class OutpostScreenDialog(Dialog):
 
     def _chat_active(self) -> bool:
         """Tags start a conversation while a person is selected and no reply is open (the conversation is not over)."""
+        if self._chat is None:
+            raise Exception("The chat's list is not made.")
         return self._chat.selected is not None and (self._chat_log is None or self._chat_log.replies is None)
 
     def _start_tag(self, tag: str) -> None:
@@ -559,6 +570,8 @@ class OutpostScreenDialog(Dialog):
         self._sync_chat_log()
         if not self._chat_active():
             return
+        if self._chat_log is None:
+            raise Exception("No chat log: no person is selected.")
         if self._chat_conversation is not None:
             self._chat_conversation.close()
         self._chat_conversation = OutpostChat(current_player, self._chat_log.person, self._chat_log, tag)
@@ -574,6 +587,8 @@ class OutpostScreenDialog(Dialog):
     def _draw_missions(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The missions of the outpost (OutpostMissions) in a dark panel over the block, its scroll bar at the right,
         inside the margin."""
+        if self._missions is None:
+            raise Exception("The missions' list is not made.")
         margin = _margin(height)
         top = right.top + margin
         panel = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
@@ -597,8 +612,10 @@ class OutpostScreenDialog(Dialog):
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         if SUPPLIES[k].key != "mines":  # They don't trust him more. Mines are *expensive*
             return float('inf')
-        entity = self.ship.owner.those_who_share.entity
+        entity = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE].entity
         entered = self.outpost.player_reputation_on_entering
+        if entered is None:
+            raise Exception("No reputation recorded on entering.")
         floor = entity.title_floor(entered)
         if floor == float('-inf'):  # the lowest title is kept whatever is taken
             return float('inf')
@@ -631,7 +648,7 @@ class OutpostScreenDialog(Dialog):
             units = max(0, min(units, self._supply_limit(k) - before))
         quantity = hold.load(supply, units) if delta > 0 else hold.unload(supply, units)
         self._hold_full = delta > 0 and quantity < units and hold.free_capacity() < supply.weight
-        self.ship.owner.those_who_share.adjust_reputation_by_supply(supply.key, -delta*quantity)
+        self.ship.owner.adjust_reputation_by_supply(supply.key, -delta*quantity)
         refused = delta > 0 and quantity < asked - 1e-9  # a float can fall a hair short of what was asked
         if not refused:
             audio.play('ui_click')
@@ -645,7 +662,11 @@ class OutpostScreenDialog(Dialog):
     def _community_refuses(self, sound: str) -> None:
         """The Community's refusal of a mine or an attachment that goes over the reputation limit: the title held on
         entering is named, as the limit is set by it."""
-        title = self.ship.owner.those_who_share.entity.title_for(self.outpost.player_reputation_on_entering)
+        entered = self.outpost.player_reputation_on_entering
+        if entered is None:
+            raise Exception("No reputation recorded on entering.")
+        standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
+        title = standing.entity.title_for(entered)
         self.ship.notification.set(f"The Community thinks you have already enough stuff for a {title}.", sound)
 
     # region Attachments
@@ -666,11 +687,14 @@ class OutpostScreenDialog(Dialog):
         """What the attachments may still cost: the reputation the pilot has now over the lowest one that keeps the
         title held on entering. They are charged to the reputation as they are set, so this is what is left. No limit
         when that title is the lowest."""
-        those_who_share = self.ship.owner.those_who_share
-        floor = those_who_share.entity.title_floor(self.outpost.player_reputation_on_entering)
+        entered = self.outpost.player_reputation_on_entering
+        if entered is None:
+            raise Exception("No reputation recorded on entering.")
+        standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
+        floor = standing.entity.title_floor(entered)
         if floor == float('-inf'):
             return float('inf')
-        return those_who_share.reputation - floor
+        return self.ship.owner.reputation - floor
 
     @staticmethod
     def _attachment_cost(name: str, value: Any) -> float:
@@ -688,7 +712,7 @@ class OutpostScreenDialog(Dialog):
         if change > 0 and change > self._reputation_remaining():
             self._community_refuses('mine_refused')
             return
-        self.ship.owner.those_who_share.adjust_reputation(-change)
+        self.ship.owner.adjust_reputation(-change)
         self._store_attachment(name, value)
 
     def _press_attachment(self, name: str) -> None:
@@ -740,7 +764,8 @@ class OutpostScreenDialog(Dialog):
 
     def _draw_knowledge(self, surface: pygame.Surface, left: pygame.Rect, height: int, top: int) -> int:
         """The knowledge buttons (KNOWLEDGE_ORDER) in one row across the left block, from `top`, each square and as wide
-        as its share of the row; Missions only where the cockpit shows it (shows_missions). Returns the y under the row."""
+        as its share of the row; Missions only where the cockpit shows it (shows_missions). Returns the y under the
+        row."""
         from graphics.instruments.cockpit_buttons import KNOWLEDGE_ORDER, MISSIONS, CockpitButtons, shows_missions
         # local: the instruments import the player, which imports the dialogs
         margin = _margin(height)
@@ -780,6 +805,8 @@ class OutpostScreenDialog(Dialog):
         if self._frame_key != (size, thickness):
             self._frame_image = _nine_slice(self._frame_texture, BEZEL_BORDER, size, thickness)
             self._frame_key = (size, thickness)
+        if self._frame_image is None:
+            raise Exception("The frame is not made.")
         return self._frame_image
 
     def _draw_officer(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> int:
@@ -859,6 +886,8 @@ class OutpostScreenDialog(Dialog):
         """The answers of the shown message, numbered, `width` wide from `left`: translucent rectangles close to each
         other, the last at the bottom of the block. The one under the mouse, or that has the keyboard focus, is tinted
         with the accent colour, and its text turns dark."""
+        if self._shown is None:
+            raise Exception("No message is shown.")
         labels = self._shown[0].buttons
         margin = _margin(height)
         font = body_font(max(14, height // 48))
@@ -987,6 +1016,8 @@ class OutpostScreenDialog(Dialog):
 
     def _answer_event(self, event: pygame.event.Event) -> bool:
         """Answers the shown message with the number keys or a click. True if it did."""
+        if self._shown is None:
+            raise Exception("No message is shown.")
         count = len(self._shown[0].buttons)
         if event.type == pygame.KEYDOWN:
             number_keys = ((pygame.K_1, pygame.K_9), (pygame.K_KP1, pygame.K_KP9))
@@ -1038,7 +1069,8 @@ class OutpostScreenDialog(Dialog):
         return BUTTON_LABELS[self.selected] == 'Cargo' and self._shown is None
 
     def _shows_option(self, index: int) -> bool:
-        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available), unless
+        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available),
+        unless
         a mission the pilot has taken is open here to deliver: then the Taken missions are there, without any offer."""
         from galaxies.missions.mission_board import MissionBoard  # local: as in AvailableColumn
         if BUTTON_LABELS[index] != 'Missions':
@@ -1058,6 +1090,8 @@ class OutpostScreenDialog(Dialog):
         """The events the missions' list takes: its clicks, its scroll (the wheel, the scroll bar, Page Up and Page
         Down) and a way back from a detail, by Backspace or a right-click. The arrow keys stay with the options. True
         if it took the event."""
+        if self._missions is None:
+            raise Exception("The missions' list is not made.")
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_BACKSPACE:
                 return self._missions.back()
@@ -1076,6 +1110,8 @@ class OutpostScreenDialog(Dialog):
         is in, the wheel to the list under the mouse, and Page Up and Page Down to all of them; the scroll bars drag on
         their own. The arrow keys stay with the options. The search box of the people takes the typing first. True if a
         list took the event."""
+        if self._chat is None or self._chat_tags is None or self._chat_view is None:
+            raise Exception("The chat's panels are not made.")
         if self._chat.search_event(event):
             return True
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
@@ -1089,7 +1125,7 @@ class OutpostScreenDialog(Dialog):
         results = [widget.handle_event(event) for widget in lists]  # every list gets its turn: a drag, a page
         return any(results)
 
-    def _focus_targets(self) -> List[tuple]:
+    def _focus_targets(self) -> List[Tuple[Any, ...]]:
         """What Tab goes over, in order: the options (Leave among them) unless a message with more than one answer waits
         (_blocks_options), the −, +, and ++ of each cargo row while Cargo is selected, the people listed while Chat is
         selected, and the answers of the shown message. Then round again."""
@@ -1109,6 +1145,8 @@ class OutpostScreenDialog(Dialog):
         if self._shows_chat():
             self._sync_chat_log()
             targets += [('tag', tag) for tag in self._chat_tags_now()]
+            if self._chat is None:
+                raise Exception("The chat's list is not made.")
             targets += [('person', index) for index in range(len(self._chat.available()))]
             if self._chat_log is not None and self._chat_log.replies:
                 targets += [('reply', j) for j in range(len(self._chat_log.replies))]
@@ -1132,7 +1170,7 @@ class OutpostScreenDialog(Dialog):
             self._open_combo = None
             return
         targets = self._focus_targets()
-        token = self._focus if self._focus in targets else ('option', self.selected)
+        token: Any = self._focus if self._focus in targets else ('option', self.selected)
         if token[0] == 'answer':
             self._answer(token[1])
         elif token[0] == 'cargo':
@@ -1142,6 +1180,8 @@ class OutpostScreenDialog(Dialog):
         elif token[0] == 'attach':
             self._press_attachment(token[1])
         elif token[0] == 'person':
+            if self._chat is None:
+                raise Exception("The chat's list is not made.")
             self._chat.select_at(token[1])
         elif token[0] == 'tag':
             self._start_tag(token[1])
@@ -1168,11 +1208,9 @@ class OutpostScreenDialog(Dialog):
         if event.type == pygame.QUIT:
             return ('exit', None)
         pressed: Optional[str] = None  # a knowledge button clicked: its name, the host opens its dialog
-        if self._shown is not None and self._answer_event(event):  # noqa: SIM114
-            pass
-        elif self._shows_missions() and self._missions_event(event):
-            pass
-        elif self._shows_chat() and self._chat_event(event):
+        if ((self._shown is not None and self._answer_event(event))
+                or (self._shows_missions() and self._missions_event(event))
+                or (self._shows_chat() and self._chat_event(event))):
             pass
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
             self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)

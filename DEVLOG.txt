@@ -73,7 +73,7 @@ DEVELOPER'S DIARY
   * Test the scoop sounds.
   * I disabled the sounds of Python in Windows > Settings > Voice mixer. If I need them later...
 
-### 2026-10-26 (4/11)
+### 2026-10-27 (4/11)
 
   * Portal Bases. Missions. Test. Birthdays. Hang around them. Enjoy.
   * List of people:
@@ -88,24 +88,29 @@ DEVELOPER'S DIARY
   * New level brings scoop, solar panels and heat shield. Hide them else.
   * Missions which can be resolved anywhere (scan...)
 
-### 2026-10-26 (5/11)
+### 2026-10-28 (5/11)
 
   * PLAN_END_DISTANCE to tune long trip advisor.
   * Say Komisar: "They are good listeners" :D
   * "I miss my childen."
 
+### 2026-10-29 (5/11)
+
 STARTED:
 
 GRAVITY OF TREASON (Rep 50-100)
   * Gravity.
+  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
 
-Extra time: 153h45' + 1h + 21:30-
+Extra time: 155h00' + 4:30-
+
+
 
 > BACKLOG
 
 GRAVITY OF TREASON (Rep 50-100)
-  * Enough liking and low enough loyalty... opens dialog to get a visit? Lets somebody plunder your ore?
   * Visitors in the settlements? Some of them shady?
+  * Extra: "Scan the sun" mission. Solar panels, heat shield.
   * Extra: Binding slowly.
   * Extra: Portraits without uniform: Black, Latino, White
   * Extra: Gravity. Evaluate, at least... for realism's sake.
@@ -115,7 +120,6 @@ GRAVITY OF TREASON (Rep 50-100)
   * Mission to jovian planet.
   * Next step is to draw it.
   * Generate the moons.
-  * Extra: "Scan the sun" mission. Solar panels, heat shield.
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?

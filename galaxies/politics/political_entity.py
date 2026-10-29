@@ -260,3 +260,6 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "I cook for myself. Simple meals, no company.",
         ]
     )
+
+# The entities by name: a save names its citizenship, and a name that is not here loads as None.
+ENTITIES: dict[str, PoliticalEntity] = {THOSE_WHO_SHARE.name: THOSE_WHO_SHARE}

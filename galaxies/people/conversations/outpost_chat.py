@@ -1,9 +1,10 @@
 """A conversation of the outpost's chat (the Chat option of the outpost screen): started by a conversation tag, with the
 person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
 
-The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and the replies with `offer`
-(the callback gets the index of the reply the player chose). The conversation dies out when it offers nothing more: the
-player then starts the next one from a tag, in the same log. `start` says the tag as the pilot's line, then the answer
+The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and
+the replies with `offer` (the callback gets the index of the reply the player chose). The conversation dies out
+when it offers nothing more: the player then starts the next one from a tag,
+in the same log. `start` says the tag as the pilot's line, then the answer
 (for the presentation tag, the pilot's line is Player.present_yourself).
 Flags can be written to mark important events of the conversation.
 
@@ -16,15 +17,19 @@ import random
 from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional
 
+import logging
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
 from galaxies.people.player import Player
+from galaxies.politics import political_entity
 
 # A political text: its three tones, in the order -1, 0, 1.
 PoliticalTexts = tuple[str, str, str]
 # A topic: its relevance score, a short line per tone for the low-sociability replies, and a text per tone.
 PoliticalTopics = dict[str, tuple[float, PoliticalTexts, PoliticalTexts]]
+
+logger = logging.getLogger(__name__)
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
@@ -75,8 +80,8 @@ class OutpostChat(Conversation):
         self.interlocutor.record()
 
     def say(self, generator: Callable[[], str]) -> None:
-        """The person says `text` in the chat. The expressions of `text` that are tags of the reactions become the pilot's
-        conversation tags, from now on. Time passes."""
+        """The person says `text` in the chat. The expressions of `text` that are tags of the reactions become the
+        pilot's conversation tags, from now on. Time passes."""
         import game_environment as gem
         gem.current_environment.date_time += timedelta(seconds=60)
 
@@ -91,7 +96,7 @@ class OutpostChat(Conversation):
         conversation has nothing more to say."""
         self.log.offer(labels, then)
 
-    # region Talk
+    # region Normal Talk
     def reactions_index(self) -> dict[str, Callable[[], str]]:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
@@ -459,28 +464,49 @@ class OutpostChat(Conversation):
                 return f"Huh? {correction_text} And this was weird."
 
     def talk_job(self) -> str:
+        text: str = ''
         if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 20:
             if self.interlocutor.main_problem_with_role().startswith("+"):
                 if self.interlocutor.main_problem_with_role().endswith("loy"):
-                    return "I wish I worked in something more relevant."
+                    text = "I wish I worked in something more relevant."
                 elif self.interlocutor.main_problem_with_role().endswith("emp"):
-                    return "I wish I worked in something more helpful for people."
+                    text = "I wish I worked in something more helpful for people."
                 else:
-                    return "I wish I worked more with people."
+                    text = "I wish I worked more with people."
             else:  # noqa: PLR5501
                 if self.interlocutor.main_problem_with_role().endswith("loy"):
-                    return "I wish I worked in something less demanding."
+                    text = "I wish I worked in something less demanding."
                 elif self.interlocutor.main_problem_with_role().endswith("emp"):
-                    return "I wish I had more time for myself."
+                    text = "I wish I had more time for myself."
                 else:
-                    return "I wish I could concentrate more, focus."
+                    text = "I wish I could concentrate more, focus."
         elif self.interlocutor.how_happy_with_role() == 1:
-            return "My job is ok."
+            text = "My job is ok."
         elif self.interlocutor.how_happy_with_role() == 2:
-            return "I really like my job."
+            text = "I really like my job."
         else:
-            return "A job's a job."
+            text = "A job's a job."
 
+        flags: set[str] = self.player.political_status[political_entity.THOSE_WHO_SHARE].flags
+        already_sold: bool = "sold mine codes" in flags
+        already_talked_openly: bool = any(
+            "Dared talk openly." in lines for lines in self.interlocutor.interactions.values()
+            )
+        if not already_sold and not already_talked_openly \
+            and self.interlocutor.loyalty100 < 20 and self.interlocutor.sympathy100 >= 80:
+            buttons = ["I like mine.", "I guess it's ok.", "I don't have an option, do I? This or retire."]
+            if self.interlocutor.sociability100 < 20:
+                text += "\n\nYou? <stares intensively>"
+            elif self.interlocutor.sociability100 < 80:
+                text += "\n\nAnd you? You can be honest with me."
+            else:
+                text += (
+                    "\n\nAnd you? You can tell me the truth. I am your friend, you know that. After all"
+                    " you have done."
+                    )
+            self.offer(buttons, self.traitor_chance)
+
+        return text
 
     def talk_life(self) -> str:
         # General effect. People like to be asked about their lives. Once per day max, though.
@@ -962,6 +988,120 @@ class OutpostChat(Conversation):
     def talk_unknown_tag(self) -> str:
         return ("I don't know what you mean.")
 
+    # endregion
+
+    # region Traitor's Path
+    def traitor_chance(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_glad_for_you)
+        elif answer == 1:
+            self.say(self.traitor_maybe_later)
+        else:
+            self.say(self.traitor_options)
+
+    def traitor_glad_for_you(self) -> str:
+        self.interlocutor.adjust_sympathy(-5)
+        self.flags.append("Dared talk openly.")
+
+        if self.interlocutor.sociability100 < 20:
+            return "<shrugs>"
+        elif self.interlocutor.sociability100 < 80:
+            return "Cool! Good for you <avoids eye contact>"
+        else:
+            return "I am glad! Nice for you. Long live! <looks nervous>"
+
+    def traitor_maybe_later(self) -> str:
+        if self.interlocutor.sociability100 < 20:
+            return "You can tell me later."
+        elif self.interlocutor.sociability100 < 80:
+            return "Ok. I understand. Tell me if this changes."
+        else:
+            return "Yeah. I understand. We do what we can. But tell me if one day you can't. I am here for you."
+
+    def traitor_options(self) -> str:
+        text: str = ""
+        buttons = ["<Accept>", "<Reject>"]
+        if self.interlocutor.sociability100 < 20:
+            text = "<whispers> Options. Dangerous. But. Interested?"
+        elif self.interlocutor.sociability100 < 80:
+            text = (
+                "<whispers> Well... there are options. But they are... we would be in trouble if someone finds out."
+                " Big trouble.\n\n"
+                "Are you interested, friend?"
+            )
+        else:
+            text += (
+                "<whispers> Yeah. Well... there are options. But we would be in BIG trouble if someone finds out."
+                " So... are you still interested? Can I trust you, friend?"
+                )
+        self.offer(buttons, self.traitor_offered)
+        return text
+
+    def traitor_offered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_instructions)
+        else:
+            self.say(self.traitor_said_too_much)
+
+    def traitor_said_too_much(self) -> str:
+        self.interlocutor.adjust_sympathy(-10)
+        self.flags.append("Dared talk openly.")
+
+        if self.interlocutor.sociability100 < 20:
+            return "<Says nothing>"
+        elif self.interlocutor.sociability100 < 80:
+            return "Suit yourself, then."
+        else:
+            return "Then forget I said anything."
+
+    def traitor_instructions(self) -> str:
+        text: str = ""
+        buttons = ["But what happens then?"]
+        if self.interlocutor.sociability100 < 20:
+            text = "<whispering> You give me codes. Ore mines. Mines gives Credits. Less ore."
+        elif self.interlocutor.sociability100 < 80:
+            text = (
+                "<whispers> Well... I know somebody. UniDev. You give me the codes of your ore mines. When you"
+                " collect, there is less ore. But there are Credits."
+            )
+        else:
+            text += (
+                "<whispers> Well... I know someboy. From UniDev. They come as visitors, with excuses, with their ships."
+                "\n\nYou give me the codes for your ore mines. From then on, they will... mine less ore. But there will"
+                " be cryptos waiting for you. UniDev credits. Accumulate them."
+                )
+        self.offer(buttons, self.traitor_what_then)
+        return text
+
+    def traitor_what_then(self, answer: int) -> None:
+        self.say(self.traitor_what_happens_then)
+
+    def traitor_what_happens_then(self) -> str:
+        text: str = ""
+        buttons = ["<Give the access codes>"]
+        if self.interlocutor.sociability100 < 20:
+            text = "<whispering> You get 2 million. Ringmaster. He'll hate you. But you'll be free."
+        elif self.interlocutor.sociability100 < 80:
+            text = (
+                "<whispering> When you have... max two million, one if you still have the shabby ship... you go to the"
+                " Ringmaster. You offer him the credits for the ship. He will hate you. But the Community can use those"
+                " Credits. You will be a foreigner from then on. And a traitor. But you will be free."
+            )
+        else:
+            text += (
+                "<whispering> When you have... max two million, with no upgrades. Or one if you still got the"
+                "shabby ship, you go to the Ringmaster. The credits for the ship. He will hate you. Hell, many people"
+                "here will hate you. But the hypocrits can well use those Credits. You will become a foreigner with a"
+                "ship... your property."
+                "\n\nThen you can leave. And be free."
+                )
+        self.offer(buttons, self.traitor_ready)
+        return text
+
+    def traitor_ready(self, answer: int) -> None:
+        self.interlocutor.adjust_sympathy(50)
+        self.flags.append("Dared talk openly.")
+        self.player.political_status[political_entity.THOSE_WHO_SHARE].flags.add("sold mine codes")
     # endregion
 
     # region Auxiliar methods
