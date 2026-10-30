@@ -46,9 +46,9 @@ class Navigation:
     `velocity_reference_frame`).
     Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
     Bound, the world's surface gravity pulls the ship down and the flight assist holds it up (see `_apply_gravity`).
-    Unbound inside the fixed zone of a body that pulls, the ship falls along the body's Kepler orbit (see
-    `_move_unbound`), the pilot is told to compensate its gravity on entering the zone and that it is over on leaving
-    (`_announce_compensation`), and the time scale is limited there (`coasting_time_limit`).
+    Unbound, the ship follows the Kepler orbit about its attractor: the fixed body while that pulls, else the star
+    (see `attractor` and `_move_unbound`). The pilot is told to compensate a world's gravity on entering its zone
+    and that it is over on leaving (`_announce_compensation`), and the time scale is limited (`coasting_time_limit`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -187,6 +187,8 @@ class Navigation:
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
         self._announce_compensation()
+        if not ship.is_bound:
+            ship.check_heat()
 
         if ship.is_bound:
             world = environment.fixed_world
@@ -241,11 +243,22 @@ class Navigation:
             return 0.0
         return world.gravitational_parameter / world.radius ** 2
 
+    def attractor(self) -> Optional[Body]:
+        """The body whose pull the ship follows: the fixed body while it pulls, else the star, which pulls the ship
+        everywhere outside the planets' fixed zones (the stellar frame, where the star is at rest at the origin). None
+        when nothing pulls."""
+        environment = gem.current_environment
+        body = environment.fixed_body
+        if body is not None and body.gravitational_parameter > 0.0:
+            return body
+        star = environment.nearest_system.star
+        return star if star.gravitational_parameter > 0.0 else None
+
     def pull(self) -> float:
-        """m/s^2, the pull of the fixed body where the ship is: its surface gravity while bound, else the pull at the
+        """m/s^2, the pull of the attractor where the ship is: its surface gravity while bound, else the pull at the
         ship's distance from its centre. Zero where nothing pulls."""
-        body = gem.current_environment.fixed_body
-        if body is None or body.gravitational_parameter == 0.0:
+        body = self.attractor()
+        if body is None:
             return 0.0
         if self.ship.is_bound:
             return self.gravity()
@@ -337,7 +350,7 @@ class Navigation:
         zone, and on leaving it. Bound, the flight assist does it and nothing is said."""
         ship = self.ship
         body = gem.current_environment.fixed_body
-        pulling = body if not ship.is_bound and body is not None and body.gravitational_parameter > 0.0 else None
+        pulling = body if not ship.is_bound and isinstance(body, World) and body.gravitational_parameter > 0.0 else None
         if pulling is self.compensating:
             return
         if self.compensating is not None and not ship.is_bound:
@@ -373,7 +386,7 @@ class Navigation:
         ))
 
     def _move_unbound(self, delta_time: float) -> None:
-        """Moves the unbound ship over the frame. Inside the fixed zone of a body that pulls, the path is the body's
+        """Moves the unbound ship over the frame. Under the pull of the attractor (see `attractor`) the path is its
         Kepler orbit, exact for any step (`kepler.propagate`), and the frame's thrust is a kick at its start: the change
         of velocity that `_update_velocity` made since the last frame. The state is kept relative to the body, as it
         was at the end of the last frame, so that a frame does not ask for the body's position at an earlier date. The
@@ -382,8 +395,8 @@ class Navigation:
         straight line, as there is no pull."""
         ship = self.ship
         environment = gem.current_environment
-        body = environment.fixed_body
-        if body is None or body.gravitational_parameter == 0.0:
+        body = self.attractor()
+        if body is None:
             self.coasting = None
             ship.position.add_vector(ship.velocity.as_vector() * delta_time)
             return
@@ -578,8 +591,8 @@ class Navigation:
         """Game seconds one frame may cover while the unbound ship is in the fixed zone of a body that pulls: a share of
         the period of a circular orbit at its distance, so that a fall does not skip over the bind shell. Infinite
         otherwise."""
-        body = gem.current_environment.fixed_body
-        if self.ship.is_bound or body is None or body.gravitational_parameter == 0.0:
+        body = self.attractor()
+        if self.ship.is_bound or body is None:
             return math.inf
         distance = self.distance_to_body_centre(body)
         return Navigation.COASTING_STEP_SHARE * math.tau * math.sqrt(distance ** 3 / body.gravitational_parameter)

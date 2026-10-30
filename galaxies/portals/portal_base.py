@@ -36,7 +36,16 @@ class PortalBase(Body, Settlement):
     is_world = False
     is_base = True  # serviced like an outpost: the long distance advice keeps the same reserve for it
     # the chief (Komisar) and the ring's master (Ringmaster) are on duty all the time; the stevedores work in two teams
-    roles = {COM_OFFICER: 1, DOCKMASTER: 1, STEVEDORE: 2, GUNNER: 1, JANITOR: 1, SECURITY: 1, KOMISAR: 1, RINGMASTER: 1}
+    roles = {
+        COM_OFFICER: 1,
+        DOCKMASTER: 1,
+        STEVEDORE: 2,
+        GUNNER: 1,
+        JANITOR: 1,
+        SECURITY: 1,
+        KOMISAR: 1,
+        RINGMASTER: 1
+        }
     kind = SettlementKind.PORTAL_BASE
     MOUTH_DEPTH = 48.0  # m, from the ring's centre to the mouth of the hangar, at the reference radius (100 m)
     BERTH_CLEARANCE = 200.0  # m, how far in front of the mouth the ship is put when the pilot leaves

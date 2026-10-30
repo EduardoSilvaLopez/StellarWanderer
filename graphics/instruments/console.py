@@ -18,6 +18,7 @@ from .notification import notification_bar
 from .altitude_meter import AltitudeMeter
 from .proximity_meter import ProximityMeter
 from .radar import Radar
+from .orbit_button import OrbitButton
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -91,6 +92,7 @@ class Console:
             ProximityMeter.draw_indicators(surface, fonts, h, ship, indicators_rect)
             readouts_left = bar_rect.right + int(w * 0.015)
             LocationInfo.draw_readouts(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
+            OrbitButton.draw(surface, fonts, h, ship, cluster_left, screen.bottom, indicators_w)
 
         if ship.is_bound:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)
@@ -98,8 +100,8 @@ class Console:
         else:
             Radar.draw(surface, screen, ship, date_time)
 
-        # The scanner and cargo titles sit on the top of the map's screen; their boxes and the cargo hold start below the
-        # titles and end at the bottom of the cluster. The resource bars start on the titles' line, so that their
+        # The scanner and cargo titles sit on the top of the map's screen; their boxes and the cargo hold start below
+        # the titles and end at the bottom of the cluster. The resource bars start on the titles' line, so that their
         # first row (the credits, even when hidden) lines up with them.
         title_font = fonts.get(max(9, int(h * 0.017)))
         box_top = panel_box_top(title_font, screen.top)

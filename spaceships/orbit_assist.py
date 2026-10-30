@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
 from galaxies.kepler import apsides
+from galaxies.world import World
 import game_environment as gem
 from spaceships.navigation import Navigation
 
@@ -61,7 +62,7 @@ class OrbitAssist:
         cover an orbit and a landing with a margin, and the engine must be able to stop a fall, if the ship falls."""
         environment = gem.current_environment
         body = environment.fixed_body
-        if ship.is_bound or body is None or body.gravitational_parameter == 0.0:
+        if ship.is_bound or not isinstance(body, World) or body.gravitational_parameter == 0.0:
             return "not fixed to a body that pulls"
         mu = body.gravitational_parameter
         r_vec, v_vec = ship.navigation._relative_to_body(body)

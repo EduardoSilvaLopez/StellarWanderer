@@ -37,8 +37,6 @@ class ProximityMeter:
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
     `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the
-    While fixed to a body that pulls, an "Orbit:" bar under the drift shows how far the drift is from the circular speed
-    at the ship's distance, the sideways speed an orbit needs (red while the lowest point is under the bind shell).
     "Distance" and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds:
     keeping its direction relative to the body, the ship reaches the surface even braking with only
     `Navigation.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
@@ -94,30 +92,6 @@ class ProximityMeter:
             pygame.draw.line(surface, ACCENT_LABEL, (left, y_of(apoapsis)), (right, y_of(apoapsis)), 2)
 
     @staticmethod
-    def _draw_orbit_progress(surface: pygame.Surface, label_font: Any, column: pygame.Rect, pad: int, row_height: int,
-                             body: Body, ship: Ship) -> None:
-        """The sideways speed the ORBIT assist aims for, the circular speed at the ship's distance, as a bar that the
-        drift fills. Red while the lowest point of the path is under the bind shell, green once it clears."""
-        from galaxies.kepler import apsides
-        from spaceships.navigation import Navigation
-        r_vec, v_vec = ship.navigation._relative_to_body(body)
-        periapsis, _, _ = apsides(body.gravitational_parameter, r_vec, v_vec)
-        circular_speed = math.sqrt(body.gravitational_parameter / r_vec.length())
-        fraction = min(1.0, ship.navigation.drift_speed(body) / circular_speed)
-        colour = SPEED_WARNING_RED if periapsis < Navigation.BIND_RADIUS_MULTIPLE * body.radius else BINDING_NEAR_GREEN
-
-        row_y = column.top + pad + 4 * row_height
-        label = label_font.render('Orbit:', True, ACCENT_LABEL)
-        left = column.left + pad
-        surface.blit(label, (left, row_y))
-        track = pygame.Rect(left + label.get_width() + label_font.size(' ')[0], row_y + 3,
-                            column.right - pad - (left + label.get_width() + label_font.size(' ')[0]),
-                            label_font.get_height() - 6)
-        pygame.draw.rect(surface, ACCENT_DIM, track, 1)
-        pygame.draw.rect(surface, colour, (track.left + 2, track.top + 2, int((track.width - 4) * fraction),
-                                           track.height - 4))
-
-    @staticmethod
     def draw_indicators(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, column: pygame.Rect) -> None:
         """The target's state, the name on the first row, then the distance, approach and drift, each value on the same
         line after its label, from the top of `column`."""
@@ -149,8 +123,6 @@ class ProximityMeter:
         draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
                   approach_colour)
         draw_pair(3, 'Drift:', ACCENT_LABEL, f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)
-        if in_fixed_zone and body.gravitational_parameter > 0.0:
-            ProximityMeter._draw_orbit_progress(surface, label_font, column, pad, row_height, body, ship)
 
         advisory = LongDistanceAdvisor.current
         if advisory is not None:

@@ -28,6 +28,10 @@ ACCENT_LABEL = tuple((a + b) // 2 for a, b in zip(ACCENT, ACCENT_DIM))
 AMBER = (240, 176, 92)
 BINDING_MARK_RED = (235, 64, 64)
 BINDING_NEAR_GREEN = (80, 230, 120)
+# the gravity bar: darker than the warnings, as the pull is not critical in the normal case
+GRAVITY_RED = (150, 42, 42)
+GRAVITY_AMBER = (150, 110, 60)
+GRAVITY_GREEN = (46, 130, 72)
 SPEED_WARNING_RED = BINDING_MARK_RED  # "Speed" readout when a collision with the fixed body is unavoidable
 PROGRADE_COLOR = AMBER
 TARGET_MARKER_COLOR = (236, 236, 236)  # the X on the canopy where the target is, or on its border

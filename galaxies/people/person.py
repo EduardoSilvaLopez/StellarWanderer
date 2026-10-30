@@ -22,6 +22,8 @@ from common.paths import resource_path
 
 PEOPLE_DIR = resource_path('people')
 SECONDS_PER_YEAR = 365.2425 * 24 * 60 * 60
+MAX_ICON_ZOOM = 0.10  # of the portrait, see Person._varied
+MAX_ICON_DARKENING = 0.15
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +175,8 @@ class Person:
             # Apply alterations.
             my_alterations = gem.current_environment.persons[self.seed]
             self.first_met_at = my_alterations['first_met_at']
+            if 'dob' in my_alterations:
+                self.dob = datetime.fromisoformat(my_alterations['dob'])
             self.comment = my_alterations.get('comment', '')
             if my_alterations.get('last_communication_at'):
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
@@ -287,9 +291,29 @@ class Person:
 
         icon_path = os.path.join(portraits_dir, filename)
         try:
-            self.icon = pygame.image.load(icon_path)
+            picture: pygame.Surface = pygame.image.load(icon_path)
         except Exception as e:
             print(f"Warning: Could not load person entity icon {filename}: {e}")
+            return
+        self.icon = self._varied(picture, my_random)
+
+    @staticmethod
+    def _varied(picture: pygame.Surface, my_random: random.Random) -> pygame.Surface:
+        """The picture a little zoomed, off-centre and darker, so that people sharing a picture do not look identical.
+        The draws come last of the person's, after the choice of the picture, and the size stays the same."""
+        zoom: float = 1 + my_random.random() * MAX_ICON_ZOOM
+        x_share: float = my_random.random()
+        y_share: float = my_random.random()
+        brightness: float = 1 - my_random.random() * MAX_ICON_DARKENING
+
+        width, height = picture.get_size()
+        crop_width, crop_height = round(width / zoom), round(height / zoom)
+        crop = pygame.Rect(round((width - crop_width) * x_share), round((height - crop_height) * y_share),
+                           crop_width, crop_height)
+        varied: pygame.Surface = pygame.transform.smoothscale(picture.subsurface(crop), (width, height))
+        shade: int = round(255 * brightness)
+        varied.fill((shade, shade, shade), special_flags=pygame.BLEND_RGB_MULT)
+        return varied
     # endregion
 
     # region Description
@@ -432,6 +456,7 @@ class Person:
 
         # The name is written for whoever reads the savefile: loading generates it again from the seed and ignores it.
         result: dict = {'seed': self.seed, 'name': self.get_full_name(), 'first_met_at': self.first_met_at}
+        result['dob'] = str(self.dob)
         if self.comment:
             result['comment'] = self.comment
         if self.last_communication_at:

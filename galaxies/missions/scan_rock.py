@@ -37,21 +37,14 @@ class ScanRock(Mission):
     # start at a frequency of 0 (no offers yet).
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.25,
+            frequency=0.10,
             taken_by_others=0.1,
             deadline_days_min=8,
             deadline_days_max=24,
             reward=1.5,
             failure_penalty=-5.0
             ),
-        SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.0,
-            taken_by_others=0.1,
-            deadline_days_min=8,
-            deadline_days_max=24,
-            reward=1.5,
-            failure_penalty=-5.0
-            ),
+        SettlementKind.PORTAL_BASE: None,
     }
 
     def __init__(

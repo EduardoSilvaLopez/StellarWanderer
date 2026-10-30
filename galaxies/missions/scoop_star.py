@@ -33,10 +33,10 @@ class ScoopStar(Mission):
     TERMS = {
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.03,
+            frequency=0.035,
             taken_by_others=0.01,
-            deadline_days_min=15,
-            deadline_days_max=30,
+            deadline_days_min=10,
+            deadline_days_max=25,
             reward=25.0,
             failure_penalty=-5.0
             ),

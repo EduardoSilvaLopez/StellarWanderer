@@ -484,7 +484,7 @@ class OutpostChat(Conversation):
             return "Sit, drill, wait. Until the shit hits the fan."
         else:
             return (
-                "Well, when things go really bad, a Gunner's responsibility is to they are the ones who pull"
+                "Well, when things go really bad, a Gunner's responsibility is be the ones who pull"
                 " the trigger. A hard decision taken in seconds."
             )
 
@@ -720,7 +720,7 @@ class OutpostChat(Conversation):
                 elif days_to_birthday == -1:
                     text += "\n\nMy birthday was yesterday."
                 elif days_to_birthday == 0:
-                    text += "\n\nToday is my birthday."
+                    text += "\n\nYou wanted to say happy birthday?"
                 elif days_to_birthday == 1:
                     text += "\n\nTomorrow is my birthday."
                 return text

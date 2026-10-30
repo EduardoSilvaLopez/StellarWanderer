@@ -59,7 +59,7 @@ from graphics.orbit_path import OrbitPath
 from graphics.instruments.clock import Clock
 from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
-from graphics.instruments.resource_bars import ResourceBars
+from graphics.instruments.orbit_button import OrbitButton
 from spaceships.orbit_assist import OrbitAssist
 from graphics.instruments.world_map import WorldMap
 from common.frame_watch import frame_watch
@@ -450,7 +450,7 @@ def main() -> None:
                             elapsed = min(elapsed + base.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
                             audio.play(OutpostScreenDialog.OPEN_SOUND)
                 elif event.key == pygame.K_KP_5:
-                    player.ship.toggle_scoop(player.time_scale)
+                    player.ship.toggle_scoop()
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
                     OrbitPath.shown = not OrbitPath.shown
                 # cycles the target (only outside every fixed zone); Shift+Tab goes back
@@ -464,7 +464,7 @@ def main() -> None:
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 running, screen = open_knowledge(pressed, screen, gui, fonts, clock)
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-                  and ResourceBars.orbit_hit(event.pos, player.ship)):
+                  and OrbitButton.hit(event.pos, player.ship)):
                 OrbitAssist.press(player.ship)
             elif event.type == pygame.MOUSEWHEEL:
                 if player.ship.is_bound:  # the world map is only shown while bound
@@ -552,7 +552,7 @@ def main() -> None:
             or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
         # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
         audio.set_loop('attitude', rotating)
-        ship.check_scoop(player.time_scale)
+        ship.check_scoop()
         ship.collect_corona(delta_game_seconds)
         ship.scanner.update_target()
         if keys[pygame.K_SPACE]:

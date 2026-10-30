@@ -60,7 +60,6 @@ class Ship(Updatable):
     SCOOP_OPENED = "Scoop opened. Hull integrity compromised."
     SCOOP_CLOSED = "Scoop closed. Hull integrity restored."
     SCOOP_CLOSED_FAST = (f"Speed over {SCOOP_MAX_SPEED:.0f} m/s. Scoop blocked.")
-    SCOOP_CLOSED_TIME = "Pilot in coldsleep. Scoop blocked."
     SCOOP_WATER_FULL = "Hold full. Closing scoop."
     SCOOP_ASTEROID_TAKEN = "Asteroid consumed."
 
@@ -153,22 +152,20 @@ class Ship(Updatable):
         frame (Navigation.velocity_reference_frame)."""
         return (self.velocity.as_vector() - self.navigation.velocity_reference_frame()).length()
 
-    def can_stay_open(self, time_scale: float) -> bool:
-        """The scoop may be open: not above SCOOP_MAX_SPEED, and with the time compressed only if the ship is really
-        stationary (`scoop_speed` exactly zero)."""
-        speed = self.scoop_speed()
-        return speed == 0.0 or (time_scale <= 1 and speed <= Ship.SCOOP_MAX_SPEED)
+    def can_stay_open(self) -> bool:
+        """The scoop may be open: not above SCOOP_MAX_SPEED, whatever the time compression."""
+        return self.scoop_speed() <= Ship.SCOOP_MAX_SPEED
 
-    def toggle_scoop(self, time_scale: float) -> None:
+    def toggle_scoop(self) -> None:
         """Opens the scoop's view, or closes it (Numpad 5), each with its notification. Without a scoop installed
-        nothing happens. It opens only up to SCOOP_MAX_SPEED, and with the time compressed only while the ship is stationary (see
-        `can_stay_open`); otherwise it stays closed, with only the sound of a refusal for the pilot to learn from."""
+        nothing happens. It opens only up to SCOOP_MAX_SPEED (see `can_stay_open`); otherwise it stays closed, with
+        only the sound of a refusal for the pilot to learn from."""
         if not self.has_scoop:
             return
         if self.scoop_open:
             self.scoop_open = False
             self.notification.set(Ship.SCOOP_CLOSED)
-        elif not self.can_stay_open(time_scale):
+        elif not self.can_stay_open():
             audio.play('mine_refused')
         else:
             self.scoop_open = True
@@ -248,7 +245,7 @@ class Ship(Updatable):
         return not any(isinstance(mission, ScanAsteroid) and mission.status == OPEN and mission.asteroid() is not None
                        and mission.asteroid().seed == asteroid.seed for mission in self.owner.missions)
 
-    def check_scoop(self, time_scale: float) -> None:
+    def check_scoop(self) -> None:
         """Every frame: an open scoop is closed, with a notification, when it may not stay open (`can_stay_open`): the
         hole in the hull would be open to what comes at it. As with any notification, the
         compression goes back to the minimum. One that is no longer installed closes silently (it was given back at an
@@ -257,9 +254,9 @@ class Ship(Updatable):
             return
         if not self.has_scoop:
             self.scoop_open = False
-        elif not self.can_stay_open(time_scale):
+        elif not self.can_stay_open():
             self.scoop_open = False
-            self.notification.set(Ship.SCOOP_CLOSED_TIME if time_scale > 1 else Ship.SCOOP_CLOSED_FAST)
+            self.notification.set(Ship.SCOOP_CLOSED_FAST)
 
     def corona_missions(self) -> list:
         """The open scoop star missions whose probe the scoop can fill now: the ship is unbound, in the heat radius of the
@@ -332,6 +329,11 @@ class Ship(Updatable):
         5**-L of the light, so the death flux is reached 5**L times farther out, scaled from the default radius."""
         death_flux = star.HEAT_FLUX + (star.DEATH_FLUX - star.HEAT_FLUX) * 5 ** self.heat_shield.value
         return star.default_death_radius * math.sqrt(star.DEATH_FLUX / death_flux)
+
+    def check_heat(self) -> None:
+        """Every frame while unbound: the star's heat is judged now, not at the next update, which may be an hour of
+        game time later and too late for a fast fall (see _live_through)."""
+        self._live_through(0.0)
 
     def _live_through(self, days: float) -> Ship:
         """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked), the

@@ -229,6 +229,12 @@ class Star(Body):
     # endregion
 
     # region Body
+    @property
+    def gravitational_parameter(self) -> float:
+        """The star pulls every unbound ship outside the planets' fixed zones (see Navigation.attractor)."""
+        from galaxies.world import World  # local: the world module imports the knowledge base, which imports the star
+        return World.GRAVITATIONAL_CONSTANT * self.mass
+
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         return Vector3(0.0, 0.0, 0.0)
 
