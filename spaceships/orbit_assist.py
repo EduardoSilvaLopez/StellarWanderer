@@ -18,9 +18,10 @@ pilot gives up by pressing the button again.
 from __future__ import annotations
 import math
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
+from galaxies.kepler import apsides
 import game_environment as gem
 from spaceships.navigation import Navigation
 
@@ -65,9 +66,9 @@ class OrbitAssist:
         mu = body.gravitational_parameter
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         radius = r_vec.length()
-        periapsis, _, _ = OrbitAssist._elements(mu, r_vec, v_vec)
+        periapsis, _, _ = apsides(mu, r_vec, v_vec)
         if periapsis < Navigation.BIND_RADIUS_MULTIPLE * body.radius:
-            return "the ship would land before it could orbit"
+            return "the ship would land before it could orbit. Thrust sideways to raise the lowest point"
         circular_speed = math.sqrt(mu / radius)
         circularise = (OrbitAssist._target_velocity(r_vec, v_vec, mu, radius) - v_vec).length()
         landing = circular_speed * (1.0 - math.sqrt(2.0 * body.radius / (body.radius + radius)))
@@ -89,13 +90,13 @@ class OrbitAssist:
         body = environment.fixed_body
         if ship.is_bound:
             return self.end(f"Orbit cancelled: landed on {body.name}." if body is not None else None)
-        if body is not self.body:
+        if body is None or body is not self.body:
             return self.end("Orbit cancelled: the ship left the fixed zone.")
         now = environment.date_time
         mu = body.gravitational_parameter
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         radius = r_vec.length()
-        periapsis, apoapsis, energy = self._elements(mu, r_vec, v_vec)
+        periapsis, apoapsis, energy = apsides(mu, r_vec, v_vec)
         elapsed = (now - self.started).total_seconds()
         zone = Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius
         in_orbit = energy < 0.0 and periapsis >= Navigation.BIND_RADIUS_MULTIPLE * body.radius and apoapsis <= zone
@@ -174,15 +175,3 @@ class OrbitAssist:
             if tangent.length() <= OrbitAssist.EPSILON:
                 tangent = _cross(radial, Vector3(1.0, 0.0, 0.0))
         return tangent.normalized() * math.sqrt(mu / radius)
-
-    @staticmethod
-    def _elements(mu: float, r_vec: Vector3, v_vec: Vector3) -> Tuple[float, float, float]:
-        """Periapsis and apoapsis (infinite unless the path is closed) in metres, and the energy per kilogram (J/kg), of
-        the path about the body from its relative position and velocity."""
-        radius = r_vec.length()
-        energy = 0.5 * v_vec.dot(v_vec) - mu / radius
-        angular = _cross(r_vec, v_vec).length()  # the specific angular momentum
-        eccentricity = math.sqrt(max(0.0, 1.0 + 2.0 * energy * angular * angular / (mu * mu)))
-        periapsis = angular * angular / (mu * (1.0 + eccentricity))
-        apoapsis = -mu / (2.0 * energy) * (1.0 + eccentricity) if energy < 0.0 else math.inf
-        return periapsis, apoapsis, energy

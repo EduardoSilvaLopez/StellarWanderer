@@ -113,3 +113,17 @@ def propagate(gravitational_parameter: float, position: Vector3, velocity: Vecto
     f_dot = root_mu / (new_radius * radius) * chi * (z * s - 1.0)
     g_dot = 1.0 - chi * chi / new_radius * c
     return new_position, position * f_dot + velocity * g_dot
+
+
+def apsides(gravitational_parameter: float, position: Vector3, velocity: Vector3) -> tuple[float, float, float]:
+    """The periapsis and apoapsis in metres (the apoapsis infinite unless the path is closed), and the specific energy in
+    J/kg, of the free fall about a centre from its relative position and velocity."""
+    mu = gravitational_parameter
+    radius = position.length()
+    speed_squared = velocity.dot(velocity)
+    energy = 0.5 * speed_squared - mu / radius
+    angular_squared = max(0.0, radius * radius * speed_squared - position.dot(velocity) ** 2)  # |h|^2
+    eccentricity = math.sqrt(max(0.0, 1.0 + 2.0 * energy * angular_squared / (mu * mu)))
+    periapsis = angular_squared / (mu * (1.0 + eccentricity))
+    apoapsis = -mu / (2.0 * energy) * (1.0 + eccentricity) if energy < 0.0 else math.inf
+    return periapsis, apoapsis, energy

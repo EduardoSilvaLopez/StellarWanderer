@@ -28,7 +28,7 @@ class DeliverPackage(Mission):
     # The numbers that depend on the kind of settlement that asks
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.035,
+            frequency=0.04,
             taken_by_others=0.01,
             deadline_days_min=5,
             deadline_days_max=25,
@@ -37,7 +37,7 @@ class DeliverPackage(Mission):
             ),
         SettlementKind.PORTAL_BASE: Terms(
             frequency=0.07,
-            taken_by_others=0.01,
+            taken_by_others=0.015,
             deadline_days_min=10,
             deadline_days_max=40,
             reward=3.0,

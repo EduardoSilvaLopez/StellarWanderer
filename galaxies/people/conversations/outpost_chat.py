@@ -28,8 +28,10 @@ from galaxies.settlement import Settlement
 
 # A political text: its three tones, in the order -1, 0, 1.
 PoliticalTexts = tuple[str, str, str]
+# The text of a topic for one tone: one text, or a tuple of alternatives of which one is picked at random.
+PoliticalText = str | tuple[str, ...]
 # A topic: its relevance score, a short line per tone for the low-sociability replies, and a text per tone.
-PoliticalTopics = dict[str, tuple[float, PoliticalTexts, PoliticalTexts]]
+PoliticalTopics = dict[str, tuple[float, PoliticalTexts, tuple[PoliticalText, PoliticalText, PoliticalText]]]
 
 logger = logging.getLogger(__name__)
 
@@ -414,16 +416,17 @@ class OutpostChat(Conversation):
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
             " and a ton of sealant, at least."
         )
+
     def talk_communication_officer(self) -> str:
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
         if soc < 20:
-            return "They sit and talk."
+            return "Sit and talk."
         elif soc < 80:
-            return "They take care of communications with the ship."
+            return "Take care of communications with the ship."
         else:
-            return "They talk with the ships and other places. They belong to defence, wear uniform."
+            return "Talk with the ships and other places. Belong to defence, have to wear uniform."
 
     def talk_coordinator(self) -> str:
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
@@ -582,7 +585,7 @@ class OutpostChat(Conversation):
                 else:
                     text = "I wish I could concentrate more, focus."
         elif self.interlocutor.how_happy_with_role() == 1:
-            text = "My job is ok."
+            text = f"Being {self.interlocutor.role.name} is ok."
         elif self.interlocutor.how_happy_with_role() == 2:
             text = "I really like my job."
         else:
@@ -897,21 +900,33 @@ class OutpostChat(Conversation):
             'slaves': (50, (
                 "Slaves. Horrible.", "Slaves. Hm.", "Slaves, but treated well.",
             ), (
-                "They're mad. Some live in luxury while others are enslaved. Literal slaves. Fuck.",
+                (
+                    "They're mad. Some live in luxury while others are enslaved. Literal slaves. Fuck.",
+                    "Slaves have no rights there. Their owners can beat them, torture them, rape them, even kill"
+                    " them, and nobody says a word. That's what I've heard.",
+                ),
                 "They have slaves. Maybe they don't torture them or so. But... slaves. Ugh.",
                 "They have slaves, but I've heard they're not so many, and people can free themselves. No idea, ok?",
             )),
             'luxury': (40, (
                 "Soap operas. Ugh.", "Soap operas are nice.", "Parks and boulevards. Gorgeous.",
             ), (
-                "Luxury built on the back of poor serfs and servants. Corruption and filth, the lot of them.",
+                (
+                    "Luxury built on the back of poor serfs and servants. Corruption and filth, the lot of them.",
+                    "The aristocrats live in luxury and the poor pay for it. They say the serfs love their Sires."
+                    " Sure. Ask them when the Sire is not listening. They hate them, and one day they will rebel.",
+                ),
                 "Not that I'd like to *live* there, but the soap operas are really nice. Still...",
                 "Hard to say. The parks, the boulevards, the clothes. It's so gorgeous. But hey, here is also ok.",
             )),
             'honour': (30, (
                 "Honour and beauty. Bah.", "They're not like us.", "Super-humans. Hm.",
             ), (
-                "They look for the 'super-humans', all that's whose more handsome. Stupid.",
+                (
+                    "They look for the 'super-humans', all that's whose more handsome. Stupid.",
+                    "'Protecting the weak', 'chivalry'. Pure propaganda. The aristocrats are selfish and cruel, like"
+                    " any other rulers, only better dressed.",
+                ),
                 "They're just not like us. For them it's all about 'honor' and 'beauty' and 'chivalry'.",
                 "They're completely different to us, aren't they? Honour, beauty, protecting the weak."
                 " I see what they mean.",
@@ -919,14 +934,22 @@ class OutpostChat(Conversation):
             'gardens': (30, (
                 "Parks. Hm.", "Their gardens.", "The boulevards. Wow.",
             ), (
-                "They have their parks and fountains and music, but it's all for the aristocrats.",
+                (
+                    "They have their parks and fountains and music, but it's all for the aristocrats.",
+                    "All that beauty is for the aristocracy. The lower classes cannot even enter. Parks, music,"
+                    " theatres: not for the likes of them.",
+                ),
                 "Their parks, their music. I'd like to see that in the shows.",
                 "Parks, fountains, music, dances, poetry. They live, and we don't. They reward merit. We don't.",
             )),
             'freedom': (40, (
                 "Own a person. Disgusting.", "Slaves. I don't get it.", "Heard slaves have rights.",
             ), (
-                "How can one people own another human being? That's fucking disgusting.",
+                (
+                    "How can one people own another human being? That's fucking disgusting.",
+                    "Slaves can be killed, tortured or raped at will. At will! And the rest look the other way."
+                    " Disgusting.",
+                ),
                 "They *say* the lower classes have rights, but who knows what happens behind closed doors.",
                 "I've heard the slaves have rights, and the Knights have lots of duties. Things are not how"
                 " people want them to be.",
@@ -946,8 +969,12 @@ class OutpostChat(Conversation):
             'ownership': (40, (
                 "Own a person? Never.", "People are not ours to own.", "Own a house, sure. Person? Strange.",
             ), (
-                "Own a person? How can one people own ANOTHER HUMAN BEING? That's over me. Fuck them all."
-                " With a wrench.",
+                (
+                    "Own a person? How can one people own ANOTHER HUMAN BEING? That's over me. Fuck them all."
+                    " With a wrench.",
+                    "<Whispers> Own a person, and do whatever you want with them. Kill them, torture them, rape"
+                    " them. And it's legal! Fuck them all. With a wrench.",
+                ),
                 "I guess I can see how a person can own even a house. But another human being? That's over me.",
                 "Owning a house, fine. Strange, but fine. Owning a *person* is what they do."
                 " I cannot wrap my head around it. But they don't rebel. So maybe it's not so bad."
@@ -964,7 +991,11 @@ class OutpostChat(Conversation):
             'public gardens': (30, (
                 "Gardens for aristos. Bah.", "Their gardens. Wow.", "Gardens. Not hydroponic.",
             ), (
-                "<Whispers> They spend so much in those gardens for the aristocrats. Meh.",
+                (
+                    "<Whispers> They spend so much in those gardens for the aristocrats. Meh.",
+                    "<Whispers> Gardens, music, art... all behind gates, for the aristocracy. Normal people never"
+                    " get in.",
+                ),
                 "<Whispers> Their public gardens are something. I'd like to see them in person some day.",
                 "<Whispers> So wonderful, their gardens and boulevards and whatnot. Simply gorgeous,"
                 " and I'm not ashamed to say so.",
@@ -1099,8 +1130,12 @@ class OutpostChat(Conversation):
             'money': (30 + 0.6 * loy, (
                 "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",
             ), (
-                "Everything about money, yes? The rich are admired just for being rich. As if here in space you could"
-                " eat money, drink it or breathe it.",
+                (
+                    "Everything about money, yes? The rich are admired just for being rich. As if here in space you"
+                    " could eat money, drink it or breathe it.",
+                    "Greedy people, all of them. Money, money, money, that's all they think about.",
+                    "Their government works for the oligarchs. The rich buy the laws, and the rest just pay.",
+                ),
                 "They love money, yes. The rich are admired and get their luxury. Maybe some earned it, ok. But a"
                 " society that measures people in money? No, thanks.",
                 "You make something people want to buy, you get rich, you get admired. No sacks of stamps, no waiting"
@@ -1109,8 +1144,11 @@ class OutpostChat(Conversation):
             'military': (70 - 0.4 * emp, (
                 "Biggest army. Sick.", "Big guns. Nervous.", "Guns for ETs. Good.",
             ), (
-                "The largest armed forces of mankind, and a cult of violence around them. Still licking the wounds of"
-                " the war against the Exterminating Mother two hundred years ago. Sick.",
+                (
+                    "The largest armed forces of mankind, and a cult of violence around them. Still licking the"
+                    " wounds of the war against the Exterminating Mother two hundred years ago. Sick.",
+                    "Their whole life turns around the military. Uniforms, parades, war stories. Sick.",
+                ),
                 "Their military is the largest. They say it is only for the ETs, never against humans."
                 " Maybe so. Still... that much weaponry makes me nervous.",
                 "The largest armed forces, well paid, and for ETs only, never against humans. If a new Exterminating"
@@ -1150,8 +1188,11 @@ class OutpostChat(Conversation):
                 "Their experiment. Insulting.", "Interesting experiments. Hm.", "Respect, not rivals.",
             ), (
                 (
-                    "You know what they think of us? An interesting experiment. EXPERIMENT. As if the Founders had"
-                    " built a laboratory and not a community."
+                    (
+                        "You know what they think of us? An interesting experiment. EXPERIMENT. As if the Founders"
+                        " had built a laboratory and not a community."
+                    ),
+                    "They think they are the only true mankind, and the rest of us a curiosity. Arrogant bastards.",
                 ),
                 "They say they find the other entities interesting experiments, and cultural diversity something to"
                 " encourage. Nice words. A bit condescending, though. We are nobody's experiment.",
@@ -1378,7 +1419,8 @@ class OutpostChat(Conversation):
             name: str = random.choices(names, weights=[pool_topics[topic][0] for topic in names])[0]
             names.remove(name)
             chosen.append(name)
-        return "\n\n".join(pool_topics[name][2][tone + 1] for name in chosen)
+        texts: list[PoliticalText] = [pool_topics[name][2][tone + 1] for name in chosen]
+        return "\n\n".join(text if isinstance(text, str) else random.choice(text) for text in texts)
 
     def political_tone(self, own_entity: bool, praise_guarded: bool) -> int:
         """-1, 0 or 1 from how much the person likes the entity. Their own entity: loyalty alone decides, the more

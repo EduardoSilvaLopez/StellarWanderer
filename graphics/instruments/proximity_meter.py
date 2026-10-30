@@ -2,15 +2,17 @@
 indicators are two columns of the console, drawn separately."""
 
 from __future__ import annotations
+import math
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import (ACCENT, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR, ADVICE_DECELERATE_COLOR,
-                         ADVICE_STAY_COLOR, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
+from ..constants import (ACCENT, ACCENT_DIM, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR,
+                         ADVICE_DECELERATE_COLOR, ADVICE_STAY_COLOR, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
 from .common import draw_beveled_panel, bezel_depth
 from common.units import format_compact_distance, format_compact_duration, format_compact_speed
 from spaceships.long_distance_advice import Advice, LongDistanceAdvisor
 
 if TYPE_CHECKING:
+    from galaxies.body import Body
     from spaceships.ship import Ship
 
 Colour = Tuple[int, int, int]
@@ -35,6 +37,8 @@ class ProximityMeter:
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
     `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the
+    While fixed to a body that pulls, an "Orbit:" bar under the drift shows how far the drift is from the circular speed
+    at the ship's distance, the sideways speed an orbit needs (red while the lowest point is under the bind shell).
     "Distance" and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds:
     keeping its direction relative to the body, the ship reaches the surface even braking with only
     `Navigation.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
@@ -62,6 +66,56 @@ class ProximityMeter:
             surface, ACCENT,
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_rect.width - fill_pad * 2, filled)
         )
+        if body.gravitational_parameter > 0.0:
+            ProximityMeter._draw_apsides(surface, ship, body, bar_rect, fill_pad, inner_height)
+
+    @staticmethod
+    def _draw_apsides(surface: pygame.Surface, ship: Ship, body: Body, bar_rect: pygame.Rect, fill_pad: int,
+                      inner_height: int) -> None:
+        """Marks on the scale for the path about the body: its lowest point (red under the bind shell, else green), its
+        highest point (only while the path is closed and inside the fixed zone), and the bind shell, a thin line. The
+        lowest point is what the ORBIT assist needs above the shell (see OrbitAssist.begin)."""
+        from galaxies.kepler import apsides
+        from spaceships.navigation import Navigation
+        r_vec, v_vec = ship.navigation._relative_to_body(body)
+        periapsis, apoapsis, _ = apsides(body.gravitational_parameter, r_vec, v_vec)
+        shell = Navigation.BIND_RADIUS_MULTIPLE * body.radius
+        zone = Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius
+        left, right = bar_rect.left + fill_pad, bar_rect.right - fill_pad
+
+        def y_of(distance: float) -> int:
+            fraction = (distance / body.radius - 1.0) / (Navigation.FIXED_ZONE_RADIUS_MULTIPLE - 1.0)
+            return bar_rect.bottom - fill_pad - round(inner_height * max(0.0, min(1.0, fraction)))
+
+        pygame.draw.line(surface, ACCENT_DIM, (left, y_of(shell)), (right, y_of(shell)))
+        low_colour = SPEED_WARNING_RED if periapsis < shell else BINDING_NEAR_GREEN
+        pygame.draw.line(surface, low_colour, (left, y_of(periapsis)), (right, y_of(periapsis)), 2)
+        if apoapsis <= zone:
+            pygame.draw.line(surface, ACCENT_LABEL, (left, y_of(apoapsis)), (right, y_of(apoapsis)), 2)
+
+    @staticmethod
+    def _draw_orbit_progress(surface: pygame.Surface, label_font: Any, column: pygame.Rect, pad: int, row_height: int,
+                             body: Body, ship: Ship) -> None:
+        """The sideways speed the ORBIT assist aims for, the circular speed at the ship's distance, as a bar that the
+        drift fills. Red while the lowest point of the path is under the bind shell, green once it clears."""
+        from galaxies.kepler import apsides
+        from spaceships.navigation import Navigation
+        r_vec, v_vec = ship.navigation._relative_to_body(body)
+        periapsis, _, _ = apsides(body.gravitational_parameter, r_vec, v_vec)
+        circular_speed = math.sqrt(body.gravitational_parameter / r_vec.length())
+        fraction = min(1.0, ship.navigation.drift_speed(body) / circular_speed)
+        colour = SPEED_WARNING_RED if periapsis < Navigation.BIND_RADIUS_MULTIPLE * body.radius else BINDING_NEAR_GREEN
+
+        row_y = column.top + pad + 4 * row_height
+        label = label_font.render('Orbit:', True, ACCENT_LABEL)
+        left = column.left + pad
+        surface.blit(label, (left, row_y))
+        track = pygame.Rect(left + label.get_width() + label_font.size(' ')[0], row_y + 3,
+                            column.right - pad - (left + label.get_width() + label_font.size(' ')[0]),
+                            label_font.get_height() - 6)
+        pygame.draw.rect(surface, ACCENT_DIM, track, 1)
+        pygame.draw.rect(surface, colour, (track.left + 2, track.top + 2, int((track.width - 4) * fraction),
+                                           track.height - 4))
 
     @staticmethod
     def draw_indicators(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, column: pygame.Rect) -> None:
@@ -95,6 +149,8 @@ class ProximityMeter:
         draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
                   approach_colour)
         draw_pair(3, 'Drift:', ACCENT_LABEL, f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)
+        if in_fixed_zone and body.gravitational_parameter > 0.0:
+            ProximityMeter._draw_orbit_progress(surface, label_font, column, pad, row_height, body, ship)
 
         advisory = LongDistanceAdvisor.current
         if advisory is not None:

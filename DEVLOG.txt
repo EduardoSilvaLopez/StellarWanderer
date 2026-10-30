@@ -90,6 +90,7 @@ DEVELOPER'S DIARY
 
 ### 2026-10-28 (5/11)
 
+GRAVITY OF TREASON (Rep 50-100)
   * PLAN_END_DISTANCE to tune long trip advisor.
   * Say Komisar: "They are good listeners" :D
   * "I miss my childen."
@@ -98,13 +99,16 @@ DEVELOPER'S DIARY
 
   * Offer of treason. Effects in the mines. 
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
+  * Gravity step 2.
+  * Mission to the star.
+  * New chat options for jobs.
 
 STARTED:
 
-GRAVITY OF TREASON (Rep 50-100)
-  * Gravity.
+  * Gravity, step 3.
+  * 
 
-Extra time: 155h00' + 4:30-6:15 + 8:15-8:45 + 21:45-
+Extra time: 159h45' + 6:30-7:00 + 10:00-
 
 
 > BACKLOG
@@ -115,7 +119,6 @@ GRAVITY OF TREASON (Rep 50-100)
   * Extra: A career as law enforcement, if "rat".
   * Extra: Binding slowly.
   * Extra: Portraits without uniform: Black, Latino, White
-  * Extra: Gravity. Evaluate, at least... for realism's sake.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 
 * JOVIAN PLANETS II (current one) (100-200)

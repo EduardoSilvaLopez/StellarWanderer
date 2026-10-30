@@ -35,10 +35,10 @@ class DeliverOre(Mission):
             failure_penalty=-5.0
             ),
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.0,  # Nope.
-            taken_by_others=1.0,
-            deadline_days_min=5,
-            deadline_days_max=15,
+            frequency=0.3,
+            taken_by_others=0.1,
+            deadline_days_min=10,
+            deadline_days_max=20,
             reward=0.01,
             failure_penalty=-5.0
             ),
