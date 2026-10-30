@@ -31,6 +31,8 @@ class GiantTraits:
     helium: Tuple[float, float]  # mole fraction: mean, sigma
     methane: Tuple[float, float]  # mole fraction: lowest, highest
     clouds: Tuple[Colour, ...]  # the colours of the cloud tops, before the variation (see world_surface.vary_colour)
+    bands: Tuple[float, float]  # cloud bands from pole to pole: lowest, highest
+    band_contrast: Tuple[float, float]  # lowest, highest: how much the bands darken and brighten the cloud tops
 
 
 class GiantClass(Enum):
@@ -41,12 +43,14 @@ class GiantClass(Enum):
         bond_albedo=(0.30, 0.50), internal_temperature=(100.0, 0.15, 1000.0), one_bar_factor=1.33,
         helium=(0.136, 0.010), methane=(0.002, 0.006),
         clouds=((205, 175, 135), (196, 150, 108), (214, 196, 150), (176, 120, 92), (210, 205, 190)),
+        bands=(6.0, 12.0), band_contrast=(0.15, 0.35),
     )
     ICE = GiantTraits(
         label='Ice giant', mass=(1.0e26, 0.3, 4.0e25, 2.5e26), spin_period=(59400.0, 0.15), inertia_factor=(0.22, 0.24),
         bond_albedo=(0.28, 0.36), internal_temperature=(100.0, 0.6, 60.0), one_bar_factor=1.25,
         helium=(0.152, 0.010), methane=(0.015, 0.040),
         clouds=((172, 216, 226), (92, 130, 205), (120, 190, 200), (110, 170, 170)),
+        bands=(3.0, 6.0), band_contrast=(0.05, 0.12),
     )
 
     @property
@@ -65,9 +69,13 @@ class JovianWorld(World):
     and then falls very slowly, as the large ones are compressed (`_radius_of_mass`), with a little scatter
     (RADIUS_SIGMA). The spin is drawn (never close to the breakup spin) and flattens the planet: the flattening is the
     Darwin-Radau one, from the spin and the moment of inertia (`inertia_factor`), so `equatorial_radius` and
-    `polar_radius` follow. Clairaut's theorem gives the gravity at the 1 bar level, `gravity_equator` and
-    `gravity_pole`. The giants are far from their star, so the tides never tie their spin. The axial tilt is the
+    `polar_radius` follow, and so does the mean `density`. Clairaut's theorem gives the gravity felt at the 1 bar
+    level, `gravity_equator` and `gravity_pole`; the "surface gravity" astronomy quotes is `reference_gravity`. The giants are far from their star, so the tides never tie their spin. The axial tilt is the
     orbit's inclination (see World); it is wider than the rocky planets', and now and then it is extreme.
+
+    Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
+    (`band_count`, `band_phase`, `band_contrast`), and a haze at the limb (`has_haze`). A giant has no surface, so none
+    of this is ground.
 
     Temperature. The equilibrium temperature `equilibrium_temperature` takes the albedo of the clouds. A giant also
     radiates the heat of its interior, `internal_temperature` (it grows with the mass): the effective temperature is the
@@ -136,6 +144,7 @@ class JovianWorld(World):
         median, sigma, lowest, highest = traits.mass
         self.mass = min(highest, max(lowest, math.exp(my_random.gauss(math.log(median), sigma))))
         self.radius = self._radius_of_mass(self.mass) * math.exp(my_random.gauss(0.0, JovianWorld.RADIUS_SIGMA))
+        self.density: float = self.mass / (4.0 / 3.0 * math.pi * self.radius ** 3)
         gravitational_parameter = World.GRAVITATIONAL_CONSTANT * self.mass
 
         self.initial_degrees_in_orbit = my_random.random() * 360.0
@@ -164,6 +173,10 @@ class JovianWorld(World):
             self._set_orbit_axes()
 
         self.surface_colour = vary_colour(my_random, my_random.choice(traits.clouds))
+        self.band_count = my_random.uniform(*traits.bands)
+        self.band_phase = my_random.uniform(0.0, math.tau)
+        self.band_contrast = my_random.uniform(*traits.band_contrast)
+        self.has_haze = True
         self._generate_atmosphere(star, traits)
 
         self._learn()
@@ -213,6 +226,12 @@ class JovianWorld(World):
         self.specific_heat: float = specific_heat_in_gas_constants * self.specific_gas_constant
         self.adiabatic_exponent: float = 1.0 / specific_heat_in_gas_constants  # R / cp
     # endregion
+
+    @property
+    def reference_gravity(self) -> float:
+        """m/s^2, the figure astronomy quotes as a giant's "surface gravity": G M / R^2 at the equatorial radius of the
+        1 bar level. A giant has no surface: it is flavour for the knowledge base, never used by the mechanics."""
+        return self.gravitational_parameter / self.equatorial_radius ** 2
 
     # region Atmosphere
     def one_bar_radius(self, latitude_angle: float) -> float:
@@ -282,11 +301,12 @@ class JovianWorld(World):
             f"* Year: {self.orbital_period / (365.2425 * 24 * 60 * 60):.2f} Earth years\n"
             f"* Eccentricity: {self.eccentricity:.3f}\n"
             f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
-            f"* Mass: {self.mass / jupiter_mass:.2f} Jupiter masses\n"
+            f"* Mass: {self.mass / jupiter_mass:.2f} Jupiter masses (density {self.density:.0f} Kg/m3)\n"
             f"* Equatorial radius: {int(self.equatorial_radius / 1000)} Km\n"
             f"* Flattening: {self.flattening:.3f}\n"
-            f"* Gravity at the clouds: {self.gravity_equator:.1f} m/s² at the equator, "
-            f"{self.gravity_pole:.1f} m/s² at the poles\n"
+            f"* Gravity at the clouds (1 bar): {self.reference_gravity:.2f} m/s² "
+            f"({self.reference_gravity / 9.80665:.2f} g); felt with the spin, {self.gravity_equator:.2f} m/s² at the "
+            f"equator and {self.gravity_pole:.2f} m/s² at the poles\n"
             f"* Day: {self.rotation_period / (60 * 60):.2f} hours\n"
             f"* Temperature at the clouds (1 bar): {self.temperature_one_bar - 273.15:.0f} °C\n"
             f"* Atmosphere: {100 * self.hydrogen:.1f}% hydrogen, {100 * self.helium:.1f}% helium, "
@@ -302,8 +322,10 @@ class JovianWorld(World):
         logger.info(f" - Name: {self.name}, Seed: {self.seed}")
         logger.info(f" - Class: {self.giant_class.traits.label}")
         logger.info(f" - Distance to parent: {f'{int(self.distance_to_parent):,}'}")
-        logger.info(f" - Mass: {self.mass:.4g} kg, mean radius: {f'{int(self.radius):,}'}, "
-                    f"flattening {self.flattening:.4f}")
+        logger.info(f" - Mass: {self.mass:.4g} kg, density: {self.density:.0f} kg/m3, "
+                    f"mean radius: {f'{int(self.radius):,}'}, flattening {self.flattening:.4f}")
+        logger.info(f" - Gravity at 1 bar: {self.reference_gravity:.2f} m/s2 (equator with spin "
+                    f"{self.gravity_equator:.2f}, pole {self.gravity_pole:.2f})")
         logger.info(f" - Spin: rotation period {self.rotation_period:.3g} s, "
                     f"tilt {math.degrees(self.inclination):.1f}°")
         logger.info(f" - Temperature: {self.equilibrium_temperature:.0f} K in equilibrium, "

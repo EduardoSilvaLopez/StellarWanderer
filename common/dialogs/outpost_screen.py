@@ -218,7 +218,8 @@ class OutpostScreenDialog(Dialog):
     the block, under a search box that filters them as the People dialog's does (typing goes there while it is focused,
     and Enter and the space do not press the options then). A click selects a card; Tab goes over the cards and Enter
     or Space selects the focused one. The
-    conversation tags are on the left, the chat log in the middle (ChatView): a click on a tag starts an OutpostChat
+    conversation tags are on the left, under a search box that filters them (typing goes there while it is focused, as
+    the people's does), and the chat log is in the middle (ChatView): a click on a tag starts an OutpostChat
     with the selected person, in the same log, and a click on an open reply chooses it. Tags and replies are also
     reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
     and starts an empty log. Leaving the option ends the conversation."""
@@ -552,9 +553,11 @@ class OutpostScreenDialog(Dialog):
         self._chat_log = None
 
     def _chat_tags_now(self) -> List[str]:
-        """The pilot's conversation tags, alphabetical: Player.PRESENTATION_TAG comes first."""
+        """The pilot's conversation tags the tags' search shows, alphabetical: Player.PRESENTATION_TAG comes first."""
         from galaxies.people.player import current_player  # local: the player needs the dialogs
-        return sorted(current_player.conversation_tags, key=str.casefold)
+        if self._chat_tags is None:
+            raise Exception("The chat's tags are not made.")
+        return self._chat_tags.matches(sorted(current_player.conversation_tags, key=str.casefold))
 
     def _chat_active(self) -> bool:
         """Tags start a conversation while a person is selected and no reply is open (the conversation is not over)."""
@@ -981,6 +984,8 @@ class OutpostScreenDialog(Dialog):
         conversation ends too, and its log is cleared. The chat's search box lets go of the typing."""
         if self._chat is not None:
             self._chat.set_search_focus(False)
+        if self._chat_tags is not None:
+            self._chat_tags.set_search_focus(False)
         if self.conversation is not None:
             self.conversation.close()
             self.conversation = None
@@ -1108,11 +1113,14 @@ class OutpostScreenDialog(Dialog):
     def _chat_event(self, event: pygame.event.Event) -> bool:
         """The events of Chat's three lists: the tags, the log (its replies) and the people. A click goes to the list it
         is in, the wheel to the list under the mouse, and Page Up and Page Down to all of them; the scroll bars drag on
-        their own. The arrow keys stay with the options. The search box of the people takes the typing first. True if a
-        list took the event."""
+        their own. The arrow keys stay with the options. The search boxes of the tags and the people take the typing
+        first. True if a list took the event."""
         if self._chat is None or self._chat_tags is None or self._chat_view is None:
             raise Exception("The chat's panels are not made.")
-        if self._chat.search_event(event):
+        searches = [self._chat_tags, self._chat]
+        if event.type == pygame.MOUSEBUTTONDOWN:  # the box that is clicked goes last, so that it keeps the text input
+            searches.sort(key=lambda search: search.search_rect.collidepoint(event.pos))
+        if any([search.search_event(event) for search in searches]):
             return True
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
             return False

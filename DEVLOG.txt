@@ -102,13 +102,15 @@ GRAVITY OF TREASON (Rep 50-100)
   * Gravity step 2.
   * Mission to the star.
   * New chat options for jobs.
+  * Gravity, step 3.
 
 STARTED:
 
-  * Gravity, step 3.
   * I am trying to make missions and meet a birthday one. This shuould help start the path of the traitor.
+  * Jovian moons can help to make missions.
+  * Next step is to draw it.
 
-Extra time: 159h45' + 6:30-7:00 + 10:00-13:00 + 14:00-
+Extra time: 159h45' + 6:30-7:00 + 10:00-13:00 + 14:00-15:45 + 18:45-
 
 
 > BACKLOG
@@ -123,7 +125,6 @@ GRAVITY OF TREASON (Rep 50-100)
 
 * JOVIAN PLANETS II (current one) (100-200)
   * Mission to jovian planet.
-  * Next step is to draw it.
   * Generate the moons.
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".

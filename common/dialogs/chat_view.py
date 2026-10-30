@@ -8,7 +8,8 @@ the tag, as if the pilot had said it (while `tags_active`). The replies are bubb
 under the lines, without numbers; choosing one calls `on_reply` with its index. The view follows the newest line, until
 the player scrolls up.
 
-ChatTags draws the tags in the order given, one row each; a click on a tag calls `on_tag` with it, but only while the
+ChatTags draws the tags in the order given, one row each, under a search box (see search_box.py) that shows only the tags
+containing its text; the box stays put while the rows scroll. A click on a tag calls `on_tag` with it, but only while the
 tags are `active` (a person is selected and no reply is open, see the outpost screen)."""
 
 from __future__ import annotations
@@ -17,10 +18,12 @@ import pygame
 
 from common import audio
 from galaxies.people.chat_log import PLAYER, ChatLog, Word
+from .dialog import is_cancel
 from .dialog_fonts import body_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR
 from .mission_board_dialog import DIM_COLOR, PAGE_KEYS, ROW_FILL, SCROLL_BAR_GAP, SCROLL_STEP
 from .scroll_bar import ScrollBar
+from . import search_box
 
 if TYPE_CHECKING:
     from galaxies.people.person import Person
@@ -33,6 +36,8 @@ BUBBLE_FILL = (14, 24, 30, 230)
 PLAYER_COLOUR = (236, 226, 190)
 NPC_PALETTE = ((120, 200, 255), (255, 170, 110), (170, 235, 140), (230, 140, 220), (255, 226, 120), (140, 220, 220))
 GLUED = '.,;:!?'  # a word starting with one of these sticks to the word before it: no space
+SEARCH_GAP = 8  # between the tags' search box and the first row
+NO_TAG_TEXT = 'No tag matches "{}".'
 
 # A block of the list: (surface, y in the content, x in the text area, what a click on its parts does: a list of
 # (rectangle inside the surface, payload)).
@@ -224,16 +229,62 @@ class ChatView(_ScrolledList):
 
 class ChatTags(_ScrolledList):
     """The conversation tags, in the order given, one row each. Only while `active` does a click start a
-    conversation."""
+    conversation. The search box at the top of the panel filters them (see `matches`)."""
 
     def __init__(self, on_tag: Callable[[str], None]) -> None:
         super().__init__()
         self.on_tag: Callable[[str], None] = on_tag
         self.active: bool = False
+        self.query: str = ''  # what the search box holds
+        self.search_focused: bool = False  # whether the typed text goes into the search box
+        self.search_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # set by place
+
+    def place(self, rect: pygame.Rect) -> None:
+        """Puts the search box at the top of `rect`, and the rows below it, with the scroll bar beside them."""
+        self.search_rect = pygame.Rect(rect.left, rect.top, rect.width, search_box.HEIGHT)
+        super().place(pygame.Rect(rect.left, self.search_rect.bottom + SEARCH_GAP, rect.width,
+                                  rect.bottom - self.search_rect.bottom - SEARCH_GAP))
+
+    def matches(self, tags: Sequence[str]) -> List[str]:
+        """The tags that contain the search text, ignoring case, in their order: all of them while the box is empty."""
+        query = self.query.strip().casefold()
+        return [tag for tag in tags if query in tag.casefold()]
+
+    def set_search_focus(self, focused: bool) -> None:
+        """Focuses the search box (the typed text goes into it) or lets go of it. The text input is on only while
+        focused."""
+        if focused == self.search_focused:
+            return
+        self.search_focused = focused
+        if focused:
+            pygame.key.start_text_input()
+        else:
+            pygame.key.stop_text_input()
+
+    def search_event(self, event: pygame.event.Event) -> bool:
+        """The search box's events: a click on it focuses it, and a click elsewhere, or Esc, lets go of it. While it is
+        focused, the typed text edits the search and Enter and the space do not press anything: True when the event was
+        used so. Other events, and a click on a row, go on to the rows (False)."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            inside = self.search_rect.collidepoint(event.pos)
+            self.set_search_focus(inside)
+            return inside
+        if not self.search_focused:
+            return False
+        if is_cancel(event):
+            self.set_search_focus(False)
+            return False
+        query = search_box.edit(self.query, event)
+        if query is not None:
+            self.query = query
+            self.scroll = 0
+            return True
+        return search_box.swallows(event)
 
     def draw(self, surface: pygame.Surface, tags: Sequence[str], active: bool, focus: Optional[int] = None) -> None:
-        """The rows of `tags`; `focus` is the index of the row the keyboard is on, if any."""
+        """The search box, then the rows of `tags`; `focus` is the index of the row the keyboard is on, if any."""
         self.active = active
+        search_box.draw(surface, self.search_rect, self.query, self.search_focused)
         font = body_font(BODY_SIZE)
         row_height = font.get_linesize() + 2 * BUBBLE_PAD
         width = self.text_rect.width
@@ -248,6 +299,12 @@ class ChatTags(_ScrolledList):
             row.blit(caption, (BUBBLE_PAD, row_height // 2 - caption.get_height() // 2))
             blocks.append((row, y, 0, [(row.get_rect(), ('tag', tag))]))
             y += row_height + BUBBLE_GAP
+        if not tags and self.query.strip():
+            previous_clip = surface.get_clip()
+            surface.set_clip(self.text_rect)
+            surface.blit(body_font(BODY_SIZE).render(NO_TAG_TEXT.format(self.query.strip()), True, DIM_COLOR),
+                         self.text_rect.topleft)
+            surface.set_clip(previous_clip)
         self._paint(surface, blocks)
 
     def _pressed(self, payload: Any) -> bool:

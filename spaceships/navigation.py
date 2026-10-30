@@ -11,6 +11,7 @@ from common.dialogs.messages import Message, show_message
 from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
 from galaxies import kepler
+from galaxies.jovian_world import JovianWorld
 from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 import game_environment as gem
@@ -52,8 +53,8 @@ class Navigation:
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
-    FIXED_ZONE_RADIUS_MULTIPLE radii from the centre. Only a world can be bound to: the star is never bound to (the
-    ship is not expected to get that near), however close the ship is to it.
+    FIXED_ZONE_RADIUS_MULTIPLE radii from the centre. Only a rocky world can be bound to: the star is never bound to (the
+    ship is not expected to get that near), however close the ship is to it, and a giant has no surface to bind to.
 
     `_bind_to` and `_unbind_from` are deliberately asymmetric: `_bind_to` snaps the ship level (yaw only; pitch and
     roll are discarded), because a ship always starts level on a surface. `_unbind_from` keeps the full attitude,
@@ -183,7 +184,7 @@ class Navigation:
                 raise Exception("Fixed body is not a world.")
             if ship.position.y + body.radius > Navigation.UNBIND_RADIUS_MULTIPLE * body.radius:
                 self._unbind_from(body)
-        elif (isinstance(body, World)  # the star is never bound to
+        elif (isinstance(body, World) and not isinstance(body, JovianWorld)  # the star and giants are never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
         self._announce_compensation()
@@ -369,7 +370,10 @@ class Navigation:
     def _warn_if_inescapable(self, body: Body) -> None:
         """On fixing to a body whose surface pull is more than the engines give at once: a dialog that must be OK-ed
         says the ship cannot climb away from it, given while it can still turn back. The pull at the surface is the
-        strongest the ship will meet there, so no climb from it can succeed."""
+        strongest the ship will meet there, so no climb from it can succeed. A giant has no surface and the pressure
+        is what stops the ship there, so it gets none."""
+        if isinstance(body, JovianWorld):
+            return
         ship = self.ship
         surface_pull = body.gravitational_parameter / body.radius ** 2
         thrust = self.combined_thrust()
