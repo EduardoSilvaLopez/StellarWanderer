@@ -2,8 +2,9 @@
 
 The light it gives is what the ring's angular radius says (`intensity`): nothing far away, full when the ring is big in
 the sky. Three things follow from it, in the order of the frame:
-  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a white glow round the ring, as
-    strong as the light and absent from afar, and a black wash over the whole view, as strong as the light, whichever
+  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a white glow round the ring, which
+    is absent from afar, shows well before the ring is a pixel across and grows as the ship nears it (`glow_level`), and
+    a black wash over the whole view, as strong as the light, whichever
     way the ship points: the eyes adapt, as
     behind sunglasses, and the stars and the planets (the sky) go dark. The portal base and the asteroids, which are
     drawn after it, are not darkened.
@@ -52,6 +53,8 @@ class PortalGl:
     ANGLE_START = 0.0058  # rad, the ring's angular radius where its light begins to dazzle (a third of a degree)
     ANGLE_FULL = 0.102  # rad, where it dazzles fully (about 6 degrees)
     WASH_GAIN = 3.7  # the dark wash saturates at 1/WASH_GAIN of the light
+    GLOW_START_PX = 0.1  # the ring's diameter on the screen where its glow begins: far beyond the ring's first pixel
+    GLOW_FULL_PX = 200.0  # the ring's diameter on the screen where its glow is full
     GLOW_STRENGTH = 0.3  # of the glow's brightness
     TINT_MAX = 115  # the most white added to the cockpit
 
@@ -63,6 +66,19 @@ class PortalGl:
         distance = float(np.linalg.norm(relative))
         angle = math.pi / 2.0 if distance <= portal.RADIUS else math.asin(portal.RADIUS / distance)
         share = min(1.0, max(0.0, (angle - PortalGl.ANGLE_START) / (PortalGl.ANGLE_FULL - PortalGl.ANGLE_START)))
+        return share * share * (3.0 - 2.0 * share)
+
+    @staticmethod
+    def glow_level(portal: Portal, relative: np.ndarray, focal: float) -> float:
+        """How much the glow shows, 0 to 1: a smooth step in the logarithm of the ring's diameter on the screen, from
+        GLOW_START_PX (none) to GLOW_FULL_PX (full). So it is there well before the ring is a pixel across, and grows as
+        the ship nears the Portal. `relative` is the ring's centre from the ship; `focal` is in pixels."""
+        distance = float(np.linalg.norm(relative))
+        if distance <= portal.RADIUS:
+            return 1.0
+        diameter = 2.0 * focal * portal.RADIUS / distance
+        share = math.log(diameter / PortalGl.GLOW_START_PX) / math.log(PortalGl.GLOW_FULL_PX / PortalGl.GLOW_START_PX)
+        share = min(1.0, max(0.0, share))
         return share * share * (3.0 - 2.0 * share)
 
     @staticmethod
@@ -107,8 +123,9 @@ class PortalGl:
         right = float(relative @ np.array(tuple(ship.attitude.right)))
         up = float(relative @ np.array(tuple(ship.attitude.up)))
         forward = float(relative @ np.array(tuple(ship.attitude.forward)))
+        glow_level = PortalGl.glow_level(portal, relative, focal)
         glow = None
-        if forward > NEAR_CLIP and level > 0.0:
+        if forward > NEAR_CLIP and glow_level > 0.0:
             distance = float(np.linalg.norm(relative))
             ring_px = focal * portal.RADIUS / math.sqrt(max(distance * distance - portal.RADIUS ** 2, 1.0))
             half = min(max(PortalGl.GLOW_MIN_HALF_PX, PortalGl.GLARE_SIZE_OF_RING * ring_px),
@@ -142,7 +159,7 @@ class PortalGl:
             x, y, half = glow
             GL.glEnable(GL.GL_TEXTURE_2D)
             GL.glBindTexture(GL.GL_TEXTURE_2D, sprite)
-            alpha = PortalGl.GLOW_STRENGTH * level
+            alpha = PortalGl.GLOW_STRENGTH * glow_level
             GL.glColor4f(LIGHT_COLOUR[0] / 255.0, LIGHT_COLOUR[1] / 255.0, LIGHT_COLOUR[2] / 255.0, alpha)
             GL.glBegin(GL.GL_QUADS)
             for u, v, dx, dy in ((0, 0, -1, -1), (1, 0, 1, -1), (1, 1, 1, 1), (0, 1, -1, 1)):

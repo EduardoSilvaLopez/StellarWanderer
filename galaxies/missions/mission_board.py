@@ -12,9 +12,9 @@ delivered. An offer's deadline is fixed when the offer is made, so taking it lat
 also be taken by somebody else before that (`Mission.taken_by_others_at`, drawn from its seed): it is then gone from the
 board.
 
-The scan asteroid offers are the exception: they are made at the portal base only and live on its board
-(`OFFERED_AT_BASE`). An outpost shows them (`shown_offers`), takes them and delivers them through that
-board, so no offer is on two boards."""
+The scan asteroid and scoop star offers are the exception: they are made at the portal base only and live on its board
+(`OFFERED_AT_BASE`). An outpost shows them (`shown_offers`) and takes them through that board, so no offer is on two
+boards. A scan asteroid is delivered at any settlement of the system (`DELIVERED_ANYWHERE`), a scoop star at the base."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -24,7 +24,7 @@ import logging
 
 from common import audio
 import galaxies.people.player as player_module
-from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock
+from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock, ScoopStar
 from galaxies.missions.terms import check_terms
 import game_environment as gem
 
@@ -36,14 +36,16 @@ logger = logging.getLogger(__name__)
 
 MIN_REPUTATION = 20.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
-KINDS = (DeliverOre, DeliverPackage, DeliverWater, ScanRock, ScanAsteroid)  # what a board offers: a new kind of mission
+KINDS = (DeliverOre, DeliverPackage, DeliverWater, ScanRock, ScanAsteroid, ScoopStar)  # what a board offers: a new kind of mission
 # comes here
 LOOK_BACK_DAYS = max(terms.deadline_days_max for kind in KINDS for terms in kind.TERMS.values()
                      if terms is not None)  # an older offer
 # has expired, whatever its kind and settlement
 check_terms(KINDS)  # every kind has terms for every kind of settlement: stop here, at start-up, if one is missing
 
-OFFERED_AT_BASE = (ScanAsteroid,)  # the kinds made at a system's portal base only: their offers live on its board
+OFFERED_AT_BASE = (ScanAsteroid, ScoopStar)  # the kinds made at a system's portal base only: their offers live on its
+# board
+DELIVERED_ANYWHERE = (ScanAsteroid,)  # of those, the ones any settlement of the system takes (the others, at the base)
 LOCAL_KINDS = tuple(kind for kind in KINDS if kind not in OFFERED_AT_BASE)  # the others, made at every settlement
 
 class MissionBoard:
@@ -84,7 +86,7 @@ class MissionBoard:
         system_key = self.outpost.stellar_system.get_alterations_key()
         return [m for m in self.player.missions if m.status == OPEN and (
             m.destination == dest_keys
-            or (isinstance(m, OFFERED_AT_BASE) and m.destination.partition('|')[0] == system_key))]
+            or (isinstance(m, DELIVERED_ANYWHERE) and m.destination.partition('|')[0] == system_key))]
 
     def update_missions(self, now: datetime) -> None:
         if self.base is not self:

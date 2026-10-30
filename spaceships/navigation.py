@@ -17,6 +17,7 @@ import game_environment as gem
 
 if TYPE_CHECKING:
     from galaxies.body import Body
+    from .orbit_assist import OrbitAssist
     from .ship import Ship
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,8 @@ class Navigation:
         self.coasting: Optional[CoastState] = None
         # The body whose gravity the pilot was told to compensate, to stay fixed to it (None when none).
         self.compensating: Optional[Body] = None
+        # The ORBIT assist while it flies the ship (see orbit_assist.py), else None.
+        self.orbit: Optional[OrbitAssist] = None
 
     # region Angles and directions
     def pitch_angle(self, body: Body, current_datetime: datetime) -> float:
@@ -237,6 +240,16 @@ class Navigation:
         if not self.ship.is_bound or world is None:
             return 0.0
         return world.gravitational_parameter / world.radius ** 2
+
+    def pull(self) -> float:
+        """m/s^2, the pull of the fixed body where the ship is: its surface gravity while bound, else the pull at the
+        ship's distance from its centre. Zero where nothing pulls."""
+        body = gem.current_environment.fixed_body
+        if body is None or body.gravitational_parameter == 0.0:
+            return 0.0
+        if self.ship.is_bound:
+            return self.gravity()
+        return body.gravitational_parameter / self.distance_to_body_centre(body) ** 2
 
     def is_hovering(self) -> bool:
         """True while bound above the ground in a gravity: the flight assist is holding the ship up, which costs energy

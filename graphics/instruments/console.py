@@ -98,8 +98,9 @@ class Console:
         else:
             Radar.draw(surface, screen, ship, date_time)
 
-        # The scanner and cargo titles sit on the top of the map's screen; their boxes, the resource bars and the
-        # cargo hold all start below the titles and end at the bottom of the cluster.
+        # The scanner and cargo titles sit on the top of the map's screen; their boxes and the cargo hold start below the
+        # titles and end at the bottom of the cluster. The resource bars start on the titles' line, so that their
+        # first row (the credits, even when hidden) lines up with them.
         title_font = fonts.get(max(9, int(h * 0.017)))
         box_top = panel_box_top(title_font, screen.top)
         panel_bottom = cluster_top + cluster_height
@@ -108,7 +109,7 @@ class Console:
         Scanner.draw(surface, fonts, bars_left, h, ship, screen.top, screen.bottom, mfd.right)
 
         # Resource bars
-        bars_rect = pygame.Rect(bars_left, box_top, bars_w, panel_bottom - box_top)
+        bars_rect = pygame.Rect(bars_left, screen.top, bars_w, panel_bottom - screen.top)
         ResourceBars.draw(surface, fonts, h, ship, bars_rect)
 
         # Cargo

@@ -134,11 +134,14 @@ class Person:
             self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) * -role.reputation_bonus
 
         self.empathy100: float = my_random.random() * 100
+        self.loyalty100 = _nudged(self.loyalty100, role.personality_bonus[1])
+
         self.sociability100: float = my_random.random() * 100
+        self.loyalty100 = _nudged(self.loyalty100, role.personality_bonus[2])
 
         self.loyalty100: float = my_random.random() * 100
         self.loyalty100 = _nudged(self.loyalty100, math.sqrt(self.reputation))
-        self.loyalty100 = _nudged(self.loyalty100, role.loyalty_bonus)
+        self.loyalty100 = _nudged(self.loyalty100, role.personality_bonus[0])
 
         self.sympathy100: float = 50.0
 

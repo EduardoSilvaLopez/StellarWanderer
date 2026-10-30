@@ -44,7 +44,8 @@ class Scanner:
         the player sees ahead. If somehow several are set, an outpost comes first, then a rock.
 
         A scanned outpost is titled SCANNER. With the scoop open the square is left empty, titled SCOOP: its view is
-        drawn over it (`scoop_rect`).
+        drawn over it (`scoop_rect`). Where it fills a probe of the corona (`Ship.corona_missions`) the title adds the
+        least filled probe, with a bar between the title and the square.
 
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
@@ -75,8 +76,13 @@ class Scanner:
 
         Scanner.scoop_rect = rect if ship.scoop_open else None
         if ship.scoop_open:
-            title = label_font.render('SCOOP', True, ACCENT)
+            probes = [mission.probe_progress for mission in ship.corona_missions()]
+            title = label_font.render('SCOOP' if not probes else f'SCOOP  PROBE {int(min(probes) * 100)}%', True, ACCENT)
             surface.blit(title, title.get_rect(midtop=(rect.centerx, title_top)))
+            if probes:  # the scoop's view covers the square: the bar is under the title, over the box's top edge
+                track = pygame.Rect(rect.left, rect.top - 4, rect.width, 3)
+                pygame.draw.rect(surface, ACCENT_LABEL, track, 1)
+                pygame.draw.rect(surface, ACCENT, (track.left, track.top, int(track.width * min(probes)), track.height))
             return
 
         rock = ship.scanner.targeted_rock

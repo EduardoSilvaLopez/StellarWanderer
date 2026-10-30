@@ -14,7 +14,8 @@ Controls:
                outpost, enter it (the ship must be landed): a screen over the whole window, the other state of the
                game, where it goes on; its Leave button leaves it
     M          place mine
-    Keypad 5   open or close the scoop's view in the scanner's place (with a scoop installed, at x1, up to 100 m/s)
+    Keypad 5   open or close the scoop's view in the scanner's place (with a scoop installed, up to 100 m/s at x1; with
+               the time compressed, only while the ship is stationary)
     O          show or hide the orbit of the targeted body
     Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside an outpost; Esc
                again resumes. Game time is paused while a dialog is open.
@@ -58,6 +59,8 @@ from graphics.orbit_path import OrbitPath
 from graphics.instruments.clock import Clock
 from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
+from graphics.instruments.resource_bars import ResourceBars
+from spaceships.orbit_assist import OrbitAssist
 from graphics.instruments.world_map import WorldMap
 from common.frame_watch import frame_watch
 from common.updating import update_queue
@@ -460,6 +463,9 @@ def main() -> None:
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 running, screen = open_knowledge(pressed, screen, gui, fonts, clock)
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and ResourceBars.orbit_hit(event.pos, player.ship)):
+                OrbitAssist.press(player.ship)
             elif event.type == pygame.MOUSEWHEEL:
                 if player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
@@ -485,7 +491,10 @@ def main() -> None:
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
-        keys = pygame.key.get_pressed() if player.inside is None else NO_KEYS
+        # While the ORBIT assist flies the ship, the keys do nothing: its own forward thrust is the only input.
+        orbit = ship.navigation.orbit
+        keys = pygame.key.get_pressed() if player.inside is None and orbit is None else NO_KEYS
+        orbit_thrust = orbit.step(delta_game_seconds) if orbit is not None else 0.0
 
         if player.time_scale == 1:  # Yaw, pitch, roll only at x1: disabled when faster.
             # Yaw: Numpad 4 (left) and 6 (right)
@@ -529,11 +538,11 @@ def main() -> None:
             delta_game_seconds,
             1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
             (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if ship.is_bound else 0,
-            1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0),
+            orbit_thrust if orbit is not None else (1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0)),
             keys[pygame.K_s]
         )
         thrusting = (
-            keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
+            orbit_thrust > 0.0 or keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
             or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
             or (keys[pygame.K_s] and ship.navigation.has_motion_to_brake()))
         # the hull's hum: a thrust key held, or the brake while there is motion to brake
@@ -544,6 +553,7 @@ def main() -> None:
         # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
         audio.set_loop('attitude', rotating)
         ship.check_scoop(player.time_scale)
+        ship.collect_corona(delta_game_seconds)
         ship.scanner.update_target()
         if keys[pygame.K_SPACE]:
             if not ship.collect_raw_water(delta_game_seconds):

@@ -153,16 +153,22 @@ class Ship(Updatable):
         frame (Navigation.velocity_reference_frame)."""
         return (self.velocity.as_vector() - self.navigation.velocity_reference_frame()).length()
 
+    def can_stay_open(self, time_scale: float) -> bool:
+        """The scoop may be open: not above SCOOP_MAX_SPEED, and with the time compressed only if the ship is really
+        stationary (`scoop_speed` exactly zero)."""
+        speed = self.scoop_speed()
+        return speed == 0.0 or (time_scale <= 1 and speed <= Ship.SCOOP_MAX_SPEED)
+
     def toggle_scoop(self, time_scale: float) -> None:
         """Opens the scoop's view, or closes it (Numpad 5), each with its notification. Without a scoop installed
-        nothing happens. It opens only at x1 and up to SCOOP_MAX_SPEED; otherwise it stays closed, with only the sound
-        of a refusal for the pilot to learn from."""
+        nothing happens. It opens only up to SCOOP_MAX_SPEED, and with the time compressed only while the ship is stationary (see
+        `can_stay_open`); otherwise it stays closed, with only the sound of a refusal for the pilot to learn from."""
         if not self.has_scoop:
             return
         if self.scoop_open:
             self.scoop_open = False
             self.notification.set(Ship.SCOOP_CLOSED)
-        elif time_scale > 1 or self.scoop_speed() > Ship.SCOOP_MAX_SPEED:
+        elif not self.can_stay_open(time_scale):
             audio.play('mine_refused')
         else:
             self.scoop_open = True
@@ -243,20 +249,38 @@ class Ship(Updatable):
                        and mission.asteroid().seed == asteroid.seed for mission in self.owner.missions)
 
     def check_scoop(self, time_scale: float) -> None:
-        """Every frame: an open scoop is closed, with a notification, when the time is compressed or the ship is faster
-        than SCOOP_MAX_SPEED: the hole in the hull would be open to what comes at it. As with any notification, the
+        """Every frame: an open scoop is closed, with a notification, when it may not stay open (`can_stay_open`): the
+        hole in the hull would be open to what comes at it. As with any notification, the
         compression goes back to the minimum. One that is no longer installed closes silently (it was given back at an
         outpost)."""
         if not self.scoop_open:
             return
         if not self.has_scoop:
             self.scoop_open = False
-        elif time_scale > 1:
+        elif not self.can_stay_open(time_scale):
             self.scoop_open = False
-            self.notification.set(Ship.SCOOP_CLOSED_TIME)
-        elif self.scoop_speed() > Ship.SCOOP_MAX_SPEED:
-            self.scoop_open = False
-            self.notification.set(Ship.SCOOP_CLOSED_FAST)
+            self.notification.set(Ship.SCOOP_CLOSED_TIME if time_scale > 1 else Ship.SCOOP_CLOSED_FAST)
+
+    def corona_missions(self) -> list:
+        """The open scoop star missions whose probe the scoop can fill now: the ship is unbound, in the heat radius of the
+        star of the nearest system, which is the one the missions ask for. Empty otherwise."""
+        from galaxies.missions import OPEN, ScoopStar
+        if self.is_bound:
+            return []
+        system = gem.current_environment.nearest_system
+        if self.navigation.distance_to_body_centre(system.star) >= system.star.default_heat_radius:
+            return []
+        key = system.get_alterations_key()
+        return [mission for mission in self.owner.missions
+                if isinstance(mission, ScoopStar) and mission.status == OPEN and mission.system_key() == key]
+
+    def collect_corona(self, game_seconds: float) -> None:
+        """Every frame: with the scoop open (it is closed when it may not stay open: see
+        `check_scoop`) in the heat radius of the star, the probe of each open scoop star mission of the system fills."""
+        if not self.scoop_open:
+            return
+        for mission in self.corona_missions():
+            mission.collect(game_seconds)
     # endregion
 
     # region Updating

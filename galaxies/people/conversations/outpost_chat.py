@@ -23,6 +23,7 @@ from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
+from galaxies.portals.portal_base import PortalBase
 from galaxies.settlement import Settlement
 
 # A political text: its three tones, in the order -1, 0, 1.
@@ -69,10 +70,10 @@ class OutpostChat(Conversation):
             else self.player.present_yourself_further_times(self.interlocutor) if is_presentation \
             else self.tag
         self.log.add(PLAYER, [[(word, None) for word in pilot_line.split()]])
-        if self.tag in self.reactions:
-            self.say(self.reactions[self.tag])
-        else:
-            self.say(self.talk_unknown_tag)
+        reaction: Optional[Callable[[], str]] = next(
+            (talk for tag, talk in self.reactions.items() if tag.lower() == self.tag.lower()), None
+        )
+        self.say(reaction if reaction is not None else self.talk_unknown_tag)
 
     def remember(self) -> None:
         """Writes the interaction into the person's record now, not only when the conversation closes, so a save made
@@ -97,27 +98,36 @@ class OutpostChat(Conversation):
         conversation has nothing more to say."""
         self.log.offer(labels, then)
 
-    # region Normal Talk
+    # region Presentation
     def reactions_index(self) -> dict[str, Callable[[], str]]:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
             'asteroids': self.talk_asteroid,
             'base': self.talk_base,
             'belt': self.talk_belt,
-            'founders': self.talk_founders,
-            'happy birthday': self.talk_happy_birthday,
+            'communication officer': self.talk_communication_officer,
+            'coordinator': self.talk_coordinator,
+            'dockmaster': self.talk_dockmaster,
+            'Founders': self.talk_founders,
+            'gunner': self.talk_gunner,
+            'Happy birthday': self.talk_happy_birthday,
             'hobby': self.talk_hobby,
+            'janitor': self.talk_janitor,
             'job': self.talk_job,
+            'komisar': self.talk_komisar,
             'life': self.talk_life,
             'noobie': self.talk_noobie,
-            'paladin xi': self.talk_paladin_xi,
-            'pgms': self.talk_pgms,
+            'Paladin Xi': self.talk_paladin_xi,
+            'PGMs': self.talk_pgms,
             'portal': self.talk_portal,
+            'ringmaster': self.talk_ringmaster,
+            'security': self.talk_security,
             'space': self.talk_space,
+            'stevedore': self.talk_stevedore,
             'the network': self.talk_the_network,
-            'the shining throne': self.talk_the_shining_throne,
-            'those-who-share': self.talk_those_who_share,
-            'united diversity': self.talk_united_diversity,
+            'The Shining Throne': self.talk_the_shining_throne,
+            'Those-Who-Share': self.talk_those_who_share,
+            'United Diversity': self.talk_united_diversity,
         }
 
     def talk_present_yourself(self) -> str:
@@ -154,6 +164,8 @@ class OutpostChat(Conversation):
             ] \
             if x is not None
         )
+        noobie_or_not: str = 'the noobie' if self.date_time < datetime(year=700, month=7, day=1) \
+            else you
 
         if emp < 20:
             if soc < 20:
@@ -167,24 +179,24 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return "You. What do you want?"
                 elif sym < 80:
-                    return "The noobie. We will see how much you last."
+                    return f"{noobie_or_not.capitalize()}. We will see how much you last."
                 else:
                     return (
-                        "I know, Paladin Xi's last discovery. Eager to kill yourself, yeah, noobie?"
-                        "Space is hard. You will see <smiles a wicked smile>."
+                        f"I know, Paladin Xi's last discovery. {noobie_or_not.capitalize()}, eager to die in space..."
+                        "Miner's job is hard. You will see <smiles a wicked smile>."
                     )
             else:  # noqa: PLR5501
                 if sym < 20:
                     return "You. What do you want? Don't you think you have done enough?"
                 elif sym < 80:
                     return (
-                        "Yeah, I know. The noobie. We will see how much you last, noobie. Space is hard."
+                        f"Yeah, I know. {noobie_or_not}. We will see how much you last. Space is hard."
                         " Paladin Xi wants to rush things, wants everybody on board. He has killed already some."
-                        " Noobs like you."
+                        " People like you."
                     )
                 else:
                     return (
-                        "I know, Paladin Xi's last discovery. Eager to kill yourself, yeah, noobie?"
+                        f"I know, Paladin Xi's last discovery. {noobie_or_not.capitalize()}, eager to die here..."
                         " Space is hard. You will see <smiles a wicked smile>."
                         "\n\nYou should not move away from orbit. Moon and planet. Ore and rocks. Don't be stupid."
                     )
@@ -210,7 +222,7 @@ class OutpostChat(Conversation):
             else:  # noqa: PLR5501 - High soc
                 if sym < 20:
                     return (
-                        "Oh, no, noobie, don't approach me, ok? I don't want troubles and you have done enough,"
+                        "Oh, no, don't approach me, ok? I don't want troubles and you have done enough,"
                         " just leave me alone. You should think about your life."
                     )
                 elif sym < 80:
@@ -294,9 +306,9 @@ class OutpostChat(Conversation):
                 if sym < 20:
                     return "You. What do you want?"
                 elif sym < 80:
-                    return "Hi. What's the matter?"
+                    return f"{you}. Hi. What's the matter?"
                 else:
-                    return "Hey. Still alive, apparently. Respect."
+                    return f"{you}! Hey! Still alive, apparently. Respect."
             else:  # noqa: PLR5501
                 if sym < 20:
                     return "Bugger off, will you? Nobody wants to talk with you."
@@ -354,7 +366,7 @@ class OutpostChat(Conversation):
                     )
                 elif sym < 80:
                     return (
-                        f"Ah, Pilot {self.player.surname}. Hello. I was going to make myself a tea. One for you?"
+                        f"Ah, {you}. Hello. I was going to make myself a tea. One for you?"
                     )
                 else:
                     return (
@@ -378,12 +390,20 @@ class OutpostChat(Conversation):
                         f"{you}, my friend! How are you doing? What can I do for you?"
                     )
 
+# endregion
+
+# region Normal Talk
+
     def talk_asteroid(self) -> str:
         return (
             "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
             " simply fucking far away. Others are... in the belt. And those are worse."
         )
     def talk_base(self) -> str:
+        if isinstance(self.interlocutor.residency, PortalBase):
+            return (
+                "It's still small but we have some amenities already."
+            )
         return (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
             " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's life."
@@ -394,10 +414,76 @@ class OutpostChat(Conversation):
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
             " and a ton of sealant, at least."
         )
+    def talk_communication_officer(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "They sit and talk."
+        elif soc < 80:
+            return "They take care of communications with the ship."
+        else:
+            return "They talk with the ships and other places. They belong to defence, wear uniform."
+
+    def talk_coordinator(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+
+        if soc < 20:
+            if loy < 20:
+                return "Little boss."
+            elif loy < 80:
+                return "Chief in the outpost."
+            else:
+                return "Outposts. Manage stuff. Make hard calls."
+        elif soc < 80:
+            if loy < 20:
+                return "Bossing around in the outposts."
+            elif loy < 80:
+                return "Coordinate things in the outposts."
+            else:
+                return "Authority of an outpost. Job for well-respected people."
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "Little boss of the outposts. And loving it."
+            elif loy < 80:
+                return "Responsible for the outposts. Coordinate and communicate with the portal base."
+            else:
+                return (
+                    "The authority of an outpost. Job for highly respected people. Remove obstacles, coordinate,"
+                    " communicate with the portal base and resolve conflicts."
+                )
+
+    def talk_dockmaster(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Load. Unload. Repair."
+        elif soc < 80:
+            return "Take care of the ships landing there."
+        else:
+            return "Responsible for ship maintanance and the cargo."
+
     def talk_founders(self) -> str:
         return (
             "Well, the ones who founded Those-Who-Share, you know?"
         )
+
+    def talk_gunner(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Do nothing. Good."
+        elif soc < 80:
+            return "Sit, drill, wait. Until the shit hits the fan."
+        else:
+            return (
+                "Well, when things go really bad, a Gunner's responsibility is to they are the ones who pull"
+                " the trigger. A hard decision taken in seconds."
+            )
 
     def talk_hobby(self) -> str:
         return self.interlocutor.hobby
@@ -464,6 +550,20 @@ class OutpostChat(Conversation):
             else:
                 return f"Huh? {correction_text} And this was weird."
 
+    def talk_janitor(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Base maintenance. Not cleaners."
+        elif soc < 80:
+            return "Base maintenance. Repairs, devices, checks, life support. Not here to clean your room."
+        else:
+            return (
+                "Caring about base maintenance. Running around, checking the life support, devices, repairs."
+                " Not your servant, not to cook for you."
+            )
+
     def talk_job(self) -> str:
         text: str = ''
         if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 20:
@@ -512,6 +612,46 @@ class OutpostChat(Conversation):
             self.offer(buttons, self.traitor_chance)
 
         return text
+
+    def talk_komisar(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+
+        if soc < 20:
+            if loy < 20:
+                return "<Looks away>"
+            elif loy < 80:
+                return "<Shrugs> Talk a lot."
+            else:
+                return "Explain things. Help with problems."
+        elif soc < 80:
+            if loy < 20:
+                return "Soft-talking. Take care that people behave. Or else."
+            elif loy < 80:
+                return (
+                    "Social engineers and psychologists. The job is to make sure people understand the will of the"
+                    " Community. But they also often give personal advice."
+                )
+            else:
+                return (
+                    "The job is to friendly advice about the will of the Community and our role in it. Also, help"
+                    " with personal problems. Be a good psychologist. Friend and helper."
+                )
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "Making sure everybody 'understands the will of the Community'. Usually, soft-talking. Else..."
+            elif loy < 80:
+                return (
+                    "Indicate the right channels for a protest, talk with people if they feel bad, make sure"
+                    " people understand the will of the Community."
+                )
+            else:
+                return (
+                    "The job is to be your friend <smiles>. Often enough they are asked for personal advice. But"
+                    " of course the main tasks is to make sure people understand what are we doing here and what"
+                    " the Community is for."
+                )
 
     def talk_life(self) -> str:
         # General effect. People like to be asked about their lives. Once per day max, though.
@@ -666,12 +806,82 @@ class OutpostChat(Conversation):
             "Did you find many out there? I think Iridium is the most important right now, but the whole"
             " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
         )
+    def talk_ringmaster(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+
+        if soc < 20:
+            if loy < 20:
+                return "Bigwhigs. Careful."
+            elif loy < 80:
+                return "Main coordinator. Answer to Ministry only."
+            else:
+                return "Responsible of all this. Heavy burden."
+        elif soc < 80:
+            if loy < 20:
+                return "They are bigwhigs, the supreme bosses of the stellar system. Fiercy loyal."
+            elif loy < 80:
+                return (
+                    "The main coordinator of the expansion effort in this system. Depend directly from the Ministry."
+                    " Later, a Commander takes over."
+                )
+            else:
+                return (
+                    "Important job. Main responsible of the stellar system in development, depending only on the"
+                    " Ministry of Expansion. Chosen very carefully."
+                )
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "They are the ones taking the decisions here. Kinglets in their turf. Fiercy loyal."
+            elif loy < 80:
+                return (
+                    "Coordinate this system, until cities are established and a Commander takes"
+                    " over. Depend directly on the Ministry of Expansion.\n\n"
+                    " Chosen very, very carefully."
+                )
+            else:
+                return (
+                    "A very important job. Main responsible of the whole stellar system in development. Later, a"
+                    " Commander takes over and makes it all about security, but during the settelment phase it is"
+                    " the highest authority available, and responds only to the Ministry of Expansion.\n\n"
+                    " It is to carry a very heavy burden for the Community."
+                )
+
+    def talk_security(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Handle conflicts."
+        elif soc < 80:
+            return "A Security officer depends on the depends on the Ministry of Protection. You have to wear uniform."
+        else:
+            return (
+                "Security officers handle the conflicts. Trained to de-escalate, but ready to do what it takes."
+                " You depend on the Ministry of Protection."
+            )
+
     def talk_space(self) -> str:
         return (
             "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"
             " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
             " Just don't. Go to the bases, use the portals, remain in the network"
         )
+    def talk_stevedore(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Haul stuff. Simple job."
+        elif soc < 80:
+            return "Move cargo from and to ships. A solitary job if not for your colleague."
+        else:
+            return (
+                "Take cargo from the ship, move mines. A solitary job if it was not for your colleague. They never"
+                " work alone. Too dangerous, with the inertia."
+            )
+
     def talk_the_network(self) -> str:
         return (
             "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
