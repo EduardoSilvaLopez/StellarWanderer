@@ -15,15 +15,18 @@ class Notification(Updatable):
 
     def __init__(self) -> None:
         self.message: str = ''
+        self.bad: bool = False
         self.next_update_at: Optional[datetime] = None
 
-    def set(self, message: str, sound: Optional[str] = None) -> Notification:
+    def set(self, message: str, sound: Optional[str] = None, bad: bool = False) -> Notification:
         """Shows `message` and plays one sound for it: `sound` if given (an event with a sound of its own), else the
-        alert for a CRITICAL text and the soft ping for the rest."""
+        alert for a CRITICAL text and the soft ping for the rest. `bad` marks a refusal or a failed attempt, shown
+        between a warning and a plain message."""
         if not message:
             return self
 
         self.message = message
+        self.bad = bad
         self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
         audio.play(sound or ('alert' if message.startswith('CRITICAL') else 'notify'))
 
@@ -39,4 +42,5 @@ class Notification(Updatable):
 
     def update(self, game_date_time: datetime) -> None:
         self.message = ''
+        self.bad = False
         self.next_update_at = None

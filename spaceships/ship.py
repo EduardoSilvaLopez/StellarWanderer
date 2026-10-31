@@ -445,21 +445,21 @@ class Ship(Updatable):
         '''React to the "place mine" button: a mine on the ore field MINE_FRONT_DISTANCE metres ahead, unless something
         forbids it (the pilot is told what).'''
         if self.cargo_hold.mines <= 0:
-            self.notification.set("No mines available.", 'mine_refused')
+            self.notification.set("No mines available.", 'mine_refused', bad=True)
             return
         if not self.is_bound:
-            self.notification.set("Mines can only be placed on a world.", 'mine_refused')
+            self.notification.set("Mines can only be placed on a world.", 'mine_refused', bad=True)
             return
         if self._mine_too_near():
-            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused')
+            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused', bad=True)
             return
         if self._rock_in_front():
-            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused')
+            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused', bad=True)
             return
         front_lon, front_lat = self._mine_spot()
         targeted_field = self._ore_field_at(front_lon, front_lat)
         if targeted_field is None:
-            self.notification.set("No ore field here.", 'mine_refused')
+            self.notification.set("No ore field here.", 'mine_refused', bad=True)
             return
 
         new_mine = OreMine(targeted_field, front_lon, front_lat, self.attitude.yaw)

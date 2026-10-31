@@ -121,7 +121,7 @@ class MissionBoard:
             return
         now = gem.current_environment.date_time
         if offer.deadline <= now:
-            self.player.ship.notification.set(f"Too late: {offer.title()}.")
+            self.player.ship.notification.set(f"WARNING: Too late: {offer.title()}.")
             return
         self._holder(offer).offers.remove(offer)
         offer.accept(now)
@@ -135,7 +135,7 @@ class MissionBoard:
         if mission not in self.mine():
             return None
         if not mission.can_complete(self.player):
-            self.player.ship.notification.set(mission.shortfall(self.player))
+            self.player.ship.notification.set(mission.shortfall(self.player), bad=True)
             return None
         mission.finish(self.player)
         audio.play('mission_delivered')

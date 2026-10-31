@@ -660,7 +660,7 @@ class OutpostScreenDialog(Dialog):
             if supply.key == "mines" and before + asked > self._reputation_limit(k):
                 self._community_refuses(sound)
             else:
-                self.ship.notification.set("This kind of ship has no more space for this.", sound)
+                self.ship.notification.set("This kind of ship has no more space for this.", sound, bad=True)
 
     def _community_refuses(self, sound: str) -> None:
         """The Community's refusal of a mine or an attachment that goes over the reputation limit: the title held on
@@ -670,7 +670,7 @@ class OutpostScreenDialog(Dialog):
             raise Exception("No reputation recorded on entering.")
         standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
         title = standing.entity.title_for(entered)
-        self.ship.notification.set(f"The Community thinks you have already enough stuff for a {title}.", sound)
+        self.ship.notification.set(f"The Community thinks you have already enough stuff for a {title}.", sound, bad=True)
 
     # region Attachments
     def _attachment(self, name: str) -> Any:

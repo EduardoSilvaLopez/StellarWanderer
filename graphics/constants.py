@@ -28,6 +28,7 @@ ACCENT_LABEL = tuple((a + b) // 2 for a, b in zip(ACCENT, ACCENT_DIM))
 AMBER = (240, 176, 92)
 BINDING_MARK_RED = (235, 64, 64)
 BINDING_NEAR_GREEN = (80, 230, 120)
+NOTIFICATION_BAD_ORANGE = (255, 150, 40)  # a refused or failed attempt in the notification bar
 # the gravity bar: darker than the warnings, as the pull is not critical in the normal case
 GRAVITY_RED = (150, 42, 42)
 GRAVITY_AMBER = (150, 110, 60)

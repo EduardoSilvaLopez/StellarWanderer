@@ -1022,7 +1022,7 @@ class OutpostChat(Conversation):
                 "The biggest industry of mankind, and the working places should be pleasant. Should be. We work"
                 " for the Community, not for ourselves.",
                 "We have the biggest industry of mankind, and the hydroponic gardens are as good as any. We do fine.",
-                "The biggest industry of mankind, and the factories are pleasant places to be. I like my"
+                "The biggest industry of mankind, and the factories are pleasant places to be. I like that in my"
                 " workplace. Proud of it.",
             )),
             'money': (30 + 0.4 * loy, (
@@ -1131,8 +1131,8 @@ class OutpostChat(Conversation):
                 "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",
             ), (
                 (
-                    "Everything about money, yes? The rich are admired just for being rich. As if here in space you"
-                    " could eat money, drink it or breathe it.",
+                    "Everything about money, yes? The rich are admired just for being rich. But you cannot breathe"
+                    " money, can you? You cannot drink it, you cannot eat it.",
                     "Greedy people, all of them. Money, money, money, that's all they think about.",
                     "Their government works for the oligarchs. The rich buy the laws, and the rest just pay.",
                 ),

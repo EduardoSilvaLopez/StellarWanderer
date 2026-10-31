@@ -129,7 +129,7 @@ class OrbitAssist:
             return
         reason = OrbitAssist.begin(ship)
         if reason is not None:
-            ship.notification.set(f"Orbit not started: {reason}.")
+            ship.notification.set(f"Orbit not started: {reason}.", bad=True)
 
     def end(self, message: Optional[str]) -> float:
         """Releases the ship. `message` is the notification, or None for none (the bind notice says it landed)."""

@@ -162,7 +162,7 @@ class Mission(Updatable):
         import galaxies.people.player as player_module
         player = player_module.current_player
         self.status = FAILED
-        player.ship.notification.set(f"Mission failed: {self.title()}.")
+        player.ship.notification.set(f"WARNING: Mission failed: {self.title()}.")
         audio.play('mission_failed')
         self.fail(player)
     # endregion
