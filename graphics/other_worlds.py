@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
 import pygame
+from galaxies.jovian_world import JovianWorld
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
@@ -31,8 +32,8 @@ class OtherWorlds:
 
         worlds: List[Tuple[float, World, Vector3]] = []
         for world in environment.nearest_system.get_all_worlds():
-            if world is environment.targeted_body and ship.is_bound:
-                continue
+            if world is environment.targeted_body and ship.is_bound or isinstance(world, JovianWorld):
+                continue  # the giants are drawn in the OpenGL pass (giant_gl.py)
             to_world = ship.navigation.direction_to_body(world, environment.date_time)
             distance = to_world.length()
             if (distance > star_distance) == behind_star:

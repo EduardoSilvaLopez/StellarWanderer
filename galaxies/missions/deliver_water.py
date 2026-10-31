@@ -213,14 +213,16 @@ class DeliverWater(Mission):
     # endregion
 
     def icy_worlds(self) -> List[RockyWorld]:
-        """The icy worlds of the planetary system of the issuer's planet: the planet and its moons."""
+        """The icy worlds of the planetary system of the issuer's planet: the planet and its moons, or for an outpost on a
+        moon, the moons of its giant (the giant is not rock)."""
         from galaxies.rocky_world import RockyWorld
         from galaxies.outpost import Outpost
         settlement = self.issuer_settlement
         if not isinstance(settlement, Outpost):  # a portal base has no planet, so no planetary ice
             return []
         planet = settlement.planet
-        return [world for world in [planet, *planet.moons]
+        worlds = planet.parent_planet.moons if planet.parent_planet else [planet, *planet.moons]
+        return [world for world in worlds
                 if isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE]
 
     def icy_stellar_worlds(self) -> List[RockyWorld]:

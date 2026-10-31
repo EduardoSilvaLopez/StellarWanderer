@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from galaxies.people.player import Player
     from galaxies.rock import Rock
     from galaxies.rocky_world import RockyWorld
+    from galaxies.world import World
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +70,9 @@ class ScanRock(Mission):
 
         self.was_scanned: bool = was_scanned
         self.object_type: str = object_type
-        # Where the rock is: 'world' is None for the planet or the index of a moon, 'km2' the longitude and latitude of
-        # its Km2, 'rock' the rock's own longitude and latitude. Only drawn for a new offer; a loaded mission keeps what
-        # it was given.
+        # Where the rock is: 'world' is None for the outpost's planet or the index of a moon of `_host`, 'km2' the
+        # longitude and latitude of its Km2, 'rock' the rock's own longitude and latitude. Only drawn for a new offer; a
+        # loaded mission keeps what it was given.
         self.rock_site: Optional[dict] = rock_site
         self.adjective: str = adjective
         if self.object_type == 'rock' and self.rock_site is None:
@@ -89,13 +90,19 @@ class ScanRock(Mission):
             raise ValueError(f"{self.KIND} is asked by {settlement.name}, which has no planet")
         return settlement.planet
 
-    def _world_at(self, index: Optional[int]) -> RockyWorld:
-        """The planet of the outpost (index None), or one of its moons, which are rocky worlds too."""
-        from galaxies.rocky_world import RockyWorld
+    def _host(self) -> World:
+        """The world whose moons hold the rock: the outpost's planet, or for an outpost on a moon, its giant. The giant
+        itself is never a place for the rock, only its moons are."""
         planet = self._planet()
+        return planet.parent_planet or planet
+
+    def _world_at(self, index: Optional[int]) -> RockyWorld:
+        """The outpost's planet (index None, an outpost on a planet only), or a moon of `_host`, which are rocky worlds
+        too."""
+        from galaxies.rocky_world import RockyWorld
         if index is None:
-            return planet
-        moon = planet.moons[index]
+            return self._planet()
+        moon = self._host().moons[index]
         if not isinstance(moon, RockyWorld):
             raise ValueError(f"{self.KIND}: moon {index} is not a rocky world")
         return moon
@@ -107,12 +114,13 @@ class ScanRock(Mission):
         return self.rock_site
 
     def _choose_rock_site(self) -> Optional[dict]:
-        """A random rock that is not molten, on the planet or on one of its moons, from the mission's seed. One place is
-        tried: None if that place has no rock left, or has an outpost (the people there would have scanned it
-        themselves)."""
+        """A random rock that is not molten, on a world of the outpost's system of worlds (see `_host`), from the mission's
+        seed. One place is tried: None if that place has no rock left, or has an outpost (the people there would have
+        scanned it themselves)."""
         from galaxies.km2 import Km2
-        planet = self._planet()
-        index = self.my_random.randrange(len(planet.moons) + 1) - 1  # -1 is the planet itself
+        host = self._host()
+        first = -1 if host is self._planet() else 0  # -1 is the planet itself, a place only for an outpost on a planet
+        index = self.my_random.randrange(first, len(host.moons))
         world = self._world_at(None if index < 0 else index)
         half_turn = math.pi * world.radius  # the surface's coordinates, as Navigation keeps them
         longitude = int(self.my_random.uniform(-half_turn, half_turn))
@@ -143,7 +151,7 @@ class ScanRock(Mission):
         return km2
 
     def _world(self) -> RockyWorld:
-        """The world the rock is on: the planet of the outpost, or one of its moons."""
+        """The world the rock is on (see `_world_at`)."""
         return self._world_at(self._site()['world'])
 
     def _rock_at_site(self) -> Optional[Rock]:

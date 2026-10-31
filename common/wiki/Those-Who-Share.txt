@@ -1,8 +1,9 @@
 Those-Who-Share is the second largest political entity of the game's setting, with 15 stellar systems having cities in the year 700. It has fewer inhabited systems than The Shining Throne, but more population and a larger economy.
 
+HISTORY
 It was created by the Founders, a group of believers in a non-capitalist empathy-based society, about 140 years ago.
 
-Its most important political principles are:
+POLITICAL PRINCIPLES:
 * Human rights, which includes the provision of "all needs" (meaning a minimum standard of living). They use the slogan "From each by their skills, to each by their needs" and also political participation in assemblies in basic democratic institutions, including all means of production (for example, the workers of a factory or the staff of an outpost).
 * Collective property of all means of production, up to the smallest industry or workshop. This combines the strong influence and power of the workers there, with a de-jure property by the State alone, which can intervene in extraordinary cases.
 * Empathy as the most important human trait. Solidarity, generosity, sacrifice for the community... are highly praised. Individualism is frowned upon.
@@ -13,12 +14,12 @@ Its most important political principles are:
 * Pride in not producing "useless things", by which they often mean cultural and artistic products of any kind, unless they serve the political propaganda.
 * A minority considers that the elite is becoming, by breeding and education, a new and better kind of "super-humanity".
 
+SOCIAL CLASSES
 People of very low reputation can be sent to "learn again the values of society" to the "polischools" (from "political school") and thus being demoted to the rank of "Student", the same rank as real students. People who keep misbehaving are degraded to "Dependent", which is the rank of children, and in this case means they are under surveillance because they "need special care". Serious crimes make them "prisoners", the lowest rank, and they are then actually imprisoned and forced to work for the State.
 
 Highly reputed people, on the other hand, get better housing, the de-facto permanent use of luxury items and special services. Reputation is indicated by the title used to address them, which is not strictly uniform (the personal opinion of each one can change the title they use towards others) but has a large consensus.
 
-Those-Who-Share has the biggest heavy industry of mankind, and also excel at the exploitation of natural resources. They severely lack cultural production and soft power outside their territory, where propaganda does work to an extent: People in Those-Who-Share are usually proud of their sense of a common vision and purpose for the whole "Community", a very important term meaning all citizens.
-
+CRITICISM
 Points which are criticised overseas and also by their own rebels:
 * The discouragement of individual wishes and tastes.
 * The discouragement of artistic production, the love of "dull" decoration, landscapes and architecture.
@@ -27,6 +28,7 @@ Points which are criticised overseas and also by their own rebels:
 * The perceived hypocrisy of the luxuries enjoyed by the highly reputed citizens, which contrasts with a supposed egalitarianism (note however that egalitarianism as such is not explicitly a principle of Those-Who-Share).
 * Their perceived isolationism.
 
+URBAN LEGENDS
 These urban legends are believed by some in other political entities:
 * People are forced to dress in uniform: false, but derived from the contact with mostly uniformed people.
 * There is no arts, art is discouraged: false, but truly not so encouraged as in The Shining Throne.
@@ -35,12 +37,23 @@ These urban legends are believed by some in other political entities:
 * Polischools are brutal prisons to brainwash with deprivation and torture: false, but they truly attempt to convince, even with compassionate means, more like real-life therapy and self-help groups, and they do use advanced psychological techniques. But their whole point is to convince and befriend, not to punish.
 * They are a sect, just bigger: absolutely false, but they do have more focus on ideology than the other big entities.
 
-Normal life in Those-Who-Share:
+ECONOMY
+Those-Who-Share has the biggest heavy industry of mankind, and also excel at the exploitation of natural resources. They severely lack cultural production and soft power outside their territory, where propaganda does work to an extent: People in Those-Who-Share are usually proud of their sense of a common vision and purpose for the whole "Community", a very important term meaning all citizens.
+
+NORMAL LIFE
 - Hydroponic gardens, factories and other working places can be visited, as a free-time activity as well as by groups of children from a school class. Great care is taken in making the working place pleasant and accessible. Walking around the central square of a settlement or a quarter is also common, where small things can be purchased (with stamps), street food is available, and there are poetry or skill competitions and festivals. Indoor theatres are also common.
 - Political propaganda is quite prevalent in the form of statues, posters and big screens.
 - Objects are designed with a practical mind, trying to minimise the cost. Furniture is cosy but simple.
 - As there is no real money, school and university are of course free. There are some elite ones, which informally prioritise children of people with high reputation.
 
+ADMINISTRATION
+- The following Ministries have been defined already:
+    - Ministry of Expansion: Responsible of new stellar systems, which depends on the "mainland" to survive.
+    - Ministry of Happiness: Responsible to happiness, which includes satisfaction with the political situation.
+    Komisars work for it, also professional social engineers, sociologists, publicists and historians.
+    - Ministry of Protection: Protects the whole community, handles the police ("Security") and other kinds of facilities, amounting to armed forces: armed ships ("Mobile Defence Platforms"), armed posts in settlements.
+
+GEOGRAPHY
 The most important planets are:
     * Ài: Cities:
         * Kǎisèlín, the de-facto capital.

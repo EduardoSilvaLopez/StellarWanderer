@@ -29,6 +29,7 @@ from .rock_batches import RockBatches
 from .ore_fields import OreFields
 from .ore_mines import OreMines
 from .outposts import Outposts
+from .giant_gl import GiantGl
 from .laser import Laser
 from .surface_light import SurfaceLight
 from .scoop_view import ScoopView
@@ -140,10 +141,12 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         MilkyWay.draw(width, height, ship, environment.date_time)
+        GiantGl.draw(width, height, environment, ship, behind_star=True)
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
             StarGl.draw_star(width, height, view, seconds, player.time_scale)
         self._draw_texture(self.world_surface, self.world_texture)
+        GiantGl.draw(width, height, environment, ship, behind_star=False)
         if view is not None:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)

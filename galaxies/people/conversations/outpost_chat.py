@@ -858,7 +858,7 @@ class OutpostChat(Conversation):
         if soc < 20:
             return "Handle conflicts."
         elif soc < 80:
-            return "A Security officer depends on the depends on the Ministry of Protection. You have to wear uniform."
+            return "A Security officer depends on the Ministry of Protection. You have to wear uniform."
         else:
             return (
                 "Security officers handle the conflicts. Trained to de-escalate, but ready to do what it takes."

@@ -110,8 +110,10 @@ STARTED:
   * Jovian moons can help to make missions.
   * Next step is to draw it.
 
-Extra time: 167h45' + 5:15 - 
+Extra time: 168h45'
 
+* JOVIAN PLANETS II (current one) (100-200)
+  * Generate the moons.
 
 > BACKLOG
 
@@ -123,13 +125,9 @@ GRAVITY OF TREASON (Rep 50-100)
   * Extra: Portraits without uniform: Black, Latino, White
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 
-* JOVIAN PLANETS II (current one) (100-200)
   * Mission to jovian planet.
-  * Generate the moons.
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
-  * Extra: heat radius depend now on Ships temp reduction, which must also be saved. Maybe with mission "scan the sun"?
-    Use INITIAL_TEMP_SHIELD_REDUCTION
   * Extra: Arabs.
   * Extra: Retirement.
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?

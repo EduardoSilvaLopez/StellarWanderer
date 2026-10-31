@@ -1,4 +1,4 @@
-"""Worlds (planets and moons) drawn as spheres lit by their star."""
+"""Worlds (planets and moons) drawn as spheres lit by their star. The giants are drawn by giant_gl.py."""
 
 from __future__ import annotations
 from typing import Tuple, TYPE_CHECKING
@@ -7,7 +7,6 @@ import numpy as np
 import pygame
 from .constants import (
     WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET, MIN_VISIBLE_PX,
-    GIANT_HAZE_PIXELS, GIANT_HAZE_ALPHA,
 )
 from common.vector3 import Vector3
 
@@ -21,10 +20,9 @@ class LitWorlds:
     """Ray-traced sphere shading: every pixel's view ray is intersected with the world's sphere, so
     the silhouette is exact (an ellipse when the world is off-axis) and the shade is the cosine
     between the surface normal and the direction to the star (the star is far, so its light is
-    treated as parallel). Cost depends on the size of the disc on screen, not on the world. A giant is an
-    oblate ellipsoid, intersected the same way; its cloud bands and its limb haze are added to that.
+    treated as parallel). Cost depends on the size of the disc on screen, not on the world.
 
-    Every world drawn in the sky (planets and moons) is lit this way. Worlds too small to see are drawn as a small
+    Every rocky world and moon drawn in the sky is lit this way. Worlds too small to see are drawn as a small
     lit disc (WORLD_MIN_RADIUS_PX), and one under MIN_VISIBLE_PX across is not drawn. While unbound, all worlds are lit this way, the targeted one too, in
     distance order (`OtherWorlds.draw`). While bound, every world except the targeted one is lit; the targeted one is
     the disc below the horizon, lit by the sun like the ground (`FixedWorld.draw_surface`, given
@@ -81,38 +79,28 @@ class LitWorlds:
         """Draw one world as seen from the ship, lit by the star, with its surface colour.
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
-        the active frame (as returned by Navigation.direction_to_body / direction_to_star). The spin axis of every
-        world is the z axis of the stellar frame (see World), so its flattening alone gives the shape."""
+        the active frame (as returned by Navigation.direction_to_body / direction_to_star)."""
         from graphics.instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(h)
 
         radius = world.radius
-        flattening = world.flattening
-        equatorial = radius * (1.0 - flattening) ** (-1.0 / 3.0)
-        polar = equatorial * (1.0 - flattening)
         distance = to_world.length()
-        if distance <= equatorial or 2.0 * equatorial * focal / distance < MIN_VISIBLE_PX:
+        if distance <= radius or 2.0 * radius * focal / distance < MIN_VISIBLE_PX:
             return
         centre = ship.attitude.camera_components(to_world) * (1.0 / distance)  # unit vector, camera frame
         light = ship.attitude.camera_components(to_star - to_world).normalized()  # from the world to the star
-        pole = ship.attitude.camera_components(Vector3(0.0, 0.0, 1.0))  # the spin axis, camera frame
         cx, cy, cz = centre.x, centre.y, centre.z
 
-        # A world too small to see is drawn as a small lit disc: inflate it to a minimum angular size, all its axes
-        # with it. The axes are sines of the angular radii, as is rho.
-        rho = max(radius / distance, WORLD_MIN_RADIUS_PX / focal)
+        # A world too small to see is drawn as a small lit disc: inflate it to a minimum angular size.
+        rho = max(radius / distance, WORLD_MIN_RADIUS_PX / focal)  # sin of the angular radius
         rho = min(rho, 0.999)
-        inflation = rho * distance / radius
-        a = min(equatorial / distance * inflation, 0.999)  # the equatorial semi-axis, in distances
-        c = polar / distance * inflation  # the polar one
+        angular_radius = math.asin(rho)
 
-        # Cull what cannot reach the view, and find the screen box that can contain the disc and its haze.
-        haze_angle = GIANT_HAZE_PIXELS / focal if world.has_haze else 0.0
-        outer_angle = math.asin(min(a + haze_angle, 0.999))
+        # Cull what cannot reach the view, and find the screen box that can contain the disc.
         max_angle = math.atan(math.hypot(w / 2, max(horizon_y, view_h - horizon_y)) / focal)
-        if math.acos(max(-1.0, min(1.0, cz))) - outer_angle > max_angle:
+        if math.acos(max(-1.0, min(1.0, cz))) - angular_radius > max_angle:
             return
-        x0, y0, x1, y1 = LitWorlds._screen_box(centre, outer_angle, w, view_h, horizon_y, focal)
+        x0, y0, x1, y1 = LitWorlds._screen_box(centre, angular_radius, w, view_h, horizon_y, focal)
         box_w, box_h = x1 - x0, y1 - y0
         if box_w <= 0 or box_h <= 0:
             return
@@ -125,70 +113,37 @@ class LitWorlds:
         ys = ((horizon_y - (y0 + (np.arange(grid_h, dtype=np.float32) + 0.5) * step)) / focal).astype(np.float32)
         x, y = np.meshgrid(xs, ys)  # ray (x, y, 1), not normalised
         norm_sq = x * x + y * y + 1.0
+        norm = np.sqrt(norm_sq)
 
-        # The ellipsoid is the quadric (P - C) M (P - C) = 1, with M = I / a^2 + k p p^T, where p is the spin axis and
-        # k makes the polar semi-axis c. A ray P = t (x, y, 1) meets it where t^2 A - 2 t B + D = 0, nearest first.
-        a2 = a * a
-        k = 1.0 / (c * c) - 1.0 / a2
-        pole_on_centre = pole.x * cx + pole.y * cy + pole.z * cz
-        pole_on_ray = pole.x * x + pole.y * y + pole.z
-        ray_quad = norm_sq / a2 + k * pole_on_ray * pole_on_ray  # A = d M d
-        mc_x = cx / a2 + k * pole_on_centre * pole.x
-        mc_y = cy / a2 + k * pole_on_centre * pole.y
-        mc_z = cz / a2 + k * pole_on_centre * pole.z
-        ray_mc = x * mc_x + y * mc_y + mc_z  # B = d M C
-        centre_quad = cx * mc_x + cy * mc_y + cz * mc_z - 1.0  # D = C M C - 1
-        disc = ray_mc * ray_mc - ray_quad * centre_quad  # >= 0 where the ray meets the ellipsoid
-        along = (ray_mc - np.sqrt(np.clip(disc, 0.0, None))) / ray_quad  # t: the near hit, in units of the ray
-        vx, vy, vz = along * x - cx, along * y - cy, along - cz  # from the centre to the hit point
+        # sin^2 of the angle between each ray and the world's centre, from a cross product (no cancellation).
+        cross_x = y * cz - cy
+        cross_y = cx - x * cz
+        cross_z = x * cy - y * cx
+        sin_sq = (cross_x ** 2 + cross_y ** 2 + cross_z ** 2) / norm_sq
+        disc = rho * rho - sin_sq  # >= 0 where the ray hits the sphere
+        along = (x * cx + y * cy + cz) / norm  # cos of that angle
+        hit_distance = along - np.sqrt(np.clip(disc, 0.0, None))  # in units of the distance to the centre
 
-        # The normal is M (P - C): the shade is its cosine with the direction to the star.
-        pv = pole.x * vx + pole.y * vy + pole.z * vz
-        nx = vx / a2 + k * pv * pole.x
-        ny = vy / a2 + k * pv * pole.y
-        nz = vz / a2 + k * pv * pole.z
-        n_len = np.sqrt(nx * nx + ny * ny + nz * nz)
-        shade = np.clip((nx * light.x + ny * light.y + nz * light.z) / n_len, 0.0, 1.0)
+        ray_dot_light = (x * light.x + y * light.y + light.z) / norm
+        shade = np.clip((hit_distance * ray_dot_light - (cx * light.x + cy * light.y + cz * light.z)) / rho, 0.0, 1.0)
 
-        # Coverage: anti-aliased edge from the angular distance to the limb, as for a sphere of radius a.
-        denominator = max(2.0 * a * math.sqrt(1.0 - a * a), 1e-3)
-        pixels_inside = disc / ray_quad * a2 / denominator * focal * norm_sq / step
+        # Coverage: anti-aliased edge from the angular distance to the limb (in pixels).
+        denominator = max(2.0 * rho * math.sqrt(1.0 - rho * rho), 1e-3)
+        pixels_inside = disc / denominator * focal * norm_sq / step
         coverage = np.clip(0.5 + pixels_inside, 0.0, 1.0) * (along > 0.0)
         if not coverage.any():
             return
 
         tint = np.array(LitWorlds.light_tint(star_color, world.surface_colour), dtype=np.float32)
         intensity = WORLD_AMBIENT_LIGHT + (1.0 - WORLD_AMBIENT_LIGHT) * shade
-        if world.band_contrast > 0.0:
-            sine_latitude = pv / np.sqrt(vx * vx + vy * vy + vz * vz)
-            bands = np.sin(world.band_count * (0.5 * math.pi) * sine_latitude + world.band_phase)
-            intensity = intensity * (1.0 + world.band_contrast * bands)
         rgb = np.clip(intensity[..., None] * tint, 0, 255).astype(np.uint8)
-
-        opacity = coverage
-        if world.has_haze:
-            # Outside the limb the haze fades out over GIANT_HAZE_PIXELS. It is lit by the limb's own normal, which is
-            # the ray's direction seen from the centre, so only the sunlit edge glows.
-            haze_width = GIANT_HAZE_PIXELS / step  # in grid cells, as pixels_inside
-            haze = np.clip(1.0 + pixels_inside / haze_width, 0.0, 1.0) * GIANT_HAZE_ALPHA
-            opacity = np.maximum(coverage, haze)
-            # Only the ring outside the limb needs the haze's shade: it is a small part of the box.
-            ring = (coverage <= 0.0) & (haze > 0.0)
-            ray_length = np.sqrt(norm_sq[ring])
-            ux, uy, uz = x[ring] / ray_length, y[ring] / ray_length, 1.0 / ray_length
-            towards_centre = ux * cx + uy * cy + uz * cz
-            across = np.sqrt(np.maximum(1.0 - towards_centre * towards_centre, 1e-6))
-            limb_lit = (ux * light.x + uy * light.y + uz * light.z
-                        - towards_centre * (cx * light.x + cy * light.y + cz * light.z)) / across
-            haze_shade = WORLD_AMBIENT_LIGHT + (1.0 - WORLD_AMBIENT_LIGHT) * np.clip(limb_lit, 0.0, 1.0)
-            rgb[ring] = np.clip(haze_shade[:, None] * tint, 0, 255).astype(np.uint8)
 
         layer = pygame.Surface((grid_w, grid_h), pygame.SRCALPHA)
         pixels = pygame.surfarray.pixels3d(layer)
         pixels[:] = rgb.transpose(1, 0, 2)
         del pixels
         alpha = pygame.surfarray.pixels_alpha(layer)
-        alpha[:] = (opacity * 255).astype(np.uint8).T
+        alpha[:] = (coverage * 255).astype(np.uint8).T
         del alpha
         if step > 1:
             layer = pygame.transform.smoothscale(layer, (grid_w * step, grid_h * step))
