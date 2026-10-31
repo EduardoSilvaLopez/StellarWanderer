@@ -253,6 +253,10 @@ class Star(Body):
     @property
     def stellar_system(self) -> StellarSystem:
         return self._system
+
+    def set_altered(self) -> None:
+        """The star's only changes are the pilot's (hidden), kept by its system."""
+        self._system.set_altered()
     # endregion
 
     # region Almanack

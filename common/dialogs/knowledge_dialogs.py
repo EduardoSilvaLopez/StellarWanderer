@@ -2,15 +2,15 @@
 talked to (KnownPeopleDialog) and the specifications of the ship they fly (ShipSpecificationsDialog). All have the look
 of the message dialogs, a scrollable list and one Close button.
 
-The systems are those of the player's knowledge (knowledge.py), each shown with the text of `StellarSystem.markdown()`,
-which ends with the asteroids that matter (see `Asteroid.markdown`): its markdown headings and bullets are drawn as
-headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones the player has talked to,
+The systems are those of the player's knowledge (knowledge.py), as a list of contents of their bodies, each with a
+check box for its visibility. Each entry is the markdown of its body (see `ItemDialog`): its markdown headings and
+bullets are drawn as headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones the player has talked to,
 and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
 `Person.description_fields()`, and under both a comment box across the card that the player can write in (saved with
 the person, see Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pygame
 
 from .dialog_fonts import body_font, title_font
@@ -21,6 +21,7 @@ from .messages import Message
 from .outpost_screen import HEAT_SHIELD_OPTIONS
 
 if TYPE_CHECKING:
+    from galaxies.asteroid import Asteroid
     from galaxies.people.person import Person
     from spaceships.ship import Ship
 
@@ -46,9 +47,9 @@ SEARCH_WIDTH = 240  # the search box at the right of the People dialog's title (
 class _ListDialog(MessageDialog):
     """A message dialog whose scrolled content is a list of pre-rendered surfaces (see _build), not wrapped text."""
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, buttons: Tuple[str, ...] = ('Close',)) -> None:
         self._blocks: List[Tuple[pygame.Surface, int]] = []  # (surface, y inside the text area)
-        super().__init__(Message(title=title, text='', buttons=['Close']))
+        super().__init__(Message(title=title, text='', buttons=list(buttons)))
 
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         """The content's surfaces for a text area `width` wide, each with the gap to leave above it."""
@@ -93,25 +94,6 @@ class _ListDialog(MessageDialog):
     def _message(text: str, width: int) -> List[Tuple[pygame.Surface, int]]:
         return [(surface, 0) for surface in _ListDialog._field('', text, width)]
 
-
-class KnownSystemsDialog(_ListDialog):
-    """The stellar systems the pilot knows. Result: ('close', 0), ('close', None) on Esc or a right-click, ('exit',
-    None) if the window closes."""
-
-    def __init__(self) -> None:
-        super().__init__('Known stellar bodies')
-
-    def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
-        import game_environment as gem
-        from galaxies.people import knowledge
-
-        galaxy = gem.current_environment.galaxy
-        systems = [galaxy.system_of_key(key) for key in knowledge.current_knowledge.bodies]
-        blocks: List[Tuple[pygame.Surface, int]] = []
-        for system in (s for s in systems if s is not None):
-            blocks += self._markdown(system.markdown(), width)
-        return blocks or self._message('Nothing is known yet.', width)
-
     @staticmethod
     def _markdown(text: str, width: int) -> List[Tuple[pygame.Surface, int]]:
         """The headings ('##' system, '###' star or world, '####' moon) and bullets of a markdown text."""
@@ -143,6 +125,259 @@ class KnownSystemsDialog(_ListDialog):
             else:
                 blocks += [(surface, 2) for surface in _ListDialog._field('', stripped, width)]
         return blocks
+
+
+class ItemDialog(_ListDialog):
+    """The knowledge base's entry of one item (see KnownSystemsDialog): its markdown text, scrolled. With `on_forget`, an
+    asteroid's Forget button comes first; while `forget_blocked` (a mission is about the asteroid) it is dimmed and does
+    nothing, and the entry says why. Results: ('close', None) on Close, Esc or a right-click; ('exit', None) if the
+    window closes."""
+
+    FORGET_BLOCKED = 'A mission is about this asteroid: it can be forgotten once the mission is over.'
+
+    def __init__(self, title: str, text: str, on_forget: Optional[Callable[[], None]] = None,
+                 forget_blocked: bool = False) -> None:
+        self._text: str = text
+        self._on_forget: Optional[Callable[[], None]] = on_forget
+        self._forget_blocked: bool = forget_blocked
+        super().__init__(title, ('Forget', 'Close') if on_forget is not None else ('Close',))
+
+    def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
+        blocks = self._markdown(self._text, width)
+        if self._forget_blocked:
+            blocks += [(surface, SECTION_GAP) for surface, _ in self._message(self.FORGET_BLOCKED, width)]
+        return blocks
+
+    def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
+        result = super().handle_event(event)
+        if result == ('close', 0) and self._on_forget is not None:  # the Forget button
+            if self._forget_blocked:
+                return None
+            self._on_forget()
+            return ('close', None)
+        return result
+
+    def _draw_buttons(self, surface: pygame.Surface) -> None:
+        super()._draw_buttons(surface)
+        if self._on_forget is not None and self._forget_blocked:
+            shade = pygame.Surface(self.button_rects[0].size, pygame.SRCALPHA)
+            shade.fill((0, 0, 0, 150))
+            surface.blit(shade, self.button_rects[0])
+
+
+CHECK_SIZE = 16  # the check box of an item
+CHECK_GAP = 8  # between the check box and the text
+LIST_INDENT = 22  # per level of nesting
+ROW_GAP = 4  # between the rows of one item's group
+
+
+def _draw_check(surface: pygame.Surface, rect: pygame.Rect, state: str, locked: bool) -> None:
+    """A check box: 'on' filled, 'off' empty, 'mixed' with a bar (some of a group shown, some hidden). A locked one is
+    dimmed."""
+    colour = ACCENT_DIM if locked else ACCENT
+    pygame.draw.rect(surface, COMMENT_FILL, rect)
+    pygame.draw.rect(surface, colour, rect, 1)
+    inner = rect.inflate(-8, -8)
+    if state == 'on':
+        pygame.draw.rect(surface, colour, inner)
+    elif state == 'mixed':
+        pygame.draw.rect(surface, colour, pygame.Rect(inner.left, inner.centery - 1, inner.width, 3))
+
+
+class KnownSystemsDialog(_ListDialog):
+    """The bodies the pilot knows, as a list of contents: each stellar system, with its star, its portal base, its belts,
+    its planets (each with its moons) and its free asteroids nested under it, and the asteroids of a belt under the
+    belt. Each item but the system has a check box, checked when it is shown: unchecked, it is hidden (no label, no
+    target). The four check boxes at the top do the same for all the planets, moons, belts or free asteroids. What a
+    mission is about cannot be hidden, and an asteroid of one cannot be forgotten, while the mission is open. A click on
+    an item's name opens its entry (ItemDialog), with a Forget button for an asteroid. The list keeps its scroll
+    position. Result: ('close', 0), ('close', None) on Esc or a right-click, ('exit', None) if the window closes."""
+
+    def __init__(self) -> None:
+        self._hits: List[Tuple[int, pygame.Rect, Callable[[], None]]] = []  # (block, rectangle in it, action)
+        self._detail: Optional[ItemDialog] = None  # the entry open over the list
+        super().__init__('Known stellar bodies')
+
+    def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
+        import game_environment as gem
+        from galaxies.asteroid_belt import AsteroidBelt
+        from galaxies.people import knowledge
+
+        galaxy = gem.current_environment.galaxy
+        systems = [system for key in knowledge.current_knowledge.bodies
+                   if (system := galaxy.system_of_key(key)) is not None]
+        self._hits = []
+        if not systems:
+            return self._message('Nothing is known yet.', width)
+
+        planets = [planet for system in systems for orbit in system.orbits for planet in orbit.planets]
+        moons = [moon for planet in planets for moon in planet.moons]
+        belts = [orbit for system in systems for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
+        free = [asteroid for system in systems for asteroid in system.free_asteroids.values()]
+        blocks: List[Tuple[pygame.Surface, int]] = []
+        for title, items in (('Planets', planets), ('Moons', moons), ('Belts', belts), ('Free asteroids', free)):
+            self._row(blocks, width, 0, title, '', state=self._state(items),
+                      toggle=lambda items=items: self._toggle_all(items), gap=ROW_GAP)
+
+        for system in systems:
+            self._row(blocks, width, 0, 'Stellar system', system.name,
+                      open_=self._open_item('Stellar system', system.markdown), gap=SECTION_GAP)
+            self._body_row(blocks, width, 1, 'Star', system.star)
+            self._body_row(blocks, width, 1, 'Portal base', system.portal_base)
+            for orbit in system.orbits:
+                if isinstance(orbit, AsteroidBelt):
+                    self._body_row(blocks, width, 1, 'Asteroid belt', orbit, name='')
+                    for asteroid in orbit.relevant.values():
+                        self._asteroid_row(blocks, width, 2, asteroid)
+                    continue
+                for planet in orbit.planets:
+                    self._body_row(blocks, width, 1, planet.kind_title, planet)
+                    for moon in planet.moons:
+                        self._body_row(blocks, width, 2, moon.kind_title, moon)
+            for asteroid in system.free_asteroids.values():
+                self._asteroid_row(blocks, width, 1, asteroid)
+        return blocks
+
+    # region Rows
+    def _row(self, blocks: List[Tuple[pygame.Surface, int]], width: int, depth: int, title: str, name: str,
+             state: Optional[str] = None, locked: bool = False, toggle: Optional[Callable[[], None]] = None,
+             open_: Optional[Callable[[], None]] = None, gap: int = BLOCK_GAP) -> None:
+        """One line of the list: a check box in `state` when there is one, then the title and the name. A click on the
+        box calls `toggle` (not for a locked row); a click on the rest of the line calls `open_`, or `toggle` when there
+        is no `open_`."""
+        font = body_font(FIELD_SIZE)
+        height = font.get_linesize()
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        indent = depth * LIST_INDENT
+        box = pygame.Rect(indent, (height - CHECK_SIZE) // 2, CHECK_SIZE, CHECK_SIZE)
+        if state is not None:
+            _draw_check(surface, box, state, locked)
+        text_x = indent + CHECK_SIZE + CHECK_GAP
+        title_surface = font.render(title, True, LABEL_COLOR)
+        surface.blit(title_surface, (text_x, 0))
+        if name:
+            surface.blit(font.render(name, True, HEADING_COLOR), (text_x + title_surface.get_width() + 8, 0))
+        blocks.append((surface, gap))
+        index = len(blocks) - 1
+        if toggle is not None and not locked:
+            self._hits.append((index, box, toggle))
+            if open_ is None:
+                self._hits.append((index, pygame.Rect(0, 0, width, height), toggle))
+        if open_ is not None:
+            self._hits.append((index, pygame.Rect(0, 0, width, height), open_))
+
+    def _body_row(self, blocks: List[Tuple[pygame.Surface, int]], width: int, depth: int, title: str, body,
+                  name: Optional[str] = None) -> None:
+        """A row for a body of a system (star, portal base, world, belt): its check box and its entry."""
+        self._row(blocks, width, depth, title, body.name if name is None else name, state=self._state_of(body),
+                  locked=self._locked(body), toggle=lambda: self._toggle_item(body),
+                  open_=self._open_item(title, body.markdown), gap=ROW_GAP)
+
+    def _asteroid_row(self, blocks: List[Tuple[pygame.Surface, int]], width: int, depth: int,
+                      asteroid: Asteroid) -> None:
+        """A row for an asteroid of a belt or free-living: its check box, and its entry with Forget."""
+        self._row(blocks, width, depth, 'Asteroid', asteroid.name, state=self._state_of(asteroid),
+                  locked=self._locked(asteroid), toggle=lambda: self._toggle_item(asteroid),
+                  open_=self._open_item('Asteroid', asteroid.markdown, forget=asteroid), gap=ROW_GAP)
+
+    def _open_item(self, title: str, text: Callable[[], str], forget: Optional[Asteroid] = None) -> Callable[[], None]:
+        """The action of a row: opens its entry over the list. `text` is called then, so the entry is the current one."""
+        def open_() -> None:
+            on_forget = (lambda: self._forget(forget)) if forget is not None else None
+            blocked = forget is not None and self._locked(forget)
+            self._detail = ItemDialog(title, text(), on_forget, forget_blocked=blocked)
+        return open_
+    # endregion
+
+    # region Changes
+    @staticmethod
+    def _locked(item) -> bool:
+        """Whether a mission is about the item: an asteroid of one, or a belt with one of its asteroids. Such an item can
+        be neither hidden nor forgotten."""
+        from galaxies.asteroid import Asteroid
+        from galaxies.asteroid_belt import AsteroidBelt
+        if isinstance(item, Asteroid):
+            return item.stellar_system.is_mission_target(item)
+        if isinstance(item, AsteroidBelt):
+            return any(item.parent_stellar_system.is_mission_target(asteroid) for asteroid in item.relevant.values())
+        return False
+
+    @staticmethod
+    def _state_of(item) -> str:
+        return 'off' if item.hidden else 'on'
+
+    @staticmethod
+    def _state(items: list) -> str:
+        """The state of a group's check box: 'on' when all are shown, 'off' when all are hidden, else 'mixed'."""
+        shown = [not item.hidden for item in items]
+        if all(shown):
+            return 'on'
+        return 'mixed' if any(shown) else 'off'
+
+    def _toggle_item(self, item) -> None:
+        if self._locked(item):
+            return
+        item.set_hidden(not item.hidden)
+        if item.hidden:
+            self._untarget(item)
+        self._refresh()
+
+    def _toggle_all(self, items: list) -> None:
+        """Hides all of the group if all of it is shown, else shows all of it. The ones a mission is about stay as they
+        are."""
+        hide = self._state(items) == 'on'
+        for item in items:
+            if not self._locked(item):
+                item.set_hidden(hide)
+                if hide:
+                    self._untarget(item)
+        self._refresh()
+
+    def _forget(self, asteroid: Asteroid) -> None:
+        asteroid.forget()
+        self._untarget(asteroid)
+        self._refresh()
+
+    @staticmethod
+    def _untarget(item) -> None:
+        import game_environment as gem
+        gem.current_environment.untarget(item)
+
+    def _refresh(self) -> None:
+        """Builds the list again after a change, keeping the scroll position (as far as the list still reaches)."""
+        self._layout_text()
+        self.scroll = min(self.scroll, self._max_scroll)
+    # endregion
+
+    # region Events
+    def _action_at(self, position: Tuple[int, int]) -> Optional[Callable[[], None]]:
+        """The action of the row or check box at a mouse position (dialog coordinates), or None."""
+        for index, rect, action in self._hits:
+            top = self.text_rect.top + self._blocks[index][1] - self.scroll
+            if rect.move(self.text_rect.left, top).collidepoint(position):
+                return action
+        return None
+
+    def draw(self, surface: pygame.Surface) -> None:
+        super().draw(surface)
+        if self._detail is not None:
+            self._detail.draw(surface)
+
+    def handle_event(self, event: pygame.event.Event) -> Optional[DialogResult]:
+        if self._detail is not None:
+            result = self._detail.handle_event(event)
+            if result is not None and result[0] == 'exit':
+                return result
+            if result is not None:
+                self._detail = None
+            return None
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.text_rect.collidepoint(event.pos):
+            action = self._action_at(event.pos)
+            if action is not None:
+                action()
+                return None
+        return super().handle_event(event)
+    # endregion
 
 
 class KnownPeopleDialog(_ListDialog):

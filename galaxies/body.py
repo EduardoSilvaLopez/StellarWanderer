@@ -1,5 +1,6 @@
 """A body of a stellar system: the star, the portal base, a world or an asteroid. What navigation needs from any of
-them."""
+them, and the pilot's choice to hide one from the knowledge base: a hidden body has no label and cannot be targeted,
+but is still there and drawn. Hidden is saved as an alteration of the body's own, and not hidden is the default."""
 
 from __future__ import annotations
 from datetime import datetime
@@ -18,6 +19,17 @@ class Body:
     is_world: bool = False
     name: str
     radius: float
+    hidden: bool = False  # set by the knowledge base (see set_hidden)
+
+    @property
+    def is_shown(self) -> bool:
+        """Whether the body gets a label and can be targeted: it is not hidden."""
+        return not self.hidden
+
+    def set_hidden(self, hidden: bool) -> None:
+        """Hides or shows the body, and marks what it belongs to as altered (hidden is kept with the object)."""
+        self.hidden = hidden
+        self.set_altered()  # each kind of body has its own (a settlement, a world, a star)
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         """The position of the body's centre in the stellar frame, in meters."""

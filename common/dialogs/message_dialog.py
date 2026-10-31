@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 import pygame
 
+from graphics.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
 from .messages import Message
@@ -114,7 +115,7 @@ class MessageDialog(Dialog):
         return surface
 
     @staticmethod
-    def wrap(text: str, font: pygame.font.Font, max_width: int) -> List[str]:
+    def wrap(text: str, font: pygame.font.Font | FallbackFont, max_width: int) -> List[str]:
         """Break `text` into lines no wider than `max_width` (a word wider than that is split)."""
         lines: List[str] = []
         current = ''

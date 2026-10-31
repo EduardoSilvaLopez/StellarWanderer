@@ -47,12 +47,14 @@ class GameEnvironment:
     def refresh_fixed_body(self, player_position: Vector3) -> None:
         """Pick fixed_body for this frame: the body nearest to the ship (distance from its centre) whose fixed zone
         holds it, or None when no fixed zone does. While fixed, targeted_body follows it, and last_fixed_body records
-        it. Call only while unbound, see Navigation.update_position_and_velocity."""
+        it. A hidden body has no fixed zone. Call only while unbound, see Navigation.update_position_and_velocity."""
         from spaceships.navigation import Navigation  # local: navigation imports this module
 
         fixed: Optional[Body] = None
         fixed_distance = math.inf
         for body in self.nearest_system.get_all_bodies():
+            if not body.is_shown:
+                continue
             distance = math.dist(player_position, body.calculate_stellar_position(self.date_time))
             if distance < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius and distance < fixed_distance:
                 fixed, fixed_distance = body, distance
@@ -62,10 +64,10 @@ class GameEnvironment:
             self.last_fixed_body = fixed
 
     def bodies_by_distance(self, player_position: Vector3) -> list[Body]:
-        """The bodies of nearest_system sorted by distance from the ship, the star included: the order the Tab key goes
-        through."""
+        """The shown bodies of nearest_system sorted by distance from the ship, the star included: the order the Tab key
+        goes through. Hidden ones are not in it."""
         return sorted(
-            self.nearest_system.get_all_bodies(),
+            (body for body in self.nearest_system.get_all_bodies() if body.is_shown),
             key=lambda body: math.dist(player_position, body.calculate_stellar_position(self.date_time)),
         )
 
@@ -74,12 +76,24 @@ class GameEnvironment:
         bodies = self.bodies_by_distance(player_position)
         return bodies.index(self.targeted_body) if self.targeted_body in bodies else -1
 
+    def untarget(self, body: Body) -> None:
+        """Takes the target off `body` when it is the targeted one (it was hidden or forgotten): the star, or else the
+        portal base, takes its place when it is shown."""
+        if self.targeted_body is not body:
+            return
+        for candidate in (self.nearest_system.star, self.nearest_system.portal_base):
+            if candidate.is_shown:
+                self.targeted_body = candidate
+                return
+
     def cycle_targeted_body(self, step: int, player_position: Vector3) -> None:
         """Moves targeted_body `step` places (+1 or -1) through bodies_by_distance, wrapping around. Only outside every
         fixed zone: while fixed, the target is the fixed body."""
         if self.fixed_body is not None:
             return
         bodies = self.bodies_by_distance(player_position)
+        if not bodies:  # all of them hidden
+            return
         index = self.target_index(player_position)
         self.targeted_body = bodies[(index + step) % len(bodies)]
 

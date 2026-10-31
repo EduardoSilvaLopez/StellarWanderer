@@ -77,6 +77,7 @@ class PortalBase(Body, Settlement):
         Settlement.__init__(self, self.seed)
         if saved is not None:  # what the settlement saved in its system (see StellarSystem.get_alterations)
             self._read_alterations(saved)
+            self.hidden = bool(saved.get('hidden', False))
             self.is_altered = True
 
     def _generate_name(self, rnd: random.Random) -> str:
@@ -109,6 +110,8 @@ class PortalBase(Body, Settlement):
         """What the settlement saves, in its system's alterations (its visits and its handling)."""
         alterations: dict = {}
         self._alterations_of_visits(alterations)
+        if self.hidden:
+            alterations['hidden'] = True
         return alterations or None
 
     def inside_key(self) -> str:

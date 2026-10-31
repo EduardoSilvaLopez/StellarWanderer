@@ -170,6 +170,8 @@ class AsteroidBelt(Orbit):
         # Taken whole by a scoop: gone for good, cosmetic or not (see Asteroid.consume).
         self.consumed: set[AsteroidKey] = {AsteroidKey.from_ints(text.split())
                                            for text in (self.saved_alterations or {}).get('consumed', [])}
+        # Hidden in the knowledge base: its relevant asteroids are hidden with it (see Asteroid.is_shown).
+        self.hidden: bool = bool((self.saved_alterations or {}).get('hidden', False))
 
         logger.info(
             f"Asteroid belt {self.number}: {self.count:.3g} asteroids of {MIN_DIAMETER:.0f} m or more, richness "
@@ -420,20 +422,36 @@ class AsteroidBelt(Orbit):
         return Asteroid.of_belt(self, key, float(rows.semi_major_axis[found[0]]), float(rows.diameter[found[0]]))
 
     def promote(self, key: AsteroidKey) -> Asteroid:
-        """The asteroid of the key as a relevant one (it was cosmetic until now); the belt is marked as altered."""
+        """The asteroid of the key as a relevant one (it was cosmetic until now); the belt is marked as altered. A
+        mission asks for it, so it is shown: the belt and the asteroid are unhidden if they were hidden."""
         asteroid = self.relevant.get(key)
         if asteroid is None:
             asteroid = self.build(key)
             self.relevant[key] = asteroid
             self.set_altered()
+        if asteroid.hidden:
+            asteroid.set_hidden(False)
+        if self.hidden:
+            self.set_hidden(False)
         return asteroid
 
     def forget(self, key: AsteroidKey) -> None:
         """Forgets a promoted asteroid: it goes back to the cosmetic population, nameless, and its scan is lost. When
-        the belt has no relevant asteroid left, it is no longer altered: the one exception to 'once altered, always'."""
+        the belt has no relevant asteroid left, and is not hidden, it is no longer altered: the one exception to 'once
+        altered, always'."""
         self.relevant.pop(key, None)
-        if not self.relevant and not self.consumed:
+        if not self.relevant and not self.consumed and not self.hidden:
             self.is_altered = False
+
+    def set_hidden(self, hidden: bool) -> None:
+        """Hides or shows the belt, with its relevant asteroids (see Asteroid.is_shown)."""
+        self.hidden = hidden
+        self.set_altered()
+
+    def markdown(self) -> str:
+        """The belt's entry in the knowledge base: its average distance from the star only, in the almanack's AU."""
+        AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
+        return f"### Asteroid belt\n* Average distance: {self.distance_from_star / AU:.2f} AU\n"
 
     def consume(self, key: AsteroidKey) -> None:
         """The scoop has taken the asteroid of the key whole: it is gone, kept or cosmetic, and the belt is altered."""
@@ -442,12 +460,14 @@ class AsteroidBelt(Orbit):
         self.set_altered()
 
     def get_alterations(self) -> dict | None:
-        if not self.relevant and not self.consumed:
+        if not self.relevant and not self.consumed and not self.hidden:
             return None
         alterations = {}
         if self.relevant:
             alterations['asteroids'] = {str(key): asteroid.get_alterations() for key, asteroid in self.relevant.items()}
         if self.consumed:
             alterations['consumed'] = [str(key) for key in sorted(self.consumed, key=str)]
+        if self.hidden:
+            alterations['hidden'] = True
         return alterations
     # endregion

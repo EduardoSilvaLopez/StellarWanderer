@@ -20,7 +20,7 @@ class Laser:
         self.firing: bool = False
         self.fired_at: float = float('-inf')
 
-    def fire(self, targeted_rock: Optional[Rock], time_passed: int) -> None:
+    def fire(self, targeted_rock: Optional[Rock], time_passed: float) -> None:
         if not self.firing:
             audio.play('laser_on')
             self.fired_at = time.monotonic()

@@ -207,7 +207,7 @@ class WorldMap:
     @staticmethod
     def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: RockyWorld, ship: Ship,
                        to_pixel: PixelFunction, area: pygame.Rect) -> None:
-        """Everything the map shows: the outposts (planets only; moons have none), the ore mines, the rocks of the open
+        """Everything the map shows: the outposts, the ore mines, the rocks of the open
         scan missions and the player."""
         WorldMap._draw_outposts(surface, fonts, h, world, to_pixel, area)
         WorldMap._draw_mines(surface, world, to_pixel)
@@ -265,7 +265,7 @@ class WorldMap:
                        area: pygame.Rect) -> None:
         """White dot per outpost, with its name beside it. The label goes towards the middle of `area`
         (left when the dot is in the right half, above when in the lower half), and is kept inside it."""
-        if world.parent_planet is not None or not world.outposts:
+        if not world.outposts:
             return
         font = fonts.get(max(9, int(h * 0.014)))
         gap_x, gap_y = 6, 4

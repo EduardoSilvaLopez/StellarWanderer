@@ -188,12 +188,35 @@ class Asteroid(Body):
         self.scan_progress = min(1.0, self.scan_progress + game_seconds / duration)
         return self.scan_progress >= 1.0 and not was_scanned
 
+    @property
+    def is_shown(self) -> bool:
+        """Hidden itself, or in a belt the pilot has hidden (its belt's asteroids go with it)."""
+        return not self.hidden and (self.parent_belt is None or not self.parent_belt.hidden)
+
+    def set_altered(self) -> None:
+        if self.parent_belt is not None:
+            self.parent_belt.set_altered()
+        else:
+            self._stellar_system.set_altered()
+
+    def forget(self) -> None:
+        """The pilot forgets the asteroid: a belt's goes back to the cosmetic population, a free-living one is no longer
+        kept by its system. Either way it is gone from the knowledge base."""
+        if self.parent_belt is not None:
+            self.parent_belt.forget(self.key)
+        else:
+            self._stellar_system.forget_free_asteroid(self.offer_seed)
+
     def get_alterations(self) -> dict:
-        """What the savefile holds of the asteroid besides its key: the scan, once begun."""
-        return {'scan': self.scan_progress} if self.scan_progress > 0.0 else {}
+        """What the savefile holds of the asteroid besides its key: the scan, once begun, and whether it is hidden."""
+        alterations = {'scan': self.scan_progress} if self.scan_progress > 0.0 else {}
+        if self.hidden:
+            alterations['hidden'] = True
+        return alterations
 
     def apply_alterations(self, saved: dict) -> Asteroid:
         self.scan_progress = float(saved.get('scan', 0.0))
+        self.hidden = bool(saved.get('hidden', False))
         return self
 
     def _generate_name(self, my_random: random.Random) -> str:

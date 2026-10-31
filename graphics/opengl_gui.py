@@ -193,12 +193,12 @@ class OpenGLGui:
         self._draw_texture(layer, self.dialog_texture)
 
     def _outposts(self, environment: GameEnvironment, ship: Ship) -> List[Outpost]:
-        """Outposts of the fixed world (planets only) within draw distance of the ship.
+        """Outposts of the fixed world (of a planet or a moon) within draw distance of the ship.
 
         Taken from the world's own outposts, not from loaded Km2s, so they do not appear and disappear with
         the Km2 loading around the ship."""
         world = environment.fixed_world
-        if world.parent_planet is not None or not world.outposts:
+        if not world.outposts:
             return []
         return [
             outpost for outpost in world.outposts.values()

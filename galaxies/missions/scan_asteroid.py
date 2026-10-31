@@ -193,7 +193,7 @@ class ScanAsteroid(Mission):
         return self.asteroid()
 
     def title(self) -> str:
-        return f"Scan the asteroid {self.asteroid().name}."
+        return f"Scan the asteroid {self.asteroid().name}"
 
     def description(self) -> str:
         return (

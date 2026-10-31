@@ -228,16 +228,20 @@ def manage_missions(
             return False, screen
 
 
-def start_game(action: str, value: object) -> float:
+def start_game(action: str, value: str | int) -> float:
     """Replace the current game with a new one ('new', seed) or a saved one ('load', path).
 
     Returns the elapsed ship seconds since EPOCH of the game that starts."""
     update_queue.clear()
     audio.stop_loops()
     if action == 'load':
+        if not isinstance(value, str):
+            raise Exception("A saved game is loaded from its file path.")
         Savefile.load_from_file(value)
         elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
     else:
+        if not isinstance(value, int):
+            raise Exception("A new game starts from its galactic seed.")
         logger.info(f"New game with seed: {value}")
         knowledge.current_knowledge = knowledge.Knowledge()  # before the environment: its systems add to it
         gem.current_environment = gem.GameEnvironment(value, EPOCH, None, None)
@@ -257,6 +261,8 @@ def start_game(action: str, value: object) -> float:
 def show_welcome(player: player_module.Player) -> None:
     """Xi's farewell message, queued for a new game once the pilot has said who they are (PilotIdentityDialog)."""
     fixed_world = gem.current_environment.fixed_world
+    if fixed_world is None or fixed_world.parent_planet is None:
+        raise Exception("The fixed world has no planet.")
     planet = fixed_world.parent_planet.name
     moon = fixed_world.name
     xis_title = THOSE_WHO_SHARE.title_for(1500)
@@ -428,6 +434,8 @@ def main() -> None:
                     ship = player.ship
                     outpost = ship.scanner.targeted_outpost
                     if outpost is not None and not ship.navigation.is_landed():
+                        if outpost.com_officer is None:
+                            raise Exception("The outpost has no communications officer.")
                         ship.notification.set(
                             f"[Com. Officer] Land the ship first, {outpost.com_officer.get_player_title()}."
                             )
@@ -523,11 +531,11 @@ def main() -> None:
         # reducing them automatically, only the rates that are not zero (a brake costs energy only while it acts).
         else:
             if ship.attitude.yaw_rate:
-                ship.attitude.update_yaw(delta_game_seconds, 0, 0, 1)
+                ship.attitude.update_yaw(delta_game_seconds, 0, 0, True)
             if ship.attitude.pitch_rate:
-                ship.attitude.update_pitch(delta_game_seconds, 0, 0, 1)
+                ship.attitude.update_pitch(delta_game_seconds, 0, 0, True)
             if ship.attitude.roll_rate:
-                ship.attitude.update_roll(delta_game_seconds, 0, 0, 1)
+                ship.attitude.update_roll(delta_game_seconds, 0, 0, True)
 
         # Always update position, even with no thrust keys held: W/A/D/X/KP_8/KP_2 now
         # control acceleration in all axes, so the ship keeps drifting on its

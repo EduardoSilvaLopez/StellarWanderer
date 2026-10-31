@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class OutpostMarkers:
-    """Outposts of the planets within the fixed zone of the ship, as dots where each outpost faces the ship.
+    """Outposts of the worlds within the fixed zone of the ship, as dots where each outpost faces the ship.
 
     Drawn in the sky while unbound (after the worlds). While bound, ObjectLabels draws the dot on the surface instead.
     `in_fixed_zone` is the sphere's visibility test, so outposts on the far side of their planet get no dot.
@@ -19,26 +19,26 @@ class OutpostMarkers:
 
     @staticmethod
     def in_fixed_zone(environment: GameEnvironment, ship: Ship) -> List[tuple]:
-        """(outpost, stellar position, visible) for every outpost of a planet within the fixed zone. Bound to a world,
-        only that world's outposts are listed (a moon has none): the outposts of the planet it orbits are not.
+        """(outpost, stellar position, visible) for every outpost of a world, planet or moon, within its fixed zone. Bound
+        to a world, only that world's outposts are listed.
 
-        `visible` is False when the outpost is on the far side of its planet (its surface normal points
-        away from the ship). Such outposts still get a label, but no dot."""
+        `visible` is False when the outpost is on the far side of its world (its surface normal points away from the
+        ship). Such outposts still get a label, but no dot."""
         from spaceships.navigation import Navigation
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
         result = []
         bound_world = environment.fixed_world if ship.is_bound else None
-        for planet in environment.nearest_system.get_all_worlds():
-            if planet.parent_planet is not None or not planet.outposts:
+        for world in environment.nearest_system.get_all_worlds():
+            if not world.outposts:
                 continue
-            if ship.is_bound and planet is not bound_world:
+            if ship.is_bound and world is not bound_world:
                 continue
-            centre = planet.calculate_stellar_position(date_time)
+            centre = world.calculate_stellar_position(date_time)
             # Stellar distance, also while bound (Navigation.distance_to_body_centre assumes unbound).
-            if (ship_position - centre).length() >= Navigation.FIXED_ZONE_RADIUS_MULTIPLE * planet.radius:
+            if (ship_position - centre).length() >= Navigation.FIXED_ZONE_RADIUS_MULTIPLE * world.radius:
                 continue
-            for outpost in planet.outposts.values():
+            for outpost in world.outposts.values():
                 point = outpost.stellar_position(date_time)
                 normal = (point - centre).normalized()
                 visible = (ship_position - point).dot(normal) > 0.0

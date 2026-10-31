@@ -81,14 +81,39 @@ class ScanRock(Mission):
                 self.adjective = self.my_random.choice(Rock.ADJECTIVES)
 
     # region The rock's site
+    def _planet(self) -> RockyWorld:
+        """The planet of the outpost that asked: a scan is only offered by outposts (see TERMS)."""
+        from galaxies.outpost import Outpost
+        settlement = self.issuer_settlement
+        if not isinstance(settlement, Outpost):
+            raise ValueError(f"{self.KIND} is asked by {settlement.name}, which has no planet")
+        return settlement.planet
+
+    def _world_at(self, index: Optional[int]) -> RockyWorld:
+        """The planet of the outpost (index None), or one of its moons, which are rocky worlds too."""
+        from galaxies.rocky_world import RockyWorld
+        planet = self._planet()
+        if index is None:
+            return planet
+        moon = planet.moons[index]
+        if not isinstance(moon, RockyWorld):
+            raise ValueError(f"{self.KIND}: moon {index} is not a rocky world")
+        return moon
+
+    def _site(self) -> dict:
+        """The place of the mission's rock. A mission for a rock always has one (see `offer`)."""
+        if self.rock_site is None:
+            raise ValueError(f"{self.KIND} has no rock site")
+        return self.rock_site
+
     def _choose_rock_site(self) -> Optional[dict]:
         """A random rock that is not molten, on the planet or on one of its moons, from the mission's seed. One place is
         tried: None if that place has no rock left, or has an outpost (the people there would have scanned it
         themselves)."""
         from galaxies.km2 import Km2
-        planet = self.issuer_settlement.planet
+        planet = self._planet()
         index = self.my_random.randrange(len(planet.moons) + 1) - 1  # -1 is the planet itself
-        world = planet if index < 0 else planet.moons[index]
+        world = self._world_at(None if index < 0 else index)
         half_turn = math.pi * world.radius  # the surface's coordinates, as Navigation keeps them
         longitude = int(self.my_random.uniform(-half_turn, half_turn))
         latitude = int(world.radius * math.asin(self.my_random.uniform(-1.0, 1.0)))  # uniform over the sphere
@@ -119,15 +144,13 @@ class ScanRock(Mission):
 
     def _world(self) -> RockyWorld:
         """The world the rock is on: the planet of the outpost, or one of its moons."""
-        planet = self.issuer_settlement.planet
-        index = self.rock_site['world']
-        return planet if index is None else planet.moons[index]
+        return self._world_at(self._site()['world'])
 
     def _rock_at_site(self) -> Optional[Rock]:
         """The mission's rock. Its Km2 is put in the world's Km2s if it was not loaded, so that the change is kept."""
-        cell_longitude, cell_latitude = self.rock_site['km2']
+        cell_longitude, cell_latitude = self._site()['km2']
         km2 = self._km2_at(self._world(), cell_longitude, cell_latitude, keep=True)
-        longitude, latitude = self.rock_site['rock']
+        longitude, latitude = self._site()['rock']
         return next((rock for rock in km2.rocks if rock.longitude == longitude and rock.latitude == latitude), None)
     # endregion
 
@@ -176,7 +199,7 @@ class ScanRock(Mission):
         """The mission's rock, scanned while the mission is taken, counts as scanned."""
         if self.status != OPEN or self.object_type != 'rock' or self.was_scanned:
             return
-        if rock.parent_km2.parent_world is self._world() and [rock.longitude, rock.latitude] == self.rock_site['rock']:
+        if rock.parent_km2.parent_world is self._world() and [rock.longitude, rock.latitude] == self._site()['rock']:
             self.was_scanned = True
 
     def target_on(self, world: RockyWorld) -> Optional[Tuple[float, float]]:
@@ -184,7 +207,7 @@ class ScanRock(Mission):
         None otherwise."""
         if self.status != OPEN or self.object_type != 'rock' or self._world() is not world:
             return None
-        return tuple(self.rock_site['rock'])
+        return tuple(self._site()['rock'])
 
     def progress(self) -> str:
         if self.accepted_at is None:
@@ -195,11 +218,11 @@ class ScanRock(Mission):
         return f"The {self.adjective} {self.object_type} is not scanned yet."
 
     def title(self) -> str:
-        return f"Scan a {self.object_type}."
+        return f"Scan a {self.object_type}"
 
     def description(self) -> str:
         world = self._world()
-        longitude, latitude = self.rock_site['rock']
+        longitude, latitude = self._site()['rock']
         return (
             f"We have found an interesting {self.adjective} {self.object_type} in ({longitude}, {latitude}) on "
             f"{world.name}."
@@ -207,12 +230,15 @@ class ScanRock(Mission):
         )
 
     def can_complete(self, player: Player) -> bool:
+        del player  # the scan is what counts, nothing the pilot carries
         return self.was_scanned
 
     def complete(self, player: Player) -> None:
         """Nothing is taken from the player: the scan is what was asked."""
+        del player
 
     def shortfall(self, player: Player) -> str:
+        del player
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:

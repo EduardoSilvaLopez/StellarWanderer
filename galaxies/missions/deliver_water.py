@@ -239,7 +239,7 @@ class DeliverWater(Mission):
         return DeliverWater.REWARD_PER_KG_ASTEROID_OR_BASE
 
     def title(self) -> str:
-        return f"Deliver Water to {self.issuer_settlement.name}."
+        return f"Deliver Water to {self.issuer_settlement.name}"
 
     def description(self) -> str:
         return (

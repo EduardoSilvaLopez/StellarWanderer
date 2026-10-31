@@ -47,7 +47,7 @@ class Orbit:
             for _ in range(world_count):
                 self.planets.append(RockyWorld(self, None, self.saved_alterations))
         elif kind is OrbitKind.JOVIAN:
-            self.planets.append(JovianWorld(self))
+            self.planets.append(JovianWorld(self, self.saved_alterations))
 
     def set_altered(self) -> Orbit:
         self.is_altered = True

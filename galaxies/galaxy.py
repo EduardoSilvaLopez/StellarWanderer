@@ -61,15 +61,20 @@ class Galaxy:
         return self.outpost_of(full_keys)
 
     def outpost_of(self, full_keys: str) -> Outpost:
-        """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then the outpost's own
-        key."""
-        system_key, orbit_key, planet_key, outpost_key = full_keys.split('|')
+        """The outpost with these full keys (see Outpost.full_keys): system, orbit, planet, then its moon if it is on one,
+        and the outpost's own key."""
+        system_key, orbit_key, planet_key, *rest = full_keys.split('|')
         system = self.system_of_key(system_key)
         if system is None:
             raise KeyError(f"No stellar system {system_key} in this galaxy.")
         orbit = system.get_orbit(float(orbit_key))
-        planet = next(p for p in orbit.planets if p.get_alterations_key() == planet_key)
-        return planet.outposts[outpost_key]
+        world = next(p for p in orbit.planets if p.get_alterations_key() == planet_key)
+        if len(rest) == 2:
+            moon_key, outpost_key = rest
+            world = next(m for m in world.moons if m.get_alterations_key() == moon_key)
+        else:
+            (outpost_key,) = rest
+        return world.outposts[outpost_key]
     # endregion
 
     # region Fixed stars

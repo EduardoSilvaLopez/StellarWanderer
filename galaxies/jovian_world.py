@@ -4,10 +4,11 @@ import math
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import logging
 from galaxies import seeds
+from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 from galaxies.world_surface import Colour, equilibrium_temperature, vary_colour
 
@@ -62,7 +63,8 @@ class JovianWorld(World):
     '''A giant planet: no surface, no ground, all atmosphere. It is a gas giant (mostly hydrogen and helium) or an ice
     giant (a smaller envelope over a deep fluid of water, ammonia and methane), see `GiantClass`. The class is drawn
     from the temperature of the orbit: the colder, the likelier an ice giant, as the outer giants of the Solar System.
-    Moons, rings and outposts are not generated yet.
+    Its moons are generated largest first (`_generate_moons`), each a `RockyWorld`; rings and outposts are not generated
+    yet.
 
     Size and spin. The mass is drawn log-normally within the range of its class. The radius, the mean one (of a sphere
     of the same volume), follows from the mass: it grows with it up to about the mass of Saturn, as the small giants do,
@@ -70,8 +72,9 @@ class JovianWorld(World):
     (RADIUS_SIGMA). The spin is drawn (never close to the breakup spin) and flattens the planet: the flattening is the
     Darwin-Radau one, from the spin and the moment of inertia (`inertia_factor`), so `equatorial_radius` and
     `polar_radius` follow, and so does the mean `density`. Clairaut's theorem gives the gravity felt at the 1 bar
-    level, `gravity_equator` and `gravity_pole`; the "surface gravity" astronomy quotes is `reference_gravity`. The giants are far from their star, so the tides never tie their spin. The axial tilt is the
-    orbit's inclination (see World); it is wider than the rocky planets', and now and then it is extreme.
+    level, `gravity_equator` and `gravity_pole`; the "surface gravity" astronomy quotes is `reference_gravity`.
+    The giants are far from their star, so the tides never tie their spin. The axial tilt is the orbit's inclination
+    (see World); it is wider than the rocky planets', and now and then it is extreme.
 
     Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
     (`band_count`, `band_phase`, `band_contrast`), and a haze at the limb (`has_haze`). A giant has no surface, so none
@@ -109,6 +112,18 @@ class JovianWorld(World):
     ICE_TEMPERATURE_MIDPOINT = 85.0  # K
     ICE_TEMPERATURE_WIDTH = 12.0  # K
     INTERNAL_MASS_EXPONENT = 0.4  # the heat of the interior grows with this power of the mass
+    OUTPOSTS_ON_MOONS = True  # its moons are new, so they have outposts like a planet's (see World)
+
+    # The moons (see _generate_moons). The expected number above MOON_REFERENCE_RADIUS is MOONS_ABOVE_REFERENCE for the
+    # mass of Jupiter, growing with the power MOON_COUNT_MASS_EXPONENT of the mass, and the number above a radius falls
+    # as the power -MOON_SIZE_EXPONENT of it. The reference sets the size of every moon, so it never changes;
+    # MOON_MIN_RADIUS only says where the list stops, and it may be lowered: the larger moons stay as they are.
+    MOON_REFERENCE_RADIUS = 300000.0  # m
+    MOONS_ABOVE_REFERENCE = 5.0
+    MOON_COUNT_MASS_EXPONENT = 0.5
+    MOON_SIZE_EXPONENT = 2.0
+    MOON_MIN_RADIUS = 300000.0  # m, not below WORLD_MIN_RADIUS: a moon that small is a rock
+    MOON_MAX_RADIUS_FRACTION = 0.1  # of the giant's mean radius
 
     # Orbit tilt: |N(0, sigma)|, capped, but now and then an extreme one.
     INCLINATION_SIGMA_DEGREES = 20.0
@@ -124,13 +139,24 @@ class JovianWorld(World):
     ATMOSPHERE_EDGE_PRESSURE = 1.0e-4  # Pa: where the atmosphere is said to end
     MIN_RADIUS_FRACTION = 0.3  # the model stops this deep, in radii of the 1 bar level
 
-    def __init__(self, parent_orbit: Orbit) -> None:
+    def __init__(self, parent_orbit: Orbit, saved_alterations: Optional[dict] = None) -> None:
         super().__init__()
         self.parent_orbit = parent_orbit
         self.index = len(parent_orbit.planets)
         self.seed = seeds.derive(parent_orbit.seed, 'planet', self.index)
         my_random = random.Random(self.seed)
         star = self.stellar_system.star
+
+        # What the player changed here: its moons (see get_alterations). Nothing else of a giant can be changed.
+        self.saved_alterations: Optional[dict] = None
+        own_alterations: Optional[dict] = None
+        if saved_alterations is not None:
+            own_alterations = saved_alterations.get(self.get_alterations_key())
+        if own_alterations is not None and saved_alterations is not None:
+            self.is_altered = True
+            self.hidden = bool(own_alterations.get('hidden', False))
+            own_alterations['date_time'] = saved_alterations['date_time']
+            self.saved_alterations = own_alterations
 
         self.name = self._generate_planet_name(my_random)
         self.distance_to_parent = int(parent_orbit.distance_from_star)
@@ -180,6 +206,9 @@ class JovianWorld(World):
         self._generate_atmosphere(star, traits)
 
         self._learn()
+        self.moon_limit: float = RockyWorld.moon_limit_in_radii(self.distance_to_parent, star.mass, self.density) \
+            * self.radius
+        self._generate_moons()
         self._log_creation()
 
     # region Generation
@@ -225,6 +254,48 @@ class JovianWorld(World):
         self.specific_gas_constant: float = JovianWorld.GAS_CONSTANT / self.mean_molecular_weight
         self.specific_heat: float = specific_heat_in_gas_constants * self.specific_gas_constant
         self.adiabatic_exponent: float = 1.0 / specific_heat_in_gas_constants  # R / cp
+
+    @property
+    def kind_title(self) -> str:
+        """'Gas giant' or 'Ice giant'."""
+        return self.giant_class.traits.label
+
+    def get_alterations(self) -> Optional[dict]:
+        """The alterations of its moons, under 'moons' as a rocky planet keeps them, and whether it is hidden; None if
+        none of them changed."""
+        moon_alterations: dict = {}
+        for moon in self.moons:
+            one_moon_alterations: Optional[dict] = moon.get_alterations()
+            if one_moon_alterations:
+                moon_alterations[moon.get_alterations_key()] = one_moon_alterations
+        alterations: dict = {'moons': moon_alterations} if moon_alterations else {}
+        if self.hidden:
+            alterations['hidden'] = True
+        return alterations or None
+
+    def _is_initial_planet(self) -> bool:
+        return False  # the start is in an earthlike planet's system
+
+    def _generate_moons(self) -> None:
+        """The moons, largest first. Their radii are the arrivals of a Poisson process of sizes: the sum of exponential
+        steps, each arrival r = MOON_REFERENCE_RADIUS (arrival / expected) ^ (-1 / MOON_SIZE_EXPONENT). The k-th largest
+        moon is the k-th arrival, and its seed is that of the k-th moon, so the size and seed of a moon depend on the
+        giant only, never on MOON_MIN_RADIUS: a lower limit adds the smaller moons after the others, and nothing already
+        generated changes. No moon is drawn and thrown away, so the cost is the number kept."""
+        if self.moon_limit < RockyWorld.MOON_MIN_ROOM_RADII * self.radius:
+            return
+        expected = JovianWorld.MOONS_ABOVE_REFERENCE \
+            * (self.mass / JovianWorld.LARGE_ANCHOR[0]) ** JovianWorld.MOON_COUNT_MASS_EXPONENT
+        sizes = random.Random(seeds.derive(self.seed, 'moon_sizes'))
+        arrivals = 0.0
+        while True:
+            arrivals += sizes.expovariate(1.0)
+            size_law = JovianWorld.MOON_REFERENCE_RADIUS \
+                * (arrivals / expected) ** (-1.0 / JovianWorld.MOON_SIZE_EXPONENT)
+            radius = min(size_law, JovianWorld.MOON_MAX_RADIUS_FRACTION * self.radius)
+            if radius < JovianWorld.MOON_MIN_RADIUS:
+                break
+            self.moons.append(RockyWorld(parent_planet=self, radius=radius, saved_alterations=self.saved_alterations))
     # endregion
 
     @property
@@ -295,7 +366,7 @@ class JovianWorld(World):
         AU: float = 1.496e11
         jupiter_mass: float = JovianWorld.LARGE_ANCHOR[0]
         edge: float = self.altitude_of_pressure(JovianWorld.ATMOSPHERE_EDGE_PRESSURE, 0.0)
-        return (
+        text: str = (
             f"### {self.giant_class.traits.label} {self.name}\n"
             f"* Distance from the star: {self.distance_to_parent / AU:.2f} AU\n"
             f"* Year: {self.orbital_period / (365.2425 * 24 * 60 * 60):.2f} Earth years\n"
@@ -315,6 +386,8 @@ class JovianWorld(World):
             f"* The atmosphere thins out {int(edge / 1000)} Km above the clouds\n"
             f"\n"
         )
+        text += ''.join(moon.markdown() for moon in self.moons)
+        return text
 
     def _log_creation(self) -> JovianWorld:
         logger.info("NEW JOVIAN PLANET CREATED")

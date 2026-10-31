@@ -24,7 +24,8 @@ class Km2:
 
     SIZE = 1000  # Size of a Km2 in meters (1 km x 1 km)
 
-    def __init__(self, parent_world: RockyWorld, longitude: int, latitude: int, saved_alterations: dict) -> None:
+    def __init__(self, parent_world: RockyWorld, longitude: int, latitude: int,
+                 saved_alterations: Optional[dict]) -> None:
         from galaxies.outpost import Outpost  # local: the outpost module needs the world, which needs this one
         self.parent_world = parent_world
         self.longitude: int = longitude
@@ -37,12 +38,10 @@ class Km2:
             self.set_altered()
         own: dict = own_alterations or {}
 
-        # From the planet (if at all):
-        self.outpost: Optional[Outpost] = None
-        if not self.parent_world.parent_planet:
-            self.outpost = self.parent_world.get_outpost_for(self)
-            if self.outpost:
-                self.outpost.prepare()
+        # From the world (if it has an outpost there):
+        self.outpost: Optional[Outpost] = self.parent_world.get_outpost_for(self)
+        if self.outpost:
+            self.outpost.prepare()
 
         my_random: random.Random = random.Random(self.seed)
         rocks_count: int = max(int(parent_world.rocks_prevalence * my_random.gauss(60, 20)), 0)

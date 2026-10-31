@@ -146,7 +146,7 @@ class Scanner:
         import game_environment as gem
         environment = gem.current_environment
         base = environment.nearest_system.portal_base
-        if not self.ship.navigation.in_fixed_zone(base):
+        if not base.is_shown or not self.ship.navigation.in_fixed_zone(base):
             return
         if base.contains_hangar(self.ship.position.as_vector()):  # flown in through the mouth: at the base
             self.target = base
@@ -172,14 +172,14 @@ class Scanner:
 
     # region Asteroids
     def _look_for_asteroid(self) -> None:
-        """Sets `scan_asteroid` to the targeted body if it is an asteroid still to scan and within scan range, and
-        `scan_problem` to what keeps the beam from working on it. Out of range, it is not set at all: the scanner shows
-        nothing until the asteroid is in reach."""
+        """Sets `scan_asteroid` to the targeted body if it is an asteroid still to scan, not hidden, and within scan
+        range, and `scan_problem` to what keeps the beam from working on it. Out of range, it is not set at all: the
+        scanner shows nothing until the asteroid is in reach."""
         import game_environment as gem
         from galaxies.asteroid import Asteroid
         environment = gem.current_environment
         body = environment.targeted_body
-        if not isinstance(body, Asteroid) or body.scan_progress >= 1.0:
+        if not isinstance(body, Asteroid) or body.scan_progress >= 1.0 or not body.is_shown:
             return
 
         ship = self.ship
@@ -212,7 +212,7 @@ class Scanner:
     # endregion
 
     # region Actions
-    def activate(self, time_passed: int) -> Scanner:
+    def activate(self, time_passed: float) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship and its credits to the pilot (the beam
         stays off). On a targeted outpost,
         holding the key does nothing here: main.py enters it, once per press.

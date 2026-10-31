@@ -94,14 +94,14 @@ class ObjectLabels:
     def _draw_body_labels(surface: pygame.Surface, label_font: FallbackFont, w: int, h: int, horizon_y: int,
                           focal_length_px: float, environment: GameEnvironment, ship: Ship) -> None:
         """The star, the portal base, every world, and the asteroids of the ongoing missions, of the targeted body's
-        system (unbound)."""
+        system (unbound). A body the pilot has hidden gets no label."""
         body = environment.targeted_body
         system = body.stellar_system
 
         # Draw star label
         star_vector = ship.navigation.direction_to_star(body, environment.date_time)
         projected = project_to_camera(ship, star_vector, w, horizon_y, focal_length_px)
-        if projected is not None and ObjectLabels._in_windshield(projected, w, h):
+        if system.star.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
             screen_x, screen_y = projected
             label_surf, rect = ObjectLabels._render_label(
                 label_font, system.star.name, format_compact_distance(star_vector.length()),
@@ -112,7 +112,7 @@ class ObjectLabels:
         base = system.portal_base
         base_vector = base.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
         projected = project_to_camera(ship, base_vector, w, horizon_y, focal_length_px)
-        if projected is not None and ObjectLabels._in_windshield(projected, w, h):
+        if base.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
             label_surf, rect = ObjectLabels._render_label(
                 label_font, base.name, format_compact_distance(base_vector.length()),
                 int(projected[0]), int(projected[1])
@@ -123,6 +123,8 @@ class ObjectLabels:
         # planet before its moons, so the planet's label rectangle is known for its moons.
         drawn_rects: Dict[World, pygame.Rect] = {}
         for world_obj in system.get_all_worlds():
+            if not world_obj.is_shown:
+                continue
             world_vector = world_obj.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
             projected = project_to_camera(ship, world_vector, w, horizon_y, focal_length_px)
             if projected is None or not ObjectLabels._in_windshield(projected, w, h):
@@ -141,6 +143,8 @@ class ObjectLabels:
 
         # The asteroids of the ongoing missions, labelled like the worlds.
         for asteroid in system.mission_asteroids():
+            if not asteroid.is_shown:
+                continue
             asteroid_vector = asteroid.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
             projected = project_to_camera(ship, asteroid_vector, w, horizon_y, focal_length_px)
             if projected is None or not ObjectLabels._in_windshield(projected, w, h):

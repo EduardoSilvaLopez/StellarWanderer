@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 class Outpost(Settlement):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
-    Outposts belong to planets (`RockyWorld.outposts`, keyed by "lon lat"; the initial planet always has at least one).
+    Outposts belong to planets, and to the moons of giants (`RockyWorld.outposts`, keyed by "lon lat"; the initial planet
+    always has at least one).
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
 
@@ -47,7 +48,7 @@ class Outpost(Settlement):
     DEPTH = 12.0
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
 
-    def __init__(self, planet: RockyWorld, saved_alterations: dict) -> None:
+    def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict]) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
         seed = seeds.derive(planet.seed, 'outpost', self.index)
@@ -141,10 +142,14 @@ class Outpost(Settlement):
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
     def full_keys(self) -> str:
-        """The keys that find this outpost from the galaxy: system, orbit, planet and its own, joined by '|'."""
+        """The keys that find this outpost from the galaxy: system, orbit, planet, then its moon if it is on one, and its
+        own, joined by '|'."""
         orbit = self.planet.parent_orbit
-        return '|'.join((orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key(),
-                         self.planet.get_alterations_key(), self.get_alterations_key()))
+        keys = [orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key()]
+        if self.planet.parent_planet:
+            keys += [self.planet.parent_planet.get_alterations_key()]
+        keys += [self.planet.get_alterations_key(), self.get_alterations_key()]
+        return '|'.join(keys)
 
     def address(self) -> str:
         """User-friendly address of the outpost."""

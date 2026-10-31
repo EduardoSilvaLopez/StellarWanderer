@@ -47,6 +47,7 @@ class StellarSystem:
             self.is_altered = True
             self.saved_alterations = saved_alterations.get(alterations_key)
             self.saved_alterations['date_time'] = saved_alterations['date_time']
+        self.star.hidden = bool((self.saved_alterations or {}).get('star', {}).get('hidden', False))
         # Every system has one for now. Made after its saved state, which holds the base's visits and handling.
         self.portal_base: PortalBase = PortalBase(self, (self.saved_alterations or {}).get('portal_base'))
         self.portal: Portal = Portal(self.portal_base)  # its Portal: nothing about it is saved
@@ -80,6 +81,8 @@ class StellarSystem:
             asteroid = Asteroid.free_living(self, offer_seed)
             self.free_asteroids[offer_seed] = asteroid
             self.set_altered()
+        if asteroid.hidden:  # a mission asks for it: it is shown
+            asteroid.set_hidden(False)
         return asteroid
 
     def _generate_orbits(self, my_random: random.Random) -> list[Orbit]:
@@ -152,6 +155,21 @@ class StellarSystem:
         key = AsteroidKey.from_ints(site['key'].split())
         return belt.relevant.get(key) or belt.build(key)
 
+    def is_mission_target(self, asteroid: Asteroid) -> bool:
+        """Whether an open mission of the pilot is about this asteroid: it can be neither hidden nor forgotten then."""
+        # Local: as mission_asteroids, the missions import this package.
+        import galaxies.people.player as player_module
+        from galaxies.missions import OPEN, DeliverWater, ScanAsteroid
+        player = player_module.current_player
+        if player is None:
+            return False
+        key = self.get_alterations_key()
+        site = asteroid.site()
+        return any(isinstance(mission, (ScanAsteroid, DeliverWater)) and mission.status == OPEN
+                   and mission.asteroid_site is not None and mission.asteroid_site['system'] == key
+                   and all(mission.asteroid_site[name] == value for name, value in site.items())
+                   for mission in player.missions)
+
     def promoted_asteroids(self) -> list[Asteroid]:
         """The asteroids that matter in this system, whatever became of their missions: the relevant ones of its belts,
         then the free-living ones."""
@@ -187,6 +205,8 @@ class StellarSystem:
     def get_alterations(self) -> dict | None:
         alterations = {}
         if self.is_altered:
+            if self.star.hidden:
+                alterations['star'] = {'hidden': True}
             base_alterations = self.portal_base.get_alterations()
             if base_alterations:
                 alterations['portal_base'] = base_alterations
@@ -206,18 +226,9 @@ class StellarSystem:
     # endregion
 
     def markdown(self) -> str:
-        '''Markdown of the system.'''
-        text: str = (
+        '''Markdown of the system itself: its name and place. Its bodies have their own entries (see the knowledge
+        dialog).'''
+        return (
             f"## {self.name} ({self.political_entity.name})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )
-        text += self.star.markdown()
-        text += self.portal_base.markdown()
-        AU: float = 1.496e11  # m. The text is for players: AU, like the planets' entries.
-        text += "### Orbits\n" + ''.join(
-            f"* {orbit.kind.value} at {orbit.distance_from_star / AU:.2f} AU\n"
-            for orbit in self.orbits
-        )
-        text += ''.join(planet.markdown() for orbit in self.orbits for planet in orbit.planets)
-        text += ''.join(asteroid.markdown() for asteroid in self.promoted_asteroids())
-        return text

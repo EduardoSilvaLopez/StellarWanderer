@@ -108,7 +108,7 @@ class ScoopStar(Mission):
         return self.issuer_settlement.stellar_system.star
 
     def title(self) -> str:
-        return "Take a probe of the corona."
+        return "Take a probe of the corona"
 
     def description(self) -> str:
         return (

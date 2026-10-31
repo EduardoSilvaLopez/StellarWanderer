@@ -160,20 +160,29 @@ class LitWorlds:
         tint = np.array(LitWorlds.light_tint(star_color, world.surface_colour), dtype=np.float32)
         intensity = WORLD_AMBIENT_LIGHT + (1.0 - WORLD_AMBIENT_LIGHT) * shade
         if world.band_contrast > 0.0:
-            latitude = np.arcsin(np.clip(pv / np.sqrt(vx * vx + vy * vy + vz * vz), -1.0, 1.0))
-            bands = np.sin(world.band_count * latitude + world.band_phase)
+            sine_latitude = pv / np.sqrt(vx * vx + vy * vy + vz * vz)
+            bands = np.sin(world.band_count * (0.5 * math.pi) * sine_latitude + world.band_phase)
             intensity = intensity * (1.0 + world.band_contrast * bands)
         rgb = np.clip(intensity[..., None] * tint, 0, 255).astype(np.uint8)
 
         opacity = coverage
         if world.has_haze:
-            # Outside the limb the haze fades out over GIANT_HAZE_PIXELS, as a flat glow in the cloud colour.
+            # Outside the limb the haze fades out over GIANT_HAZE_PIXELS. It is lit by the limb's own normal, which is
+            # the ray's direction seen from the centre, so only the sunlit edge glows.
             haze_width = GIANT_HAZE_PIXELS / step  # in grid cells, as pixels_inside
             haze = np.clip(1.0 + pixels_inside / haze_width, 0.0, 1.0) * GIANT_HAZE_ALPHA
             opacity = np.maximum(coverage, haze)
-            rgb = np.where((coverage > 0.0)[..., None], rgb, tint.astype(np.uint8))
+            # Only the ring outside the limb needs the haze's shade: it is a small part of the box.
+            ring = (coverage <= 0.0) & (haze > 0.0)
+            ray_length = np.sqrt(norm_sq[ring])
+            ux, uy, uz = x[ring] / ray_length, y[ring] / ray_length, 1.0 / ray_length
+            towards_centre = ux * cx + uy * cy + uz * cz
+            across = np.sqrt(np.maximum(1.0 - towards_centre * towards_centre, 1e-6))
+            limb_lit = (ux * light.x + uy * light.y + uz * light.z
+                        - towards_centre * (cx * light.x + cy * light.y + cz * light.z)) / across
+            haze_shade = WORLD_AMBIENT_LIGHT + (1.0 - WORLD_AMBIENT_LIGHT) * np.clip(limb_lit, 0.0, 1.0)
+            rgb[ring] = np.clip(haze_shade[:, None] * tint, 0, 255).astype(np.uint8)
 
-        globals()['DEBUG_HAZE'] = (opacity, pixels_inside, x0, y0, box_w, box_h, step)  # TEMP
         layer = pygame.Surface((grid_w, grid_h), pygame.SRCALPHA)
         pixels = pygame.surfarray.pixels3d(layer)
         pixels[:] = rgb.transpose(1, 0, 2)

@@ -97,14 +97,16 @@ class RockyWorld(World):
     def moon_limit_in_radii(distance_to_star: float, star_mass: float, density: float) -> float:
         """The farthest a moon's orbit (semi-major axis) can be from a planet, in planet radii, when it is
         `distance_to_star` metres from a star of `star_mass` kilograms and has `density` kg/m^3:
-        MOON_STABLE_HILL_FRACTION of its Hill sphere. The sphere is taken at the planet's periapsis and the moon's apoapsis at the largest
-        eccentricities (MAX_ECCENTRICITY), as neither is known yet. A planet's mass grows with its radius cubed, so the
-        Hill sphere in planet radii depends on the density and not on the size: the limit is linear in the distance."""
+        MOON_STABLE_HILL_FRACTION of its Hill sphere. The sphere is taken at the planet's periapsis and the moon's
+        apoapsis at the largest eccentricities (MAX_ECCENTRICITY), as neither is known yet. A planet's mass grows with
+        its radius cubed, so the Hill sphere in planet radii depends on the density and not on the size: the limit is
+        linear in the distance."""
         hill_in_radii = distance_to_star * (1.0 - RockyWorld.MAX_ECCENTRICITY) \
             * (4.0 * math.pi * density / (9.0 * star_mass)) ** (1.0 / 3.0)
         return RockyWorld.MOON_STABLE_HILL_FRACTION * hill_in_radii / (1.0 + RockyWorld.MAX_ECCENTRICITY)
 
-    def __init__(self, parent_orbit: Orbit = None, parent_planet: World = None, saved_alterations: dict = None) -> None:
+    def __init__(self, parent_orbit: Optional[Orbit] = None, parent_planet: Optional[World] = None,
+                 saved_alterations: Optional[dict] = None, radius: float = 0.0) -> None:
         super().__init__()
 
         # A parent_planet? Then it is a moon.
@@ -114,10 +116,13 @@ class RockyWorld(World):
             self.index = len(self.parent_planet.moons)
             self.seed = seeds.derive(self.parent_planet.seed, 'moon', self.index)
         else:
+            if parent_orbit is None:
+                raise Exception("A planet has no orbit to be made in.")
             self.parent_planet = None
             self.parent_orbit = parent_orbit
             self.index = len(self.parent_orbit.planets)
             self.seed = seeds.derive(self.parent_orbit.seed, 'planet', self.index)
+            self.distance_to_parent = int(parent_orbit.distance_from_star)
         my_random: random.Random = random.Random(self.seed)
 
         self.name =\
@@ -127,14 +132,12 @@ class RockyWorld(World):
 
         # The make-up first: temperature (a moon is as far from the star as its planet), surface, density, mass, radius.
         planet = self.parent_planet if self.parent_planet else self
-        if not self.parent_planet:
-            self.distance_to_parent = int(parent_orbit.distance_from_star)
         self.equilibrium_temperature = equilibrium_temperature(self.stellar_system.star, planet.distance_to_parent)
         self.surface_type: SurfaceType
         self.surface_colour: Tuple[int, int, int]
         self.surface_type, self.surface_colour = generate_surface(my_random, self.equilibrium_temperature)
         self.density: float
-        self._generate_mass_density_and_radius(my_random)
+        self._generate_mass_density_and_radius(my_random, radius)
 
         if self.parent_planet:
             self.distance_to_parent = self._generate_moon_distance(my_random)
@@ -160,7 +163,7 @@ class RockyWorld(World):
 
         self.rocks_prevalence: float = my_random.random()
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
-        if self.parent_planet is not None and self.parent_planet._is_initial_planet():
+        if isinstance(self.parent_planet, RockyWorld) and self.parent_planet._is_initial_planet():
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.68 * my_random.random()
@@ -178,26 +181,17 @@ class RockyWorld(World):
             # come from a planet
             own_alterations = saved_alterations['moons'].get(alterations_key)
 
-        if own_alterations is not None:
+        if own_alterations is not None and saved_alterations is not None:
             self.is_altered = True
+            self.hidden = bool(own_alterations.get('hidden', False))
             self.saved_alterations = own_alterations
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        # Outposts (planets only): one is generated at least on the initial planet.
-        from galaxies.outpost import Outpost
+        # Outposts: on a planet, and on a moon only where its planet allows them (the moons of a giant, which did not
+        # exist before; the others keep their values).
         self.outposts: dict = {}
-        if not self.parent_planet:
-            outposts_count = int(abs(my_random.gauss(1.5, 0.5)))
-            if self._is_initial_planet() and outposts_count <= 0:
-                outposts_count = 1
-
-            all_outposts_alterations = self.saved_alterations.get('outposts')\
-                if self.saved_alterations else None
-
-            for _ in range(outposts_count):
-                # Added one by one, so each outpost sees the previous ones when it takes its index.
-                outpost = Outpost(self, all_outposts_alterations)
-                self.outposts[outpost.get_alterations_key()] = outpost  # May overwrite, it is intentional.
+        if not self.parent_planet or self.parent_planet.OUTPOSTS_ON_MOONS:
+            self._generate_outposts(my_random)
 
         # Register mines in its Km2:
         self.registered_mines: List[tuple] = []
@@ -239,20 +233,44 @@ class RockyWorld(World):
         self._learn()
         self._log_creation()
 
+    def _generate_outposts(self, my_random: random.Random) -> None:
+        """The outposts of this world: a count drawn from its stream, then each one from its own seed (see Outpost).
+        One is generated at least on the initial planet. Their alterations are the saved ones of this world."""
+        from galaxies.outpost import Outpost
+        outposts_count = int(abs(my_random.gauss(1.5, 0.5)))
+        if self._is_initial_planet() and outposts_count <= 0:
+            outposts_count = 1
+
+        all_outposts_alterations = self.saved_alterations.get('outposts') if self.saved_alterations else None
+        for _ in range(outposts_count):
+            # Added one by one, so each outpost sees the previous ones when it takes its index.
+            outpost = Outpost(self, all_outposts_alterations)
+            self.outposts[outpost.get_alterations_key()] = outpost  # May overwrite, it is intentional.
+
     def _is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
             and (self.stellar_system.x, self.stellar_system.y,
                  self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
 
-    def _generate_mass_density_and_radius(self, my_random: random.Random) -> None:
+    def _generate_mass_density_and_radius(self, my_random: random.Random, radius: float) -> None:
         """Sets `density`, `mass` and `radius`. The density before compression is drawn by the surface type (icy or
         not); the mass is a planet's own or a moon's share of its planet's (drawn again while the world would be
         smaller than WORLD_MIN_RADIUS, as it would be no more than a rock); the weight then squeezes the density
-        (COMPRESSION_MASS) and the sphere of that mass and density gives the radius."""
+        (COMPRESSION_MASS) and the sphere of that mass and density gives the radius. A moon of a giant comes with its
+        radius, drawn by the giant (see JovianWorld): its mass and density follow from that."""
         mean, sigma, lowest, highest = \
             RockyWorld.ICE_DENSITY if self.surface_type is SurfaceType.ICE else RockyWorld.ROCK_DENSITY
         uncompressed_density = min(highest, max(lowest, my_random.gauss(mean, sigma)))
+        if radius:
+            volume = 4.0 / 3.0 * math.pi * radius ** 3
+            self.mass = uncompressed_density * volume
+            for _ in range(4):  # the compression depends on the mass: a few steps settle it
+                self.density = uncompressed_density \
+                    * (1.0 + self.mass / RockyWorld.COMPRESSION_MASS) ** RockyWorld.COMPRESSION_EXPONENT
+                self.mass = self.density * volume
+            self.radius = int(radius)
+            return
         if self.parent_planet:
             median, sigma, lowest, highest = RockyWorld.MOON_MASS_SHARE
             scale = self.parent_planet.mass
@@ -277,10 +295,12 @@ class RockyWorld(World):
         planet radii (more for a moon lighter than its planet, as the Roche limit says) and never beyond the planet's
         moon_limit (its Hill sphere). A draw beyond the limit is placed inside the stable region with the fractional
         part of the same draw, so moons do not pile up at the limit."""
+        if self.parent_planet is None:
+            raise Exception("The moon has no planet.")
         lowest = RockyWorld.MOON_MIN_DISTANCE_RADII * self.parent_planet.radius \
             * max(1.0, (self.parent_planet.density / self.density) ** (1.0 / 3.0))
         highest = self.parent_planet.moon_limit
-        result = 0.0
+        result = 0
         draw = 0.0
         while result < lowest:
             draw = my_random.gauss(3, 1)
@@ -361,6 +381,8 @@ class RockyWorld(World):
         if all_outposts_alterations:
             result['outposts'] = all_outposts_alterations
 
+        if self.hidden:
+            result['hidden'] = True
         if not result:
             return None
         return result

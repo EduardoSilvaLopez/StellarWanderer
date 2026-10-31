@@ -45,6 +45,7 @@ class World(Body):
 
     WORLD_MIN_RADIUS = 300000  # Spherical celestial object.
     GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
+    OUTPOSTS_ON_MOONS = False  # whether the moons of this world may have outposts (the giants' moons, see JovianWorld)
 
     # Orbit shape: |N(0, sigma)|, capped.
     ECCENTRICITY_SIGMA = 0.1
@@ -66,6 +67,8 @@ class World(Body):
         self.name: str
         self.radius: float
         self.mass: float
+        self.density: float
+        self.moon_limit: float  # in radii: the farthest a moon's orbit can be (see RockyWorld.moon_limit_in_radii)
         self.distance_to_parent: float
         self.initial_degrees_in_orbit: float
         self.orbital_period: float
@@ -93,6 +96,11 @@ class World(Body):
     @property
     def stellar_system(self) -> StellarSystem:
         return self.parent_orbit.parent_stellar_system
+
+    @property
+    def kind_title(self) -> str:
+        """What the knowledge base calls the world: a planet or a moon."""
+        return 'Moon' if self.parent_planet else 'Planet'
 
     # region Generation
     def _learn(self) -> None:
