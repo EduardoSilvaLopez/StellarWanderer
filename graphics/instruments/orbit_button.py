@@ -1,5 +1,6 @@
-"""The ORBIT button, bottom left of the cockpit while the ship is unbound: the sideways speed an orbit needs, as a bar
-the drift fills, and the button that starts the ORBIT assist (spaceships/orbit_assist.py), or gives it up."""
+"""The ORBIT button, bottom left of the cockpit while the ship is unbound, the left half of its row (the TRAVEL button
+has the right one, see travel_button.py): the sideways speed an orbit needs, as a bar the drift fills over the whole
+row's width, and the button that starts the ORBIT assist (spaceships/orbit_assist.py), or leaves the orbit."""
 
 from __future__ import annotations
 import math
@@ -20,6 +21,7 @@ class OrbitButton:
     draw, and a click counts only in the cockpit (see hit)."""
 
     rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+    GAP = 4  # pixels between the ORBIT and TRAVEL buttons
 
     @staticmethod
     def enabled(ship: Ship) -> bool:
@@ -32,7 +34,7 @@ class OrbitButton:
 
     @staticmethod
     def hit(position: Tuple[int, int], ship: Ship) -> bool:
-        """Whether a click at `position` is on the button while it does something: lit, or running (to give it up)."""
+        """Whether a click at `position` is on the button while it does something: lit, or in orbit (to leave it)."""
         if ship.owner.inside is not None:
             return False
         return OrbitButton.rect.collidepoint(position) and (ship.navigation.orbit is not None
@@ -40,12 +42,13 @@ class OrbitButton:
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, bottom: int, width: int) -> None:
-        """The bar above the button, the button at the bottom, both `width` wide from `left`."""
+        """The bar above the button, the button at the bottom: the bar `width` wide from `left`, the button the left half
+        of that."""
         if ship.is_bound:
             return
         label_font = fonts.get(max(9, int(h * 0.017)))
         height = label_font.get_height() + 6
-        OrbitButton.rect = pygame.Rect(left, bottom - height, width, height)
+        OrbitButton.rect = pygame.Rect(left, bottom - height, (width - OrbitButton.GAP) // 2, height)
         running = ship.navigation.orbit is not None
         lit = OrbitButton.enabled(ship)
         colour = ACCENT if running else (BINDING_NEAR_GREEN if lit else ACCENT_DIM)

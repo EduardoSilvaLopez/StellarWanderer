@@ -5,9 +5,10 @@ frame), and so do the missions, to warn about a trip the ship may not manage (`L
 
 The algorithm
 -------------
-The ship feels no gravity outside the fixed zones, so it moves in straight lines at the speed it has, and only the
-pilot's thrust changes that. Inside the fixed zone of a body that pulls the ship falls along the body's orbit, which
-this does not follow, so the advice there is only a guide.
+The plan takes the ship's path as a straight line at the speed it has, which only the pilot's thrust changes. In the
+fixed zone of a world that pulls it is one, as the engines compensate the pull (`Navigation.compensates_pull`); outside
+the zones the star pulls, so lightly that over a trip the line is a good guide. In orbit it is not: no advice is given
+there near the target (see below).
 The trip is one straight line, flown in three phases: accelerate (thrust towards the target), stay (no thrust, coast)
 and decelerate (thrust against the motion): the "bang-coast-bang" profile. Each frame the advice is worked out again
 from the state of the ship, so it follows the target as it moves and corrects whatever the pilot did.
@@ -56,16 +57,22 @@ from the state of the ship, so it follows the target as it moves and corrects wh
    - STAY otherwise. A DECELERATE is kept until the closing speed is nil, or the distance is
      `DECELERATE_RELEASE` times the stopping distance (the ship braked much more than it needed): braking at full
      thrust keeps the distance above the stopping distance by a constant, so a ratio would flicker.
-     The pilot brakes with S, which outside the fixed zones brakes against the target's velocity
+     The pilot brakes with S, which brakes against the target's velocity while unbound
      (`Navigation.velocity_reference_frame`), so the DECELERATE is done with the ship's brake (`b`).
 
-The advice is given only while the target is farther than `FAR_DISTANCE` (1 Gm, a million km) from the ship's, however
-fast the ship moves: nearer, the pilot has the other instruments. It is not given in the fixed zone of the target
-either. `ENERGY_MARGIN` of the maximum energy is kept above the reserve: a plan that spent it all would turn into
+Far from the target the plan ends `PLAN_END_DISTANCE` (about 1 Gm, a million km) from its surface, however fast the
+ship moves. Where that plan ends, a near one takes over (a trip between the moons of a giant is all near): it ends
+`NEAR_END_RADII` target radii from the target's centre, inside its fixed zone if it is a world: the moons, which move
+fast on short orbits, are led as the planets are, and the ship ends up fixed to the target, whose orbit it then follows
+(left outside, at rest with respect to a moon, it would be pulled away by the moon's centripetal acceleration within
+minutes). The advice ends on entering the zone: the last leg is the pilot's, or the autopilot's brake.
+`ENERGY_MARGIN` of the maximum energy is kept above the reserve: a plan that spent it all would turn into
 "Too far" at its last step (a share of what is left each time would compound, so the margin is a fixed amount).
 
-A change from one of the three pieces of advice to another puts the time compression back to x1, with a sound, so that
-the pilot does not miss it.
+A frame covers no more than half of the time left of the current piece of advice (`time_limit`), so that time
+compression does not carry the ship past the next one, the braking above all. A change from one of the three pieces of
+advice to another puts the time compression back to x1, with a sound, so that the pilot does not miss it, unless
+the TRAVEL autopilot (travel_assist.py) is flying it.
 
    Once the advice has been DECELERATE the ship brakes to rest with respect to the target as it is now, not on
    arrival: what is left of the trip is short, and the target's velocity changes by kilometres per second in a
@@ -94,6 +101,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from common import audio
+from galaxies.world import World
 from .navigation import Navigation
 
 if TYPE_CHECKING:
@@ -180,13 +188,18 @@ def make_plan(distance: float, radial: float, drift: float, acceleration: float,
 class LongDistanceAdvisor:
     """Works out the advice every frame (see the module docstring) and keeps it in `current` for the instruments."""
 
-    FAR_DISTANCE = 1.0e9  # m, a million km: the advice is given beyond it
+    FAR_DISTANCE = 1.0e9  # m, a million km: a trip shorter than this is always within reach (see shortage)
     PLAN_END_DISTANCE = 1.05e9  # m: the plan ends here, at rest with respect to the target, with room left for braking
     RESERVE_WITHOUT_OUTPOST = 0.60
     RESERVE_WITH_SERVICES = 0.20
     BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft
     END_TOLERANCE = 2.0e7  # m: the plan has reached its end when the ship is this near it...
     END_SPEED = 100.0  # m/s: ...and moves slower than this with respect to the target
+    # Target radii from its centre: where the near plan ends, inside the zone of a world (the ship is then fixed to it,
+    # and follows its orbit, which a ship left outside would not), outside it for what is not a world...
+    NEAR_END_RADII = 7.0
+    NEAR_END_RADII_OUTSIDE = 12.0
+    NEAR_END_TOLERANCE_RADII = 1.0  # target radii: ...and how near that end has to be reached
     DRIFT_TOLERANCE = 0.05  # of the closing speed: the drift beyond which a stay turns into thrust (about 3 degrees)
     DRIFT_FLOOR = 100.0  # m/s: the drift that is never worth advice
     DRIFT_RELEASE = 0.2  # of the tolerance: the thrust that cancels the drift goes on until it is this low
@@ -221,22 +234,39 @@ class LongDistanceAdvisor:
         LongDistanceAdvisor._advice = None if advisory is None else advisory.advice
         advice = LongDistanceAdvisor._advice
         LongDistanceAdvisor._braked = advisory is not None and (braked or advice is Advice.DECELERATE)
-        if previous is not None and advice is not None and advice is not previous:
+        if (previous is not None and advice is not None and advice is not previous
+                and player.ship.navigation.travel is None):  # the autopilot follows the advice: nothing to miss
             player.time_scale = min(player.time_scale, player.TIME_SCALE_MIN)
             audio.play(LongDistanceAdvisor.CHANGE_SOUND)
 
     @staticmethod
+    def time_limit() -> float:
+        """Game seconds one frame may cover: half of the time left of the current piece of advice, so that time
+        compression does not carry the ship past the next one. Infinite without advice."""
+        advisory = LongDistanceAdvisor.current
+        if advisory is None or advisory.phase_time is None:
+            return math.inf
+        return 0.5 * advisory.phase_time
+
+    @staticmethod
     def advise(ship: Ship, body: Body, date: datetime, previous: Advice | None, braked: bool = False,
                arrival: datetime | None = None) -> Advisory | None:
-        """The advice for the ship to reach the body at the date, or None when none is given (the body is near, or in
-        its fixed zone). `previous` is the last piece of advice, for the hysteresis, and `braked` whether it has been
-        DECELERATE on this approach. `arrival` is the arrival of the last frame's plan, where the search starts from."""
+        """The advice for the ship to reach the body at the date, or None when none is given (in the body's fixed zone,
+        or in orbit near it). `previous` is the last piece of advice, for the hysteresis, and `braked` whether it has
+        been DECELERATE on this approach. `arrival` is the arrival of the last frame's plan, where the search starts
+        from."""
         navigation = ship.navigation
         advisor = LongDistanceAdvisor
         if navigation.in_fixed_zone(body):
             return None
-        if navigation.distance_to_body_centre(body) - body.radius <= advisor.FAR_DISTANCE:  # not to the aim point
+        # where the far plan ends (not to the aim point), the near one takes over
+        near = (navigation.distance_to_body_centre(body) - body.radius
+                <= advisor.PLAN_END_DISTANCE + advisor.END_TOLERANCE)
+        if near and navigation.orbit is not None:
             return None
+        near_end_radii = advisor.NEAR_END_RADII if isinstance(body, World) else advisor.NEAR_END_RADII_OUTSIDE
+        end_distance = (near_end_radii - 1.0) * body.radius if near else advisor.PLAN_END_DISTANCE
+        end_tolerance = advisor.NEAR_END_TOLERANCE_RADII * body.radius if near else advisor.END_TOLERANCE
 
         position = np.array(tuple(navigation.stellar_position(date)))
         velocity = np.array(tuple(ship.velocity.as_vector()))
@@ -244,7 +274,7 @@ class LongDistanceAdvisor:
         reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
             else advisor.RESERVE_WITHOUT_OUTPOST
         spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
-        leg_speed_change, leg_time = advisor._final_leg(accelerations)
+        leg_speed_change, leg_time = advisor._final_leg(accelerations, end_distance)
         budget = spare_energy / Navigation.ENERGY_PER_SPEED - leg_speed_change
         hold = ship.cargo_hold
         spare_days = min(hold.air - reserve * hold.air_max, hold.water - reserve * hold.water_max,
@@ -252,9 +282,9 @@ class LongDistanceAdvisor:
 
         trip_time = 0.0 if arrival is None or braked else max(0.0, (arrival - date).total_seconds())
         plan, target, direction, distance, relative, radial, drift = advisor._trip(
-            position, velocity, body, date, accelerations, budget, trip_time, 1 if braked else None)
+            position, velocity, body, date, accelerations, budget, trip_time, end_distance, 1 if braked else None)
         lead = target - position
-        if distance <= advisor.END_TOLERANCE and float(np.linalg.norm(relative)) <= advisor.END_SPEED:
+        if distance <= end_tolerance and float(np.linalg.norm(relative)) <= advisor.END_SPEED:
             return None  # the plan is done
 
         too_far = plan is None or (plan.eta is not None and (plan.eta + leg_time) / SECONDS_PER_DAY > spare_days)
@@ -271,18 +301,19 @@ class LongDistanceAdvisor:
         return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time)
 
     @staticmethod
-    def _final_leg(accelerations: tuple[float, float]) -> tuple[float, float]:
-        """What the pilot's last leg costs, kept back by the plan: a trip of PLAN_END_DISTANCE from rest, flown flat out.
-        The change of speed it takes (accelerating and braking), in m/s, and its time, in s."""
-        leg = make_plan(LongDistanceAdvisor.PLAN_END_DISTANCE, 0.0, 0.0, *accelerations, 1.0e12)
+    def _final_leg(accelerations: tuple[float, float], end_distance: float) -> tuple[float, float]:
+        """What the pilot's last leg costs, kept back by the plan: a trip of `end_distance` (where the plan ends, from
+        the surface) from rest, flown flat out. The change of speed it takes (accelerating and braking), in m/s, and its
+        time, in s."""
+        leg = make_plan(end_distance, 0.0, 0.0, *accelerations, 1.0e12)
         return 2.0 * leg.peak_speed, leg.eta
 
     @staticmethod
     def _trip(position: np.ndarray, velocity: np.ndarray, body: Body, date: datetime,
-              accelerations: tuple[float, float], budget: float, trip_time: float,
+              accelerations: tuple[float, float], budget: float, trip_time: float, end_distance: float,
               iterations: int | None = None) -> tuple:
         """The plan of the trip from `position` at `velocity` to the body, and what it was made from: the target's
-        position, the unit direction to the aim point, the distance from there to where the plan ends (PLAN_END_DISTANCE
+        position, the unit direction to the aim point, the distance from there to where the plan ends (`end_distance`
         short of the surface), the velocity relative to the target on arrival and its parts along and across the
         direction. `trip_time` is where the search for the arrival starts; a few `iterations` (INTERCEPT_ITERATIONS by
         default) refine it."""
@@ -297,7 +328,7 @@ class LongDistanceAdvisor:
             offset = aim - position
             centre_distance = float(np.linalg.norm(offset))
             direction = offset / max(centre_distance, 1.0)
-            distance = max(centre_distance - body.radius - advisor.PLAN_END_DISTANCE, 1.0)
+            distance = max(centre_distance - body.radius - end_distance, 1.0)
             relative = velocity - target_velocity
             radial = float(relative @ direction)
             drift = float(np.linalg.norm(relative - radial * direction))
@@ -311,8 +342,9 @@ class LongDistanceAdvisor:
     def shortage(ship: Ship, body: Body, date: datetime, position: np.ndarray, velocity: np.ndarray) -> str | None:
         """What a ship of this kind, with its tanks and stores full, would lack for a trip to the body from rest at
         `position` and `velocity` (stellar frame): "energy", "air", "water" or "food", whichever the advice would
-        turn into "Too far" for. None if it has all it needs, or if the body is near enough (within FAR_DISTANCE of
-        its surface) for the advice not to be given. Used by the missions, to warn the player before they take one."""
+        turn into "Too far" for. None if it has all it needs, or if the body is near (within FAR_DISTANCE of its
+        surface): a trip that short is always within reach. Used by the missions, to warn the player before they take
+        one."""
         advisor = LongDistanceAdvisor
         centre = np.array(tuple(body.calculate_stellar_position(date)))
         if float(np.linalg.norm(centre - position)) - body.radius <= advisor.FAR_DISTANCE:
@@ -320,10 +352,10 @@ class LongDistanceAdvisor:
         reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
             else advisor.RESERVE_WITHOUT_OUTPOST
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
-        leg_speed_change, leg_time = advisor._final_leg(accelerations)
+        leg_speed_change, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
         budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / Navigation.ENERGY_PER_SPEED
                   - leg_speed_change)
-        plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0)[0]
+        plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0, advisor.PLAN_END_DISTANCE)[0]
         if plan is None:
             return 'energy'
         hold = ship.cargo_hold

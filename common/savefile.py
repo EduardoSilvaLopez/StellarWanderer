@@ -129,8 +129,8 @@ class Savefile:
                 body = current_orbit.planets[planet_idx]
             else:
                 body = current_orbit.planets[planet_idx].moons[moon_idx]
-        # A bound ship is fixed to its world; an unbound one is fixed only if it is in a fixed zone, which the next
-        # frame works out (refresh_fixed_body). The target is set once the ship and the missions are loaded (below).
+        # A bound ship is fixed to its world; an unbound one is fixed only if it is in a fixed zone, which is worked out
+        # once the ship is loaded (refresh_fixed_body, below). The target is set then too.
         gem.current_environment.targeted_body = gem.current_environment.last_fixed_body = body
         gem.current_environment.fixed_body = body if player_data['ship']['is_bound'] else None
 
@@ -153,9 +153,15 @@ class Savefile:
         if settlement is not None:
             pem.current_player.resume_inside(settlement)
         # The target is the body at the saved place in the Tab order, which depends on the ship and its missions, so
-        # it is read only now. While fixed, the target is the fixed body (already set above).
+        # it is read only now. Unbound, the fixed body is picked first, as the next frame would, so that its snap of
+        # the target does not undo the saved target.
+        ship_position = pem.current_player.ship.position.as_vector()
+        if not player_data['ship']['is_bound']:
+            gem.current_environment.refresh_fixed_body(ship_position)
+            from spaceships.orbit_assist import OrbitAssist  # local: it imports the dialogs, which import this module
+            OrbitAssist.resume(pem.current_player.ship)  # an orbit is worked out again, not saved
         target_index: int = load_object['environment']['target_index']
-        if gem.current_environment.fixed_body is None and target_index >= 0:
-            bodies = gem.current_environment.bodies_by_distance(pem.current_player.ship.position.as_vector())
+        if target_index >= 0:
+            bodies = gem.current_environment.bodies_by_distance(ship_position)
             gem.current_environment.targeted_body = bodies[target_index]
     # endregion

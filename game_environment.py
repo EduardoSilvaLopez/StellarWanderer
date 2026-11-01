@@ -24,8 +24,9 @@ class GameEnvironment:
         self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations)
         # The body whose fixed zone the ship is in (the nearest one, if several), or None outside every fixed zone.
         self.fixed_body: Optional[Body] = None
-        # Always set. The fixed body while the ship is in a fixed zone; once it leaves the last one, the body it was
-        # fixed on until then, unless the player has cycled to another one (cycle_targeted_body).
+        # Always set: the body the instruments show and the braking is measured against. While unbound the Tab key
+        # moves it (cycle_targeted_body), fixed or not; it follows the fixed body only on entering a zone from outside
+        # all of them, while the pilot has not chosen another one.
         self.targeted_body: Body = None
         # The body the ship was last fixed to: what the savefile stores as the ship's body.
         self.last_fixed_body: Body = None
@@ -44,10 +45,13 @@ class GameEnvironment:
         a surface: bound mode, the scanner, the mines, the world map. Everything else asks for targeted_body."""
         return self.fixed_body if self.fixed_body is not None and self.fixed_body.is_world else None
 
-    def refresh_fixed_body(self, player_position: Vector3) -> None:
+    def refresh_fixed_body(self, player_position: Vector3, keep_target: bool = False) -> None:
         """Pick fixed_body for this frame: the body nearest to the ship (distance from its centre) whose fixed zone
-        holds it, or None when no fixed zone does. While fixed, targeted_body follows it, and last_fixed_body records
-        it. A hidden body has no fixed zone. Call only while unbound, see Navigation.update_position_and_velocity."""
+        holds it, or None when no fixed zone does. The target follows the body the ship becomes fixed on only when the
+        ship enters a zone from outside all of them, while the target is still the last fixed body: it is then the
+        default, not a choice of the pilot. From one zone into another, and with `keep_target` (the autopilot flies to
+        it), it stays. last_fixed_body records the body while fixed. A hidden body has no fixed zone. Call only while
+        unbound, see Navigation.update_position_and_velocity."""
         from spaceships.navigation import Navigation  # local: navigation imports this module
 
         fixed: Optional[Body] = None
@@ -58,10 +62,13 @@ class GameEnvironment:
             distance = math.dist(player_position, body.calculate_stellar_position(self.date_time))
             if distance < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius and distance < fixed_distance:
                 fixed, fixed_distance = body, distance
+        previous = self.fixed_body
         self.fixed_body = fixed
         if fixed is not None:
-            self.targeted_body = fixed
+            following = self.targeted_body is self.last_fixed_body
             self.last_fixed_body = fixed
+            if previous is None and following and not keep_target:
+                self.targeted_body = fixed
 
     def bodies_by_distance(self, player_position: Vector3) -> list[Body]:
         """The shown bodies of nearest_system sorted by distance from the ship, the star included: the order the Tab key
@@ -87,10 +94,8 @@ class GameEnvironment:
                 return
 
     def cycle_targeted_body(self, step: int, player_position: Vector3) -> None:
-        """Moves targeted_body `step` places (+1 or -1) through bodies_by_distance, wrapping around. Only outside every
-        fixed zone: while fixed, the target is the fixed body."""
-        if self.fixed_body is not None:
-            return
+        """Moves targeted_body `step` places (+1 or -1) through bodies_by_distance, wrapping around. The caller only
+        calls it while unbound: fixed on a body, the pilot may still pick any other one as the target."""
         bodies = self.bodies_by_distance(player_position)
         if not bodies:  # all of them hidden
             return

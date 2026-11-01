@@ -19,6 +19,7 @@ from .altitude_meter import AltitudeMeter
 from .proximity_meter import ProximityMeter
 from .radar import Radar
 from .orbit_button import OrbitButton
+from .travel_button import TravelButton
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -93,6 +94,7 @@ class Console:
             readouts_left = bar_rect.right + int(w * 0.015)
             LocationInfo.draw_readouts(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
             OrbitButton.draw(surface, fonts, h, ship, cluster_left, screen.bottom, indicators_w)
+            TravelButton.draw(surface, fonts, h, ship, cluster_left, screen.bottom, indicators_w)
 
         if ship.is_bound:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)

@@ -49,6 +49,9 @@ class Player:
         self.surname: str = ''
         self.gender: Person.GenderGroup = Person.GenderGroup.MALE
         self.time_scale: int = 1  # Default time scale
+        # The time scale before the caps lowered it last, and the one they lowered it to (see limit_time_scale)
+        self._limited_from: int = 1
+        self._limited_to: int = 1
         self.ship: Ship = ShabbyThsMiner(self)
         self.credits: int = 0
         self.citizenship: Optional[political_entity.PoliticalEntity] = political_entity.THOSE_WHO_SHARE
@@ -73,21 +76,38 @@ class Player:
     def is_time_scale_dangerous(self) -> bool:
         """Whether the time compression is clearly dangerous at the ship's state (bound or unbound). Only while the ship
         has a speed (the same speed the console shows) or hovers (it burns energy): a ship standing still on the ground
-        is never dangerous."""
-        limit = self.TIME_SCALE_DANGER_BOUND if self.ship.is_bound else self.TIME_SCALE_DANGER_UNBOUND
+        is never dangerous. Compensating a pull unbound burns energy as hovering does, so it has the bound limit."""
+        burning = self.ship.is_bound or self.ship.navigation.compensates_pull()
+        limit = self.TIME_SCALE_DANGER_BOUND if burning else self.TIME_SCALE_DANGER_UNBOUND
         return self.time_scale >= limit and (
             self.ship.velocity.as_vector().length() > 0.0 or self.ship.navigation.is_hovering())
 
+    def wished_time_scale(self) -> int:
+        """The time scale the pilot has asked for: the current one, except during a trip (TRAVEL), when it is the one
+        the caps lowered it from, so that it comes back by itself when they lift: the pilot sets it once, and does not
+        have to compress and decompress time as the trip goes on."""
+        travelling = self.ship.navigation.travel is not None
+        return self._limited_from if travelling and self.time_scale == self._limited_to else self.time_scale
+
+    def reset_time_scale(self) -> None:
+        """Back to x1, with nothing left to restore."""
+        self.time_scale = self._limited_from = self._limited_to = self.TIME_SCALE_MIN
+
     def limit_time_scale(self, frame_seconds: float, limit: float) -> None:
         """Lowers the time scale, in its steps, until a frame of `frame_seconds` real seconds covers no more than
-        `limit` game seconds (see Navigation.coasting_time_limit). The clock shows the lower one."""
+        `limit` game seconds (see Navigation.coasting_time_limit and target_time_limit, and
+        LongDistanceAdvisor.time_limit). The clock shows the lower one."""
+        self.time_scale = self.wished_time_scale()
+        wished = self.time_scale
         while self.time_scale > self.TIME_SCALE_MIN and frame_seconds * self.time_scale > limit:
             self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
+        self._limited_from, self._limited_to = wished, self.time_scale
 
     def increase_time_scale(self) -> Player:
         """Faster, from TIME_SCALE_MIN up to TIME_SCALE_MAX."""
         old_time_scale = self.time_scale
-        self.time_scale = min(max(self.time_scale * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
+        wished = self.wished_time_scale()
+        self.time_scale = min(max(wished * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
         if self.time_scale != old_time_scale:
             audio.play('time_up')
         return self
@@ -101,7 +121,7 @@ class Player:
     def decrease_time_scale(self) -> Player:
         """Slower, down to TIME_SCALE_MIN."""
         old_time_scale = self.time_scale
-        self.time_scale = max(self.time_scale // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
+        self.time_scale = max(self.wished_time_scale() // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         if self.time_scale != old_time_scale:
             audio.play('time_down')
         return self

@@ -21,8 +21,15 @@ INSTRUCTIONS: List[Tuple[str, List[str]]] = [
         "Fly close to a planet or moon to 'bind' to its surface. Fly away from it to 'unbind'.",
         "When the proximity meter's title is green (FIXED) - the coordinates change. Use brake to align with the "
         "body's movement.",
-        "Outside every fixed zone, the meter reads TARGET: Tab and Shift+Tab move the target through the bodies in "
-        "order of distance.",
+        "Unbound, Tab and Shift+Tab move the target through the bodies in order of distance, even while fixed on "
+        "another body. The meter reads TARGET while the target is not the fixed body.",
+        "Unbound near a world that pulls, the engines compensate its pull, at a cost in energy: the ship moves in "
+        "straight lines. ORBIT lets it fall into an orbit instead, which costs nothing. In orbit the ship can turn "
+        "freely and S only stops the turns; W, X, A, D or ORBIT again leave the orbit.",
+        "TRAVEL (button, or T) flies the ship to the targeted body by itself, following the long distance advice: you "
+        "may look around and compress time (it slows down by itself near the end, and speeds up again). It stops "
+        "near the target, at rest with respect to it. W, X, A, D or TRAVEL again take the controls back; S only "
+        "stops the turns.",
         "O: show or hide the orbit of the targeted body, a thin line in the sky while unbound.",
         "While bound, the map in the middle shows the world: the mouse wheel and left button can be used to look "
         "around.",

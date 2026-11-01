@@ -95,7 +95,7 @@ GRAVITY OF TREASON (Rep 50-100)
   * Say Komisar: "They are good listeners" :D
   * "I miss my childen."
 
-### 2026-10-29 (5/11)
+### 2026-10-29 (6/11)
 
   * Offer of treason. Effects in the mines. 
   * Extra: "Scan the sun" mission. Solar panels, heat shield.
@@ -110,14 +110,19 @@ STARTED:
   * Jovian moons can help to make missions.
   * Next step is to draw it.
 
-Extra time: 168h45'
+### 2026-11-01 (7/11)
+
+Extra time: 166h00' + 12:00 - 13:00
+
+* GRAVITY OF TREASON (Rep 50-100)
 
 * JOVIAN PLANETS II (current one) (100-200)
   * Generate the moons.
+  * Mission to jovian planet.
 
 > BACKLOG
 
-GRAVITY OF TREASON (Rep 50-100)
+* GRAVITY OF TREASON (Rep 50-100)
   * Rat
   * Selling ore
   * Extra: A career as law enforcement, if "rat".
@@ -125,7 +130,7 @@ GRAVITY OF TREASON (Rep 50-100)
   * Extra: Portraits without uniform: Black, Latino, White
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 
-  * Mission to jovian planet.
+* (JOVIAN PLANETS II)
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: Arabs.
@@ -161,6 +166,15 @@ GRAVITY OF TREASON (Rep 50-100)
   * Directly? Try the current ship configurations.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+
+* DEVELOPMENT: How the world changes from 700-01-01 on.
+  * Stellar system's timeline of checks decided on creation.
+  * Checks take in accoung neighbouring systems, then generate first outpost.
+  * Randomize over all settlements + 1. If +1, another one is created. If not, it is upgraded.
+  * The portal base depends on the existing settlements. Has a construction rendering, and a finished one.
+  * Names are related: "Difficult Task" => "Accomplished Task" => "Task Defence Base"
+  * Branch into types of settlements: laboratories, defence, industry.
+  * Unify again into cities but keeping the focus.
 
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
 * AI PERSONALITY?

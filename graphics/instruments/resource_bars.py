@@ -1,6 +1,6 @@
 """Resource bars: the ship's resources, one row each, top to bottom: credits (a value), maintenance and energy (bars),
-temperature (a bar from 25 to its value, on its scale) and gravity (the pull where the ship is, against the combined
-thrust, green when low). Each row has its label on the left, and the rows line up with each other. The first row's
+temperature (a bar from 25 to its value, on its scale) and gravity (a bar of the pull where the ship is against the combined thrust, green when low, labelled
+with the pull in m/s^2). Each row has its label on the left, and the rows line up with each other. The first row's
 label sits on the top of the group's rect, where the scanner and cargo titles are."""
 
 from __future__ import annotations
@@ -133,6 +133,14 @@ class ResourceBars:
             elif name == 'Temperature':
                 _draw_temperature(surface, track, ship)
             else:
-                # the pull against the most the engines give: green when low, red at the limit
-                fraction = min(1.0, ship.navigation.pull() / ship.navigation.combined_thrust())
+                # the pull against the most the engines give: green when low, red at the limit; its value in m/s^2 over it
+                pull = ship.navigation.pull()
+                fraction = min(1.0, pull / ship.navigation.combined_thrust())
                 _draw_bar(surface, track, fraction, colour=level_colour(fraction, GRAVITY_GRADIENT))
+                # a dark shadow under the value, so it reads over the filled part of the bar
+                text = f'{pull:.2f} m/s²'
+                origin = (bar_left + pad // 2, centre_y)
+                shadow = label_font.render(text, True, (0, 0, 0))
+                surface.blit(shadow, shadow.get_rect(midleft=(origin[0] + 1, origin[1] + 1)))
+                value = label_font.render(text, True, ACCENT)
+                surface.blit(value, value.get_rect(midleft=origin))

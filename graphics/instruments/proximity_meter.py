@@ -26,9 +26,9 @@ class ProximityMeter:
     from centre at the bottom, FIXED_ZONE_RADIUS_MULTIPLE x radius at the top. Outside the fixed zone the bar stays
     empty.
 
-    The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the ship
-    is in the fixed zone, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each value sits on
-    its label's row, after the label. Below them, while `LongDistanceAdvisor.current` holds advice, "Long distance
+    The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the target
+    is the body the frame is fixed on, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each
+    value sits on its label's row, after the label. Below them, while `LongDistanceAdvisor.current` holds advice, "Long distance
     advice:" in the advice colour, after a free row, and under it ACCELERATE, STAY or DECELERATE, each in its own
     colour, with the time left of that phase (`Advisory.phase_time`), and under it the ETA, the date and time of
     arrival as the clock shows them; "Too far" when no plan keeps the reserves.
@@ -64,7 +64,7 @@ class ProximityMeter:
             surface, ACCENT,
             (bar_rect.left + fill_pad, bar_rect.bottom - fill_pad - filled, bar_rect.width - fill_pad * 2, filled)
         )
-        if body.gravitational_parameter > 0.0:
+        if body.gravitational_parameter > 0.0 and not ship.navigation.compensates_pull():
             ProximityMeter._draw_apsides(surface, ship, body, bar_rect, fill_pad, inner_height)
 
     @staticmethod
@@ -72,7 +72,8 @@ class ProximityMeter:
                       inner_height: int) -> None:
         """Marks on the scale for the path about the body: its lowest point (red under the bind shell, else green), its
         highest point (only while the path is closed and inside the fixed zone), and the bind shell, a thin line. The
-        lowest point is what the ORBIT assist needs above the shell (see OrbitAssist.begin)."""
+        lowest point is what the ORBIT assist needs above the shell (see OrbitAssist.begin). Drawn only while the ship
+        falls freely: compensating the pull, it moves in a straight line, not along that path."""
         from galaxies.kepler import apsides
         from spaceships.navigation import Navigation
         r_vec, v_vec = ship.navigation._relative_to_body(body)
@@ -117,8 +118,8 @@ class ProximityMeter:
             surface.blit(label_font.render(value, True, value_col), (left + label_surf.get_width() + gap, row_y))
 
         centre_dist = format_compact_distance(ship.navigation.distance_to_body_centre(body))
-        draw_pair(0, 'FIXED' if in_fixed_zone else 'TARGET', BINDING_NEAR_GREEN if in_fixed_zone else ACCENT, body.name,
-                  ACCENT)
+        is_fixed = body is gem.current_environment.fixed_body
+        draw_pair(0, 'FIXED' if is_fixed else 'TARGET', BINDING_NEAR_GREEN if is_fixed else ACCENT, body.name, ACCENT)
         draw_pair(1, 'Distance:', label_colour, centre_dist, ACCENT)
         draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
                   approach_colour)

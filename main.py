@@ -60,7 +60,9 @@ from graphics.instruments.clock import Clock
 from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.orbit_button import OrbitButton
+from graphics.instruments.travel_button import TravelButton
 from spaceships.orbit_assist import OrbitAssist
+from spaceships.travel_assist import TravelAssist
 from graphics.instruments.world_map import WorldMap
 from common.frame_watch import frame_watch
 from common.updating import update_queue
@@ -461,8 +463,10 @@ def main() -> None:
                     player.ship.toggle_scoop()
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
                     OrbitPath.shown = not OrbitPath.shown
-                # cycles the target (only outside every fixed zone); Shift+Tab goes back
-                elif event.key == pygame.K_TAB:
+                elif event.key == pygame.K_t:  # the TRAVEL autopilot: starts it, or gives the controls back
+                    TravelAssist.press(player.ship)
+                # cycles the target (only unbound: bound, the target is the world); Shift+Tab goes back
+                elif event.key == pygame.K_TAB and not player.ship.is_bound:
                     step = -1 if event.mod & pygame.KMOD_SHIFT else 1
                     gem.current_environment.cycle_targeted_body(step, player.ship.position.as_vector())
             elif event.type == pygame.KEYUP:
@@ -474,6 +478,9 @@ def main() -> None:
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and OrbitButton.hit(event.pos, player.ship)):
                 OrbitAssist.press(player.ship)
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and TravelButton.hit(event.pos, player.ship)):
+                TravelAssist.press(player.ship)
             elif event.type == pygame.MOUSEWHEEL:
                 if player.ship.is_bound:  # the world map is only shown while bound
                     WorldMap.zoom(event.y)  # zooms the world map, if the mouse is over it
@@ -493,16 +500,32 @@ def main() -> None:
         frame_watch.begin()
 
         ship = player.ship
-        # Unbound in a fixed zone that pulls, a frame covers only a share of the orbit (Navigation.coasting_time_limit)
-        player.limit_time_scale(dt, ship.navigation.coasting_time_limit())
+        # Unbound, a frame covers only a share of an orbit that the ship falls along (Navigation.coasting_time_limit),
+        # and passes neither the target's fixed zone (Navigation.target_time_limit) nor the next piece of advice
+        player.limit_time_scale(dt, min(ship.navigation.coasting_time_limit(), ship.navigation.target_time_limit(),
+                                        LongDistanceAdvisor.time_limit()))
         delta_game_seconds = dt * player.time_scale
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
 
-        # While the ORBIT assist flies the ship, the keys do nothing: its own forward thrust is the only input.
-        orbit = ship.navigation.orbit
-        keys = pygame.key.get_pressed() if player.inside is None and orbit is None else NO_KEYS
-        orbit_thrust = orbit.step(delta_game_seconds) if orbit is not None else 0.0
+        # In orbit (from the press of ORBIT) and on a trip (TRAVEL) the turn keys work and S only stops the turns; a
+        # translation key gives the controls back.
+        keys = pygame.key.get_pressed() if player.inside is None else NO_KEYS
+        translating = keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
+        orbit, travel = ship.navigation.orbit, ship.navigation.travel
+        if orbit is not None and translating:
+            orbit.leave()
+            orbit = None
+        if travel is not None and translating:
+            travel.leave()
+            travel = None
+        assist_thrust, travel_brake = None, False
+        if orbit is not None:
+            assist_thrust = orbit.step(delta_game_seconds)
+        elif travel is not None:
+            assist_thrust, travel_brake = travel.step(delta_game_seconds)
+        in_orbit = ship.navigation.orbit is not None  # the step may have ended it
+        assisted = in_orbit or ship.navigation.travel is not None  # S then only stops the turns
 
         if player.time_scale == 1:  # Yaw, pitch, roll only at x1: disabled when faster.
             # Yaw: Numpad 4 (left) and 6 (right)
@@ -541,24 +564,31 @@ def main() -> None:
         # control acceleration in all axes, so the ship keeps drifting on its
         # last velocity until thrust (or boundary clamp) changes it. Holding S
         # brakes instead, overriding all thrust keys in all three axes and stopping
-        # all rotations (yaw, pitch, roll).
+        # all rotations (yaw, pitch, roll); in orbit and on a trip it only stops the rotations.
+        if assist_thrust is None:
+            assist_thrust_given = False
+            right_input = 1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0)
+            up_input = (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if ship.is_bound else 0
+            forward_input = 1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0)
+        else:
+            assist_thrust_given = any(assist_thrust)
+            right_input, up_input, forward_input = assist_thrust
+        braking = (keys[pygame.K_s] and not assisted) or travel_brake
         ship.navigation.update_position_and_velocity(
-            delta_game_seconds,
-            1 if keys[pygame.K_d] else (-1 if keys[pygame.K_a] else 0),
-            (1 if keys[pygame.K_KP_8] else (-1 if keys[pygame.K_KP_2] else 0)) if ship.is_bound else 0,
-            orbit_thrust if orbit is not None else (1 if keys[pygame.K_w] else (-1 if keys[pygame.K_x] else 0)),
-            keys[pygame.K_s]
-        )
+            delta_game_seconds, right_input, up_input, forward_input, braking)
         thrusting = (
-            orbit_thrust > 0.0 or keys[pygame.K_w] or keys[pygame.K_x] or keys[pygame.K_a] or keys[pygame.K_d]
+            assist_thrust_given or travel_brake or translating
             or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
-            or (keys[pygame.K_s] and ship.navigation.has_motion_to_brake()))
+            or (keys[pygame.K_s] and not assisted and ship.navigation.has_motion_to_brake()))
         # the hull's hum: a thrust key held, or the brake while there is motion to brake
         audio.set_loop('thrust', thrusting)
         rotating = player.time_scale == 1 and (
             keys[pygame.K_KP_4] or keys[pygame.K_KP_6] or keys[pygame.K_e] or keys[pygame.K_q]
-            or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8])))
-        # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held
+            or (not ship.is_bound and (keys[pygame.K_KP_2] or keys[pygame.K_KP_8]))
+            or (assisted and keys[pygame.K_s]
+                and any((ship.attitude.yaw_rate, ship.attitude.pitch_rate, ship.attitude.roll_rate))))
+        # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held, or S stopping them in
+        # orbit or on a trip
         audio.set_loop('attitude', rotating)
         ship.check_scoop()
         ship.collect_corona(delta_game_seconds)

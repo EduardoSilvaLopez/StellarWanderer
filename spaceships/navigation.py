@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from galaxies.body import Body
     from .orbit_assist import OrbitAssist
     from .ship import Ship
+    from .travel_assist import TravelAssist
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +42,19 @@ class Navigation:
 
     The fixed zone is the sphere of FIXED_ZONE_RADIUS_MULTIPLE radii around a body's centre. The fixed body is the
     nearest body whose fixed zone holds the ship (see `GameEnvironment.refresh_fixed_body`). Being fixed is what makes
-    the ship's coordinates relative to that body: while unbound, the position is always the star's frame. Braking is
-    relative to the fixed body inside its fixed zone and, outside every fixed zone, to the body the instruments show,
-    `GameEnvironment.targeted_body`: braking to rest with respect to the target is how a trip ends (see
-    `velocity_reference_frame`).
+    the ship's coordinates relative to that body: while unbound, the position is always the star's frame. The target
+    (`GameEnvironment.targeted_body`, the body the instruments show) is separate: the pilot may fix on one body and
+    target another. Braking to rest with respect to the target is how a trip ends (see `velocity_reference_frame`).
     Braking is by three independent engines, one per ship axis, bound or not (see `_brake`).
     Bound, the world's surface gravity pulls the ship down and the flight assist holds it up (see `_apply_gravity`).
-    Unbound, the ship follows the Kepler orbit about its attractor: the fixed body while that pulls, else the star
-    (see `attractor` and `_move_unbound`). The pilot is told to compensate a world's gravity on entering its zone
-    and that it is over on leaving (`_announce_compensation`), and the time scale is limited (`coasting_time_limit`).
+    Unbound in the fixed zone of a world that pulls, the engines compensate its pull, as the flight assist does while
+    bound (see `compensates_pull`): the ship moves in straight lines relative to the world, so that what the
+    instruments show, and the straight lines of the long distance advice, hold. In orbit (the ORBIT assist, `orbit`)
+    they do not, and the ship follows its Kepler orbit, as it follows the star's outside the planets' zones (see
+    `attractor` and `_move_unbound`). The TRAVEL autopilot (`travel`, see travel_assist.py) flies the ship to the
+    target along the long distance advice's straight line, and the ORBIT assist and it end each other. The pilot is
+    told on entering and leaving such a zone (`_announce_compensation`), and the time scale is limited
+    (`coasting_time_limit`, `target_time_limit`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -73,6 +78,8 @@ class Navigation:
     ROCKS_TRAVEL_LIMIT = RockyWorld.SURROUNDINGS_RADIUS
     # share of the orbital period, at the ship's distance, that one frame may cover while falling in a fixed zone
     COASTING_STEP_SHARE = 0.01
+    # share of the target's fixed zone radius that one frame may cover near or in that zone
+    TARGET_STEP_SHARE = 0.05
 
     def __init__(self, ship: Ship) -> None:
         self.ship: Ship = ship
@@ -84,8 +91,10 @@ class Navigation:
         self.coasting: Optional[CoastState] = None
         # The body whose gravity the pilot was told to compensate, to stay fixed to it (None when none).
         self.compensating: Optional[Body] = None
-        # The ORBIT assist while it flies the ship (see orbit_assist.py), else None.
+        # The ORBIT assist from the press of ORBIT until the ship leaves the orbit (see orbit_assist.py), else None.
         self.orbit: Optional[OrbitAssist] = None
+        # The TRAVEL autopilot from the press of TRAVEL until the trip ends (see travel_assist.py), else None.
+        self.travel: Optional[TravelAssist] = None
 
     # region Angles and directions
     def pitch_angle(self, body: Body, current_datetime: datetime) -> float:
@@ -177,7 +186,7 @@ class Navigation:
         environment = gem.current_environment
         if not ship.is_bound:
             with frame_watch.timed('refresh fixed body'):
-                environment.refresh_fixed_body(ship.position.as_vector())
+                environment.refresh_fixed_body(ship.position.as_vector(), keep_target=self.travel is not None)
         body = environment.fixed_body  # None outside every fixed zone: then there is nothing to bind to
         if ship.is_bound:
             if not isinstance(body, World):
@@ -187,6 +196,7 @@ class Navigation:
         elif (isinstance(body, World) and not isinstance(body, JovianWorld)  # the star and giants are never bound to
                 and self.distance_to_body_centre(body) <= Navigation.BIND_RADIUS_MULTIPLE * body.radius):
             self._bind_to(body)
+            environment.targeted_body = body  # bound, the target is the world the ship stands on
         self._announce_compensation()
         if not ship.is_bound:
             ship.check_heat()
@@ -255,6 +265,13 @@ class Navigation:
         star = environment.nearest_system.star
         return star if star.gravitational_parameter > 0.0 else None
 
+    def compensates_pull(self) -> bool:
+        """Whether the engines compensate the pull of the fixed body: unbound in the fixed zone of a world that pulls,
+        out of orbit (in orbit the ship falls freely), while there is energy. The star's pull is never compensated."""
+        body = gem.current_environment.fixed_body
+        return (not self.ship.is_bound and self.orbit is None and self.ship.energy > 0.0
+                and isinstance(body, World) and body.gravitational_parameter > 0.0)
+
     def pull(self) -> float:
         """m/s^2, the pull of the attractor where the ship is: its surface gravity while bound, else the pull at the
         ship's distance from its centre. Zero where nothing pulls."""
@@ -305,9 +322,12 @@ class Navigation:
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
         frame when the slowest engine is done. The energy is ENERGY_PER_SPEED per m/s that the speed relative to the
-        frame drops by, whichever engines do it."""
+        frame drops by, whichever engines do it. The frame is the one at the start of the frame, as the state of the
+        ship is (see `_move_unbound`): braked against the end of it, a moving target would give back, in the next
+        frame, the change of its velocity (at high time compression, a moon's orbit would carry the ship away)."""
         ship = self.ship
-        reference = self.velocity_reference_frame()
+        start = gem.current_environment.date_time - timedelta(seconds=delta_time)
+        reference = self.velocity_reference_frame(start)
         relative = ship.velocity.as_vector() - reference
         if ship.is_bound:
             yaw = math.radians(ship.attitude.yaw)
@@ -391,7 +411,8 @@ class Navigation:
 
     def _move_unbound(self, delta_time: float) -> None:
         """Moves the unbound ship over the frame. Under the pull of the attractor (see `attractor`) the path is its
-        Kepler orbit, exact for any step (`kepler.propagate`), and the frame's thrust is a kick at its start: the change
+        Kepler orbit, exact for any step (`kepler.propagate`), or a straight line relative to it while the engines
+        compensate the pull (`_coast_compensated`), and the frame's thrust is a kick at its start: the change
         of velocity that `_update_velocity` made since the last frame. The state is kept relative to the body, as it
         was at the end of the last frame, so that a frame does not ask for the body's position at an earlier date. The
         first frame in such a zone, or one where something else moved the ship (binding, the portal base), starts from
@@ -411,19 +432,35 @@ class Navigation:
         if previous is not None and previous.body is body and previous.position == ship.position.as_vector():
             kick = ship.velocity.as_vector() - previous.velocity
             seconds = (now - previous.date_time).total_seconds()
-            relative_position, relative_velocity = kepler.propagate(
-                mu, previous.relative_position, previous.relative_velocity + kick, seconds)
+            start_position, start_velocity = previous.relative_position, previous.relative_velocity + kick
         else:
             start = now - timedelta(seconds=delta_time)
-            relative_position, relative_velocity = kepler.propagate(
-                mu, ship.position.as_vector() - body.calculate_stellar_position(start),
-                ship.velocity.as_vector() - body.calculate_stellar_velocity(start), delta_time)
+            seconds = delta_time
+            start_position = ship.position.as_vector() - body.calculate_stellar_position(start)
+            start_velocity = ship.velocity.as_vector() - body.calculate_stellar_velocity(start)
+        if self.compensates_pull():
+            relative_position, relative_velocity = self._coast_compensated(mu, start_position, start_velocity, seconds)
+        else:
+            relative_position, relative_velocity = kepler.propagate(mu, start_position, start_velocity, seconds)
         centre = body.calculate_stellar_position(now)
         centre_velocity = body.calculate_stellar_velocity(now)
         ship.position.set_vector(centre + relative_position)
         ship.velocity.set_vector(centre_velocity + relative_velocity)
         self.coasting = CoastState(body, now, relative_position, relative_velocity,
                                    ship.position.as_vector(), ship.velocity.as_vector())
+
+    def _coast_compensated(self, mu: float, position: Vector3, velocity: Vector3,
+                           seconds: float) -> Tuple[Vector3, Vector3]:
+        """The position and velocity relative to the body after `seconds` while the engines compensate its pull: a
+        straight line, at ENERGY_PER_SPEED per m/s of pull compensated, as hovering costs. What the engines cannot
+        give at once (`combined_thrust`), near a world that pulls harder, still pulls."""
+        distance = position.length()
+        pull = mu / distance ** 2
+        compensated = min(pull, self.combined_thrust())
+        self.ship.energy -= Navigation.ENERGY_PER_SPEED * compensated * seconds
+        acceleration = position * (-(pull - compensated) / distance)
+        return (position + velocity * seconds + acceleration * (0.5 * seconds * seconds),
+                velocity + acceleration * seconds)
 
     def _collide_with_portal_base(self) -> None:
         """Unbound, near the portal base: the ship's hull comes to rest against what is solid in it (see
@@ -556,17 +593,13 @@ class Navigation:
         return (not self.ship.is_bound
                 and self.distance_to_body_centre(body) < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius)
 
-    def velocity_reference_frame(self) -> Vector3:
-        """The velocity that braking (S) and the prograde/retrograde markers are measured against: the fixed body's
-        inside its fixed zone, else, while unbound, the targeted body's (the long distance advice brakes against it),
-        else zero."""
-        environment = gem.current_environment
-        body = environment.fixed_body
-        if body is None or not self.in_fixed_zone(body):
-            body = None if self.ship.is_bound else environment.targeted_body
-        if body is None:
+    def velocity_reference_frame(self, current_datetime: Optional[datetime] = None) -> Vector3:
+        """The velocity that braking (S) and the prograde/retrograde markers are measured against: the targeted body's
+        at `current_datetime` (now by default) while unbound (the long distance advice brakes against it), else zero."""
+        if self.ship.is_bound:
             return Vector3(0.0, 0.0, 0.0)
-        return body.calculate_stellar_velocity(environment.date_time)
+        environment = gem.current_environment
+        return environment.targeted_body.calculate_stellar_velocity(current_datetime or environment.date_time)
 
     def _relative_to_body(self, body: Body) -> Tuple[Vector3, Vector3]:
         current_datetime = gem.current_environment.date_time
@@ -594,12 +627,29 @@ class Navigation:
     def coasting_time_limit(self) -> float:
         """Game seconds one frame may cover while the unbound ship is in the fixed zone of a body that pulls: a share of
         the period of a circular orbit at its distance, so that a fall does not skip over the bind shell. Infinite
-        otherwise."""
+        otherwise, and while the engines compensate all of the pull: the path is then a straight line."""
         body = self.attractor()
         if self.ship.is_bound or body is None:
             return math.inf
         distance = self.distance_to_body_centre(body)
+        if self.compensates_pull() and body.gravitational_parameter / distance ** 2 <= self.combined_thrust():
+            return math.inf
         return Navigation.COASTING_STEP_SHARE * math.tau * math.sqrt(distance ** 3 / body.gravitational_parameter)
+
+    def target_time_limit(self) -> float:
+        """Game seconds one frame may cover while unbound, so that the ship does not pass the target's fixed zone in a
+        frame: at its speed relative to the target, half of the way to the zone, or TARGET_STEP_SHARE of the zone near
+        or in it. Infinite bound, or at rest with respect to the target."""
+        if self.ship.is_bound:
+            return math.inf
+        environment = gem.current_environment
+        body = environment.targeted_body
+        speed = (self.ship.velocity.as_vector() - body.calculate_stellar_velocity(environment.date_time)).length()
+        if speed == 0.0:
+            return math.inf
+        zone = Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius
+        reach = max(Navigation.TARGET_STEP_SHARE * zone, 0.5 * (self.distance_to_body_centre(body) - zone))
+        return reach / speed
 
     def collision_warning(self, body: Body) -> bool:
         """True if the ship, on its straight line relative to the body, would reach the surface even braking
