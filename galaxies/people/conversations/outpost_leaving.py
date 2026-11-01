@@ -8,8 +8,11 @@ from common.dialogs.messages import Message, ShowMessage, show_message
 from galaxies.settlement import Settlement
 from galaxies.people.player import Player
 from galaxies.politics.political_entity import PoliticalEntity
+from galaxies.missions.mission import DONE, Mission
+from galaxies.missions.deliver_ore import DeliverOre
 from spaceships.ship_configurations.ths_miner import ThsMiner
 from spaceships.ship_configurations.ths_shabby_miner import ShabbyThsMiner
+from spaceships.ship_configurations.ths_versatile import ThsVersatile
 from ..person import Person
 from ..conversation import Conversation
 
@@ -65,6 +68,7 @@ class OutpostLeaving(Conversation):
             )
 
     def _higher_title_effects(self, old_rep: float) -> str:
+        new_title: str = self.player.get_title()
         if old_rep < 10:
             self.player.ship.change_cargo_hold(ShabbyThsMiner.StandardHold)
             return (
@@ -99,10 +103,33 @@ class OutpostLeaving(Conversation):
                 "Take care of it, will you?\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        return ""
+        elif old_rep < 200 or isinstance(self.player.ship, ShabbyThsMiner):
+            done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
+            ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if done else 1.0
+            if ore_factor <= 0.5:
+                self.show(Message(
+                    title=self.title,
+                    text=(
+                        f"If looks like you have been doing much more than just mining ore... {new_title}."
+                        "All according to The Three Aspects, though. Very well!\n\n"
+                        "Maybe you could use a... more polyvalent ship, Pilot? One with less cargo capacity, about"
+                        " the half. But more acceleration and containers for life support. And a bit more robust.\n\n"
+                        " You decide, Pilot, you know better how you can serve."
+                    ),
+                    buttons=['Yes, please', 'No, thanks.'],
+                    ), self._polyvalent_answered
+                )
+            return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+
+        return f"People are starting to call you {self.player.get_title()}..."
 
     def _answered(self, chosen_button: Optional[int]) -> None:
         self._decide(chosen_button == 0)
+
+    def _polyvalent_answered(self, chosen_button: Optional[int]) -> None:
+        if chosen_button == 0:
+            self.player.ship.upgrade_to(ThsVersatile)
+        self._decide(True)
 
     def _decide(self, leaves: bool) -> None:
         self.close()

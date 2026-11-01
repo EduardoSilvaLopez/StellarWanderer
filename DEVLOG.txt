@@ -107,18 +107,19 @@ GRAVITY OF TREASON (Rep 50-100)
 STARTED:
 
   * I am trying to reach the path of the traitor. Very hard to reach.
-  * Jovian moons can help to make missions.
-  * Next step is to draw it.
+  * Stevedores help unload.
 
 ### 2026-11-01 (7/11)
 
-Extra time: 166h00' + 12:00 - 13:00
-
 * GRAVITY OF TREASON (Rep 50-100)
+  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
 
 * JOVIAN PLANETS II (current one) (100-200)
+  * Next step is to draw it.
   * Generate the moons.
-  * Mission to jovian planet.
+  * Jovian moons can help to make missions.
+
+Extra time: 166h00' + 12:00 - 13:00 + 18:15 + 2h
 
 > BACKLOG
 
@@ -131,6 +132,7 @@ Extra time: 166h00' + 12:00 - 13:00
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 
 * (JOVIAN PLANETS II)
+  * Mission to jovian planet.
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: Arabs.
@@ -201,4 +203,5 @@ Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns int
 Fold All Regions (Ctrl+K Ctrl+8)
 Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
 Mode for checking: python.analysis.typeCheckingMode
-Glow of portal ring: GLOW_START_PX, GLOW_FULL_PX or GLOW_STRENGTH.
+GIANT_HAZE_DEPTH (0.004) sets how bright the glow is. It is tuned by eye, not derived from the physics.
+GIANT_LIMB_DEPTH (0.3) sets how dark the limb gets.

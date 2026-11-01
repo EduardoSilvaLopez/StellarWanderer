@@ -401,9 +401,13 @@ class OutpostScreenDialog(Dialog):
         y = top + picture.get_height() + margin
         bar_height = max(8, height // 90)
         levels_top = y  # the Mines row sits here, beside the levels
-        levels =(('Maintenance', self.ship.maintenance), ('Energy', self.ship.energy / self.ship.energy_max))
-        for label, fraction in levels:
-            caption = font.render(f"{label}   {fraction:.0%}", True, TEXT_COLOR)
+        # ore and raw water are measured against the whole capacity, so their bars never fill
+        ore, raw_water = hold.ore * hold.ORE_WEIGHT, hold.raw_water * hold.RAW_WATER_WEIGHT
+        levels =(('Maintenance', self.ship.maintenance, ''), ('Energy', self.ship.energy / self.ship.energy_max, ''),
+                 ('Ore', ore / hold.capacity, f"   {ore:.0f} kg"),
+                 ('Raw water', raw_water / hold.capacity, f"   {raw_water:.0f} kg"))
+        for label, fraction, amount in levels:
+            caption = font.render(f"{label}   {fraction:.0%}{amount}", True, TEXT_COLOR)
             surface.blit(caption, (left, y))
             y += font.get_linesize()
             bar = pygame.Rect(left, y, width, bar_height)

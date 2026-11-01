@@ -1,0 +1,27 @@
+from __future__ import annotations
+
+from spaceships.cargo_hold import CargoHold
+from spaceships.ship import Ship
+
+
+class ThsVersatile(Ship):
+    """A versatile, still mining-oriented ship. Less cargo than a standard miner, though."""
+
+    NAME = 'THS polyvalent'
+    ENERGY_MAX = 2000e9  # Wh
+    PRECARIOUSNESS = 0.7  # The maximum is 1. Better ships will decrease this.
+    FORWARD_BACKWARD_ACC = 30.0  # meters per second squared
+    UP_DOWN_ACC = 30.0  # m/s^2
+    RIGHT_LEFT_ACC = 15  # m/s^2
+    BRAKE_ACC = 30.0  # m/s^2, never less than the acceleration
+    HEIGHT = 4
+    WIDTH = 4
+    DEPTH = 6
+
+    class StandardHold(CargoHold):
+        CAPACITY = 5000
+        AIR_MAX = 120.0
+        WATER_MAX = 110.0
+        FOOD_MAX = 100.0
+
+    CARGO_HOLD = StandardHold

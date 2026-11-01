@@ -43,7 +43,7 @@ class OreMine(Updatable):
             self.longitude: float = longitude
             self.latitude: float = latitude
             self.orientation: float = orientation
-            self.content: int = 0
+            self.content: float = 0.0  # Kg: the one place ore is fractional, it accumulates until the ship takes whole Kg
             self.credits: int = 0
             self.last_updated_at: Optional[datetime] = None
             self.next_update_at: Optional[datetime] = None
@@ -51,7 +51,7 @@ class OreMine(Updatable):
             self.longitude: float = saved_attributes['longitude']
             self.latitude: float = saved_attributes['latitude']
             self.orientation: float = saved_attributes['orientation']
-            self.content: int = saved_attributes['content']
+            self.content: float = saved_attributes['content']
             self.credits: int = saved_attributes.get('credits', 0)  # saved only when not 0
             self.last_updated_at: Optional[datetime] = \
                 datetime.strptime(saved_attributes['last_updated_at'], '%Y-%m-%d %H:%M:%S.%f') \
@@ -175,7 +175,7 @@ class ExternalMine(OreMine):
         self.longitude: float = parent_field.longitude
         self.latitude: float = parent_field.latitude
         self.orientation: float = parent_field.orientation
-        self.content: int = 0
+        self.content: float = 0.0
         self.credits: int = 0
         self.converted_at: datetime = converted_at
 

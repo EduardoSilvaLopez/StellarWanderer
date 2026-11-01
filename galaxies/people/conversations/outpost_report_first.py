@@ -34,7 +34,9 @@ class OutpostReportFirst(Conversation):
         time_str: str = self._time_as_string(int(time_to_handle))
         handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
-        unloading: str = self.outpost.unloading_text(self.player.ship)
+        # A handling still under way keeps its unloading as it is: the question comes once it is done.
+        going: bool = self.outpost.handling_going(self.date_time)
+        unloading: str = '' if going else self.outpost.unloading_text(self.player.ship)
         do_ask: bool = unloading != ''
         ore_question: str = f"\n\nShall we start unloading {unloading}, {self.interlocutor.get_player_title()}?" \
             if do_ask else ''
@@ -52,7 +54,7 @@ class OutpostReportFirst(Conversation):
         else:
             # Information only: the handling starts now, not when its Ok is pressed, so that a click away from the
             # message does not leave the ship unhandled (the screen does not wait for the Ok, see OutpostScreenDialog).
-            self._start_handling(True)
+            self._start_handling(going and self.outpost.handling_unloads)
             self.show(Message(
                     title=self.title,
                     text=text,
@@ -78,9 +80,9 @@ class OutpostReportFirst(Conversation):
 
     def _start_handling(self, unloads: bool) -> None:
         """The handling of the ship starts (repair and recharge), unloading the hold if `unloads`, unless it takes no
-        time at all."""
-        if unloads:
-            self.outpost.handling_unloads = True
+        time at all. The levels up to now are given first, with the unloading they had."""
+        self.outpost.update_handle(self.player.ship, self.date_time)
+        self.outpost.handling_unloads = unloads
 
         if self.outpost.get_time_to_handle(self.player.ship): # Skip by absurd amounts.
             self.outpost.start_handle(self.player.ship)

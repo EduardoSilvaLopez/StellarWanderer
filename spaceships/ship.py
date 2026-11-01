@@ -30,7 +30,7 @@ class Ship(Updatable):
     laser, cargo hold) and its flight limits.
 
     This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
-    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS, TEMP_SHIELD_REDUCTION), the forward and backward
+    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS), the forward and backward
     acceleration (FORWARD_BACKWARD_ACC), the braking (BRAKE_ACC, never less than the acceleration) and the cargo hold
     class (CARGO_HOLD). The ship is upgraded by replacing it
     with another configuration (see upgrade_to).
@@ -73,7 +73,6 @@ class Ship(Updatable):
     # Set by each configuration, never here.
     ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
-    TEMP_SHIELD_REDUCTION: ClassVar[float]  # Maximum external temperature allowed, used for TEMP_MAX inside the ship.
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
     UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included (Navigation._apply_gravity)
     RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared
@@ -101,10 +100,6 @@ class Ship(Updatable):
     @property
     def precariousness(self) -> float:
         return self.PRECARIOUSNESS
-
-    @property
-    def temp_shield_reduction(self) -> float:
-        return self.TEMP_SHIELD_REDUCTION
     # endregion
 
     # region Life

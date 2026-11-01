@@ -157,8 +157,13 @@ FROST_VIGNETTE_COLOUR = (150, 205, 255)  # the cold side's vignette, pale blue
 FROST_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its minimum
 FROST_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from the centre to a corner
 WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_colour) still visible on the unlit side
-GIANT_HAZE_PIXELS = 8.0  # how far the haze of a giant reaches beyond its limb
-GIANT_HAZE_ALPHA = 0.5  # the opacity of that haze at the limb
+# The haze of a giant: its vertical optical depth above the clouds (it sets how bright the glow at the limb is, which is
+# tuned by eye), how many scale heights up it is drawn, and the darkening of the cloud tops towards the limb: the
+# optical depth per unit of air mass beyond the vertical, and the air mass cap.
+GIANT_HAZE_DEPTH = 0.004
+GIANT_HAZE_TOP = 8.0
+GIANT_LIMB_DEPTH = 0.3
+GIANT_LIMB_MAX_AIR_MASS = 4.0
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
 SURFACE_STARLIGHT = 0.30

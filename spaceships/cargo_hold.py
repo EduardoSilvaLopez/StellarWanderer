@@ -47,7 +47,7 @@ class CargoHold(ABC):
         self.water: float = self.water_max
         self.food: float = self.food_max
         self.mines: int = self.INITIAL_MINES
-        self.ore: int = 0
+        self.ore: int = 0  # Kg, always whole: a mine keeps the fraction (see OreMine.content)
         self.raw_water: float = 0.0  # Kg, scooped from an icy world (see DeliverWater); not a supply of the outposts
 
     # region Configuration
@@ -71,11 +71,11 @@ class CargoHold(ABC):
         """Takes the stock of `old`: mines, ore, air, water and food. An air, water or food maximum that changed refills
         its stock instead. The capacity is not stock, so nothing refills it."""
         self.mines = old.mines
-        self.ore = old.ore
-        self.raw_water = old.raw_water
         self.air = self.air_max if self.air_max != old.air_max else old.air
         self.water = self.water_max if self.water_max != old.water_max else old.water
         self.food = self.food_max if self.food_max != old.food_max else old.food
+        self.raw_water = old.raw_water if self.free_capacity() > old.raw_water else self.free_capacity()
+        self.ore = old.ore if self.free_capacity() > old.ore else math.floor(self.free_capacity())
         return self
     # endregion
 

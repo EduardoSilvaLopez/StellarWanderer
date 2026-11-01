@@ -1,5 +1,5 @@
 """Gas and ice giants drawn in the OpenGL pass: a fragment shader intersects each pixel's view ray with the oblate
-ellipsoid of the giant, shades it with its bands, and adds the haze at its limb. The giants behind the star are drawn
+ellipsoid of the giant, shades it with its bands, darkens it towards the limb and adds the glow of its haze. The giants behind the star are drawn
 before it, the others after the sky, so the sun covers the first and not the second (see OpenGLGui.draw)."""
 
 from __future__ import annotations
@@ -8,7 +8,10 @@ import math
 from OpenGL import GL
 from galaxies.jovian_world import JovianWorld
 from common.vector3 import Vector3
-from .constants import WORLD_AMBIENT_LIGHT, WORLD_MIN_RADIUS_PX, MIN_VISIBLE_PX, GIANT_HAZE_PIXELS, GIANT_HAZE_ALPHA
+from .constants import (
+    WORLD_AMBIENT_LIGHT, WORLD_MIN_RADIUS_PX, MIN_VISIBLE_PX, GIANT_HAZE_DEPTH, GIANT_HAZE_TOP, GIANT_LIMB_DEPTH,
+    GIANT_LIMB_MAX_AIR_MASS,
+)
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
@@ -40,10 +43,14 @@ uniform float ambient;     // WORLD_AMBIENT_LIGHT
 uniform float band_count;
 uniform float band_phase;
 uniform float band_contrast;
-uniform float haze_pixels;
-uniform float haze_alpha;
+uniform float scale_height;  // of the haze, in distances
+uniform float haze_top;      // the top of the haze, in distances from the centre
+uniform float haze_depth;    // vertical optical depth of the haze above the clouds
+uniform float limb_depth;    // optical depth of the cloud tops per unit of air mass beyond the vertical
+uniform float max_air_mass;
 
 const float HALF_PI = 1.5707963;
+const int CHORD_SAMPLES = 12;
 
 void main() {
     float px = gl_FragCoord.x;
@@ -69,20 +76,35 @@ void main() {
     float inside = disc / ray_quad * a2 / denominator * focal * norm_sq;
     float coverage = clamp(0.5 + inside, 0.0, 1.0) * step(0.0, along);
 
+    // The cloud tops are seen through more of the haze towards the limb, where the ray is longer: they darken there.
+    vec3 u = d / sqrt(norm_sq);
+    float towards_viewer = clamp(-dot(v, u) / length(v), 1e-3, 1.0);
+    float air_mass = min(1.0 / towards_viewer, max_air_mass);
+    float transmission = exp(-limb_depth * (air_mass - 1.0));
+
     float bands = sin(band_count * HALF_PI * pv / length(v) + band_phase);
     float lit = ambient + (1.0 - ambient) * shade;
-    vec3 surface = clamp(lit * (1.0 + band_contrast * bands) * tint / 255.0, 0.0, 1.0);
+    vec3 surface = clamp(lit * (1.0 + band_contrast * bands) * transmission * tint / 255.0, 0.0, 1.0);
 
-    // Outside the limb the haze fades over haze_pixels, lit by the limb's own normal: only the sunlit edge glows.
-    float haze = clamp(1.0 + inside / haze_pixels, 0.0, 1.0) * haze_alpha;
-    vec3 u = d / sqrt(norm_sq);
+    // Beyond the limb the ray runs through the haze: its optical depth is the density, falling with the altitude,
+    // integrated along the chord. The glow is the light scattered from it, lit by the limb's own normal.
     float towards = dot(u, centre);
+    float impact = sqrt(max(1.0 - towards * towards, 0.0));
+    float half_chord = sqrt(max(haze_top * haze_top - impact * impact, 0.0));
+    float tau = 0.0;
+    for (int i = 0; i < CHORD_SAMPLES; i++) {
+        float s = (float(i) + 0.5) * half_chord / float(CHORD_SAMPLES);
+        float altitude = max(sqrt(impact * impact + s * s) - equatorial, 0.0);
+        tau += exp(-altitude / scale_height);
+    }
+    tau *= 2.0 * half_chord / float(CHORD_SAMPLES) * haze_depth / scale_height;
+    float glow_opacity = 1.0 - exp(-tau);
     float across = sqrt(max(1.0 - towards * towards, 1e-6));
     float limb_lit = (dot(u, light) - towards * dot(centre, light)) / across;
     vec3 glow = (ambient + (1.0 - ambient) * clamp(limb_lit, 0.0, 1.0)) * tint / 255.0;
 
     vec3 colour = coverage > 0.0 ? surface : glow;
-    gl_FragColor = vec4(colour, max(coverage, haze));
+    gl_FragColor = vec4(colour, max(coverage, glow_opacity));
 }
 """
 
@@ -167,8 +189,9 @@ class GiantGl:
         a = min(equatorial_radius / distance * inflation, 0.999)
         c = polar_radius / distance * inflation
 
-        haze_angle = GIANT_HAZE_PIXELS / focal
-        outer_angle = math.asin(min(a + haze_angle, 0.999))
+        scale_height = world.scale_height / distance * inflation
+        haze_top = a + GIANT_HAZE_TOP * scale_height
+        outer_angle = math.asin(min(haze_top, 0.999))
         max_angle = math.atan(math.hypot(width / 2, max(horizon_y, view_h - horizon_y)) / focal)
         if math.acos(max(-1.0, min(1.0, centre.z))) - outer_angle > max_angle:
             return
@@ -190,8 +213,11 @@ class GiantGl:
         GL.glUniform1f(GL.glGetUniformLocation(program, "band_count"), world.band_count)
         GL.glUniform1f(GL.glGetUniformLocation(program, "band_phase"), world.band_phase)
         GL.glUniform1f(GL.glGetUniformLocation(program, "band_contrast"), world.band_contrast)
-        GL.glUniform1f(GL.glGetUniformLocation(program, "haze_pixels"), GIANT_HAZE_PIXELS)
-        GL.glUniform1f(GL.glGetUniformLocation(program, "haze_alpha"), GIANT_HAZE_ALPHA)
+        GL.glUniform1f(GL.glGetUniformLocation(program, "scale_height"), scale_height)
+        GL.glUniform1f(GL.glGetUniformLocation(program, "haze_top"), haze_top)
+        GL.glUniform1f(GL.glGetUniformLocation(program, "haze_depth"), GIANT_HAZE_DEPTH)
+        GL.glUniform1f(GL.glGetUniformLocation(program, "limb_depth"), GIANT_LIMB_DEPTH)
+        GL.glUniform1f(GL.glGetUniformLocation(program, "max_air_mass"), GIANT_LIMB_MAX_AIR_MASS)
 
         # The rectangle in normalised device coordinates: the screen's rows run down from the top.
         def ndc(px: float, py: float) -> tuple:

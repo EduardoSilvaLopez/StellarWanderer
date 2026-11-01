@@ -82,12 +82,11 @@ class World(Body):
         self.periapsis_argument: float
         self.moons: List[World] = []
         self.surface_colour: Tuple[int, int, int]
-        # How the world looks as a sphere: a giant is oblate, has cloud bands and a haze at its limb (see JovianWorld).
+        # How the world looks as a sphere: a giant is oblate and has cloud bands (see JovianWorld).
         self.flattening: float = 0.0
         self.band_count: float = 0.0
         self.band_phase: float = 0.0
         self.band_contrast: float = 0.0
-        self.has_haze: bool = False
         self.is_altered: bool = False
         self.km2s: List[Km2] = []
         self.outposts: dict = {}

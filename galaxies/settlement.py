@@ -5,6 +5,7 @@ saved (see Outpost, PortalBase)."""
 
 from __future__ import annotations
 from abc import abstractmethod
+import math
 import random
 import logging
 from datetime import datetime, timedelta
@@ -16,7 +17,7 @@ from common.vector3 import Vector3
 import game_environment as gem
 from galaxies import seeds
 from galaxies.settlement_kind import SettlementKind
-from galaxies.people.role import (COM_OFFICER, COORDINATOR, DOCKMASTER, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
+from galaxies.people.role import (COM_OFFICER, COORDINATOR, DOCKMASTER, STEVEDORE, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
 
 if TYPE_CHECKING:
     from galaxies.body import Body
@@ -317,10 +318,22 @@ class Settlement(Updatable):
         time_to_repair = (self.get_max_maintenance() - ship.maintenance) / Settlement.MAINTENANCE_PER_SECOND
         if time_to_repair < 0:
             time_to_repair = 0.0
-        time_to_unload = (ship.cargo_hold.ore / Settlement.UNLOAD_ORE_PER_SECOND
-                          + ship.cargo_hold.raw_water / Settlement.UNLOAD_RAW_WATER_PER_SECOND) \
-            if self.handling_unloads else 0
-        return int(max(time_to_charge, time_to_repair + time_to_unload)) # Dockmaster is alone, repairs or unloads.
+
+        time_to_unload: float = 0.0
+        stevedores = self._stevedores_on_duty()
+        if self.handling_unloads:
+            # The time one person takes, shared by the stevedores on duty, or done by the dockmaster alone.
+            time_one_person = ship.cargo_hold.ore / Settlement.UNLOAD_ORE_PER_SECOND \
+                + ship.cargo_hold.raw_water / Settlement.UNLOAD_RAW_WATER_PER_SECOND
+            time_to_unload = time_one_person / (stevedores or 1)
+
+        if stevedores > 0:
+            return int(max(time_to_charge, time_to_repair, time_to_unload))  # Stevedores unload beside the repairs.
+        return int(max(time_to_charge, time_to_repair + time_to_unload))  # The dockmaster unloads after the repairs.
+
+    def _stevedores_on_duty(self) -> int:
+        """How many stevedores are on duty: they unload the hold while the dockmaster repairs the ship."""
+        return len([p for p in self.on_duty_list() if p.role == STEVEDORE])
 
     @staticmethod
     def unloading_text(ship: Ship) -> str:
@@ -337,6 +350,11 @@ class Settlement(Updatable):
         full = 1 - self.READY_MARGIN
         return (self.handling_due_at is None and ship.cargo_hold.ore == 0 and ship.cargo_hold.raw_water == 0
                 and ship.energy >= ship.energy_max * full and ship.maintenance >= self.get_max_maintenance() * full)
+
+    def handling_going(self, now: datetime) -> bool:
+        """Whether the handling of the ship is still under way at `now`. Its due date stays set after it ends, until
+        the pilot leaves."""
+        return self.handling_due_at is not None and now < self.handling_due_at
 
     def start_handle(self, ship: Ship, extra_seconds: float = 0.0) -> Settlement:
         """The settlement starts working on the pilot's `ship`, from the state it is in now: it will be ready after
@@ -362,6 +380,7 @@ class Settlement(Updatable):
             ship.energy += energy_change
             gpp.current_player.adjust_reputation_by_supply("energy", -energy_change)
 
+            repair_left = (self.get_max_maintenance() - ship.maintenance) / self.MAINTENANCE_PER_SECOND
             if ship.maintenance < self.get_max_maintenance():
                 if self.get_max_maintenance() - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
                     # Avoid epsilon changes.
@@ -373,12 +392,17 @@ class Settlement(Updatable):
                 gpp.current_player.adjust_reputation_by_supply("maintenance", -maintenance_change)
 
             if self.handling_unloads:
-                # The dockmaster unloads the ore first, then the raw water, with the time the ore did not take.
+                # The stevedores unload from the start; without them, the dockmaster unloads once the repairs are done.
+                # The ore goes first, then the raw water, with the time the ore did not take.
+                stevedores = self._stevedores_on_duty()
+                unloaders = stevedores or 1
+                unload_seconds = seconds if stevedores else seconds - min(seconds, max(0.0, repair_left))
                 hold = ship.cargo_hold
-                ore_change = min(hold.ore, self.UNLOAD_ORE_PER_SECOND * seconds)
-                hold.ore -= int(ore_change)
-                water_time = seconds - ore_change / self.UNLOAD_ORE_PER_SECOND
-                water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * water_time)
+                ore_change = min(hold.ore, math.floor(self.UNLOAD_ORE_PER_SECOND * unloaders * unload_seconds))
+                hold.ore -= ore_change
+                water_time = unload_seconds - ore_change / (self.UNLOAD_ORE_PER_SECOND * unloaders) if hold.ore == 0 \
+                    else 0.0
+                water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * unloaders * water_time)
                 hold.raw_water -= water_change
                 gpp.current_player.adjust_reputation_by_supply("ore", ore_change)
                 gpp.current_player.adjust_reputation_by_supply("raw_water", water_change)

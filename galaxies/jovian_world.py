@@ -77,7 +77,7 @@ class JovianWorld(World):
     (see World); it is wider than the rocky planets', and now and then it is extreme.
 
     Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
-    (`band_count`, `band_phase`, `band_contrast`), and a haze at the limb (`has_haze`). A giant has no surface, so none
+    (`band_count`, `band_phase`, `band_contrast`), and a haze above them that thins with `scale_height`. A giant has no surface, so none
     of this is ground.
 
     Temperature. The equilibrium temperature `equilibrium_temperature` takes the albedo of the clouds. A giant also
@@ -202,7 +202,6 @@ class JovianWorld(World):
         self.band_count = my_random.uniform(*traits.bands)
         self.band_phase = my_random.uniform(0.0, math.tau)
         self.band_contrast = my_random.uniform(*traits.band_contrast)
-        self.has_haze = True
         self._generate_atmosphere(star, traits)
 
         self._learn()
@@ -254,6 +253,8 @@ class JovianWorld(World):
         self.specific_gas_constant: float = JovianWorld.GAS_CONSTANT / self.mean_molecular_weight
         self.specific_heat: float = specific_heat_in_gas_constants * self.specific_gas_constant
         self.adiabatic_exponent: float = 1.0 / specific_heat_in_gas_constants  # R / cp
+        # The height over which the pressure falls by a factor e, in the stratosphere; the haze thins with it.
+        self.scale_height: float = self.specific_gas_constant * self.temperature_stratosphere / self.reference_gravity
 
     @property
     def kind_title(self) -> str:

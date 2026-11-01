@@ -27,9 +27,10 @@ class OutpostReportFurther(Conversation):
         do_ask: bool = False
         time_str: str = self._time_as_string(int(time_to_handle))
         ready: bool = self.outpost.is_ready(self.player.ship)  # nothing to offer, even if a few seconds are left
+        going: bool = self.outpost.handling_going(self.date_time)  # its unloading stays as it is until it is done
         if time_to_handle > 0 and not ready:
             handle_info_or_question = f"Your ship will be ready {time_str}."
-        elif unloading := self.outpost.unloading_text(self.player.ship):
+        elif not going and (unloading := self.outpost.unloading_text(self.player.ship)):
             handle_info_or_question = f"Shall we start unloading {unloading}? It should be ready in {time_str}."
             do_ask = True
 
@@ -55,8 +56,9 @@ class OutpostReportFurther(Conversation):
         return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
     def _unload_answered(self, chosen_button: Optional[int]) -> OutpostReportFurther:
+        self.outpost.update_handle(self.player.ship, self.date_time)  # the levels up to the answer, with the old choice
+        self.outpost.handling_unloads = chosen_button == 0
         if chosen_button == 0:
-            self.outpost.handling_unloads = True
             self.outpost.start_handle(self.player.ship)
         self._finish(chosen_button)
         return self
