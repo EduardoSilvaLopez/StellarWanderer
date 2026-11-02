@@ -90,7 +90,7 @@ DEVELOPER'S DIARY
 
 ### 2026-10-28 (5/11)
 
-GRAVITY OF TREASON (Rep 50-100)
+GRAVITY OF TREASON I (Rep 50-100)
   * PLAN_END_DISTANCE to tune long trip advisor.
   * Say Komisar: "They are good listeners" :D
   * "I miss my childen."
@@ -103,33 +103,21 @@ GRAVITY OF TREASON (Rep 50-100)
   * Mission to the star.
   * New chat options for jobs.
   * Gravity, step 3.
+  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
 
 STARTED:
 
+* JOVIAN PLANETS II (current one) (100-200)
   * I am trying to reach the path of the traitor. Very hard to reach.
   * Stevedores help unload.
 
 ### 2026-11-01 (7/11)
 
-* GRAVITY OF TREASON (Rep 50-100)
-  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
-
-* JOVIAN PLANETS II (current one) (100-200)
   * Next step is to draw it.
   * Generate the moons.
   * Jovian moons can help to make missions.
 
 Extra time: 166h00' + 12:00 - 13:00 + 18:15 + 2h
-
-> BACKLOG
-
-* GRAVITY OF TREASON (Rep 50-100)
-  * Rat
-  * Selling ore
-  * Extra: A career as law enforcement, if "rat".
-  * Extra: Binding slowly.
-  * Extra: Portraits without uniform: Black, Latino, White
-  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
 
 * (JOVIAN PLANETS II)
   * Mission to jovian planet.
@@ -140,10 +128,19 @@ Extra time: 166h00' + 12:00 - 13:00 + 18:15 + 2h
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
+  * Extra: Binding slowly.
+  * Extra: Portraits without uniform: Black, Latino, White
+
+> BACKLOG
+
+* GRAVITY OF TREASON (Rep 50-100) II
+  * Rat
+  * Selling ore
+  * Extra: A career as law enforcement, if "rat".
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in THS)
   * Cities
-  * Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
+  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * OROGRAPHY
