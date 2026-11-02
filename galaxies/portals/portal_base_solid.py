@@ -7,7 +7,8 @@ checked at points spread over it (`_hull_samples`).
 
 As with the ground of a world (Navigation._update_position), the speed toward the nearest surface is forced down so that
 the hull comes to rest against it: each point of it may close in at most as many m/s as the metres left, and the hull is
-never left inside. The speed along the surface is kept. Nothing is damaged."""
+never left inside. The speed along the surface is kept. Nothing is damaged. The motion of a frame is swept, in steps of
+SWEEP_STEP, so that a wall is not passed through in one frame (Navigation._collide_with_portal_base)."""
 
 from __future__ import annotations
 import functools
@@ -33,6 +34,7 @@ THRUSTER_LENGTH = 10.0
 
 GRADIENT_STEP = 1e-4  # m, for the normal of the surface: small, so that it is never the mean of two walls in a corner
 SAMPLE_STEP = 2.0  # m, about the spacing of the points of the hull's surface that are checked against the solids
+SWEEP_STEP = 0.5  # m, the most the hull moves between two checks: less than the thinnest wall (the hangar's, 1 m)
 SKEW = (0.0031, 0.0047, 0.0059)  # m, a direction that is parallel to no wall, to tell the two sides of a corner
 ITERATIONS = 3  # a corner needs the ship pushed out of more than one surface
 Vec = tuple[float, float, float]
@@ -108,6 +110,13 @@ class PortalBaseSolid:
         if (x, y, z) == tuple(position) and (vx, vy, vz) == tuple(velocity):
             return None
         return (x, y, z), (vx, vy, vz)
+
+    def touches(self, position: Vec, right: Vec, up: Vec, forward: Vec, half_sizes: Vec) -> bool:
+        """Whether the hull, with the camera at `position` (in the base's frame) and the ship's axes, has a point inside
+        a solid. `resolve` takes the hull out of one, and also slows it before a surface it has not reached."""
+        x, y, z = position
+        return any(self.distance(x + ox, y + oy, z + oz) < 0.0
+                   for ox, oy, oz in (_turned(sample, right, up, forward) for sample in _hull_samples(half_sizes)))
 
     def _clearances(self, x: float, y: float, z: float, offsets: list[Vec]) -> list[float]:
         """The signed distance from each point of the hull, the camera at (x, y, z) and the points at `offsets`."""

@@ -4,7 +4,7 @@ import math
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
 
 import logging
 from galaxies import seeds
@@ -13,10 +13,16 @@ from galaxies.world import World
 from galaxies.world_surface import Colour, equilibrium_temperature, vary_colour
 
 if TYPE_CHECKING:
+    from common.vector3 import Vector3
     from galaxies.orbit import Orbit
     from galaxies.star import Star
 
 logger = logging.getLogger(__name__)
+
+
+def _smoothstep(edge0: float, edge1: float, value: float) -> float:
+    t = max(0.0, min(1.0, (value - edge0) / (edge1 - edge0)))
+    return t * t * (3.0 - 2.0 * t)
 
 
 @dataclass(frozen=True)
@@ -77,8 +83,11 @@ class JovianWorld(World):
     (see World); it is wider than the rocky planets', and now and then it is extreme.
 
     Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
-    (`band_count`, `band_phase`, `band_contrast`), and a haze above them that thins with `scale_height`. A giant has no surface, so none
-    of this is ground.
+    (`band_count`, `band_phase`, `band_contrast`), and a haze above them that thins with `scale_height`. A giant has no
+    surface, so none of this is ground: the gas takes light out in proportion to its density (`optical_profile`), the
+    cloud tops are where it gets opaque, and a ship that dives sees less light and less distance, until all is dark.
+    Inside the planet the pull is that of the mass within (`pull_at`), which falls to zero at the centre, where the
+    ship can go.
 
     Temperature. The equilibrium temperature `equilibrium_temperature` takes the albedo of the clouds. A giant also
     radiates the heat of its interior, `internal_temperature` (it grows with the mass): the effective temperature is the
@@ -138,6 +147,10 @@ class JovianWorld(World):
     METHANE = (16.043e-3, 4.0)
     ATMOSPHERE_EDGE_PRESSURE = 1.0e-4  # Pa: where the atmosphere is said to end
     MIN_RADIUS_FRACTION = 0.3  # the model stops this deep, in radii of the 1 bar level
+    # How much of the light the gas takes out: the extinction of a kilogram of it per square metre it spreads over. The
+    # optical depth of a column is this times its mass (the pressure over the gravity). It is set so that the clouds
+    # are opaque at about the 1 bar level, which is what makes the cloud tops the visible surface; it is tuned by eye.
+    MASS_EXTINCTION = 5.0e-4  # m^2/kg
 
     def __init__(self, parent_orbit: Orbit, saved_alterations: Optional[dict] = None) -> None:
         super().__init__()
@@ -359,6 +372,58 @@ class JovianWorld(World):
     def _tropopause_pressure(self) -> float:
         return JovianWorld.ONE_BAR * (self.temperature_stratosphere / self.temperature_one_bar) \
             ** (1.0 / self.adiabatic_exponent)
+
+    def ambient_at(self, relative_position: Vector3) -> Tuple[float, float]:
+        """The pressure (Pa) and the temperature (K) of the gas at a position relative to the centre, in the stellar
+        frame (where the spin axis is z). Beyond the model's depth they are those of the depth."""
+        distance = relative_position.length()
+        latitude = math.asin(max(-1.0, min(1.0, relative_position.z / distance))) if distance > 0.0 else 0.0
+        return self.atmosphere_at(distance - self.one_bar_radius(latitude), latitude)
+
+    def optical_profile(self, altitudes: Sequence[float]) -> Tuple[List[float], List[float]]:
+        """What the gas does to light at each altitude (m above the 1 bar level, at the equator): the extinction
+        coefficient (1/m, the extinction of a kilogram times the density) and the optical depth of the column above
+        (the extinction of a kilogram times the pressure over the gravity, the mass of the column)."""
+        extinctions: List[float] = []
+        column_depths: List[float] = []
+        for altitude in altitudes:
+            pressure, temperature = self.atmosphere_at(altitude, 0.0)
+            distance = max(self.equatorial_radius + altitude, JovianWorld.MIN_RADIUS_FRACTION * self.equatorial_radius)
+            gravity = self.reference_gravity * (self.equatorial_radius / distance) ** 2
+            density = pressure * self.mean_molecular_weight / (JovianWorld.GAS_CONSTANT * temperature)
+            extinctions.append(JovianWorld.MASS_EXTINCTION * density)
+            column_depths.append(JovianWorld.MASS_EXTINCTION * pressure / gravity)
+        return extinctions, column_depths
+
+    def light_transmission(self, relative_position: Vector3, direction: Vector3) -> float:
+        """The share of a star's light, coming from the unit `direction`, that reaches a position relative to the
+        centre (stellar frame): the column of gas above it, along the slant of the light, and nothing when the star is
+        below the local horizon. The same as the shader's, for what is not drawn by it (the glare)."""
+        distance = relative_position.length()
+        if distance <= 0.0:
+            return 0.0
+        cosine = relative_position.dot(direction) / distance
+        pressure, _ = self.ambient_at(relative_position)
+        column_depth = JovianWorld.MASS_EXTINCTION * pressure / max(self.pull_at(distance), 1e-3)
+        return _smoothstep(-0.02, 0.15, cosine) * math.exp(-column_depth / max(cosine, 0.05))
+
+    def pull_at(self, distance: float) -> float:
+        """The pull at a distance from the centre: a point mass's outside the planet, and inside that of the mass within
+        it, which falls to zero at the centre, where a ship can go. The planet is a polytrope of index 1, the usual
+        model of a giant: the mass within x (the distance over the radius) is (sin(pi x) - pi x cos(pi x)) / pi of
+        the whole."""
+        x = distance / self.radius
+        if x >= 1.0:
+            return self.gravitational_parameter / distance ** 2
+        if x <= 0.0:
+            return 0.0
+        y = math.pi * x
+        enclosed = y ** 3 / (3.0 * math.pi) if y < 0.01 else (math.sin(y) - y * math.cos(y)) / math.pi
+        return self.gravitational_parameter * enclosed / (self.radius * x) ** 2
+
+    def dynamical_time(self, distance: float) -> float:
+        """Inside the planet the time of the pull's change is that of the whole planet, not of the distance."""
+        return super().dynamical_time(max(distance, self.radius))
     # endregion
 
     # region Almanack and log

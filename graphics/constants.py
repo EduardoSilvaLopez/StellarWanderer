@@ -157,13 +157,21 @@ FROST_VIGNETTE_COLOUR = (150, 205, 255)  # the cold side's vignette, pale blue
 FROST_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its minimum
 FROST_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from the centre to a corner
 WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_colour) still visible on the unlit side
-# The haze of a giant: its vertical optical depth above the clouds (it sets how bright the glow at the limb is, which is
-# tuned by eye), how many scale heights up it is drawn, and the darkening of the cloud tops towards the limb: the
-# optical depth per unit of air mass beyond the vertical, and the air mass cap.
-GIANT_HAZE_DEPTH = 0.004
-GIANT_HAZE_TOP = 8.0
-GIANT_LIMB_DEPTH = 0.3
-GIANT_LIMB_MAX_AIR_MASS = 4.0
+# The gas of a giant is drawn up to this many scale heights above the cloud tops, and its single-scattered sunlight is
+# multiplied by the gain, which is tuned by eye so that the cloud tops are as bright as their colour.
+GIANT_HAZE_TOP = 10.0
+GIANT_SUN_GAIN = 1.5
+GIANT_LIMB_DARKENING = 0.6  # the cloud tops, seen along the horizon, have this much less light (0 to 1)
+# The light inside the clouds is scattered many times, so it feels only this share of the optical depth that the
+# direct sun does: it reaches deeper, and fades to dark over a few bars instead of one (tuned by eye).
+GIANT_LIGHT_PENETRATION = 0.15
+# How coarse the march through the gas is: the most optical depth, and the most altitude (in scale heights), of a step.
+GIANT_STEP_DEPTH = 0.6
+GIANT_STEP_HEIGHT = 1.0
+# A giant on screen larger than this many pixels is drawn into a smaller target (what the shader does per pixel is the
+# cost of the frame) and scaled up: the gas is smooth.
+GIANT_PIXEL_BUDGET = 120000
+GIANT_TARGET_SIZE = 1024  # the side of the square target, pixels
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
 SURFACE_STARLIGHT = 0.30

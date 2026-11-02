@@ -3,6 +3,7 @@ them, and the pilot's choice to hide one from the knowledge base: a hidden body 
 but is still there and drawn. Hidden is saved as an alteration of the body's own, and not hidden is the default."""
 
 from __future__ import annotations
+import math
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -44,6 +45,16 @@ class Body:
         """G times the body's mass, in m^3/s^2: the pull on a ship inside its fixed zone (Navigation._move_unbound).
         Zero for a body that does not pull: the star does not pull yet, and neither does the portal base."""
         return 0.0
+
+    def pull_at(self, distance: float) -> float:
+        """m/s^2, the pull at `distance` metres from the centre: a point mass's. A body a ship can enter (a giant) has
+        its own inside."""
+        return self.gravitational_parameter / distance ** 2
+
+    def dynamical_time(self, distance: float) -> float:
+        """Seconds of a circular orbit at `distance` metres from the centre: the time in which the pull changes the
+        ship's motion. It bounds the frame's time step (`Navigation.coasting_time_limit`)."""
+        return math.tau * math.sqrt(distance ** 3 / self.gravitational_parameter)
 
     @property
     def stellar_system(self) -> StellarSystem:

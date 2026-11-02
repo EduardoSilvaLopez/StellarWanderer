@@ -69,6 +69,8 @@ class OrbitAssist:
         body = environment.fixed_body
         if ship.is_bound or not isinstance(body, World) or body.gravitational_parameter == 0.0:
             return "not fixed to a body that pulls"
+        if ship.navigation.is_inside(body):
+            return "the ship is inside the planet"
         mu = body.gravitational_parameter
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         radius = r_vec.length()
@@ -100,6 +102,9 @@ class OrbitAssist:
             return NO_THRUST
         if body is None or body is not self.body:
             self.end("Orbit cancelled: the ship left the fixed zone.")
+            return NO_THRUST
+        if ship.navigation.is_inside(body):
+            self.end("Orbit cancelled: the ship is inside the planet.")
             return NO_THRUST
         if self.established:
             return NO_THRUST
@@ -140,7 +145,8 @@ class OrbitAssist:
         the orbit is saved: it is worked out again, as the fixed body is."""
         environment = gem.current_environment
         body = environment.fixed_body
-        if ship.is_bound or not isinstance(body, World) or body.gravitational_parameter == 0.0:
+        if ship.is_bound or not isinstance(body, World) or body.gravitational_parameter == 0.0 \
+                or ship.navigation.is_inside(body):
             return
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         if OrbitAssist._is_orbit(body, r_vec, v_vec):

@@ -1,6 +1,7 @@
 """Resource bars: the ship's resources, one row each, top to bottom: credits (a value), maintenance and energy (bars),
 temperature (a bar from 25 to its value, on its scale) and gravity (a bar of the pull where the ship is against the combined thrust, green when low, labelled
-with the pull in m/s^2). Each row has its label on the left, and the rows line up with each other. The first row's
+with the pull in m/s^2), then, in the atmosphere of a giant only, the pressure (Pa) and the temperature (K) of the gas
+outside, as plain values. Each row has its label on the left, and the rows line up with each other. The first row's
 label sits on the top of the group's rect, where the scanner and cargo titles are."""
 
 from __future__ import annotations
@@ -20,7 +21,8 @@ WARNING_COLOUR = AMBER  # the maintenance warning level, a vertical line across 
 TEMPERATURE_MIN_WIDTH = 3  # pixels: the bar's width when the temperature is the ideal one
 TEMPERATURE_IDEAL = 25  # degrees: the green line. The colour moves away from it towards either extreme of the scale.
 CREDIT_SYMBOL = 'Ȼ'
-ROW_LABELS = ('Credits', 'Maintenance', 'Energy', 'Temperature', 'Gravity')
+ROW_LABELS = ('Credits', 'Maintenance', 'Energy', 'Temperature', 'Gravity', 'Pressure', 'Outside')
+ATMOSPHERE_ROWS = ('Pressure', 'Outside')  # values (Pa, K) of the gas around the ship, shown only while it is in one
 
 
 Stops = Tuple[Tuple[float, Tuple[int, int, int]], ...]
@@ -114,8 +116,9 @@ class ResourceBars:
         bar_right = rect.right - pad
 
         legal = credits_shown()
+        ambient = ship.navigation.ambient()
         for index, name in enumerate(ROW_LABELS):
-            if name == 'Credits' and not legal:
+            if name == 'Credits' and not legal or name in ATMOSPHERE_ROWS and ambient is None:
                 continue  # the row is empty, but its place stays
             centre_y = rect.top + label_font.get_height() // 2 + row_pitch * index
             label = label_font.render(name, True, ACCENT)
@@ -132,6 +135,11 @@ class ResourceBars:
                 _draw_bar(surface, track, ship.energy / ship.energy_max)
             elif name == 'Temperature':
                 _draw_temperature(surface, track, ship)
+            elif name in ATMOSPHERE_ROWS:
+                pressure, temperature = ambient
+                text = f'{pressure:.2e} Pa' if name == 'Pressure' else f'{temperature:.0f} K'
+                value = label_font.render(text, True, ACCENT)
+                surface.blit(value, value.get_rect(midleft=(bar_left, centre_y)))
             else:
                 # the pull against the most the engines give: green when low, red at the limit; its value in m/s^2 over it
                 pull = ship.navigation.pull()

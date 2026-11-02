@@ -25,12 +25,12 @@ class OrbitButton:
 
     @staticmethod
     def enabled(ship: Ship) -> bool:
-        """The button lights up in a fixed zone of a world that pulls, unbound."""
+        """The button lights up in a fixed zone of a world that pulls, unbound, but not inside a giant."""
         import game_environment as gem
         from galaxies.world import World
         body = gem.current_environment.fixed_body
         return not ship.is_bound and isinstance(body, World) and body.gravitational_parameter > 0.0 \
-            and ship.navigation.in_fixed_zone(body)
+            and ship.navigation.in_fixed_zone(body) and not ship.navigation.is_inside(body)
 
     @staticmethod
     def hit(position: Tuple[int, int], ship: Ship) -> bool:

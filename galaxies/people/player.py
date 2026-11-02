@@ -95,7 +95,7 @@ class Player:
 
     def limit_time_scale(self, frame_seconds: float, limit: float) -> None:
         """Lowers the time scale, in its steps, until a frame of `frame_seconds` real seconds covers no more than
-        `limit` game seconds (see Navigation.coasting_time_limit and target_time_limit, and
+        `limit` game seconds (see Navigation.coasting_time_limit, target_time_limit and portal_base_time_limit, and
         LongDistanceAdvisor.time_limit). The clock shows the lower one."""
         self.time_scale = self.wished_time_scale()
         wished = self.time_scale

@@ -105,7 +105,8 @@ def sun_visibility(environment: GameEnvironment, ship: Ship, view: StarView) -> 
 
     A world hides the sun when it is nearer than the star and the sun lies inside the world's disc. Bound, the world
     under the ship is the ground: the sun is hidden below its horizon, the disc being `asin(R / (R + altitude))` around
-    straight down. The sun goes from shown to hidden over its own apparent size, as it crosses the world's edge."""
+    straight down. The sun goes from shown to hidden over its own apparent size, as it crosses the world's edge. In the
+    atmosphere of a giant the gas above the ship dims it too (`JovianWorld.light_transmission`)."""
     body = environment.targeted_body
     date_time = environment.date_time
     star_vector = ship.navigation.direction_to_star(body, date_time)
@@ -124,14 +125,20 @@ def sun_visibility(environment: GameEnvironment, ship: Ship, view: StarView) -> 
         to_world = ship.navigation.direction_to_body(world, date_time)
         distance = to_world.length()
         if distance < star_distance:
-            discs.append((math.asin(min(1.0, world.radius / distance)), to_world))
+            discs.append((math.asin(min(1.0, world.radius / distance)) if distance > 0.0 else math.pi / 2.0, to_world))
 
     visibility = 1.0
     for angular_radius, direction in discs:
+        if direction.length() == 0.0:
+            return 0.0  # at the very centre of a giant: all around is the planet
         cosine = star_vector.dot(direction) / (star_distance * direction.length())
         separation = math.acos(max(-1.0, min(1.0, cosine)))  # sun's centre to the disc's centre
         shown = (separation - angular_radius + sun_radius) / (2.0 * sun_radius)  # 0 inside the edge by a sun radius
         visibility = min(visibility, max(0.0, min(1.0, shown)))
+    if ship.navigation.ambient() is not None:  # in a giant's atmosphere: the gas above takes light out of the glare
+        giant = environment.fixed_body
+        relative_position = ship.position.as_vector() - giant.calculate_stellar_position(date_time)
+        visibility *= giant.light_transmission(relative_position, star_vector * (1.0 / star_distance))
     return visibility
 
 

@@ -102,25 +102,37 @@ GRAVITY OF TREASON I (Rep 50-100)
   * Gravity step 2.
   * Mission to the star.
   * New chat options for jobs.
-  * Gravity, step 3.
-  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
-
-STARTED:
-
-* JOVIAN PLANETS II (current one) (100-200)
-  * I am trying to reach the path of the traitor. Very hard to reach.
-  * Stevedores help unload.
 
 ### 2026-11-01 (7/11)
 
+  * Gravity, step 3.
+  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
+  * Stevedores help unload.
   * Next step is to draw it.
   * Generate the moons.
   * Jovian moons can help to make missions.
 
-Extra time: 166h00' + 12:00 - 13:00 + 18:15 + 2h
+### 2026-11-02 (8/11)
+
+  * Resolve the "mirrored planet" when diving.
+  * Create the atmosphere when diving.
+
+STARTED:
+
+  * I am trying to reach the path of the traitor. Very hard to reach.
+
+* JOVIAN PLANETS II (current one) (100-200)
+  * Killin the player when diving :D . I mean... preassure.
+
+* The night side of a giant is still black, with no faint limb. It hides stars but is hard to see against space. Do you want a faint planetshine edge there?
+* The cockpit tint does not follow the atmosphere yet.
+* The deep pressure and temperature numbers are the model's extrapolation: below 0.3 radii it freezes at about 2.4×10¹⁴ Pa and 1.2×10⁵ K at the centre. They are not a physical claim.
+* Clouds at kilometre scale and storms are still pending.
+
+Extra time: 166h15' + 7:45 - 
 
 * (JOVIAN PLANETS II)
-  * Mission to jovian planet.
+  * Mission to jovian planet itself (scoop, scan).
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: Arabs.
@@ -199,6 +211,8 @@ https://docs.python.org/3.14/tutorial/modules.html
 Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns into a list of signatures.
 Fold All Regions (Ctrl+K Ctrl+8)
 Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
-Mode for checking: python.analysis.typeCheckingMode
-GIANT_HAZE_DEPTH (0.004) sets how bright the glow is. It is tuned by eye, not derived from the physics.
-GIANT_LIMB_DEPTH (0.3) sets how dark the limb gets.
+
+GIANT_SUN_GAIN sets the brightness.
+GIANT_LIGHT_PENETRATION (now 0.15) sets how quickly the light dies with depth.
+GIANT_LIMB_DARKENING sets the darker edge.
+JovianWorld.MASS_EXTINCTION sets how opaque the clouds are.

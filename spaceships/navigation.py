@@ -12,6 +12,7 @@ from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
 from galaxies import kepler
 from galaxies.jovian_world import JovianWorld
+from galaxies.portals.portal_base_solid import SWEEP_STEP
 from galaxies.rocky_world import RockyWorld
 from galaxies.world import World
 import game_environment as gem
@@ -54,7 +55,7 @@ class Navigation:
     `attractor` and `_move_unbound`). The TRAVEL autopilot (`travel`, see travel_assist.py) flies the ship to the
     target along the long distance advice's straight line, and the ORBIT assist and it end each other. The pilot is
     told on entering and leaving such a zone (`_announce_compensation`), and the time scale is limited
-    (`coasting_time_limit`, `target_time_limit`).
+    (`coasting_time_limit`, `target_time_limit`, `portal_base_time_limit`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -70,6 +71,7 @@ class Navigation:
     BIND_RADIUS_MULTIPLE = 1.1  # bind at or inside this distance from the world's centre, in radii
     UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
+    PORTAL_BASE_FRAME_TRAVEL = 5.0  # m, the most the hull moves in a frame near the portal base (see its time limit)
     COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
     # of energy (Wh) for each m/s the ship's speed changes by, thrusting or braking (not turning)
@@ -112,8 +114,10 @@ class Navigation:
         """Unit vector from the ship towards the body's surface, in the active frame."""
         if self.ship.is_bound:
             return Vector3(0.0, -1.0, 0.0)
-        centre = body.calculate_stellar_position(current_datetime)
-        return (centre - self.ship.position.as_vector()).normalized()
+        towards_centre = body.calculate_stellar_position(current_datetime) - self.ship.position.as_vector()
+        if towards_centre.length() == 0.0:  # at the very centre of a giant there is no down: the ship's own
+            return -self.ship.attitude.up
+        return towards_centre.normalized()
 
     def direction_to_star(self, body: Body, current_datetime: datetime) -> Vector3:
         if self.ship.is_bound:
@@ -280,7 +284,23 @@ class Navigation:
             return 0.0
         if self.ship.is_bound:
             return self.gravity()
-        return body.gravitational_parameter / self.distance_to_body_centre(body) ** 2
+        return body.pull_at(self.distance_to_body_centre(body))
+
+    def is_inside(self, body: Body) -> bool:
+        """Whether the ship is inside a giant, which a ship can enter and cross: there is no orbit there, as the pull is
+        not a point mass's (see `JovianWorld.pull_at`)."""
+        return isinstance(body, JovianWorld) and self.distance_to_body_centre(body) < body.radius
+
+    def ambient(self) -> Optional[Tuple[float, float]]:
+        """The pressure (Pa) and the temperature (K) of the gas around the ship, while it is in the atmosphere of the giant
+        it is fixed to (to where the pressure falls to JovianWorld.ATMOSPHERE_EDGE_PRESSURE); None elsewhere, as no
+        other atmosphere is modelled."""
+        body = gem.current_environment.fixed_body
+        if self.ship.is_bound or not isinstance(body, JovianWorld):
+            return None
+        relative_position, _ = self._relative_to_body(body)
+        pressure, temperature = body.ambient_at(relative_position)
+        return (pressure, temperature) if pressure >= JovianWorld.ATMOSPHERE_EDGE_PRESSURE else None
 
     def is_hovering(self) -> bool:
         """True while bound above the ground in a gravity: the flight assist is holding the ship up, which costs energy
@@ -348,8 +368,9 @@ class Navigation:
     def _update_position(self, delta_time: float) -> None:
         ship = self.ship
         if not ship.is_bound:
+            start = ship.position.as_vector()
             self._move_unbound(delta_time)
-            self._collide_with_portal_base()
+            self._collide_with_portal_base(start)
             return
         ship.position.add_vector(ship.velocity.as_vector() * delta_time)
 
@@ -439,7 +460,9 @@ class Navigation:
             start_position = ship.position.as_vector() - body.calculate_stellar_position(start)
             start_velocity = ship.velocity.as_vector() - body.calculate_stellar_velocity(start)
         if self.compensates_pull():
-            relative_position, relative_velocity = self._coast_compensated(mu, start_position, start_velocity, seconds)
+            relative_position, relative_velocity = self._coast_compensated(body, start_position, start_velocity, seconds)
+        elif isinstance(body, JovianWorld) and start_position.length() < body.radius:
+            relative_position, relative_velocity = self._fall_inside(body, start_position, start_velocity, seconds)
         else:
             relative_position, relative_velocity = kepler.propagate(mu, start_position, start_velocity, seconds)
         centre = body.calculate_stellar_position(now)
@@ -449,40 +472,98 @@ class Navigation:
         self.coasting = CoastState(body, now, relative_position, relative_velocity,
                                    ship.position.as_vector(), ship.velocity.as_vector())
 
-    def _coast_compensated(self, mu: float, position: Vector3, velocity: Vector3,
+    def _coast_compensated(self, body: Body, position: Vector3, velocity: Vector3,
                            seconds: float) -> Tuple[Vector3, Vector3]:
         """The position and velocity relative to the body after `seconds` while the engines compensate its pull: a
         straight line, at ENERGY_PER_SPEED per m/s of pull compensated, as hovering costs. What the engines cannot
         give at once (`combined_thrust`), near a world that pulls harder, still pulls."""
         distance = position.length()
-        pull = mu / distance ** 2
+        if distance == 0.0:
+            return position + velocity * seconds, velocity  # at the centre of a giant: no pull
+        pull = body.pull_at(distance)
         compensated = min(pull, self.combined_thrust())
         self.ship.energy -= Navigation.ENERGY_PER_SPEED * compensated * seconds
         acceleration = position * (-(pull - compensated) / distance)
         return (position + velocity * seconds + acceleration * (0.5 * seconds * seconds),
                 velocity + acceleration * seconds)
 
-    def _collide_with_portal_base(self) -> None:
+    @staticmethod
+    def _fall_inside(body: Body, position: Vector3, velocity: Vector3, seconds: float) -> Tuple[Vector3, Vector3]:
+        """The position and velocity relative to a giant after `seconds` of free fall inside it. The pull there is not
+        the point mass's of the Kepler orbit (`kepler.propagate`), which is singular at the centre, so the fall is
+        stepped, in steps of at most a hundredth of the planet's dynamical time (velocity Verlet)."""
+        steps = max(1, math.ceil(seconds / (0.01 * body.dynamical_time(0.0))))
+        dt = seconds / steps
+
+        def acceleration(at: Vector3) -> Vector3:
+            distance = at.length()
+            return at * (-body.pull_at(distance) / distance) if distance > 0.0 else Vector3(0.0, 0.0, 0.0)
+
+        accelerated = acceleration(position)
+        for _ in range(steps):
+            velocity = velocity + accelerated * (0.5 * dt)
+            position = position + velocity * dt
+            accelerated = acceleration(position)
+            velocity = velocity + accelerated * (0.5 * dt)
+        return position, velocity
+
+    def _collide_with_portal_base(self, start: Vector3) -> None:
         """Unbound, near the portal base: the ship's hull comes to rest against what is solid in it (see
-        PortalBaseSolid). The base is at rest in the stellar frame, so the ship's velocity is also relative to it."""
+        PortalBaseSolid). The motion of the frame, from `start` to the ship's position, is swept in steps of SWEEP_STEP,
+        and the hull stops at the first step where it touches a solid, so that no wall thinner than a frame's motion is
+        passed through. The base is at rest in the stellar frame, so the ship's velocity is also relative to it."""
         ship = self.ship
         if ship.is_docked:
             return
         environment = gem.current_environment
         base = environment.nearest_system.portal_base
         centre = base.calculate_stellar_position(environment.date_time)
-        offset = ship.position.as_vector() - centre
         half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)  # right, up, forward: the hull's halves
-        if offset.length() > base.solid.reach(half_sizes):
+        end = ship.position.as_vector()
+        path = end - start
+        samples = Navigation._swept_within_reach(start - centre, path, base.solid.reach(half_sizes))
+        if not samples:
             return
-        velocity = ship.velocity.as_vector()
         attitude = ship.attitude
+
+        def offset_at(fraction: float) -> Vector3:
+            return start + path * fraction - centre
+
+        def hull_touches(fraction: float) -> bool:
+            offset = offset_at(fraction)
+            return base.solid.touches((offset.x, offset.y, offset.z), attitude.right, attitude.up, attitude.forward,
+                                      half_sizes)
+
+        # the first step where the hull is in a solid, or else the end of the frame, is where it is resolved
+        fraction = next((step for step in samples if hull_touches(step)), 1.0)
+        offset = offset_at(fraction)
+        velocity = ship.velocity.as_vector()
         resolved = base.solid.resolve((offset.x, offset.y, offset.z), (velocity.x, velocity.y, velocity.z),
                                       attitude.right, attitude.up, attitude.forward, half_sizes)
         if resolved is not None:
             (x, y, z), velocity_after = resolved
             ship.position.set_vector((centre.x + x, centre.y + y, centre.z + z))
             ship.velocity.set_vector(velocity_after)
+
+    @staticmethod
+    def _swept_within_reach(start: Vector3, path: Vector3, reach: float) -> list[float]:
+        """The fractions of `path` (from 0 to 1, the end last) at which the hull is checked, every SWEEP_STEP metres,
+        for the part of the path inside `reach` of the base's centre (`start` is relative to it): the rest cannot touch."""
+        length_squared = path.dot(path)
+        if length_squared == 0.0:
+            return [1.0] if start.dot(start) <= reach * reach else []
+        b = 2.0 * start.dot(path)
+        c = start.dot(start) - reach * reach
+        discriminant = b * b - 4.0 * length_squared * c
+        if discriminant < 0.0:
+            return []
+        root = math.sqrt(discriminant)
+        first = max(0.0, (-b - root) / (2.0 * length_squared))
+        last = min(1.0, (-b + root) / (2.0 * length_squared))
+        if first > last:
+            return []
+        count = max(1, math.ceil((last - first) * math.sqrt(length_squared) / SWEEP_STEP))
+        return [first + (last - first) * index / count for index in range(count + 1)]
     # endregion
 
     # region Binding to a world
@@ -632,9 +713,24 @@ class Navigation:
         if self.ship.is_bound or body is None:
             return math.inf
         distance = self.distance_to_body_centre(body)
-        if self.compensates_pull() and body.gravitational_parameter / distance ** 2 <= self.combined_thrust():
+        if self.compensates_pull() and body.pull_at(distance) <= self.combined_thrust():
             return math.inf
-        return Navigation.COASTING_STEP_SHARE * math.tau * math.sqrt(distance ** 3 / body.gravitational_parameter)
+        return Navigation.COASTING_STEP_SHARE * body.dynamical_time(distance)
+
+    def portal_base_time_limit(self) -> float:
+        """Game seconds one frame may cover while the unbound ship is near the portal base, so that its hull moves at
+        most PORTAL_BASE_FRAME_TRAVEL in it (half the way to the base's reach, if it is further out): the sweep of the
+        frame (`_collide_with_portal_base`) then stays short. Infinite bound, docked or at rest."""
+        ship = self.ship
+        speed = ship.velocity.as_vector().length()
+        if ship.is_bound or ship.is_docked or speed == 0.0:
+            return math.inf
+        environment = gem.current_environment
+        base = environment.nearest_system.portal_base
+        half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)
+        margin = (ship.position.as_vector() - base.calculate_stellar_position(environment.date_time)).length() \
+            - base.solid.reach(half_sizes)
+        return max(Navigation.PORTAL_BASE_FRAME_TRAVEL, 0.5 * margin) / speed
 
     def target_time_limit(self) -> float:
         """Game seconds one frame may cover while unbound, so that the ship does not pass the target's fixed zone in a
