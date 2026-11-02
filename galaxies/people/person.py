@@ -407,7 +407,7 @@ class Person:
             f"PERSON UPDATE: {self.get_full_name()}"
             f"\n{description}"
             f"- Loyalty: {self.loyalty100}" # Not told to player.
-            f"- Sympathy: {self.sympathy100}" # Not told to player.
+            f"\n- Sympathy: {self.sympathy100}" # Not told to player.
             )
         return self
 

@@ -49,7 +49,8 @@ class OpenGLGui:
     where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha,
     transparent where nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
     sun, straight on the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See
-    graphics/star_gl.py. The SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed
+    graphics/star_gl.py. The giants (graphics/giant_gl.py) are under the sky too, after the sun: the sky is made
+    transparent over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed
     down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
     (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at
     about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame
@@ -106,11 +107,12 @@ class OpenGLGui:
         frame_watch.mark('sky fill')
         DistantStars.draw(self.world_surface, width, height, environment, ship)
         frame_watch.mark('distant stars')
-        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True)
+        erasers = GiantGl.sky_erasers(environment, ship, width, height)
+        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True, erasers=erasers)
         view = view_of(environment, ship, width, height)
         if view is not None:
             erase(self.world_surface, view, width, height)  # the sun shows through the sky here
-        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False)
+        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False, erasers=erasers)
         frame_watch.mark('other worlds')
         OrbitPath.draw(self.world_surface, width, height, environment, ship)
         frame_watch.mark('orbit path')
@@ -146,8 +148,8 @@ class OpenGLGui:
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
             StarGl.draw_star(width, height, view, seconds, player.time_scale)
-        self._draw_texture(self.world_surface, self.world_texture)
         GiantGl.draw(width, height, environment, ship, behind_star=False)
+        self._draw_texture(self.world_surface, self.world_texture)
         if view is not None:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)

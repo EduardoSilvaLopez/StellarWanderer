@@ -17,9 +17,10 @@ class LocationInfo:
 
     The name is the reference body and its system: the fixed body while the ship is fixed, else the star. Its name is
     the system's alone when it is the star. It is drawn large and centred in the top bar, above the windshield. The
-    readouts are the position of the ship (bound: altitude, longitude, latitude; unbound: x, y, z, each with its rate
-    Δ), the attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of the velocity vector over all
-    three axes, shown without a sign. The target is not shown here (see ProximityMeter)."""
+    readouts are the position of the ship (bound: altitude, longitude, latitude, each with its rate Δ; unbound: the
+    distance to the targeted body), the attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of
+    the velocity vector over all three axes, shown without a sign. The target's own state is not shown here (see
+    ProximityMeter)."""
 
     @staticmethod
     def _reference_body() -> Body:
@@ -50,30 +51,24 @@ class LocationInfo:
         """Draw the position and attitude readouts, one per line from (left, top), `line_spacing` pixels apart."""
         label_font = fonts.get(max(9, int(h * 0.017)))
 
+        import game_environment as gem
+        texts = []
         if ship.is_bound:
             axis_lines = [
                 ('Altitude', ship.position.y, ship.velocity.y),
                 ('Longitude', ship.position.x, ship.velocity.x),
                 ('Latitude', ship.position.z, ship.velocity.z),
             ]
-        else:
-            axis_lines = [
-                ('x', ship.position.x, ship.velocity.x),
-                ('y', ship.position.y, ship.velocity.y),
-                ('z', ship.position.z, ship.velocity.z),
-            ]
-
-        import game_environment as gem
-        body = LocationInfo._reference_body()  # pitch and roll: relative to the same body as the position box
-        date_time = gem.current_environment.date_time
-        speed = ship.velocity.as_vector().length()
-        texts = []
-        for label, position, velocity in axis_lines:
-            if ship.is_bound:
+            for label, position, velocity in axis_lines:
                 grouped = f'{int(position):,}'.replace(',', '.')  # thousands separated by dots: 12.345
                 texts.append(f'{label}: {grouped} Δ {int(velocity)}')
-            else:
-                texts.append(f'{label}: {format_compact_distance(position)}  Δ {int(velocity)}')
+        else:
+            distance = ship.navigation.distance_to_body_centre(gem.current_environment.targeted_body)
+            texts.append(f'Distance: {format_compact_distance(distance)}')
+
+        body = LocationInfo._reference_body()  # pitch and roll: relative to the reference body, which the name shows
+        date_time = gem.current_environment.date_time
+        speed = ship.velocity.as_vector().length()
         texts += [
             f'Yaw: {int(ship.attitude.yaw)}° Δ {int(ship.attitude.yaw_rate)}',
             f'Pitch: {int(ship.navigation.pitch_angle(body, date_time))}° Δ {int(ship.attitude.pitch_rate)}',

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
 
@@ -40,6 +41,7 @@ class GiantTraits:
     clouds: Tuple[Colour, ...]  # the colours of the cloud tops, before the variation (see world_surface.vary_colour)
     bands: Tuple[float, float]  # cloud bands from pole to pole: lowest, highest
     band_contrast: Tuple[float, float]  # lowest, highest: how much the bands darken and brighten the cloud tops
+    wind: Tuple[float, float]  # m/s: lowest, highest speed of the fastest zonal jet
 
 
 class GiantClass(Enum):
@@ -50,14 +52,14 @@ class GiantClass(Enum):
         bond_albedo=(0.30, 0.50), internal_temperature=(100.0, 0.15, 1000.0), one_bar_factor=1.33,
         helium=(0.136, 0.010), methane=(0.002, 0.006),
         clouds=((205, 175, 135), (196, 150, 108), (214, 196, 150), (176, 120, 92), (210, 205, 190)),
-        bands=(6.0, 12.0), band_contrast=(0.15, 0.35),
+        bands=(6.0, 12.0), band_contrast=(0.15, 0.35), wind=(60.0, 300.0),
     )
     ICE = GiantTraits(
         label='Ice giant', mass=(1.0e26, 0.3, 4.0e25, 2.5e26), spin_period=(59400.0, 0.15), inertia_factor=(0.22, 0.24),
         bond_albedo=(0.28, 0.36), internal_temperature=(100.0, 0.6, 60.0), one_bar_factor=1.25,
         helium=(0.152, 0.010), methane=(0.015, 0.040),
         clouds=((172, 216, 226), (92, 130, 205), (120, 190, 200), (110, 170, 170)),
-        bands=(3.0, 6.0), band_contrast=(0.05, 0.12),
+        bands=(3.0, 6.0), band_contrast=(0.05, 0.12), wind=(40.0, 250.0),
     )
 
     @property
@@ -83,7 +85,8 @@ class JovianWorld(World):
     (see World); it is wider than the rocky planets', and now and then it is extreme.
 
     Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
-    (`band_count`, `band_phase`, `band_contrast`), and a haze above them that thins with `scale_height`. A giant has no
+    (`band_count`, `band_phase`, `band_contrast`), and jets between the bands (`wind_speed`) that carry the clouds
+    eastward or westward by turns (`cloud_state`), lightning that flashes now and then (`lightning`), and a haze above them that thins with `scale_height`. A giant has no
     surface, so none of this is ground: the gas takes light out in proportion to its density (`optical_profile`), the
     cloud tops are where it gets opaque, and a ship that dives sees less light and less distance, until all is dark.
     Inside the planet the pull is that of the mass within (`pull_at`), which falls to zero at the centre, where the
@@ -151,6 +154,13 @@ class JovianWorld(World):
     # optical depth of a column is this times its mass (the pressure over the gravity). It is set so that the clouds
     # are opaque at about the 1 bar level, which is what makes the cloud tops the visible surface; it is tuned by eye.
     MASS_EXTINCTION = 5.0e-4  # m^2/kg
+    MAX_WIND_CELLS = 16  # the most wind cells a giant has (see cloud_state)
+    # Lightning, in the water clouds deep below the cloud tops. Jupiter flashes a few times a second over the whole
+    # planet, each flash a diffuse glow of some hundred kilometres that lasts a fraction of a second.
+    LIGHTNING_RATE = 0.5  # flashes per second over the whole planet
+    LIGHTNING_DURATION = 0.4  # s
+    LIGHTNING_PRESSURE = 5.0e5  # Pa: where the flashes are, the water clouds
+    LIGHTNING_RADIUS = (8.0e4, 4.0e5)  # m: lowest and highest radius of the glow at the cloud tops (log-uniform)
 
     def __init__(self, parent_orbit: Orbit, saved_alterations: Optional[dict] = None) -> None:
         super().__init__()
@@ -215,6 +225,10 @@ class JovianWorld(World):
         self.band_count = my_random.uniform(*traits.bands)
         self.band_phase = my_random.uniform(0.0, math.tau)
         self.band_contrast = my_random.uniform(*traits.band_contrast)
+        self.wind_speed: float = my_random.uniform(*traits.wind)
+        cloud_random = random.Random(seeds.derive(self.seed, 'clouds'))  # the clouds' own stream: no draw above moves
+        self.cloud_offset: Tuple[float, float, float] = (cloud_random.uniform(0.0, 60.0), cloud_random.uniform(0.0, 60.0),
+                                                         cloud_random.uniform(0.0, 60.0))  # where in the noise it is
         self._generate_atmosphere(star, traits)
 
         self._learn()
@@ -404,6 +418,56 @@ class JovianWorld(World):
             return 0.0
         cosine = relative_position.dot(direction) / distance
         return _smoothstep(-0.02, 0.15, cosine) * math.exp(-self.column_depth_at(relative_position) / max(cosine, 0.05))
+
+    def cloud_state(self, current_datetime: datetime) -> Tuple[float, int, List[float]]:
+        """How the clouds are turned at a date: the planet's spin angle (rad), the index of the first wind cell, and the
+        angle (rad, in [0, tau)) each cell's clouds have drifted eastward of the planet's turn. The cells are the
+        stretches of latitude around each boundary between two bands, where the jets are: a cell's jet blows east or
+        west by turns, at the speed of its latitude. Pure functions of the date, as the orbit is."""
+        half_width = self.band_count * math.pi / 2.0
+        first = math.floor((self.band_phase - half_width) / math.pi + 0.5)
+        last = math.floor((self.band_phase + half_width) / math.pi + 0.5)
+        seconds = self._elapsed_seconds(current_datetime)
+        angles: List[float] = []
+        for cell in range(first, min(last, first + JovianWorld.MAX_WIND_CELLS - 1) + 1):
+            sine = max(-0.97, min(0.97, (cell * math.pi - self.band_phase) / half_width))
+            speed = self.wind_speed * (-1.0) ** cell * (1.0 - 0.5 * sine * sine)
+            rate = speed / (self.equatorial_radius * math.sqrt(1.0 - sine * sine))
+            angles.append(math.tau * ((rate * seconds / math.tau) % 1.0))
+        return self._spin_angle_rad(current_datetime), first, angles
+
+    def lightning(self, current_datetime: datetime) -> List[Tuple[float, float, float, float]]:
+        """The flashes alight at a date, as (latitude rad, longitude rad on the planet, radius m of the glow at the
+        cloud tops, brightness 0 to 1). The flashes are drawn second by second from the planet's seed, so a date gives
+        the same flashes every time and nothing is stored. They favour the belts, away from the poles, and each is a
+        double pulse that dies away."""
+        seconds = self._elapsed_seconds(current_datetime)
+        found: List[Tuple[float, float, float, float]] = []
+        first = math.floor(seconds - JovianWorld.LIGHTNING_DURATION)
+        for slot in range(first, math.floor(seconds) + 1):
+            slot_random = random.Random(seeds.derive(self.seed, 'lightning', slot))
+            flashes, limit, product = 0, math.exp(-JovianWorld.LIGHTNING_RATE), slot_random.random()
+            while product > limit:  # a Poisson count
+                flashes += 1
+                product *= slot_random.random()
+            for _ in range(flashes):
+                start = slot + slot_random.random()
+                for _ in range(8):  # the latitude: more in the belts than in the zones
+                    sine = slot_random.uniform(-0.95, 0.95)
+                    pattern = self.band_count * math.pi / 2.0 * sine + self.band_phase
+                    if slot_random.random() < 0.25 + 0.75 * (0.5 - 0.5 * math.sin(pattern)):
+                        break
+                longitude = slot_random.uniform(-math.pi, math.pi)
+                low, high = JovianWorld.LIGHTNING_RADIUS
+                radius = low * (high / low) ** slot_random.random()
+                strength = slot_random.uniform(0.4, 1.0)
+                age = seconds - start
+                if not 0.0 <= age < JovianWorld.LIGHTNING_DURATION:
+                    continue
+                pulse = math.exp(-age / 0.06) + (0.7 * math.exp(-(age - 0.12) / 0.06) if age > 0.12 else 0.0)
+                if strength * pulse > 0.02:
+                    found.append((math.asin(sine), longitude, radius, min(1.0, strength * pulse)))
+        return found
 
     def column_depth_at(self, relative_position: Vector3) -> float:
         """The optical depth of the gas above a position relative to the centre (stellar frame), straight up."""

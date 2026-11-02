@@ -165,6 +165,25 @@ GIANT_LIMB_DARKENING = 0.6  # the cloud tops, seen along the horizon, have this 
 # The thin haze scatters light mostly forward (Henyey-Greenstein asymmetry, 0 = evenly): with the star behind a giant its
 # limb glows as a crescent. Tuned by eye; the thick clouds scatter evenly.
 GIANT_FORWARD_SCATTERING = 0.1
+# The clouds of a giant: noise stretched along the latitude circles, in octaves that stop where a pixel could not show them.
+GIANT_CLOUD_WAVELENGTH = 2.0e6  # m: the coarsest feature, across the bands
+GIANT_CLOUD_STRETCH = 6.0  # how much longer the features are along the bands than across them
+GIANT_CLOUD_OCTAVES = 10  # each with half the wavelength of the one before
+GIANT_CLOUD_GAIN = 0.65  # each octave has this share of the strength of the one before: the higher, the sharper
+GIANT_CLOUD_CONTRAST = 2.2  # the swing of the clouds' brightness, in band contrasts
+GIANT_CLOUD_WARP = 0.8  # how far the noise bends its own coordinates, in coarsest wavelengths: the turbulence
+# The clouds as a volume: the cloud tops rise and fall (relief, lit by the sun's slope) and the layers differ with depth.
+GIANT_CLOUD_RELIEF = 1.5  # how far the cloud tops rise and fall, in scale heights
+GIANT_CLOUD_RELIEF_OCTAVES = 5  # of the noise that shapes them: the coarse ones (fine ones would only add creases)
+GIANT_CLOUD_DENSITY = 0.7  # how much the clouds thicken and thin the gas (0 to 1)
+GIANT_CLOUD_LAYER_EDGE = 5.0  # the clouds reach this many scale heights above and below the 1 bar level (fading from half)
+GIANT_CLOUD_DEPTH_WAVELENGTH = 3.0e5  # m: the altitude over which the coarsest clouds change, so the layers differ
+GIANT_CLOUD_RELIEF_SHADING = 0.6  # how much the slope of the cloud tops lights and shadows them (0 to 1)
+# Lightning: the flashes of a giant (JovianWorld.lightning) light the gas round them from below.
+GIANT_LIGHTNING_GAIN = 2.0  # how bright a flash is, against the clouds lit by the star
+GIANT_LIGHTNING_COLOUR = (0.78, 0.86, 1.0)  # a little cold
+GIANT_LIGHTNING_MAX_TIME_SCALE = 1000  # from this time scale on there is no lightning (below it, even a one-frame flash is shown)
+GIANT_LIGHTNING_MAX_FLASHES = 8  # the most that are drawn at once
 ATMOSPHERE_TINT_MAX = 0.5  # share of the cloud colour, lit, added to the cockpit when the gas around the ship is thick and lit
 # The light inside the clouds is scattered many times, so it feels only a share of the optical depth that the direct sun
 # does: by the diffusion approximation, sqrt(3 (1 - w) (1 - w g)) of it, where w is the single-scattering albedo of the

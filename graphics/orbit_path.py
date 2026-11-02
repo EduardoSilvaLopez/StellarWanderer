@@ -1,6 +1,6 @@
 """The orbit of the targeted body, a thin line in the sky while unbound: where a moving target is going.
 
-A world or an asteroid of a mission has one; the star does not."""
+A world or an asteroid of a mission has one; the star does not. A giant hides the part of it that is behind."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -8,6 +8,7 @@ import numpy as np
 import pygame
 
 from .constants import NEAR_CLIP, ORBIT_PATH_COLOR
+from .giant_gl import GiantGl
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
@@ -20,6 +21,7 @@ class OrbitPath:
     is clipped to the view first: near the target, the pieces are far longer than the distance to them."""
 
     STEPS = 180
+    PARTS = 12  # each piece is tested for a giant in front of it in this many parts
     MARGIN = 1.05  # the clip is this much wider than the view, so lines reach its border
     shown = True  # toggled with O (main.py): hidden, the line is not drawn
 
@@ -64,9 +66,16 @@ class OrbitPath:
         if not inside.any():
             return
 
-        # The ends of the pieces that remain, on the screen.
+        # The pieces that remain, each cut in parts: the parts a giant is in front of are not drawn.
         a = (start + (end - start) * t_in[:, None])[inside]
         b = (start + (end - start) * t_out[:, None])[inside]
+        occluders = GiantGl.occluders(environment, ship)
+        if occluders:
+            shares = np.linspace(0.0, 1.0, OrbitPath.PARTS + 1)
+            cuts = a[:, None, :] + (b - a)[:, None, :] * shares[None, :, None]
+            parts_a, parts_b = cuts[:, :-1].reshape(-1, 3), cuts[:, 1:].reshape(-1, 3)
+            shown = ~GiantGl.hidden((parts_a + parts_b) / 2.0, occluders)
+            a, b = parts_a[shown], parts_b[shown]
         depth_a, depth_b = np.maximum(a[:, 2], NEAR_CLIP / 2), np.maximum(b[:, 2], NEAR_CLIP / 2)
         lines = np.rint(np.stack([
             w / 2 + focal * a[:, 0] / depth_a, horizon_y - focal * a[:, 1] / depth_a,

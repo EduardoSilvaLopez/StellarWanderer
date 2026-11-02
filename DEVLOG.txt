@@ -124,13 +124,15 @@ STARTED:
 
 * JOVIAN PLANETS II (current one) (100-200)
   * Improving the visuals:
-    * Clouds at kilometre scale.
-    * Moonshine.
     * Lightning flashes.
+    * Storms.
+    * Moonshine.
     * Aurora.
-  * Killin the player when diving :D . I mean... preassure, temperature.
+  * Killing the player when diving :D . I mean... preassure, temperature.
 
-Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 
+  The constants are all GIANT_CLOUD_* in constants.py, and none are tuned by eye in the game yet. The ones I'd expect you to want are GIANT_CLOUD_CONTRAST (strength), GIANT_CLOUD_STRETCH and GIANT_CLOUD_WARP (how turbulent).
+
+Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
 
 * (JOVIAN PLANETS II)
   * Mission to jovian planet itself (scoop, scan).

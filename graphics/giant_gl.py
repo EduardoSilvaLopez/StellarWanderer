@@ -2,13 +2,21 @@
 view ray through the atmosphere, from the outside or from the inside. What the gas does to light comes from the
 atmosphere model (`JovianWorld.optical_profile`): the extinction along the ray makes the cloud tops the visible surface
 where the gas gets opaque, and below them the sunlight is used up by the column above, so the deeper the ship the
-dimmer and the shorter its view, until all is dark. With the star behind a giant its thin haze, lit above the planet's
-shadow and scattering forward, rings the limb as a crescent. The giants behind the star are drawn before it, the others after the
-sky, so the sun covers the first and not the second (see OpenGLGui.draw)."""
+dimmer and the shorter its view, until all is dark. The clouds are noise stretched along the bands, in octaves down to what a pixel can show, which each wind cell of
+the planet (`JovianWorld.cloud_state`) carries east or west, so they drift and shear with the date. They are a volume:
+they raise and lower the cloud tops, thicken and thin the gas, brighten the slopes the sun faces and shadow the others,
+and the colour of the gas changes with the depth (`deep_colour`). Lightning (`JovianWorld.lightning`) lights the gas
+round each flash from below, a glow on the night side.
+With the star behind a giant its thin haze, lit above the planet's
+shadow and scattering forward, rings the limb as a crescent. The giants are drawn under the sky texture (the star
+covers those behind it, and they cover it otherwise): the sky is made transparent over each (`sky_erasers`), and the
+orbit line is cut where a giant is in front of it (`hidden`), so a moon or its orbit passes in front of or behind its
+planet as it should (see OpenGLGui.draw)."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
 import math
+from datetime import datetime
 import numpy as np
 from OpenGL import GL
 from galaxies.jovian_world import JovianWorld
@@ -16,7 +24,10 @@ from common.vector3 import Vector3
 from .constants import (
     WORLD_AMBIENT_LIGHT, WORLD_MIN_RADIUS_PX, MIN_VISIBLE_PX, GIANT_HAZE_TOP, GIANT_SUN_GAIN, GIANT_STEP_DEPTH,
     GIANT_STEP_HEIGHT, GIANT_PIXEL_BUDGET, GIANT_TARGET_SIZE, GIANT_LIMB_DARKENING, GIANT_LIGHT_PENETRATION,
-    GIANT_FORWARD_SCATTERING,
+    GIANT_FORWARD_SCATTERING, GIANT_CLOUD_WAVELENGTH, GIANT_CLOUD_STRETCH, GIANT_CLOUD_OCTAVES, GIANT_CLOUD_WARP,
+    GIANT_CLOUD_CONTRAST, GIANT_CLOUD_DEPTH_WAVELENGTH, GIANT_CLOUD_RELIEF, GIANT_CLOUD_RELIEF_OCTAVES, GIANT_CLOUD_DENSITY, GIANT_CLOUD_GAIN,
+    GIANT_CLOUD_LAYER_EDGE, GIANT_CLOUD_RELIEF_SHADING, GIANT_LIGHTNING_GAIN, GIANT_LIGHTNING_COLOUR,
+    GIANT_LIGHTNING_MAX_TIME_SCALE, GIANT_LIGHTNING_MAX_FLASHES, NEAR_CLIP,
 )
 from .lit_worlds import LitWorlds
 
@@ -44,6 +55,7 @@ FRAGMENT_SHADER = """
 const int NODES = 64;
 const int MAX_STEPS = 64;
 const float HALF_PI = 1.5707963;
+const float NOISE_SIZE = 64.0;
 
 // Where a fragment is on the screen: pixel_offset + (fragment x, flip - fragment y) * pixel_scale, in screen pixels
 // from the top left. The giant is drawn at the window's resolution, or, when it is big, into a smaller target.
@@ -75,8 +87,34 @@ uniform float step_height;  // the altitude, in scale heights, a step may cover
 uniform float band_count;
 uniform float band_phase;
 uniform float band_contrast;
+uniform sampler3D noise;       // random lattice values, see lattice_noise
+uniform vec3 prime_x;          // the planet's prime meridian, in the camera frame (it turns with the spin)
+uniform vec3 prime_y;          // 90 degrees east of it
+uniform vec3 cloud_offset;     // where in the noise this giant's clouds are
+uniform float cloud_wavelength;
+uniform float cloud_stretch;
+uniform float cloud_octaves;
+uniform float cloud_warp;
+uniform float cloud_gain;        // the strength of each octave against the one before
+uniform float cloud_contrast;
+uniform float cloud_depth;       // m: the altitude over which the coarsest clouds change
+uniform float cloud_relief;      // how far the cloud tops rise and fall, in scale heights
+uniform float relief_octaves;    // the octaves that shape the cloud tops: the coarse ones
+uniform int flash_count;           // the flashes that are alight, and where (camera frame), how wide (m), how bright
+uniform vec3 flash_direction[8];
+uniform vec2 flash_shape[8];
+uniform float flash_column;       // the optical depth above the flashes
+uniform vec3 flash_colour;
+uniform float cloud_density;     // how much the clouds thicken and thin the gas, 0 to 1
+uniform float layer_edge;        // scale heights from the 1 bar level where the clouds end
+uniform float relief_shading;
+uniform float cell_first;      // index of the first wind cell
+uniform float cell_count;
+uniform float cell_angle[16];  // how far each wind cell's clouds have drifted east of the planet's turn
 
 float inv_a2;
+float cloud_h;  // noise units per metre along the bands, and across them
+float cloud_v;
 float shape;   // 1 / polar^2 - 1 / equatorial^2
 float pole_light;  // the spin axis against the direction to the star
 
@@ -88,6 +126,80 @@ float haze_phase(float c) {
 
 float asinh_(float x) {
     return log(x + sqrt(x * x + 1.0));
+}
+
+
+// Random values on a lattice, three to a cell, in a 3D texture that repeats every NOISE_SIZE cells; the texture's own
+// linear filter does the interpolation, and the coordinates are eased so that the noise is smooth across cells.
+vec3 lattice_noise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = p - i;
+    f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    return texture3D(noise, (mod(i, NOISE_SIZE) + f + 0.5) / NOISE_SIZE).rgb;
+}
+
+float value_noise(vec3 p) {
+    return lattice_noise(p).r;
+}
+
+// The clouds at a place of the planet and an altitude, -1 to 1: its prime meridian coordinates a, b and sine of
+// latitude c, with the cell's clouds turned east by theta. The noise is stretched along the latitude circles, bent by itself, and made
+// of octaves, each half as wide as the one before, dropped where a pixel (`footprint`, metres) could not show them.
+float clouds(float a, float b, float c, float altitude, float theta, float footprint, float turbulence,
+             float octaves) {
+    float x = a * cos(theta) + b * sin(theta);
+    float y = b * cos(theta) - a * sin(theta);
+    vec3 p = vec3(x * cloud_h, y * cloud_h, c * cloud_v + altitude / cloud_depth) + cloud_offset;
+    vec3 bend = lattice_noise(p * 0.5 + vec3(3.1, 1.7, 5.3)) - 0.5;
+    p += cloud_warp * turbulence * bend;
+    float sum = 0.0;
+    float amplitude = 1.0;
+    float wavelength = cloud_wavelength;
+    for (int octave = 0; octave < 12; octave++) {
+        float seen = clamp(wavelength / (2.0 * footprint) - 1.0, 0.0, 1.0);
+        if (float(octave) >= octaves || seen <= 0.0) {
+            break;
+        }
+        sum += amplitude * seen * (value_noise(p) - 0.5);
+        p = p * 2.0 + vec3(5.2, 1.3, 3.7);
+        amplitude *= cloud_gain;
+        wavelength *= 0.5;
+    }
+    float scaled = sum * 1.3 * (1.0 - cloud_gain) / 0.5 * 2.0;
+    return scaled / (1.0 + abs(scaled));  // a soft limit: a hard one flattens the clouds into plateaus
+}
+
+// The clouds in the direction `up` from the centre, at an altitude: in the wind cell of the latitude, and in the next
+// one over where two cells meet, as the clouds shear there. `octaves` is how many to make of them.
+float cloud_field(vec3 up, float altitude, float footprint, float octaves) {
+    if (2.0 * footprint > cloud_wavelength) {
+        return 0.0;  // too far to show even the coarsest
+    }
+    float a = dot(up, prime_x);
+    float b = dot(up, prime_y);
+    float c = dot(up, pole);
+    float pattern = band_count * HALF_PI * c + band_phase;
+    float turbulence = 0.75 - 0.25 * sin(pattern);
+    float place = pattern / 3.1415927 + 0.5;
+    float cell = floor(place);
+    float within = place - cell;
+    float index = clamp(cell - cell_first, 0.0, cell_count - 1.0);
+    float value = clouds(a, b, c, altitude, cell_angle[int(index)], footprint, turbulence, octaves);
+    float other = within < 0.2 ? index - 1.0 : (within > 0.8 ? index + 1.0 : index);
+    if (other != index && other >= 0.0 && other < cell_count) {
+        float share = within < 0.2 ? 0.5 * (1.0 - within / 0.2) : 0.5 * (within - 0.8) / 0.2;
+        value = mix(value, clouds(a, b, c, altitude, cell_angle[int(other)], footprint, turbulence, octaves), share);
+    }
+    return value;
+}
+
+// The colour of the gas by the optical depth above it: pale ice haze on top, the cloud colour at the deck, brown
+// below it, and a cold grey-blue in the deep.
+vec3 deep_colour(vec3 base, float column) {
+    float s = log(max(column, 1e-4));
+    vec3 colour = mix(mix(base, vec3(0.95), 0.35), base, smoothstep(-2.5, -0.3, s));
+    colour = mix(colour, base * vec3(0.78, 0.6, 0.42), smoothstep(0.7, 2.3, s));
+    return mix(colour, vec3(0.2, 0.28, 0.42) * (0.3 + dot(base, vec3(0.33))), smoothstep(3.0, 4.2, s));
 }
 
 void gas_at(float altitude, out float extinction, out float column) {
@@ -119,6 +231,8 @@ vec4 trace(vec3 u) {
 
     float transmission = 1.0;
     vec3 gathered = vec3(0.0);
+    bool cloud_seen = false;
+    float cloud = 0.0;     // the fine clouds where the ray first meets the deck
     for (int march = 0; march < MAX_STEPS; march++) {
         if (t >= t_end || transmission < 0.004) {
             break;
@@ -127,8 +241,19 @@ vec4 trace(vec3 u) {
         float r = max(length(p), 1.0);
         float pp = dot(pole, p);
         float q = sqrt(max(dot(p, p) * inv_a2 + shape * pp * pp, 1e-12));
+        vec3 up = p / r;
+        float altitude = r * (1.0 - 1.0 / q);
+        float footprint = max(t, 1.0) / focal * pixel_scale.x / max(-dot(up, u), 0.15);
+        // The cloud tops rise and fall: in the layer of the clouds the gas is looked up at an altitude moved by the
+        // clouds there, as if the whole atmosphere were raised where they are high.
+        float relief = 0.0;
+        float layer = 1.0 - smoothstep(0.5 * layer_edge, layer_edge, abs(altitude) / scale_height);
+        if (layer > 0.0 && cloud_relief > 0.0) {
+            relief = cloud_field(up, altitude, footprint, relief_octaves);
+        }
         float extinction, column;
-        gas_at(r * (1.0 - 1.0 / q), extinction, column);
+        gas_at(altitude - relief * cloud_relief * scale_height * layer, extinction, column);
+        extinction *= max(1.0 + cloud_density * relief * layer, 0.2);  // puffs and gaps in the gas itself
 
         // The step: a share of an optical depth, and no more than a share of a scale height of altitude.
         float radial = max(abs(dot(p, u)) / r, 0.02);
@@ -140,7 +265,6 @@ vec4 trace(vec3 u) {
         // past the horizon. Above it the beam may graze the planet: it is cut by the planet itself, or, passing above
         // it, crosses the gas at its closest altitude (the length of a grazing path is that of Chapman's law), which
         // lights the haze beyond the terminator.
-        vec3 up = p / r;
         float mu = dot(up, light);
         float sun;
         if (q <= 1.0) {
@@ -165,14 +289,49 @@ vec4 trace(vec3 u) {
             sun = exp(-penetration * path);
         }
         float scattering = mix(1.0, haze_phase(dot(light, u)), exp(-column));
-        float bands = 1.0 + band_contrast * sin(band_count * HALF_PI * dot(pole, up) + band_phase);
+        float pattern = band_count * HALF_PI * dot(pole, up) + band_phase;
+        float bands = 1.0 + band_contrast * sin(pattern);
+        if (!cloud_seen && column > 0.15) {
+            // The fine clouds, looked up once per ray where it first meets the deck.
+            cloud_seen = true;
+            cloud = cloud_field(up, altitude, footprint, cloud_octaves);
+        }
+        // How the sun lights the slope of the cloud top: from the clouds here to those a short way towards the sun.
+        float relief_light = 1.0;
+        float slope_weight = smoothstep(0.05, 0.25, column) * (1.0 - smoothstep(1.5, 3.0, column));
+        vec3 toward = light - up * mu;
+        float toward_length = length(toward);
+        if (slope_weight > 0.0 && layer > 0.0 && cloud_relief > 0.0 && toward_length > 1e-3) {
+            float span = clamp(4.0 * footprint, 1000.0, 6.0e4);
+            vec3 up_sun = normalize(up + toward / toward_length * span / r);
+            float slope = cloud_relief * scale_height * layer
+                          * (cloud_field(up_sun, altitude, footprint, relief_octaves) - relief) / span;
+            float low = max(mu, 0.05);
+            float facing = clamp((low - slope * sqrt(max(1.0 - mu * mu, 0.0))) / low, 0.2, 2.0);
+            relief_light = mix(1.0, mix(1.0, facing, relief_shading), slope_weight);
+        }
+        float turbulence = 0.75 - 0.25 * sin(pattern);
+        float shade = max(1.0 + cloud_contrast * (cloud + relief) * 0.5 * turbulence * smoothstep(0.1, 1.0, column), 0.0);
         // A single scattering is brighter at a slant, which a cloud deck is not: darken it there, but only where the gas
         // is thick (the thin haze above the limb stays bright).
         float slant = 1.0 - clamp(-dot(up, u), 0.0, 1.0);
         float deck = 1.0 - limb_darkening * slant * (1.0 - exp(-column));
-        vec3 source = tint / 255.0 * bands * deck * (sun_gain * sun * scattering + ambient * exp(-2.0 * column));
+        // The flashes light the gas round them: through the column between them and the step.
+        vec3 flash_light = vec3(0.0);
+        for (int flash = 0; flash < 8; flash++) {
+            if (flash >= flash_count) {
+                break;
+            }
+            float chord = 2.0 * (1.0 - dot(up, flash_direction[flash])) * equatorial * equatorial;
+            float width = flash_shape[flash].x;
+            flash_light += flash_colour * flash_shape[flash].y * exp(-chord / (width * width))
+                           * exp(-penetration * abs(column - flash_column));
+        }
+        float lit = sun * relief_light;
+        vec3 source = deep_colour(tint / 255.0, column) * bands * shade * deck
+                      * (sun_gain * lit * scattering + ambient * exp(-2.0 * column));
 
-        gathered += transmission * absorbed * source;
+        gathered += transmission * absorbed * (source + flash_light);
         transmission *= 1.0 - absorbed;
         t += ds;
     }
@@ -181,6 +340,8 @@ vec4 trace(vec3 u) {
 
 void main() {
     inv_a2 = 1.0 / (equatorial * equatorial);
+    cloud_h = equatorial / (cloud_wavelength * cloud_stretch);
+    cloud_v = equatorial / cloud_wavelength;
     shape = 1.0 / (polar * polar) - inv_a2;
     pole_light = dot(pole, light);
     vec2 pixel = pixel_offset + vec2(gl_FragCoord.x, flip - gl_FragCoord.y) * pixel_scale;
@@ -218,6 +379,8 @@ class GiantGl:
     _program: int = 0  # compiled once, the first time a window exists
     _framebuffer: int = 0  # the smaller target of a big giant (see _target), made the first time it is needed
     _texture: int = 0
+    OUTLINE_POINTS = 64  # the points of a giant's outline on the screen (see sky_erasers)
+    _noise: int = 0  # the 3D texture of lattice noise the clouds are made of
     _tables: Dict[int, Tuple[np.ndarray, np.ndarray]] = {}  # by the giant's id: ln extinction, ln column depth
 
     @staticmethod
@@ -228,6 +391,167 @@ class GiantGl:
         if not GL.glGetShaderiv(shader, GL.GL_COMPILE_STATUS):
             raise RuntimeError(GL.glGetShaderInfoLog(shader).decode())
         return shader
+
+    @staticmethod
+    def _set_flashes(uniform: Callable[[str], int], world: JovianWorld, date_time: datetime, spin: float, ship: Ship,
+                     camera: Vector3, equatorial: float) -> None:
+        """The lightning that is alight and can be seen: the strongest GIANT_LIGHTNING_MAX_FLASHES of the flashes on
+        the side of the planet the camera sees (all of them from inside the gas). From a time scale of
+        GIANT_LIGHTNING_MAX_TIME_SCALE on there are none: a flash may be there for a single frame, and that is fine, but
+        a time scale like that turns the sky over too fast for them to mean anything."""
+        flashes = [] if ship.owner.time_scale >= GIANT_LIGHTNING_MAX_TIME_SCALE else world.lightning(date_time)
+        directions: List[float] = []
+        shapes: List[float] = []
+        inside = camera.length() < equatorial * 1.05
+        for latitude, longitude, radius, brightness in sorted(flashes, key=lambda flash: -flash[3]):
+            azimuth = spin + longitude
+            direction = ship.attitude.camera_components(Vector3(math.cos(latitude) * math.cos(azimuth),
+                                                               math.cos(latitude) * math.sin(azimuth),
+                                                               math.sin(latitude)))
+            if not inside and direction.dot(camera) < 0.95 * equatorial:
+                continue  # beyond the horizon
+            directions += [direction.x, direction.y, direction.z]
+            shapes += [radius, brightness * GIANT_LIGHTNING_GAIN]
+            if len(shapes) >= 2 * GIANT_LIGHTNING_MAX_FLASHES:
+                break
+        count = len(shapes) // 2
+        GL.glUniform1i(uniform("flash_count"), count)
+        if count:
+            altitude = world.altitude_of_pressure(world.LIGHTNING_PRESSURE, 0.0)
+            GL.glUniform3fv(uniform("flash_direction"), count, np.array(directions, dtype=np.float32))
+            GL.glUniform2fv(uniform("flash_shape"), count, np.array(shapes, dtype=np.float32))
+            GL.glUniform1f(uniform("flash_column"), world.optical_profile([altitude])[1][0])
+            GL.glUniform3f(uniform("flash_colour"), *GIANT_LIGHTNING_COLOUR)
+
+    @staticmethod
+    def _frame_of(world: JovianWorld, to_world: Vector3, ship: Ship) -> Tuple[np.ndarray, np.ndarray]:
+        """Where a giant's centre is from the ship, and its spin axis, in the camera frame (right, up, forward)."""
+        centre = ship.attitude.camera_components(to_world)
+        pole = ship.attitude.camera_components(Vector3(0.0, 0.0, 1.0))
+        return np.array([centre.x, centre.y, centre.z]), np.array([pole.x, pole.y, pole.z])
+
+    @staticmethod
+    def sky_erasers(environment: GameEnvironment, ship: Ship, width: int, height: int) -> List[Tuple[float, object]]:
+        """What each giant hides of the sky texture (the stars, the worlds and the orbit line farther than it): its
+        distance from the ship and the polygon of its outline on the screen, or None when the ship is inside it and
+        everything is hidden. The giants are drawn under the sky texture, so the sky is made transparent over them, after
+        what is farther than they are is drawn and before what is nearer."""
+        from graphics.instruments.common import view_geometry
+        _, horizon_y, focal = view_geometry(height)
+        erasers: List[Tuple[float, object]] = []
+        for world in environment.nearest_system.get_all_worlds():
+            if not isinstance(world, JovianWorld):
+                continue
+            to_world = ship.navigation.direction_to_body(world, environment.date_time)
+            distance = to_world.length()
+            if 2.0 * world.equatorial_radius * focal / max(distance, 1.0) < MIN_VISIBLE_PX:
+                continue
+            centre, pole = GiantGl._frame_of(world, to_world, ship)
+            stretch = world.equatorial_radius / world.polar_radius
+            scaled = centre + (stretch - 1.0) * centre.dot(pole) * pole  # the giant as a sphere of its equatorial radius
+            scaled_distance = float(np.linalg.norm(scaled))
+            if scaled_distance <= world.equatorial_radius:
+                erasers.append((distance, None))
+                continue
+            toward = scaled / scaled_distance
+            e1 = np.cross(toward, [0.0, 1.0, 0.0] if abs(toward[1]) < 0.9 else [1.0, 0.0, 0.0])
+            e1 /= np.linalg.norm(e1)
+            e2 = np.cross(toward, e1)
+            cosine = world.equatorial_radius / scaled_distance
+            sine = math.sqrt(1.0 - cosine * cosine)
+            outline = []
+            for step in range(GiantGl.OUTLINE_POINTS):
+                angle = math.tau * step / GiantGl.OUTLINE_POINTS
+                normal = -cosine * toward + sine * (math.cos(angle) * e1 + math.sin(angle) * e2)
+                point = scaled + world.equatorial_radius * normal
+                outline.append(point + (1.0 / stretch - 1.0) * point.dot(pole) * pole)
+            polygon = GiantGl._clip_to_view(outline)
+            screen = [(width / 2 + focal * x / z, horizon_y - focal * y / z) for x, y, z in polygon]
+            screen = GiantGl._clip_to_screen(screen, width, height)
+            if len(screen) >= 3:
+                erasers.append((distance, [(round(x), round(y)) for x, y in screen]))
+        return erasers
+
+    @staticmethod
+    def _clip_to_view(polygon: List[np.ndarray]) -> List[Tuple[float, float, float]]:
+        """The closed polygon (camera frame) cut by the near plane, so that it can be put on the screen."""
+        clipped: List[Tuple[float, float, float]] = []
+        for index, start in enumerate(polygon):
+            end = polygon[(index + 1) % len(polygon)]
+            start_in, end_in = start[2] >= NEAR_CLIP, end[2] >= NEAR_CLIP
+            if start_in:
+                clipped.append((start[0], start[1], start[2]))
+            if start_in != end_in:
+                share = (NEAR_CLIP - start[2]) / (end[2] - start[2])
+                cut = start + (end - start) * share
+                clipped.append((cut[0], cut[1], NEAR_CLIP))
+        return clipped
+
+    @staticmethod
+    def _clip_to_screen(polygon: List[Tuple[float, float]], width: int, height: int) -> List[Tuple[float, float]]:
+        """The polygon cut to the window (a little wider): drawn whole, an outline far off the screen would make the
+        software drawing run over millions of rows."""
+        margin = 8.0
+        edges = ((0, -margin, 1.0), (0, width + margin, -1.0), (1, -margin, 1.0), (1, height + margin, -1.0))
+        for axis, limit, sign in edges:
+            clipped: List[Tuple[float, float]] = []
+            for index, start in enumerate(polygon):
+                end = polygon[(index + 1) % len(polygon)]
+                start_in, end_in = sign * (start[axis] - limit) >= 0.0, sign * (end[axis] - limit) >= 0.0
+                if start_in:
+                    clipped.append(start)
+                if start_in != end_in:
+                    share = (limit - start[axis]) / (end[axis] - start[axis])
+                    clipped.append((start[0] + (end[0] - start[0]) * share, start[1] + (end[1] - start[1]) * share))
+            polygon = clipped
+            if not polygon:
+                break
+        return polygon
+
+    @staticmethod
+    def occluders(environment: GameEnvironment, ship: Ship) -> List[Tuple[np.ndarray, np.ndarray]]:
+        """The giants as what `hidden` needs: the centre in the camera frame and the matrix of the ellipsoid (a point x
+        from the centre is inside it when x . M . x < 1). A giant the ship is inside of is left out."""
+        found: List[Tuple[np.ndarray, np.ndarray]] = []
+        for world in environment.nearest_system.get_all_worlds():
+            if not isinstance(world, JovianWorld):
+                continue
+            centre, pole = GiantGl._frame_of(world, ship.navigation.direction_to_body(world, environment.date_time), ship)
+            matrix = np.eye(3) / world.equatorial_radius ** 2                 + (1.0 / world.polar_radius ** 2 - 1.0 / world.equatorial_radius ** 2) * np.outer(pole, pole)
+            if centre @ matrix @ centre > 1.0:
+                found.append((centre, matrix))
+        return found
+
+    @staticmethod
+    def hidden(points: np.ndarray, occluders: List[Tuple[np.ndarray, np.ndarray]]) -> np.ndarray:
+        """Which of the points (camera frame, from the ship) a giant is in front of: the straight line from the ship to
+        the point goes through the giant first."""
+        covered = np.zeros(len(points), dtype=bool)
+        for centre, matrix in occluders:
+            quadratic = np.einsum('ni,ij,nj->n', points, matrix, points)
+            linear = -points @ (matrix @ centre)
+            constant = centre @ matrix @ centre - 1.0
+            discriminant = linear * linear - quadratic * constant
+            with np.errstate(invalid='ignore', divide='ignore'):
+                entry = (-linear - np.sqrt(discriminant)) / quadratic
+            covered |= (discriminant > 0.0) & (entry > 0.0) & (entry < 1.0)
+        return covered
+
+    @staticmethod
+    def _noise_texture() -> int:
+        """The cloud noise: NOISE_SIZE cubed random lattice values (three channels), repeating, linearly filtered."""
+        if not GiantGl._noise:
+            size = 64
+            values = np.random.default_rng(20241102).integers(0, 256, (size, size, size, 3), dtype=np.uint8)
+            GiantGl._noise = int(GL.glGenTextures(1))
+            GL.glBindTexture(GL.GL_TEXTURE_3D, GiantGl._noise)
+            GL.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1)
+            GL.glTexImage3D(GL.GL_TEXTURE_3D, 0, GL.GL_RGB8, size, size, size, 0, GL.GL_RGB, GL.GL_UNSIGNED_BYTE, values)
+            for parameter in (GL.GL_TEXTURE_WRAP_S, GL.GL_TEXTURE_WRAP_T, GL.GL_TEXTURE_WRAP_R):
+                GL.glTexParameteri(GL.GL_TEXTURE_3D, parameter, GL.GL_REPEAT)
+            GL.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
+            GL.glTexParameteri(GL.GL_TEXTURE_3D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+        return GiantGl._noise
 
     @staticmethod
     def _get_program() -> int:
@@ -277,18 +601,20 @@ class GiantGl:
         view_h, horizon_y, focal = view_geometry(height)
         star_color = environment.targeted_body.stellar_system.star.color
         program = GiantGl._get_program()
+        GL.glViewport(0, 0, width, height)  # the shader's pixels are the window's: the Milky Way leaves the view's viewport
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE_MINUS_SRC_ALPHA)  # the shader's colour is premultiplied by its opacity
         GL.glUseProgram(program)
         for _, world, to_world in sorted(chosen, key=lambda item: item[0], reverse=True):
             GiantGl._draw_one(program, width, height, view_h, horizon_y, focal, world, to_world, to_star, star_color,
-                              ship)
+                              ship, environment.date_time)
         GL.glUseProgram(0)
         GL.glDisable(GL.GL_BLEND)
 
     @staticmethod
     def _draw_one(program: int, width: int, height: int, view_h: int, horizon_y: int, focal: float,
-                  world: JovianWorld, to_world: Vector3, to_star: Vector3, star_color: tuple, ship: Ship) -> None:
+                  world: JovianWorld, to_world: Vector3, to_star: Vector3, star_color: tuple, ship: Ship,
+                  date_time: datetime) -> None:
         """One giant: where the camera is in its frame, the rectangle of the screen that can show it, and the program
         run over it. Seen from inside the haze the whole view is the rectangle."""
         equatorial = world.equatorial_radius
@@ -349,6 +675,33 @@ class GiantGl:
         GL.glUniform1f(uniform("band_count"), world.band_count)
         GL.glUniform1f(uniform("band_phase"), world.band_phase)
         GL.glUniform1f(uniform("band_contrast"), world.band_contrast)
+
+        spin, first_cell, cell_angles = world.cloud_state(date_time)
+        prime_x = ship.attitude.camera_components(Vector3(math.cos(spin), math.sin(spin), 0.0))
+        prime_y = ship.attitude.camera_components(Vector3(-math.sin(spin), math.cos(spin), 0.0))
+        GL.glActiveTexture(GL.GL_TEXTURE0)
+        GL.glBindTexture(GL.GL_TEXTURE_3D, GiantGl._noise_texture())
+        GL.glUniform1i(uniform("noise"), 0)
+        GL.glUniform3f(uniform("prime_x"), prime_x.x, prime_x.y, prime_x.z)
+        GL.glUniform3f(uniform("prime_y"), prime_y.x, prime_y.y, prime_y.z)
+        GL.glUniform3f(uniform("cloud_offset"), *world.cloud_offset)
+        GL.glUniform1f(uniform("cloud_wavelength"), GIANT_CLOUD_WAVELENGTH)
+        GL.glUniform1f(uniform("cloud_stretch"), GIANT_CLOUD_STRETCH)
+        GL.glUniform1f(uniform("cloud_octaves"), GIANT_CLOUD_OCTAVES)
+        GL.glUniform1f(uniform("cloud_warp"), GIANT_CLOUD_WARP)
+        GL.glUniform1f(uniform("cloud_gain"), GIANT_CLOUD_GAIN)
+        GL.glUniform1f(uniform("cloud_contrast"), GIANT_CLOUD_CONTRAST * world.band_contrast)
+        GL.glUniform1f(uniform("cloud_depth"), GIANT_CLOUD_DEPTH_WAVELENGTH)
+        GL.glUniform1f(uniform("cloud_relief"), GIANT_CLOUD_RELIEF)
+        GL.glUniform1f(uniform("relief_octaves"), GIANT_CLOUD_RELIEF_OCTAVES)
+        GL.glUniform1f(uniform("cloud_density"), GIANT_CLOUD_DENSITY)
+        GL.glUniform1f(uniform("layer_edge"), GIANT_CLOUD_LAYER_EDGE)
+        GL.glUniform1f(uniform("relief_shading"), GIANT_CLOUD_RELIEF_SHADING)
+        GL.glUniform1f(uniform("cell_first"), first_cell)
+        GL.glUniform1f(uniform("cell_count"), len(cell_angles))
+        GL.glUniform1fv(uniform("cell_angle"), len(cell_angles), np.array(cell_angles, dtype=np.float32))
+
+        GiantGl._set_flashes(uniform, world, date_time, spin, ship, camera, equatorial)
 
         # The rectangle in normalised device coordinates: the screen's rows run down from the top.
         left, top = 2.0 * x0 / width - 1.0, 1.0 - 2.0 * y0 / height

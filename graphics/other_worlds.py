@@ -1,7 +1,7 @@
 """Planets and moons other than the targeted body, drawn in the sky lit by the star."""
 
 from __future__ import annotations
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
 import pygame
 from galaxies.jovian_world import JovianWorld
@@ -18,7 +18,7 @@ class OtherWorlds:
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship,
-             behind_star: bool) -> None:
+             behind_star: bool, erasers: Optional[List[Tuple[float, object]]] = None) -> None:
         """Draw the other worlds at their true direction, bound or unbound, farthest first, each lit
         by the star (see LitWorlds).
 
@@ -26,6 +26,9 @@ class OtherWorlds:
         (worlds farther than the star, which the star then covers), then with behind_star=False
         (worlds nearer than the star). Unbound, the targeted body is one of them, drawn in distance order like the
         others; bound, it is the opaque disc below the horizon (LitWorlds.draw_targeted), so it is left out here.
+
+        `erasers` are the giants (GiantGl.sky_erasers), which are drawn under the sky: each makes the sky transparent
+        over it when its turn comes in the distance order, so what is farther is hidden and what is nearer shows over it.
         """
         to_star = ship.navigation.direction_to_star(environment.targeted_body, environment.date_time)
         star_distance = to_star.length()
@@ -40,5 +43,13 @@ class OtherWorlds:
                 worlds.append((distance, world, to_world))
 
         star = environment.targeted_body.stellar_system.star
-        for _, world, to_world in sorted(worlds, key=lambda item: item[0], reverse=True):
-            LitWorlds.draw_world(surface, w, h, to_world, to_star, world, star.color, ship)
+        items: List[Tuple[float, object, Optional[Vector3]]] = [(distance, world, to_world)
+                                                                for distance, world, to_world in worlds]
+        items += [(distance, outline, None) for distance, outline in erasers or [] if (distance > star_distance) == behind_star]
+        for _, thing, to_world in sorted(items, key=lambda item: item[0], reverse=True):
+            if to_world is not None:
+                LitWorlds.draw_world(surface, w, h, to_world, to_star, thing, star.color, ship)
+            elif thing is None:
+                surface.fill((0, 0, 0, 0))  # inside a giant: nothing farther shows
+            else:
+                pygame.draw.polygon(surface, (0, 0, 0, 0), thing)
