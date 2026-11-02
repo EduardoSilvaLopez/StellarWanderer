@@ -14,7 +14,7 @@ from .distant_stars import DistantStars
 from .local_star import view_of, erase, sun_visibility
 from .star_gl import StarGl
 from .star_surface import visor_strength
-from .starlight import Starlight, HeatVignette, FrostVignette
+from .starlight import Starlight, AtmosphereLight, HeatVignette, FrostVignette
 from .debug_fps import DebugFps
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
@@ -129,6 +129,7 @@ class OpenGLGui:
         Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
         frame_watch.mark('cockpit')
         Starlight.tint_cockpit(self.overlay_surface, environment, ship)
+        AtmosphereLight.tint_cockpit(self.overlay_surface, environment, ship)
         PortalGl.tint_cockpit(self.overlay_surface, environment, ship)
         frame_watch.mark('cockpit tint')
         HeatVignette.draw(self.overlay_surface, width, height, ship)

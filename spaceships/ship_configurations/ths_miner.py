@@ -10,6 +10,7 @@ class ThsMiner(Ship):
     NAME = 'THS miner'
     ENERGY_MAX = 1500e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 0.8  # The maximum is 1. Better ships will decrease this.
+    PRESSURE_MAX = 2.5e5 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 20.0  # meters per second squared
     UP_DOWN_ACC = 20.0  # m/s^2
     RIGHT_LEFT_ACC = 7  # m/s^2

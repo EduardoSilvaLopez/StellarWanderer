@@ -2,7 +2,8 @@
 view ray through the atmosphere, from the outside or from the inside. What the gas does to light comes from the
 atmosphere model (`JovianWorld.optical_profile`): the extinction along the ray makes the cloud tops the visible surface
 where the gas gets opaque, and below them the sunlight is used up by the column above, so the deeper the ship the
-dimmer and the shorter its view, until all is dark. The giants behind the star are drawn before it, the others after the
+dimmer and the shorter its view, until all is dark. With the star behind a giant its thin haze, lit above the planet's
+shadow and scattering forward, rings the limb as a crescent. The giants behind the star are drawn before it, the others after the
 sky, so the sun covers the first and not the second (see OpenGLGui.draw)."""
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from common.vector3 import Vector3
 from .constants import (
     WORLD_AMBIENT_LIGHT, WORLD_MIN_RADIUS_PX, MIN_VISIBLE_PX, GIANT_HAZE_TOP, GIANT_SUN_GAIN, GIANT_STEP_DEPTH,
     GIANT_STEP_HEIGHT, GIANT_PIXEL_BUDGET, GIANT_TARGET_SIZE, GIANT_LIMB_DARKENING, GIANT_LIGHT_PENETRATION,
+    GIANT_FORWARD_SCATTERING,
 )
 from .lit_worlds import LitWorlds
 
@@ -67,6 +69,7 @@ uniform float ambient;
 uniform float sun_gain;
 uniform float limb_darkening;  // how much darker the cloud tops are where they are seen at a slant
 uniform float penetration;     // how much of its optical depth the diffuse light feels (it scatters on, deep)
+uniform float forward;         // how much the thin haze scatters forward (Henyey-Greenstein asymmetry)
 uniform float step_depth;   // the optical depth a step may cover
 uniform float step_height;  // the altitude, in scale heights, a step may cover
 uniform float band_count;
@@ -75,6 +78,13 @@ uniform float band_contrast;
 
 float inv_a2;
 float shape;   // 1 / polar^2 - 1 / equatorial^2
+float pole_light;  // the spin axis against the direction to the star
+
+// How much more light the haze scatters through an angle (cosine c) than through a right angle.
+float haze_phase(float c) {
+    float g2 = forward * forward;
+    return pow(1.0 + g2, 1.5) / pow(1.0 + g2 - 2.0 * forward * c, 1.5);
+}
 
 float asinh_(float x) {
     return log(x + sqrt(x * x + 1.0));
@@ -126,16 +136,41 @@ vec4 trace(vec3 u) {
         ds = min(max(ds, 0.01 * scale_height), t_end - t);
         float absorbed = 1.0 - exp(-extinction * ds);
 
-        // The sunlight at the step: through the column above it along the slant, and none below the horizon.
+        // The sunlight at the step: through the column above it along the slant. Below the 1 bar level none reaches
+        // past the horizon. Above it the beam may graze the planet: it is cut by the planet itself, or, passing above
+        // it, crosses the gas at its closest altitude (the length of a grazing path is that of Chapman's law), which
+        // lights the haze beyond the terminator.
         vec3 up = p / r;
         float mu = dot(up, light);
-        float sun = smoothstep(-0.02, 0.15, mu) * exp(-penetration * column / max(mu, 0.05));
+        float sun;
+        if (q <= 1.0) {
+            sun = smoothstep(-0.02, 0.15, mu) * exp(-penetration * column / max(mu, 0.05));
+        } else {
+            float along = 1.0 / (max(mu, 0.0) + 1.0 / sqrt(0.5 * 3.1415927 * r / scale_height));
+            float path = column * along;
+            float al = inv_a2 + shape * pole_light * pole_light;
+            float bl = dot(p, light) * inv_a2 + shape * pp * pole_light;
+            float closest = -bl / al;
+            if (mu < 0.1 && closest > 0.0) {
+                float q_closest = q * q - bl * bl / al;
+                if (q_closest <= 1.0) {
+                    path = 1e4;
+                } else {
+                    float r_closest = max(length(p + light * closest), 1.0);
+                    float grazing_extinction, grazing_column;
+                    gas_at(r_closest * (1.0 - inversesqrt(q_closest)), grazing_extinction, grazing_column);
+                    path = grazing_column * sqrt(2.0 * 3.1415927 * r_closest / scale_height);
+                }
+            }
+            sun = exp(-penetration * path);
+        }
+        float scattering = mix(1.0, haze_phase(dot(light, u)), exp(-column));
         float bands = 1.0 + band_contrast * sin(band_count * HALF_PI * dot(pole, up) + band_phase);
         // A single scattering is brighter at a slant, which a cloud deck is not: darken it there, but only where the gas
         // is thick (the thin haze above the limb stays bright).
         float slant = 1.0 - clamp(-dot(up, u), 0.0, 1.0);
         float deck = 1.0 - limb_darkening * slant * (1.0 - exp(-column));
-        vec3 source = tint / 255.0 * bands * deck * (sun_gain * sun + ambient * exp(-2.0 * column));
+        vec3 source = tint / 255.0 * bands * deck * (sun_gain * sun * scattering + ambient * exp(-2.0 * column));
 
         gathered += transmission * absorbed * source;
         transmission *= 1.0 - absorbed;
@@ -147,6 +182,7 @@ vec4 trace(vec3 u) {
 void main() {
     inv_a2 = 1.0 / (equatorial * equatorial);
     shape = 1.0 / (polar * polar) - inv_a2;
+    pole_light = dot(pole, light);
     vec2 pixel = pixel_offset + vec2(gl_FragCoord.x, flip - gl_FragCoord.y) * pixel_scale;
     vec3 u = normalize(vec3((pixel.x - 0.5 * screen.x) / focal, (horizon - pixel.y) / focal, 1.0));
 
@@ -307,6 +343,7 @@ class GiantGl:
         GL.glUniform1f(uniform("sun_gain"), GIANT_SUN_GAIN)
         GL.glUniform1f(uniform("limb_darkening"), GIANT_LIMB_DARKENING)
         GL.glUniform1f(uniform("penetration"), GIANT_LIGHT_PENETRATION)
+        GL.glUniform1f(uniform("forward"), GIANT_FORWARD_SCATTERING)
         GL.glUniform1f(uniform("step_depth"), GIANT_STEP_DEPTH)
         GL.glUniform1f(uniform("step_height"), GIANT_STEP_HEIGHT)
         GL.glUniform1f(uniform("band_count"), world.band_count)

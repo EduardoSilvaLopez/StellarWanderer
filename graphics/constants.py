@@ -162,9 +162,19 @@ WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_c
 GIANT_HAZE_TOP = 10.0
 GIANT_SUN_GAIN = 1.5
 GIANT_LIMB_DARKENING = 0.6  # the cloud tops, seen along the horizon, have this much less light (0 to 1)
-# The light inside the clouds is scattered many times, so it feels only this share of the optical depth that the
-# direct sun does: it reaches deeper, and fades to dark over a few bars instead of one (tuned by eye).
-GIANT_LIGHT_PENETRATION = 0.15
+# The thin haze scatters light mostly forward (Henyey-Greenstein asymmetry, 0 = evenly): with the star behind a giant its
+# limb glows as a crescent. Tuned by eye; the thick clouds scatter evenly.
+GIANT_FORWARD_SCATTERING = 0.1
+ATMOSPHERE_TINT_MAX = 0.5  # share of the cloud colour, lit, added to the cockpit when the gas around the ship is thick and lit
+# The light inside the clouds is scattered many times, so it feels only a share of the optical depth that the direct sun
+# does: by the diffusion approximation, sqrt(3 (1 - w) (1 - w g)) of it, where w is the single-scattering albedo of the
+# cloud and g the asymmetry of its scatterers. The Galileo probe found the deeper clouds of Jupiter to scatter sunlight
+# without absorbing much (Sromovsky et al. 1998), so w is close to 1; the two values are estimates, not measurements
+# (ice particles of a micron have g near 0.85). The probe's radiometer measured from 0.44 to 14 bars.
+GIANT_SINGLE_SCATTERING_ALBEDO = 0.99
+GIANT_ASYMMETRY = 0.85
+GIANT_LIGHT_PENETRATION = math.sqrt(3.0 * (1.0 - GIANT_SINGLE_SCATTERING_ALBEDO)
+                                    * (1.0 - GIANT_SINGLE_SCATTERING_ALBEDO * GIANT_ASYMMETRY))
 # How coarse the march through the gas is: the most optical depth, and the most altitude (in scale heights), of a step.
 GIANT_STEP_DEPTH = 0.6
 GIANT_STEP_HEIGHT = 1.0

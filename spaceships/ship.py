@@ -73,6 +73,7 @@ class Ship(Updatable):
     # Set by each configuration, never here.
     ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
+    PRESSURE_MAX: ClassVar[float]  # Pa, the outside pressure the hull is built for: the limit of the pressure bar
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
     UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included (Navigation._apply_gravity)
     RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared

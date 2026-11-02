@@ -1,9 +1,12 @@
-"""Starlight and heat on the cockpit, drawn on the overlay after the cockpit.
+"""Starlight, atmosphere and heat on the cockpit, drawn on the overlay after the cockpit.
 
 Starlight: the opaque cockpit pixels (hull, struts, console) get the star's colour added, by
 STARLIGHT_TINT_MAX * min(1, (default_death_radius / distance) ** 2): full at the star's death radius and nearer, about a
 hundredth of it at the heat radius (about ten times the death radius), nothing to see far away. Only the colour is
-added, so the glass panes (transparent) stay so.
+added, so the glass panes (transparent) stay so. Inside the gas of a giant the star's light is dimmed by the gas above.
+
+Atmosphere: inside the gas of a giant the cockpit also gets the colour of the clouds (`AtmosphereLight`), as much as
+there is gas above and sunlight left in it.
 
 Heat: a red vignette on the edges of the whole view, its opacity the hot side of the temperature's stress (see
 `resource_bars.temperature_stress`): none at the ideal temperature or colder, full at Ship.TEMP_MAX.
@@ -14,29 +17,54 @@ Both follow `ship.temperature`, so they change when the temperature does.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
+import math
 import numpy as np
 import pygame
 from .constants import (
     STARLIGHT_TINT_MAX, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER,
-    FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER,
+    FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER, ATMOSPHERE_TINT_MAX,
+    GIANT_LIGHT_PENETRATION,
 )
 from .instruments.resource_bars import TEMPERATURE_IDEAL, temperature_stress
+from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
+def sunlight_in_gas(environment: GameEnvironment, ship: Ship) -> Optional[Tuple[float, float]]:
+    """In the atmosphere of a giant: the share of the star's light that reaches the ship (as the shader lights the gas
+    around it, the diffuse light feeling only GIANT_LIGHT_PENETRATION of the column above), and how much gas is above
+    it (0 to 1, from nothing to opaque). None anywhere else."""
+    if ship.navigation.ambient() is None:
+        return None
+    giant = environment.fixed_body
+    date_time = environment.date_time
+    relative_position = ship.position.as_vector() - giant.calculate_stellar_position(date_time)
+    distance = relative_position.length()
+    if distance <= 0.0:
+        return 0.0, 1.0
+    to_star = ship.navigation.direction_to_star(giant, date_time)
+    cosine = relative_position.dot(to_star) / (distance * to_star.length())
+    column = giant.column_depth_at(relative_position)
+    horizon = min(1.0, max(0.0, (cosine + 0.02) / 0.17))
+    sun = horizon * horizon * (3.0 - 2.0 * horizon) * math.exp(-GIANT_LIGHT_PENETRATION * column / max(cosine, 0.05))
+    return sun, 1.0 - math.exp(-column)
+
+
 class Starlight:
-    """The star's colour on the cockpit, stronger as the ship gets near it."""
+    """The star's colour on the cockpit, stronger as the ship gets near it, and weaker under the gas of a giant."""
 
     @staticmethod
     def strength(environment: GameEnvironment, ship: Ship) -> float:
         """The share of the star's colour added to the cockpit (0 to STARLIGHT_TINT_MAX)."""
         star = environment.nearest_system.star
         distance = ship.navigation.stellar_position(environment.date_time).length()  # the star is at the origin
-        return STARLIGHT_TINT_MAX * min(1.0, (star.default_death_radius / max(distance, 1.0)) ** 2)
+        strength = STARLIGHT_TINT_MAX * min(1.0, (star.default_death_radius / max(distance, 1.0)) ** 2)
+        gas = sunlight_in_gas(environment, ship)
+        return strength if gas is None else strength * gas[0]
 
     @staticmethod
     def tint_cockpit(overlay: pygame.Surface, environment: GameEnvironment, ship: Ship) -> None:
@@ -44,6 +72,24 @@ class Starlight:
         added = tuple(int(c * strength) for c in environment.nearest_system.star.color)
         if any(added):
             overlay.fill(added, special_flags=pygame.BLEND_RGB_ADD)  # the colour only: transparent pixels stay so
+
+
+class AtmosphereLight:
+    """The colour of the clouds on the cockpit, in the atmosphere of a giant: the light the gas around the ship scatters,
+    the colour the giant is drawn in. It grows with the gas above and fades as the sunlight is used up, so it is strongest
+    in the upper layers and gone in the dark below."""
+
+    @staticmethod
+    def tint_cockpit(overlay: pygame.Surface, environment: GameEnvironment, ship: Ship) -> None:
+        gas = sunlight_in_gas(environment, ship)
+        if gas is None:
+            return
+        giant = environment.fixed_body
+        colour = LitWorlds.light_tint(environment.nearest_system.star.color, giant.surface_colour)
+        share = ATMOSPHERE_TINT_MAX * gas[0] * gas[1]
+        added = tuple(int(c * share) for c in colour)
+        if any(added):
+            overlay.fill(added, special_flags=pygame.BLEND_RGB_ADD)
 
 
 _masks: Dict[Tuple, pygame.Surface] = {}

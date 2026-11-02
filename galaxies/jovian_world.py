@@ -403,9 +403,12 @@ class JovianWorld(World):
         if distance <= 0.0:
             return 0.0
         cosine = relative_position.dot(direction) / distance
+        return _smoothstep(-0.02, 0.15, cosine) * math.exp(-self.column_depth_at(relative_position) / max(cosine, 0.05))
+
+    def column_depth_at(self, relative_position: Vector3) -> float:
+        """The optical depth of the gas above a position relative to the centre (stellar frame), straight up."""
         pressure, _ = self.ambient_at(relative_position)
-        column_depth = JovianWorld.MASS_EXTINCTION * pressure / max(self.pull_at(distance), 1e-3)
-        return _smoothstep(-0.02, 0.15, cosine) * math.exp(-column_depth / max(cosine, 0.05))
+        return JovianWorld.MASS_EXTINCTION * pressure / max(self.pull_at(relative_position.length()), 1e-3)
 
     def pull_at(self, distance: float) -> float:
         """The pull at a distance from the centre: a point mass's outside the planet, and inside that of the mass within

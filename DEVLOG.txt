@@ -116,20 +116,21 @@ GRAVITY OF TREASON I (Rep 50-100)
 
   * Resolve the "mirrored planet" when diving.
   * Create the atmosphere when diving.
+  * Extra: Portraits without uniform: Black, Latino, White
 
 STARTED:
 
   * I am trying to reach the path of the traitor. Very hard to reach.
 
 * JOVIAN PLANETS II (current one) (100-200)
-  * Killin the player when diving :D . I mean... preassure.
+  * Improving the visuals:
+    * Clouds at kilometre scale.
+    * Moonshine.
+    * Lightning flashes.
+    * Aurora.
+  * Killin the player when diving :D . I mean... preassure, temperature.
 
-* The night side of a giant is still black, with no faint limb. It hides stars but is hard to see against space. Do you want a faint planetshine edge there?
-* The cockpit tint does not follow the atmosphere yet.
-* The deep pressure and temperature numbers are the model's extrapolation: below 0.3 radii it freezes at about 2.4×10¹⁴ Pa and 1.2×10⁵ K at the centre. They are not a physical claim.
-* Clouds at kilometre scale and storms are still pending.
-
-Extra time: 166h15' + 7:45 - 
+Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 
 
 * (JOVIAN PLANETS II)
   * Mission to jovian planet itself (scoop, scan).
@@ -141,7 +142,6 @@ Extra time: 166h15' + 7:45 -
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
   * Extra: Binding slowly.
-  * Extra: Portraits without uniform: Black, Latino, White
 
 > BACKLOG
 

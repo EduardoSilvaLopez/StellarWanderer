@@ -11,6 +11,7 @@ class ShabbyThsMiner(Ship):
     NAME = 'Shabby THS miner'
     ENERGY_MAX = 400e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 1  # The maximum. Better ships will decrease this.
+    PRESSURE_MAX = 1.5e5 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 15.0  # meters per second squared
     UP_DOWN_ACC = 15.0  # m/s^2
     RIGHT_LEFT_ACC = 5  # m/s^2

@@ -10,6 +10,7 @@ class ThsVersatile(Ship):
     NAME = 'THS polyvalent'
     ENERGY_MAX = 2000e9  # Wh
     PRECARIOUSNESS = 0.7  # The maximum is 1. Better ships will decrease this.
+    PRESSURE_MAX = 1e6 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 30.0  # meters per second squared
     UP_DOWN_ACC = 30.0  # m/s^2
     RIGHT_LEFT_ACC = 15  # m/s^2

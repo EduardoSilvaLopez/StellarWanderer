@@ -1,7 +1,9 @@
 """Resource bars: the ship's resources, one row each, top to bottom: credits (a value), maintenance and energy (bars),
 temperature (a bar from 25 to its value, on its scale) and gravity (a bar of the pull where the ship is against the combined thrust, green when low, labelled
-with the pull in m/s^2), then, in the atmosphere of a giant only, the pressure (Pa) and the temperature (K) of the gas
-outside, as plain values. Each row has its label on the left, and the rows line up with each other. The first row's
+with the pull in m/s^2), then, in the atmosphere of a giant only, the pressure (a bar of the outside pressure above the
+atmosphere inside the hull, up to the ship's PRESSURE_MAX, as gravity is drawn, labelled with the whole pressure in
+atmospheres) and the temperature of the gas outside (K, a plain
+value). Each row has its label on the left, and the rows line up with each other. The first row's
 label sits on the top of the group's rect, where the scanner and cargo titles are."""
 
 from __future__ import annotations
@@ -22,7 +24,8 @@ TEMPERATURE_MIN_WIDTH = 3  # pixels: the bar's width when the temperature is the
 TEMPERATURE_IDEAL = 25  # degrees: the green line. The colour moves away from it towards either extreme of the scale.
 CREDIT_SYMBOL = 'Ȼ'
 ROW_LABELS = ('Credits', 'Maintenance', 'Energy', 'Temperature', 'Gravity', 'Pressure', 'Outside')
-ATMOSPHERE_ROWS = ('Pressure', 'Outside')  # values (Pa, K) of the gas around the ship, shown only while it is in one
+ATMOSPHERE_ROWS = ('Pressure', 'Outside')  # the gas around the ship (a bar, and a value in K), shown only while in one
+ATMOSPHERE = 1.0e5  # Pa: one atmosphere as the ship configurations count it (PRESSURE_MAX): the air inside the hull
 
 
 Stops = Tuple[Tuple[float, Tuple[int, int, int]], ...]
@@ -56,6 +59,16 @@ def temperature_stress(ship: Ship) -> float:
     return max(0.0, min(1.0, stress))
 
 
+def format_atmospheres(pressure: float) -> str:
+    """A pressure (Pa) in atmospheres, in the digits that read well: 0.52 atm, 12.3 atm, 4,500 atm, 1.2e+09 atm."""
+    atmospheres = pressure / ATMOSPHERE
+    if atmospheres < 0.01 or atmospheres >= 1e6:
+        return f'{atmospheres:.1e} atm'
+    if atmospheres >= 1000:
+        return f'{atmospheres:,.0f} atm'
+    return f'{atmospheres:.1f} atm' if atmospheres >= 10 else f'{atmospheres:.2f} atm'
+
+
 def credits_shown() -> bool:
     """Credits are hidden in Those-Who-Share space, where they are illegal (the cargo list then shows them, in red, as
     contraband). The row keeps its place, so the other rows do not move."""
@@ -75,6 +88,14 @@ def _draw_bar(surface: pygame.Surface, track: pygame.Rect, fraction: float, warn
     if warning is not None:
         x = inner.left + int(inner.width * warning)
         pygame.draw.line(surface, WARNING_COLOUR, (x, track.top - 3), (x, track.bottom + 2), 2)
+
+
+def _draw_over_bar(surface: pygame.Surface, font: Any, text: str, origin: Tuple[int, int]) -> None:
+    """A value over a bar, from `origin` (its left middle), with a dark shadow under it so it reads over the filled part."""
+    shadow = font.render(text, True, (0, 0, 0))
+    surface.blit(shadow, shadow.get_rect(midleft=(origin[0] + 1, origin[1] + 1)))
+    value = font.render(text, True, ACCENT)
+    surface.blit(value, value.get_rect(midleft=origin))
 
 
 def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship) -> None:
@@ -135,20 +156,18 @@ class ResourceBars:
                 _draw_bar(surface, track, ship.energy / ship.energy_max)
             elif name == 'Temperature':
                 _draw_temperature(surface, track, ship)
-            elif name in ATMOSPHERE_ROWS:
-                pressure, temperature = ambient
-                text = f'{pressure:.2e} Pa' if name == 'Pressure' else f'{temperature:.0f} K'
-                value = label_font.render(text, True, ACCENT)
+            elif name == 'Pressure':
+                # the outside pressure against the one the hull is built for, counted from the atmosphere inside it
+                # (the hull feels only the excess): green when low, red at the limit; its value in atmospheres over it
+                fraction = max(0.0, min(1.0, (ambient[0] - ATMOSPHERE) / max(ship.PRESSURE_MAX - ATMOSPHERE, 1.0)))
+                _draw_bar(surface, track, fraction, colour=level_colour(fraction, GRAVITY_GRADIENT))
+                _draw_over_bar(surface, label_font, format_atmospheres(ambient[0]), (bar_left + pad // 2, centre_y))
+            elif name == 'Outside':
+                value = label_font.render(f'{ambient[1]:.0f} K', True, ACCENT)
                 surface.blit(value, value.get_rect(midleft=(bar_left, centre_y)))
             else:
                 # the pull against the most the engines give: green when low, red at the limit; its value in m/s^2 over it
                 pull = ship.navigation.pull()
                 fraction = min(1.0, pull / ship.navigation.combined_thrust())
                 _draw_bar(surface, track, fraction, colour=level_colour(fraction, GRAVITY_GRADIENT))
-                # a dark shadow under the value, so it reads over the filled part of the bar
-                text = f'{pull:.2f} m/s²'
-                origin = (bar_left + pad // 2, centre_y)
-                shadow = label_font.render(text, True, (0, 0, 0))
-                surface.blit(shadow, shadow.get_rect(midleft=(origin[0] + 1, origin[1] + 1)))
-                value = label_font.render(text, True, ACCENT)
-                surface.blit(value, value.get_rect(midleft=origin))
+                _draw_over_bar(surface, label_font, f'{pull:.2f} m/s²', (bar_left + pad // 2, centre_y))
