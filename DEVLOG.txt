@@ -1,17 +1,17 @@
 DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
-STARTED: Extra time: 167h15' + 8:00 -
+* HISTORY
+  * Ore distribution: a bit more in non-ore-rich.
 
-  * Extra: Retirement.
-  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
-  * Extra: Binding slowly.
+> STARTED: Extra time: 167h15' + 8:00 - 11:45
 
 > BACKLOG
 
-* A NEW BEGINNING
   * Start again, check the balance of everything.
-  * Ore distribution: a bit more in non-ore-rich.
   * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
+  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
+  * Extra: Binding slowly.
+  * Extra: Retirement.
 
 * PATH OF TREASON
   * I am trying to reach the path of the traitor. Very hard to reach.

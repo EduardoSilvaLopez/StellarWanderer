@@ -14,6 +14,18 @@
             "env": {
                 "PYTHONPYCACHEPREFIX": "${workspaceFolder}/temp/pycache"
             }
-        }
+        },
+        {
+            "name": "History simulation",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "galaxies.history.simulation_script",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPYCACHEPREFIX": "C:\\Users\\Amo\\AppData\\Local\\Temp\\claude\\d--Backup-Hobbies-Games-2027-Stellar-Wanderer-VS-Code-StellarWanderer\\7cf1057a-8273-4e18-b5a0-e1dae4c3614f\\scratchpad\\pycache"
+            }
+        }        
     ]
 }
