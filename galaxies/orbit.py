@@ -23,7 +23,7 @@ class Orbit:
                  number: float,
                  kind: OrbitKind,
                  distance_from_star: float,
-                 saved_alterations: dict
+                 saved_alterations: Optional[dict]
                  ) -> None:
         self.parent_stellar_system: StellarSystem = parent_stellar_system
         self.number: float = number

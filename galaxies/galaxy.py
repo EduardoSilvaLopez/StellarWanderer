@@ -68,6 +68,8 @@ class Galaxy:
         if system is None:
             raise KeyError(f"No stellar system {system_key} in this galaxy.")
         orbit = system.get_orbit(float(orbit_key))
+        if orbit is None:
+            raise KeyError(f"No orbit {orbit_key} in stellar system {system_key}.")
         world = next(p for p in orbit.planets if p.get_alterations_key() == planet_key)
         if len(rest) == 2:
             moon_key, outpost_key = rest

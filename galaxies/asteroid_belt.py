@@ -140,7 +140,7 @@ class AsteroidBelt(Orbit):
     SHEAR_MARGIN = 2.0  # on the angle a slice of the belt shears, for the first-order estimate
 
     def __init__(self, parent_stellar_system: StellarSystem, number: float, kind: OrbitKind, distance_from_star: float,
-                 saved_alterations: dict) -> None:
+                 saved_alterations: dict | None) -> None:
         super().__init__(parent_stellar_system, number, kind, distance_from_star, saved_alterations)
         a0 = distance_from_star
         self.gravitational_parameter: float = World.GRAVITATIONAL_CONSTANT * parent_stellar_system.star.mass

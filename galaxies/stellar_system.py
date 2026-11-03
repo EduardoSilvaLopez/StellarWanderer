@@ -34,7 +34,9 @@ class StellarSystem:
         self.x, self.y, self.z = star.position
         self.seed: int = seeds.derive(star.seed, 'system')
         my_random: random.Random = random.Random(self.seed)
-        self.political_entity = political_entity.THOSE_WHO_SHARE
+
+        self.political_entity = political_entity.THOSE_WHO_SHARE \
+            if star.position == galaxies.constants.INITIAL_STAR_POSITION else None
         self.star: Star = star  # the system's star, as a body ships can navigate to
         self.star.attach_to(self)
         self.name: str = self.star.name + " System"
@@ -45,8 +47,9 @@ class StellarSystem:
         alterations_key: str = self.get_alterations_key()
         if saved_alterations is not None and alterations_key in saved_alterations:
             self.is_altered = True
-            self.saved_alterations = saved_alterations.get(alterations_key)
-            self.saved_alterations['date_time'] = saved_alterations['date_time']
+            own_alterations: dict = saved_alterations[alterations_key]
+            own_alterations['date_time'] = saved_alterations['date_time']
+            self.saved_alterations = own_alterations
         self.star.hidden = bool((self.saved_alterations or {}).get('star', {}).get('hidden', False))
         # Every system has one for now. Made after its saved state, which holds the base's visits and handling.
         self.portal_base: PortalBase = PortalBase(self, (self.saved_alterations or {}).get('portal_base'))
@@ -62,6 +65,8 @@ class StellarSystem:
         # The free-living asteroids taken whole by a scoop: gone for good (see Asteroid.consume).
         self.consumed_free: set[int] = {int(offer_seed) for offer_seed in
                                         (self.saved_alterations or {}).get('consumed_free', [])}
+
+        # ESIHERE: History.
 
     def consume_free_asteroid(self, offer_seed: int) -> None:
         """The scoop has taken the free-living asteroid of the offer whole: it is gone, and the system is altered."""
@@ -122,7 +127,7 @@ class StellarSystem:
     # endregion
 
     # region Bodies
-    def get_orbit(self, number: float) -> Orbit:
+    def get_orbit(self, number: float) -> Orbit | None:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
     def get_all_bodies(self) -> list[Body]:
@@ -152,6 +157,8 @@ class StellarSystem:
         if site['belt'] is None:
             return self.free_asteroids.get(site['seed']) or Asteroid.free_living(self, site['seed'])
         belt = self.get_orbit(float(site['belt']))
+        if not isinstance(belt, AsteroidBelt):
+            raise ValueError(f"No asteroid belt at orbit {site['belt']} of {self.name}")
         key = AsteroidKey.from_ints(site['key'].split())
         return belt.relevant.get(key) or belt.build(key)
 
@@ -229,6 +236,6 @@ class StellarSystem:
         '''Markdown of the system itself: its name and place. Its bodies have their own entries (see the knowledge
         dialog).'''
         return (
-            f"## {self.name} ({self.political_entity.name})\n"
+            f"## {self.name} ({self.political_entity.name if self.political_entity else ''})\n"
             f"* Galactic coordinates ({self.x}ly, {self.y}ly, {self.z}ly )\n"
         )

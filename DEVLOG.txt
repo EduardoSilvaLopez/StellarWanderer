@@ -1,133 +1,5 @@
-DEVELOPER'S DIARY
+DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
-> After the last release 2026-10-20 (9/10)
-
-  * Extra: Better structure in all (files which have the same problem player and ship had). Method sorting.
-  * Extra: Strange rocks look different.
-
-* ASTEROIDS (II)
-  * Promotion gives more autonomy, needed for asteroid missions.
-  * Outpost dialog rewire.
-
-### 2026-10-22 (10/10)
-
-  * Types of ships per level.
-  * Extra: Seed generation re-done.
-  * Phase 1: Generate the belt itself. Cosmetic asteroids, limits to generation by size and 'distance' (sectors).
-  Hierarchy of sectors. 'Relevant asteroids' are different.
-  * Phase 2: Mission. Separate (must fill up myself). Sometimes a free-riding asteroid. Naming the asteroids.
-  * Far distance advice.
-  * Target not lost in save / load.
-  * Ship configurations adjusted.
-  * Phase 3: Show the asteroid in radar and label.
-  * Savegame prefix: Seed and game time, and they remain when the player starts writing.
-  * Phase 4: How they look like. How to scan.
-  * Extra: button for ship specifications.
-  * Extra: Cooler laser.
-  * Extra: No more PAUSED mode.
-  * Extra: 120 chars in code.
-
-### 2026-10-23 (1/11)
-
-* INSIDE THE OUTPOST (needed before I start all over again to check how progress feels now)
-  * Entering and leaving spends time.
-  * Much bigger dialog, whole screen. You are inside the outpost. Menu points and background on the right side.
-  * The com. officer becomes the dockmaster. They appear in "Report", the first option.
-  * "Report" button behavior.
-  * "Ship" button behaviour.
-  * "Missions" button behaviour.
-  * Installing "Blender" via Claude for its use.
-  * "Chat" button behaviour
-  * Report button -> Dockmaster
-  * Time display moved to the left
-  * Ship and Missions buttons exchanged positions.
-  * Check the whole thing with a new game, also to save tokens.
-  * On Leave, check if the range changed and if so, offer better ship or missions. This is Coordinator's job.
-  * Remove the old dialog.
-  * A simple chat.
-  * Different backgrounds for different points of the menu.
-  * Extra: Rodina checked (in Steam) Checked. One system, lots of fight, few social.
-  * Extra: warnings when time x too much (bound 10k, unbound 100k, interstellar 1M)
-
-* JOVIAN PLANETS I
-  * Extra: title from interlocutors in the outpost is relative, not absolute.
-  * Make screenshots.
-  * "life" > "happy birthday" path
-  * Notification panel for outpost dialog. "The Community thinks you have enough stuff." when wants mines,
-    "Your ship is not ready for more of this" when other things.
-
-### 2026-10-24 (2/11)
-
-  * More full dialogs... now Those-Who-Share :)
-  * External mines and ore fields.
-  * Generate the jovian planet, astronomically.
-  * Scoop basic functionality.
-  * Extra: "Bring water" mission. Uses the scoop.
-  * Reduce the prize of the asteroid, but not much.
-
-### 2026-10-25 (2/11)
-### 2026-10-26 (3/11)
-
-* BASE AND RING (50-100)
-  * Extra: Dialogs: The Shining Throne, United Diversity.
-  * Test the scoop sounds.
-  * I disabled the sounds of Python in Windows > Settings > Voice mixer. If I need them later...
-
-### 2026-10-27 (4/11)
-
-  * Portal Bases. Missions. Test. Birthdays. Hang around them. Enjoy.
-  * List of people:
-    * Search in list of people.
-    * "Unknown person" in the list of people.
-    * Include role in the list of people.
-  * Warnings when approaching the Portal. Get arrested, game over.
-  * Entering the hangar.
-  * "Life", "Job", "Hobby"
-  * Portal
-  * Long-distance travel advisor improvements. Test.
-  * New level brings scoop, solar panels and heat shield. Hide them else.
-  * Missions which can be resolved anywhere (scan...)
-
-### 2026-10-28 (5/11)
-
-GRAVITY OF TREASON I (Rep 50-100)
-  * PLAN_END_DISTANCE to tune long trip advisor.
-  * Say Komisar: "They are good listeners" :D
-  * "I miss my childen."
-
-### 2026-10-29 (6/11)
-
-  * Offer of treason. Effects in the mines. 
-  * Extra: "Scan the sun" mission. Solar panels, heat shield.
-  * Gravity step 2.
-  * Mission to the star.
-  * New chat options for jobs.
-
-### 2026-11-01 (7/11)
-
-  * Gravity, step 3.
-
-* JOVIAN PLANETS II (100-200)
-  * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
-  * Stevedores help unload.
-  * Next step is to draw it.
-  * Generate the moons.
-  * Jovian moons can help to make missions.
-
-### 2026-11-02 (8/11)
-
-  * Resolve the "mirrored planet" when diving.
-  * Create the atmosphere when diving.
-  * Extra: Portraits without uniform: Black, Latino, White
-
-### 2026-11-03 (9/11)
-
-  * Improving the visuals: Flashes, storms, clouds and more. I do not see the storms...
-  * Not done: Moonshine, aurora.
-  * Mission to jovian planet itself (scoop, scan).
-  * Killing the player when diving :D . I mean... pressure, temperature.
-  * Extra: Changin the color of the cockpit to THS.
-  
 STARTED: Extra time: 167h15' + 8:00 -
 
   * Extra: Retirement.
@@ -136,8 +8,14 @@ STARTED: Extra time: 167h15' + 8:00 -
 
 > BACKLOG
 
-* GRAVITY OF TREASON (Rep 50-100) II
+* A NEW BEGINNING
+  * Start again, check the balance of everything.
+  * Ore distribution: a bit more in non-ore-rich.
+  * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
+
+* PATH OF TREASON
   * I am trying to reach the path of the traitor. Very hard to reach.
+  * Traitor only if does not like their job.
   * Rat
   * Selling ore
   * Extra: A career as law enforcement, if "rat".

@@ -165,8 +165,8 @@ class RockyWorld(World):
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
         if isinstance(self.parent_planet, RockyWorld) and self.parent_planet._is_initial_planet():
             # Why were you sent here...? :D
-            self.rocks_prevalence = 0.5 + 0.5 * my_random.random()
-            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) ** 0.68 * my_random.random()
+            self.rocks_prevalence = 0.8 + 0.2 * my_random.random()
+            self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * (0.8 + 0.2 * my_random.random())
 
         # Alterations:
         self.is_altered = False
