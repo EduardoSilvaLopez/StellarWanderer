@@ -179,6 +179,9 @@ GIANT_CLOUD_DENSITY = 0.7  # how much the clouds thicken and thin the gas (0 to 
 GIANT_CLOUD_LAYER_EDGE = 5.0  # the clouds reach this many scale heights above and below the 1 bar level (fading from half)
 GIANT_CLOUD_DEPTH_WAVELENGTH = 3.0e5  # m: the altitude over which the coarsest clouds change, so the layers differ
 GIANT_CLOUD_RELIEF_SHADING = 0.6  # how much the slope of the cloud tops lights and shadows them (0 to 1)
+# Storms (JovianWorld.storms): vortices in the clouds, which swirl them, tint them and raise the cloud tops.
+GIANT_STORM_RAISE = 0.8  # how much higher the cloud tops are in a storm, as a share of the clouds' relief
+GIANT_STORM_MAX = 6  # the most that are drawn at once
 # Lightning: the flashes of a giant (JovianWorld.lightning) light the gas round them from below.
 GIANT_LIGHTNING_GAIN = 2.0  # how bright a flash is, against the clouds lit by the star
 GIANT_LIGHTNING_COLOUR = (0.78, 0.86, 1.0)  # a little cold

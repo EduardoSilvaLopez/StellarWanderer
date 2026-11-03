@@ -26,6 +26,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Optional, Tuple
+import math
 import os
 import sys
 
@@ -500,11 +501,10 @@ def main() -> None:
         frame_watch.begin()
 
         ship = player.ship
-        # Unbound, a frame covers only a share of an orbit that the ship falls along (Navigation.coasting_time_limit),
-        # and passes neither the target's fixed zone (Navigation.target_time_limit) nor the next piece of advice, nor
-        # moves its hull far near the portal base (Navigation.portal_base_time_limit)
-        player.limit_time_scale(dt, min(ship.navigation.coasting_time_limit(), ship.navigation.target_time_limit(),
-                                        ship.navigation.portal_base_time_limit(), LongDistanceAdvisor.time_limit()))
+        # Near the portal base, unbound, a frame must not move the hull far (Navigation.portal_base_time_limit), but
+        # inside the station there is nothing to hit
+        portal_limit = math.inf if player.inside else ship.navigation.portal_base_time_limit()
+        player.limit_time_scale(dt, portal_limit)
         delta_game_seconds = dt * player.time_scale
         elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
         gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
@@ -592,7 +592,7 @@ def main() -> None:
         # orbit or on a trip
         audio.set_loop('attitude', rotating)
         ship.check_scoop()
-        ship.collect_corona(delta_game_seconds)
+        ship.collect_probe(delta_game_seconds)
         ship.scanner.update_target()
         if keys[pygame.K_SPACE]:
             if not ship.collect_raw_water(delta_game_seconds):

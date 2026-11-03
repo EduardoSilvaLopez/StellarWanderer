@@ -254,25 +254,18 @@ class Ship(Updatable):
             self.scoop_open = False
             self.notification.set(Ship.SCOOP_CLOSED_FAST)
 
-    def corona_missions(self) -> list:
-        """The open scoop star missions whose probe the scoop can fill now: the ship is unbound, in the heat radius of the
-        star of the nearest system, which is the one the missions ask for. Empty otherwise."""
-        from galaxies.missions import OPEN, ScoopStar
-        if self.is_bound:
-            return []
-        system = gem.current_environment.nearest_system
-        if self.navigation.distance_to_body_centre(system.star) >= system.star.default_heat_radius:
-            return []
-        key = system.get_alterations_key()
+    def probe_missions(self) -> list:
+        """The open missions whose probe the scoop can fill where the ship is now (`ScoopBody.can_collect`)."""
+        from galaxies.missions import OPEN, ScoopBody
         return [mission for mission in self.owner.missions
-                if isinstance(mission, ScoopStar) and mission.status == OPEN and mission.system_key() == key]
+                if isinstance(mission, ScoopBody) and mission.status == OPEN and mission.can_collect(self)]
 
-    def collect_corona(self, game_seconds: float) -> None:
-        """Every frame: with the scoop open (it is closed when it may not stay open: see
-        `check_scoop`) in the heat radius of the star, the probe of each open scoop star mission of the system fills."""
+    def collect_probe(self, game_seconds: float) -> None:
+        """Every frame: with the scoop open (it is closed when it may not stay open: see `check_scoop`) where a probe
+        fills, the probe of each such open mission fills."""
         if not self.scoop_open:
             return
-        for mission in self.corona_missions():
+        for mission in self.probe_missions():
             mission.collect(game_seconds)
     # endregion
 

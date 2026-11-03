@@ -120,27 +120,20 @@ GRAVITY OF TREASON I (Rep 50-100)
 
 STARTED:
 
-  * I am trying to reach the path of the traitor. Very hard to reach.
-
 * JOVIAN PLANETS II (current one) (100-200)
-  * Improving the visuals:
-    * Lightning flashes.
-    * Storms.
+  * I am trying to reach the path of the traitor. Very hard to reach.
+  * Improving the visuals: Flashes, storms, clouds and more. I do not see the storms...
     * Moonshine.
     * Aurora.
-  * Killing the player when diving :D . I mean... preassure, temperature.
-
-  The constants are all GIANT_CLOUD_* in constants.py, and none are tuned by eye in the game yet. The ones I'd expect you to want are GIANT_CLOUD_CONTRAST (strength), GIANT_CLOUD_STRETCH and GIANT_CLOUD_WARP (how turbulent).
-
+  * Killing the player when diving :D . I mean... pressure, temperature.
+  
 Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
 
 * (JOVIAN PLANETS II)
   * Mission to jovian planet itself (scoop, scan).
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
-  * Extra: Arabs.
   * Extra: Retirement.
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
   * Extra: Keep talking with theartlav:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
   * Extra: Binding slowly.
@@ -155,7 +148,7 @@ Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in THS)
   * Cities
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
-  * Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+  * Extra: Arabs.
 
 * OROGRAPHY
   * Craters
@@ -168,6 +161,7 @@ Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
   * Conversion mechanics.
   * United Diversity
   * The Shining Throne
+  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * INCIDENTS
   * Get sealing equipment in the outposts.

@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 
 import logging
 from galaxies import seeds
@@ -27,6 +27,20 @@ def _smoothstep(edge0: float, edge1: float, value: float) -> float:
 
 
 @dataclass(frozen=True)
+class Storm:
+    """A vortex in the clouds of a giant at a date: where (latitude and longitude on the planet, rad), how wide (m), how
+    it turns (`twist`, rad at its centre: its sign is the sense of the turn), how strong it is (0 to 1: it grows when it
+    is born and fades before it dies), and how often it flashes (per second). `key` tells it from the others."""
+    key: int
+    latitude: float
+    longitude: float
+    radius: float
+    twist: float
+    strength: float
+    lightning_rate: float
+
+
+@dataclass(frozen=True)
 class GiantTraits:
     """What sets a class of giant apart: the ranges its values are drawn from. SI, but for the colours."""
     label: str
@@ -42,6 +56,8 @@ class GiantTraits:
     bands: Tuple[float, float]  # cloud bands from pole to pole: lowest, highest
     band_contrast: Tuple[float, float]  # lowest, highest: how much the bands darken and brighten the cloud tops
     wind: Tuple[float, float]  # m/s: lowest, highest speed of the fastest zonal jet
+    storm_colour: Tuple[float, float, float]  # what the clouds of a storm are multiplied by: a warm red, a cold dark
+    great_storm_chance: float  # that the giant has a storm that never dies
 
 
 class GiantClass(Enum):
@@ -53,6 +69,7 @@ class GiantClass(Enum):
         helium=(0.136, 0.010), methane=(0.002, 0.006),
         clouds=((205, 175, 135), (196, 150, 108), (214, 196, 150), (176, 120, 92), (210, 205, 190)),
         bands=(6.0, 12.0), band_contrast=(0.15, 0.35), wind=(60.0, 300.0),
+        storm_colour=(1.05, 0.78, 0.7), great_storm_chance=0.5,
     )
     ICE = GiantTraits(
         label='Ice giant', mass=(1.0e26, 0.3, 4.0e25, 2.5e26), spin_period=(59400.0, 0.15), inertia_factor=(0.22, 0.24),
@@ -60,6 +77,7 @@ class GiantClass(Enum):
         helium=(0.152, 0.010), methane=(0.015, 0.040),
         clouds=((172, 216, 226), (92, 130, 205), (120, 190, 200), (110, 170, 170)),
         bands=(3.0, 6.0), band_contrast=(0.05, 0.12), wind=(40.0, 250.0),
+        storm_colour=(0.62, 0.76, 1.0), great_storm_chance=0.3,
     )
 
     @property
@@ -86,7 +104,8 @@ class JovianWorld(World):
 
     Look. The sphere is an oblate ellipsoid (`flattening`, about the spin axis). Its cloud tops have bands by latitude
     (`band_count`, `band_phase`, `band_contrast`), and jets between the bands (`wind_speed`) that carry the clouds
-    eastward or westward by turns (`cloud_state`), lightning that flashes now and then (`lightning`), and a haze above them that thins with `scale_height`. A giant has no
+    eastward or westward by turns (`cloud_state`), storms that are born, drift with the jets and die (`storms`), lightning that flashes in bursts, mostly in them (`lightning`), and a
+    haze above them that thins with `scale_height`. A giant has no
     surface, so none of this is ground: the gas takes light out in proportion to its density (`optical_profile`), the
     cloud tops are where it gets opaque, and a ship that dives sees less light and less distance, until all is dark.
     Inside the planet the pull is that of the mass within (`pull_at`), which falls to zero at the centre, where the
@@ -157,9 +176,22 @@ class JovianWorld(World):
     MAX_WIND_CELLS = 16  # the most wind cells a giant has (see cloud_state)
     # Lightning, in the water clouds deep below the cloud tops. Jupiter flashes a few times a second over the whole
     # planet, each flash a diffuse glow of some hundred kilometres that lasts a fraction of a second.
-    LIGHTNING_RATE = 0.5  # flashes per second over the whole planet
+    LIGHTNING_RATE = 0.45  # flashes per second over the whole planet, away from the storms (the storms flash more)
+    LIGHTNING_BURST_MEAN = 3.2  # flashes in a burst, on average: a burst is one flash, or many over up to 3 s
+    LIGHTNING_BURST_SPAN = 3.0  # s: the longest a burst lasts
     LIGHTNING_DURATION = 0.4  # s
     LIGHTNING_PRESSURE = 5.0e5  # Pa: where the flashes are, the water clouds
+    LIGHTNING_PER_STORM = 0.18  # flashes per second of a storm a million metres wide, by the square of its radius
+    LIGHTNING_PER_STORM_MAX = 2.0
+    # Storms: vortices that are born, drift with the jet of their latitude and die. They are drawn epoch by epoch from
+    # the seed, and each lives from its birth to its death, so a date says which are alive and where, with nothing
+    # stored. A giant may also have a great storm that never dies.
+    STORM_EPOCH = 8.64e6  # s: 100 days
+    STORM_BIRTHS = 3.0  # per epoch
+    STORM_LIFE = (1.73e6, 9.5e7)  # s: lowest and highest (20 days, 3 years), log-uniform
+    STORM_RADIUS = (0.01, 0.06)  # of the equatorial radius, log-uniform
+    STORM_TWIST = (2.0, 4.0)  # rad at the centre
+    GREAT_STORM_RADIUS = (0.12, 0.25)  # of the equatorial radius
     LIGHTNING_RADIUS = (8.0e4, 4.0e5)  # m: lowest and highest radius of the glow at the cloud tops (log-uniform)
 
     def __init__(self, parent_orbit: Orbit, saved_alterations: Optional[dict] = None) -> None:
@@ -229,6 +261,16 @@ class JovianWorld(World):
         cloud_random = random.Random(seeds.derive(self.seed, 'clouds'))  # the clouds' own stream: no draw above moves
         self.cloud_offset: Tuple[float, float, float] = (cloud_random.uniform(0.0, 60.0), cloud_random.uniform(0.0, 60.0),
                                                          cloud_random.uniform(0.0, 60.0))  # where in the noise it is
+        storm_random = random.Random(seeds.derive(self.seed, 'great storm'))
+        self.storm_colour: Tuple[float, float, float] = traits.storm_colour
+        self.great_storm: Optional[Tuple[float, float, float, float]] = None  # sine of latitude, longitude, radius, twist
+        if storm_random.random() < traits.great_storm_chance:
+            sine = storm_random.choice((-1.0, 1.0)) * storm_random.uniform(0.25, 0.55)
+            self.great_storm = (sine, storm_random.uniform(-math.pi, math.pi),
+                                self.equatorial_radius * storm_random.uniform(*JovianWorld.GREAT_STORM_RADIUS),
+                                -math.copysign(storm_random.uniform(*JovianWorld.STORM_TWIST), sine))
+        self._storm_cache: Dict[int, List[Tuple[int, float, float, float, float, float, float]]] = {}
+        self._burst_cache: Dict[Tuple[int, int], List[Tuple[float, float, float, float, float]]] = {}
         self._generate_atmosphere(star, traits)
 
         self._learn()
@@ -419,6 +461,69 @@ class JovianWorld(World):
         cosine = relative_position.dot(direction) / distance
         return _smoothstep(-0.02, 0.15, cosine) * math.exp(-self.column_depth_at(relative_position) / max(cosine, 0.05))
 
+    def _cell_rate(self, cell: int) -> float:
+        """The angular speed (rad/s, eastward) of the clouds of a wind cell: its jet's, at the middle of the cell."""
+        half_width = self.band_count * math.pi / 2.0
+        sine = max(-0.97, min(0.97, (cell * math.pi - self.band_phase) / half_width))
+        speed = self.wind_speed * (-1.0) ** cell * (1.0 - 0.5 * sine * sine)
+        return speed / (self.equatorial_radius * math.sqrt(1.0 - sine * sine))
+
+    def _wind_rate(self, sine: float) -> float:
+        """The angular speed (rad/s) of the clouds at a latitude (its sine): the one of its wind cell."""
+        pattern = self.band_count * math.pi / 2.0 * sine + self.band_phase
+        return self._cell_rate(math.floor(pattern / math.pi + 0.5))
+
+    def storms(self, current_datetime: datetime) -> List[Storm]:
+        """The storms alive at a date, with where they are: each is carried east or west by the wind of its latitude.
+        Pure functions of the date: the births of every epoch are drawn from the seed, so nothing is stored."""
+        seconds = self._elapsed_seconds(current_datetime)
+        epoch = math.floor(seconds / JovianWorld.STORM_EPOCH)
+        reach = math.ceil(JovianWorld.STORM_LIFE[1] / JovianWorld.STORM_EPOCH)
+        alive: List[Storm] = []
+        for past in range(epoch - reach, epoch + 1):
+            for key, birth, life, sine, longitude, radius, twist in self._storms_born(past):
+                age = seconds - birth
+                if 0.0 <= age < life:
+                    strength = min(1.0, age / (0.1 * life), (life - age) / (0.2 * life))
+                    drift = self._wind_rate(sine) * age
+                    flashes = min(JovianWorld.LIGHTNING_PER_STORM_MAX,
+                                  JovianWorld.LIGHTNING_PER_STORM * (radius / 1.0e6) ** 2 * strength)
+                    alive.append(Storm(key, math.asin(sine), (longitude + drift + math.pi) % math.tau - math.pi, radius,
+                                       twist, strength, flashes))
+        if self.great_storm is not None:
+            sine, longitude, radius, twist = self.great_storm
+            flashes = min(JovianWorld.LIGHTNING_PER_STORM_MAX, JovianWorld.LIGHTNING_PER_STORM * (radius / 1.0e6) ** 2)
+            drift = self._wind_rate(sine) * seconds
+            alive.append(Storm(0, math.asin(sine), (longitude + drift + math.pi) % math.tau - math.pi, radius, twist, 1.0,
+                               flashes))
+        return alive
+
+    def _storms_born(self, epoch: int) -> List[Tuple[int, float, float, float, float, float, float]]:
+        """The storms born in an epoch: (key, birth s, life s, sine of latitude, longitude, radius m, twist rad)."""
+        if epoch not in self._storm_cache:
+            storm_random = random.Random(seeds.derive(self.seed, 'storms', epoch))
+            born: List[Tuple[int, float, float, float, float, float, float]] = []
+            count, limit, product = 0, math.exp(-JovianWorld.STORM_BIRTHS), storm_random.random()
+            while product > limit:  # a Poisson count
+                count += 1
+                product *= storm_random.random()
+            for number in range(count):
+                low, high = JovianWorld.STORM_LIFE
+                life = low * (high / low) ** storm_random.random()
+                sine = storm_random.uniform(-0.8, 0.8)
+                low, high = JovianWorld.STORM_RADIUS
+                radius = self.equatorial_radius * low * (high / low) ** storm_random.random()
+                twist = storm_random.uniform(*JovianWorld.STORM_TWIST)
+                if storm_random.random() < 0.85:  # most turn against the sense of the hemisphere's cyclones
+                    twist = -math.copysign(twist, sine)
+                else:
+                    twist = math.copysign(twist, sine)
+                born.append((seeds.derive(self.seed, 'storm', epoch, number) % 2 ** 31,
+                             (epoch + storm_random.random()) * JovianWorld.STORM_EPOCH, life, sine,
+                             storm_random.uniform(-math.pi, math.pi), radius, twist))
+            self._storm_cache[epoch] = born
+        return self._storm_cache[epoch]
+
     def cloud_state(self, current_datetime: datetime) -> Tuple[float, int, List[float]]:
         """How the clouds are turned at a date: the planet's spin angle (rad), the index of the first wind cell, and the
         angle (rad, in [0, tau)) each cell's clouds have drifted eastward of the planet's turn. The cells are the
@@ -430,44 +535,80 @@ class JovianWorld(World):
         seconds = self._elapsed_seconds(current_datetime)
         angles: List[float] = []
         for cell in range(first, min(last, first + JovianWorld.MAX_WIND_CELLS - 1) + 1):
-            sine = max(-0.97, min(0.97, (cell * math.pi - self.band_phase) / half_width))
-            speed = self.wind_speed * (-1.0) ** cell * (1.0 - 0.5 * sine * sine)
-            rate = speed / (self.equatorial_radius * math.sqrt(1.0 - sine * sine))
-            angles.append(math.tau * ((rate * seconds / math.tau) % 1.0))
+            angles.append(math.tau * ((self._cell_rate(cell) * seconds / math.tau) % 1.0))
         return self._spin_angle_rad(current_datetime), first, angles
 
     def lightning(self, current_datetime: datetime) -> List[Tuple[float, float, float, float]]:
         """The flashes alight at a date, as (latitude rad, longitude rad on the planet, radius m of the glow at the
-        cloud tops, brightness 0 to 1). The flashes are drawn second by second from the planet's seed, so a date gives
-        the same flashes every time and nothing is stored. They favour the belts, away from the poles, and each is a
-        double pulse that dies away."""
+        cloud tops, brightness 0 to 1). The flashes come in bursts (`_bursts_of_slot`): one flash, or a chaotic run of
+        them over up to 3 s, near each other. They are drawn second by second from the planet's seed, so a date gives the
+        same flashes every time and nothing is stored but a cache. Most bursts come from the storms (`storms`), each
+        at its own rate inside its radius; the rest are anywhere, favouring the belts, away from the poles. Each flash is
+        a double pulse that dies away."""
         seconds = self._elapsed_seconds(current_datetime)
+        storms = self.storms(current_datetime)
+        first = math.floor(seconds - JovianWorld.LIGHTNING_BURST_SPAN - JovianWorld.LIGHTNING_DURATION)
         found: List[Tuple[float, float, float, float]] = []
-        first = math.floor(seconds - JovianWorld.LIGHTNING_DURATION)
         for slot in range(first, math.floor(seconds) + 1):
-            slot_random = random.Random(seeds.derive(self.seed, 'lightning', slot))
-            flashes, limit, product = 0, math.exp(-JovianWorld.LIGHTNING_RATE), slot_random.random()
-            while product > limit:  # a Poisson count
-                flashes += 1
-                product *= slot_random.random()
-            for _ in range(flashes):
-                start = slot + slot_random.random()
-                for _ in range(8):  # the latitude: more in the belts than in the zones
-                    sine = slot_random.uniform(-0.95, 0.95)
-                    pattern = self.band_count * math.pi / 2.0 * sine + self.band_phase
-                    if slot_random.random() < 0.25 + 0.75 * (0.5 - 0.5 * math.sin(pattern)):
-                        break
-                longitude = slot_random.uniform(-math.pi, math.pi)
-                low, high = JovianWorld.LIGHTNING_RADIUS
-                radius = low * (high / low) ** slot_random.random()
-                strength = slot_random.uniform(0.4, 1.0)
-                age = seconds - start
-                if not 0.0 <= age < JovianWorld.LIGHTNING_DURATION:
-                    continue
-                pulse = math.exp(-age / 0.06) + (0.7 * math.exp(-(age - 0.12) / 0.06) if age > 0.12 else 0.0)
-                if strength * pulse > 0.02:
-                    found.append((math.asin(sine), longitude, radius, min(1.0, strength * pulse)))
+            sources = [(0, None)] + [(storm.key + 1, storm) for storm in storms]
+            for key, storm in sources:
+                for start, north, east, radius, strength in self._bursts_of_slot(slot, key, storm):
+                    age = seconds - start
+                    if not 0.0 <= age < JovianWorld.LIGHTNING_DURATION:
+                        continue
+                    pulse = math.exp(-age / 0.06) + (0.7 * math.exp(-(age - 0.12) / 0.06) if age > 0.12 else 0.0)
+                    if strength * pulse <= 0.02:
+                        continue
+                    if storm is None:  # a place on the planet
+                        latitude, longitude = north, east
+                    else:  # a place in the storm, in its radii
+                        latitude = max(-1.5, min(1.5, storm.latitude + north * storm.radius / self.equatorial_radius))
+                        longitude = storm.longitude + east * storm.radius / self.equatorial_radius \
+                            / max(math.cos(storm.latitude), 0.05)
+                    found.append((latitude, longitude, radius, min(1.0, strength * pulse)))
         return found
+
+    def _bursts_of_slot(self, slot: int, key: int, storm: Optional[Storm]) -> List[Tuple[float, float, float, float, float]]:
+        """The flashes of the bursts that begin in one second (`slot`) of a source (the background, or a storm): (start s,
+        north, east, radius m of the glow, strength). A burst is a single flash (a third of them) or a run of up to 14
+        over up to 3 s, bunched at the start with stragglers after it, all within a little of the burst's place. North
+        and east are the latitude and longitude of the place for the background and, for a storm, its offset from the
+        storm's centre in storm radii. They are drawn in a fixed order, so the cache only saves the work."""
+        if (key, slot) not in self._burst_cache:
+            if len(self._burst_cache) > 4000:
+                self._burst_cache.clear()
+            # the rate must not depend on the date (a storm's strength does), or the cache would change the flashes
+            rate = JovianWorld.LIGHTNING_RATE if storm is None else min(
+                JovianWorld.LIGHTNING_PER_STORM_MAX, JovianWorld.LIGHTNING_PER_STORM * (storm.radius / 1.0e6) ** 2)
+            slot_random = random.Random(seeds.derive(self.seed, 'lightning', key, slot))
+            bursts, limit, product = 0, math.exp(-rate / JovianWorld.LIGHTNING_BURST_MEAN), slot_random.random()
+            while product > limit:  # a Poisson count
+                bursts += 1
+                product *= slot_random.random()
+            flashes: List[Tuple[float, float, float, float, float]] = []
+            for _ in range(bursts):
+                begin = slot + slot_random.random()
+                count = 1 if slot_random.random() < 0.35 else min(14, 2 + int(slot_random.expovariate(0.3)))
+                span = 0.0 if count == 1 else slot_random.uniform(0.3, JovianWorld.LIGHTNING_BURST_SPAN)
+                if storm is None:
+                    for _ in range(8):  # the latitude: more in the belts than in the zones
+                        sine = slot_random.uniform(-0.95, 0.95)
+                        pattern = self.band_count * math.pi / 2.0 * sine + self.band_phase
+                        if slot_random.random() < 0.25 + 0.75 * (0.5 - 0.5 * math.sin(pattern)):
+                            break
+                    north, east = math.asin(sine), slot_random.uniform(-math.pi, math.pi)
+                    scatter = 6.0e4 / self.equatorial_radius  # the flashes of a burst are within some tens of km
+                else:
+                    north, east = slot_random.gauss(0.0, 0.45), slot_random.gauss(0.0, 0.45)
+                    scatter = 0.12  # storm radii
+                for number in range(count):
+                    offset = span * slot_random.random() ** 1.6 if number else 0.0
+                    low, high = JovianWorld.LIGHTNING_RADIUS
+                    flashes.append((begin + offset, north + slot_random.gauss(0.0, scatter),
+                                    east + slot_random.gauss(0.0, scatter), low * (high / low) ** slot_random.random(),
+                                    slot_random.uniform(0.35, 1.0)))
+            self._burst_cache[(key, slot)] = flashes
+        return self._burst_cache[(key, slot)]
 
     def column_depth_at(self, relative_position: Vector3) -> float:
         """The optical depth of the gas above a position relative to the centre (stellar frame), straight up."""
@@ -517,8 +658,13 @@ class JovianWorld(World):
             f"{100 * self.methane:.1f}% methane\n"
             f"* Mean molecular weight: {1000 * self.mean_molecular_weight:.2f} g/mol\n"
             f"* The atmosphere thins out {int(edge / 1000)} Km above the clouds\n"
-            f"\n"
         )
+        if self.great_storm is not None:
+            sine, _, radius, twist = self.great_storm
+            text += (f"* A great storm, {int(2 * radius / 1000):,} Km across, has turned {'clockwise' if twist < 0 else 'anticlockwise'}"
+                     f" at {abs(math.degrees(math.asin(sine))):.0f}° {'north' if sine > 0 else 'south'} for as long as "
+                     f"anyone knows, and it flashes with lightning\n")
+        text += f"\n"
         text += ''.join(moon.markdown() for moon in self.moons)
         return text
 

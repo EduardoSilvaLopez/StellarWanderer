@@ -5,8 +5,9 @@ where the gas gets opaque, and below them the sunlight is used up by the column 
 dimmer and the shorter its view, until all is dark. The clouds are noise stretched along the bands, in octaves down to what a pixel can show, which each wind cell of
 the planet (`JovianWorld.cloud_state`) carries east or west, so they drift and shear with the date. They are a volume:
 they raise and lower the cloud tops, thicken and thin the gas, brighten the slopes the sun faces and shadow the others,
-and the colour of the gas changes with the depth (`deep_colour`). Lightning (`JovianWorld.lightning`) lights the gas
-round each flash from below, a glow on the night side.
+and the colour of the gas changes with the depth (`deep_colour`). Storms (`JovianWorld.storms`) swirl the clouds, tint them and
+raise their tops; lightning (`JovianWorld.lightning`), mostly in the storms, lights the gas round each flash from below,
+a glow on the night side.
 With the star behind a giant its thin haze, lit above the planet's
 shadow and scattering forward, rings the limb as a crescent. The giants are drawn under the sky texture (the star
 covers those behind it, and they cover it otherwise): the sky is made transparent over each (`sky_erasers`), and the
@@ -27,7 +28,7 @@ from .constants import (
     GIANT_FORWARD_SCATTERING, GIANT_CLOUD_WAVELENGTH, GIANT_CLOUD_STRETCH, GIANT_CLOUD_OCTAVES, GIANT_CLOUD_WARP,
     GIANT_CLOUD_CONTRAST, GIANT_CLOUD_DEPTH_WAVELENGTH, GIANT_CLOUD_RELIEF, GIANT_CLOUD_RELIEF_OCTAVES, GIANT_CLOUD_DENSITY, GIANT_CLOUD_GAIN,
     GIANT_CLOUD_LAYER_EDGE, GIANT_CLOUD_RELIEF_SHADING, GIANT_LIGHTNING_GAIN, GIANT_LIGHTNING_COLOUR,
-    GIANT_LIGHTNING_MAX_TIME_SCALE, GIANT_LIGHTNING_MAX_FLASHES, NEAR_CLIP,
+    GIANT_LIGHTNING_MAX_TIME_SCALE, GIANT_LIGHTNING_MAX_FLASHES, GIANT_STORM_RAISE, GIANT_STORM_MAX, NEAR_CLIP,
 )
 from .lit_worlds import LitWorlds
 
@@ -105,6 +106,11 @@ uniform vec3 flash_direction[8];
 uniform vec2 flash_shape[8];
 uniform float flash_column;       // the optical depth above the flashes
 uniform vec3 flash_colour;
+uniform int storm_count;           // the storms, and where (camera frame); their radius (m), twist (rad), strength
+uniform vec3 storm_direction[6];
+uniform vec3 storm_shape[6];
+uniform vec3 storm_colour;         // what the clouds of a storm are multiplied by
+uniform float storm_raise;
 uniform float cloud_density;     // how much the clouds thicken and thin the gas, 0 to 1
 uniform float layer_edge;        // scale heights from the 1 bar level where the clouds end
 uniform float relief_shading;
@@ -211,6 +217,30 @@ void gas_at(float altitude, out float extinction, out float column) {
     column = exp(mix(log_tau[i], log_tau[i + 1], w));
 }
 
+// The direction `up` turned round each storm it lies in, as the clouds swirl in a vortex: a rotation about the
+// storm's own axis, as far as its twist at its middle and less out to its edge. `amount` is how much it is in storms.
+vec3 storm_swirl(vec3 up, out float amount) {
+    amount = 0.0;
+    for (int i = 0; i < 6; i++) {
+        if (i >= storm_count) {
+            break;
+        }
+        vec3 centre = storm_direction[i];
+        float chord = 2.0 * (1.0 - dot(up, centre)) * equatorial * equatorial;
+        float radius = storm_shape[i].x;
+        if (chord > 6.0 * radius * radius) {
+            continue;  // too far to feel it
+        }
+        float inside = exp(-chord / (radius * radius));
+        amount += storm_shape[i].z * inside;
+        if (inside > 0.01) {
+            float angle = storm_shape[i].y * storm_shape[i].z * inside;
+            up = up * cos(angle) + cross(centre, up) * sin(angle) + centre * dot(centre, up) * (1.0 - cos(angle));
+        }
+    }
+    return normalize(up);
+}
+
 // What the ray u from the camera gathers: the light the gas scatters towards it (premultiplied), and its opacity.
 vec4 trace(vec3 u) {
     float pu = dot(pole, u);
@@ -246,11 +276,17 @@ vec4 trace(vec3 u) {
         float footprint = max(t, 1.0) / focal * pixel_scale.x / max(-dot(up, u), 0.15);
         // The cloud tops rise and fall: in the layer of the clouds the gas is looked up at an altitude moved by the
         // clouds there, as if the whole atmosphere were raised where they are high.
+        float storm_amount = 0.0;
+        vec3 up_swirl = up;
         float relief = 0.0;
         float layer = 1.0 - smoothstep(0.5 * layer_edge, layer_edge, abs(altitude) / scale_height);
-        if (layer > 0.0 && cloud_relief > 0.0) {
-            relief = cloud_field(up, altitude, footprint, relief_octaves);
+        if (layer > 0.0 && storm_count > 0) {
+            up_swirl = storm_swirl(up, storm_amount);
         }
+        if (layer > 0.0 && cloud_relief > 0.0) {
+            relief = cloud_field(up_swirl, altitude, footprint, relief_octaves);
+        }
+        relief = clamp(relief + storm_raise * min(storm_amount, 1.0) * layer, -1.0, 1.6);  // the storms stand higher
         float extinction, column;
         gas_at(altitude - relief * cloud_relief * scale_height * layer, extinction, column);
         extinction *= max(1.0 + cloud_density * relief * layer, 0.2);  // puffs and gaps in the gas itself
@@ -294,7 +330,7 @@ vec4 trace(vec3 u) {
         if (!cloud_seen && column > 0.15) {
             // The fine clouds, looked up once per ray where it first meets the deck.
             cloud_seen = true;
-            cloud = cloud_field(up, altitude, footprint, cloud_octaves);
+            cloud = cloud_field(up_swirl, altitude, footprint, cloud_octaves);
         }
         // How the sun lights the slope of the cloud top: from the clouds here to those a short way towards the sun.
         float relief_light = 1.0;
@@ -304,8 +340,11 @@ vec4 trace(vec3 u) {
         if (slope_weight > 0.0 && layer > 0.0 && cloud_relief > 0.0 && toward_length > 1e-3) {
             float span = clamp(4.0 * footprint, 1000.0, 6.0e4);
             vec3 up_sun = normalize(up + toward / toward_length * span / r);
-            float slope = cloud_relief * scale_height * layer
-                          * (cloud_field(up_sun, altitude, footprint, relief_octaves) - relief) / span;
+            float sun_storm;
+            vec3 up_sun_swirl = storm_swirl(up_sun, sun_storm);
+            float relief_sun = clamp(cloud_field(up_sun_swirl, altitude, footprint, relief_octaves)
+                                     + storm_raise * min(sun_storm, 1.0) * layer, -1.0, 1.6);
+            float slope = cloud_relief * scale_height * layer * (relief_sun - relief) / span;
             float low = max(mu, 0.05);
             float facing = clamp((low - slope * sqrt(max(1.0 - mu * mu, 0.0))) / low, 0.2, 2.0);
             relief_light = mix(1.0, mix(1.0, facing, relief_shading), slope_weight);
@@ -328,7 +367,7 @@ vec4 trace(vec3 u) {
                            * exp(-penetration * abs(column - flash_column));
         }
         float lit = sun * relief_light;
-        vec3 source = deep_colour(tint / 255.0, column) * bands * shade * deck
+        vec3 source = deep_colour(tint / 255.0 * mix(vec3(1.0), storm_colour, min(storm_amount, 1.0) * smoothstep(0.05, 0.5, column)), column) * bands * shade * deck
                       * (sun_gain * lit * scattering + ambient * exp(-2.0 * column));
 
         gathered += transmission * absorbed * (source + flash_light);
@@ -391,6 +430,34 @@ class GiantGl:
         if not GL.glGetShaderiv(shader, GL.GL_COMPILE_STATUS):
             raise RuntimeError(GL.glGetShaderInfoLog(shader).decode())
         return shader
+
+    @staticmethod
+    def _set_storms(uniform: Callable[[str], int], world: JovianWorld, date_time: datetime, spin: float, ship: Ship,
+                    camera: Vector3, equatorial: float) -> None:
+        """The storms that can be seen: the biggest GIANT_STORM_MAX of those on the side of the planet the camera sees
+        (their edges may reach round the horizon), all of them from inside the gas."""
+        inside = camera.length() < equatorial * 1.05
+        chosen = sorted(world.storms(date_time), key=lambda storm: -storm.radius * storm.strength)
+        directions: List[float] = []
+        shapes: List[float] = []
+        for storm in chosen:
+            azimuth = spin + storm.longitude
+            direction = ship.attitude.camera_components(Vector3(math.cos(storm.latitude) * math.cos(azimuth),
+                                                               math.cos(storm.latitude) * math.sin(azimuth),
+                                                               math.sin(storm.latitude)))
+            if not inside and direction.dot(camera) < (0.95 - 2.0 * storm.radius / equatorial) * equatorial:
+                continue
+            directions += [direction.x, direction.y, direction.z]
+            shapes += [storm.radius, storm.twist, storm.strength]
+            if len(shapes) >= 3 * GIANT_STORM_MAX:
+                break
+        count = len(shapes) // 3
+        GL.glUniform1i(uniform("storm_count"), count)
+        if count:
+            GL.glUniform3fv(uniform("storm_direction"), count, np.array(directions, dtype=np.float32))
+            GL.glUniform3fv(uniform("storm_shape"), count, np.array(shapes, dtype=np.float32))
+            GL.glUniform3f(uniform("storm_colour"), *world.storm_colour)
+            GL.glUniform1f(uniform("storm_raise"), GIANT_STORM_RAISE)
 
     @staticmethod
     def _set_flashes(uniform: Callable[[str], int], world: JovianWorld, date_time: datetime, spin: float, ship: Ship,
@@ -702,6 +769,7 @@ class GiantGl:
         GL.glUniform1fv(uniform("cell_angle"), len(cell_angles), np.array(cell_angles, dtype=np.float32))
 
         GiantGl._set_flashes(uniform, world, date_time, spin, ship, camera, equatorial)
+        GiantGl._set_storms(uniform, world, date_time, spin, ship, camera, equatorial)
 
         # The rectangle in normalised device coordinates: the screen's rows run down from the top.
         left, top = 2.0 * x0 / width - 1.0, 1.0 - 2.0 * y0 / height

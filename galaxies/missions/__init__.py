@@ -9,7 +9,9 @@ from .deliver_water import DeliverWater
 from .deliver_package import DeliverPackage
 from .scan_asteroid import ScanAsteroid
 from .scan_rock import ScanRock
+from .scoop_body import ScoopBody
 from .scoop_star import ScoopStar
+from .scoop_giant import ScoopGiant
 
 __all__ = ['Mission', 'OPEN', 'DONE', 'FAILED', 'DeliverOre', 'DeliverWater', 'DeliverPackage', 'ScanAsteroid',
-           'ScanRock', 'ScoopStar']
+           'ScanRock', 'ScoopBody', 'ScoopStar', 'ScoopGiant']

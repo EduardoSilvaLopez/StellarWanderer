@@ -54,8 +54,8 @@ class Navigation:
     they do not, and the ship follows its Kepler orbit, as it follows the star's outside the planets' zones (see
     `attractor` and `_move_unbound`). The TRAVEL autopilot (`travel`, see travel_assist.py) flies the ship to the
     target along the long distance advice's straight line, and the ORBIT assist and it end each other. The pilot is
-    told on entering and leaving such a zone (`_announce_compensation`), and the time scale is limited
-    (`coasting_time_limit`, `target_time_limit`, `portal_base_time_limit`).
+    told on entering and leaving such a zone (`_announce_compensation`). Near the portal base the time scale is
+    limited (`portal_base_time_limit`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
