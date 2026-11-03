@@ -37,7 +37,7 @@ class Cockpit:
             date_time: Player's ship time
         """
         import game_environment as gem
-        Canopy.draw(surface, w, h)
+        Canopy.draw(surface, w, h, player.ship.COCKPIT_TEXTURE)
         frame_watch.mark('canopy')
         Crosshair.draw(surface, w, h)
         VelocityMarkers.draw(surface, fonts, w, h, player.ship)

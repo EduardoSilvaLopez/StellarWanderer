@@ -106,6 +106,8 @@ GRAVITY OF TREASON I (Rep 50-100)
 ### 2026-11-01 (7/11)
 
   * Gravity, step 3.
+
+* JOVIAN PLANETS II (current one) (100-200)
   * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
   * Stevedores help unload.
   * Next step is to draw it.
@@ -118,19 +120,17 @@ GRAVITY OF TREASON I (Rep 50-100)
   * Create the atmosphere when diving.
   * Extra: Portraits without uniform: Black, Latino, White
 
-STARTED:
+### 2026-11-03 (9/11)
 
-* JOVIAN PLANETS II (current one) (100-200)
-  * I am trying to reach the path of the traitor. Very hard to reach.
   * Improving the visuals: Flashes, storms, clouds and more. I do not see the storms...
-    * Moonshine.
-    * Aurora.
+  * Not done: Moonshine, aurora.
+  * Mission to jovian planet itself (scoop, scan).
   * Killing the player when diving :D . I mean... pressure, temperature.
+  * Extra: Changin the color of the cockpit to THS.
   
-Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
+STARTED: Extra time: 167h15' + 8:00 -
 
 * (JOVIAN PLANETS II)
-  * Mission to jovian planet itself (scoop, scan).
   * Extra: Improve the sounds for real.
   * Extra: "Realistic speed" in "ideas".
   * Extra: Retirement.
@@ -141,6 +141,7 @@ Extra time: 166h15' + 7:45 - 9:45 + 14:15 - 16:00
 > BACKLOG
 
 * GRAVITY OF TREASON (Rep 50-100) II
+  * I am trying to reach the path of the traitor. Very hard to reach.
   * Rat
   * Selling ore
   * Extra: A career as law enforcement, if "rat".

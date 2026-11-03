@@ -254,7 +254,7 @@ class OutpostScreenDialog(Dialog):
         # the file (None: black) and the size it was made from
         self._picture_key: Optional[Tuple[Optional[str], Tuple[int, int]]] = None
         self._left: Optional[pygame.Surface] = None  # the cockpit texture covering the left block, made for _left_size
-        self._left_size: Optional[Tuple[int, int]] = None
+        self._left_key: Optional[Tuple[Tuple[int, int], str]] = None  # the size and the texture file of _left
 
         self.conversation: Optional[Conversation] = None  # the one of the selected option, while there is one
         self._queue: List[Tuple[Message, Optional[ResultCallback]]] = []  # messages asked while another is shown
@@ -319,11 +319,12 @@ class OutpostScreenDialog(Dialog):
         return self._picture
 
     def _left_background(self, size: Tuple[int, int]) -> pygame.Surface:
-        """The cockpit texture, as the instruments' background, covering the left block; made once per size."""
-        if self._left is None or self._left_size != size:
-            texture = pygame.image.load(resource_path('textures', 'cockpit_background.png')).convert()
+        """The cockpit texture of the ship, as the instruments' background, covering the left block; made once per size."""
+        key = (size, self.ship.COCKPIT_TEXTURE)
+        if self._left is None or self._left_key != key:
+            texture = pygame.image.load(resource_path('textures', self.ship.COCKPIT_TEXTURE)).convert()
             self._left = _darken(_cover(texture, size), LEFT_FADE)
-            self._left_size = size
+            self._left_key = key
         return self._left
 
     def notification_height(self, window_size: Tuple[int, int]) -> int:
@@ -674,7 +675,9 @@ class OutpostScreenDialog(Dialog):
             raise Exception("No reputation recorded on entering.")
         standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
         title = standing.entity.title_for(entered)
-        self.ship.notification.set(f"The Community thinks you have already enough stuff for a {title}.", sound, bad=True)
+        self.ship.notification.set(
+            f"The Community thinks you have already enough stuff for a {title}.", sound, bad=True
+            )
 
     # region Attachments
     def _attachment(self, name: str) -> Any:
@@ -1124,7 +1127,7 @@ class OutpostScreenDialog(Dialog):
         searches = [self._chat_tags, self._chat]
         if event.type == pygame.MOUSEBUTTONDOWN:  # the box that is clicked goes last, so that it keeps the text input
             searches.sort(key=lambda search: search.search_rect.collidepoint(event.pos))
-        if any([search.search_event(event) for search in searches]):
+        if any(search.search_event(event) for search in searches):
             return True
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
             return False

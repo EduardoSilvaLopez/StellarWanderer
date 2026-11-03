@@ -16,11 +16,11 @@ SPACE_COLOR = (0, 0, 0)
 # same.
 MILKY_WAY_EXPOSURE = 0.2
 HULL_COLOR = (38, 42, 55)
-HULL_DARK = (23, 26, 36)
-HULL_EDGE_COLOR = (70, 78, 98)
+HULL_DARK = (26, 24, 24)
+HULL_EDGE_COLOR = (108, 101, 94)
 STRUT = (30, 34, 46)
-CONSOLE = (29, 32, 43)
-CONSOLE_EDGE_COLOR = (74, 82, 102)
+CONSOLE = (44, 40, 38)
+CONSOLE_EDGE_COLOR = (150, 118, 70)  # the outline of each instrument: the one warm accent of the steel
 ACCENT = (94, 234, 212)
 ACCENT_DIM = (34, 92, 92)
 # readout labels: halfway between, legible on READOUT_BG
@@ -153,9 +153,6 @@ STARLIGHT_TINT_MAX = 0.35  # share of the star's colour added to the cockpit at 
 HEAT_VIGNETTE_COLOUR = (220, 30, 10)
 HEAT_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its maximum
 HEAT_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from the centre to a corner
-FROST_VIGNETTE_COLOUR = (150, 205, 255)  # the cold side's vignette, pale blue
-FROST_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its minimum
-FROST_VIGNETTE_INNER = 0.45  # the vignette starts at this share of the way from the centre to a corner
 WORLD_AMBIENT_LIGHT = 0.05  # share of a world's surface colour (World.surface_colour) still visible on the unlit side
 # The gas of a giant is drawn up to this many scale heights above the cloud tops, and its single-scattered sunlight is
 # multiplied by the gain, which is tuned by eye so that the cloud tops are as bright as their colour.

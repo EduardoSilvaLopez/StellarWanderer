@@ -10,8 +10,8 @@ class Canopy:
     """Draw hull frame: top rail, two A-pillars, and struts between panes."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, w: int, h: int) -> None:
-        """Draw the windshield canopy."""
+    def draw(surface: pygame.Surface, w: int, h: int, texture: str) -> None:
+        """Draw the windshield canopy, its frame in the cockpit texture file `texture`."""
         top = int(h * CANOPY_TOP)
         bottom = int(h * CONSOLE_TOP)
         top_inset = w * CANOPY_TOP_INSET
@@ -20,7 +20,7 @@ class Canopy:
         # Hull frame shapes (rail, pillars, struts), filled with the cockpit
         # texture masked to their silhouette — the glass panes between them
         # are left untouched so the 3D scene shows through.
-        frame_texture = get_windshield_frame_texture(w, h)
+        frame_texture = get_windshield_frame_texture(w, h, texture)
         surface.blit(frame_texture, (0, 0))
 
         # Top rail edge.

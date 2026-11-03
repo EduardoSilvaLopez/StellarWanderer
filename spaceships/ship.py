@@ -32,7 +32,7 @@ class Ship(Updatable):
     This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
     change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS), the forward and backward
     acceleration (FORWARD_BACKWARD_ACC), the braking (BRAKE_ACC, never less than the acceleration) and the cargo hold
-    class (CARGO_HOLD). The ship is upgraded by replacing it
+    class (CARGO_HOLD), and its cockpit texture (COCKPIT_TEXTURE). The ship is upgraded by replacing it
     with another configuration (see upgrade_to).
 
     `is_bound` tells whether it is bound to a world's surface (position and velocity then in the surface frame: x
@@ -49,6 +49,7 @@ class Ship(Updatable):
         HeatShieldOne = 1
         HeatShieldTwo = 2
 
+    COCKPIT_TEXTURE = 'cockpit_background.png'  # the cockpit's texture, a file of textures/ (shabby miner by default)
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
@@ -65,15 +66,25 @@ class Ship(Updatable):
 
     UPDATE_PERIOD = 60 * 60
 
-    TEMP_MIN = -50
-    TEMP_DEFAULT = 25
-    TEMP_MAX = 50
+    TEMP_DEFAULT = 25  # the ship's systems hold this in the cold: the temperature's floor, and the bar's least
+    TEMP_MAX = 50  # above it the pilot dies of the heat
+    HULL_TIME_CONSTANT = 600.0  # s: a passive ship in a bar of gas takes this long to close 63% of a difference
+    REFERENCE_PRESSURE = 1.0e5  # Pa: the pressure of HULL_TIME_CONSTANT (the exchange falls with pressure)
+    # J/K: the heat the ship holds, which with the time constant sets its conductance. The ship's mass is not modelled: this
+    # is an estimate, about 20 t of hull at 500 J/(kg K). Revisit it if the mass ever is.
+    HULL_CAPACITY = 1.0e7
+    # Friction in a gas: q = k * sqrt(density / nose radius) * speed**3 (W/m^2), on the frontal area. k is the Sutton-Graves
+    # constant for a hydrogen-helium atmosphere (Jupiter, mass fraction of helium 0.238): 0.0447 in the report's units,
+    # times 1 / (2 sqrt(101325)) for SI. Sutton and Graves 1971, NASA TR R-376, eq. (42) and table I, in kg^0.5/m.
+    FRICTION_CONSTANT = 7.0e-5  # SI, kg^0.5/m
+    NOSE_RADIUS = 1.0  # m: the rounded front of the hull, where the heating is taken
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
 
     # Set by each configuration, never here.
     ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS: ClassVar[float]  # The maximum. Better ships will decrease this.
-    PRESSURE_MAX: ClassVar[float]  # Pa, the outside pressure the hull is built for: the limit of the pressure bar
+    PRESSURE_MAX: ClassVar[float]  # Pa, the outside pressure the hull is built for: the limit of the pressure bar, and
+    # the pressure at which the ship is crushed (see _live_through)
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
     UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included (Navigation._apply_gravity)
     RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared
@@ -315,14 +326,76 @@ class Ship(Updatable):
 
     def death_radius(self, star: Star) -> float:
         """The distance from the star at which the ship reaches TEMP_MAX, with its heat shield: a level L lets through
-        5**-L of the light, so the death flux is reached 5**L times farther out, scaled from the default radius."""
+        5**-L of the light, so the death flux is reached 5**(L/2) times closer in, scaled from the default radius."""
         death_flux = star.HEAT_FLUX + (star.DEATH_FLUX - star.HEAT_FLUX) * 5 ** self.heat_shield.value
         return star.default_death_radius * math.sqrt(star.DEATH_FLUX / death_flux)
 
-    def check_heat(self) -> None:
-        """Every frame while unbound: the star's heat is judged now, not at the next update, which may be an hour of
-        game time later and too late for a fast fall (see _live_through)."""
-        self._live_through(0.0)
+    def heat_radius(self, star: Star) -> float:
+        """The distance from the star at which the ship starts to heat up, with its heat shield: the same shield that
+        moves the death radius (see death_radius) moves this one, as the light it lets through is the same at every
+        distance."""
+        return star.default_heat_radius * 5 ** (-self.heat_shield.value / 2)
+
+    def update_heat(self, delta_time: float) -> None:
+        """The temperature, while unbound, every frame, so that a fast fall is felt when it happens: in a giant's gas it
+        is exchanged with the gas (`_exchange_with_gas`), elsewhere it follows the star's distance. It never kills: the
+        deaths are checked by `_live_through`, every update period."""
+        if self.is_bound:
+            return
+        ambient = self.navigation.ambient()
+        if ambient is not None:
+            self._exchange_with_gas(ambient[0], ambient[1], delta_time)
+            return
+        star = gem.current_environment.nearest_system.star
+        dist: float = self.navigation.distance_to_body_centre(star)
+        heat_radius = self.heat_radius(star)
+        if dist < heat_radius:
+            death_radius = self.death_radius(star)
+            fall = Ship.TEMP_DEFAULT * (dist - death_radius) / (heat_radius - death_radius)
+            self.temperature = Ship.TEMP_MAX - fall
+
+    def _time_constant(self, pressure: float) -> float:
+        """How long the hull takes to close most of a difference of temperature with the gas, at a pressure (Pa). The
+        exchange is by the molecules that strike the hull, so it falls with the pressure: in proportion below one bar,
+        and as its square root above."""
+        exponent = 1.0 if pressure < Ship.REFERENCE_PRESSURE else 0.5
+        return Ship.HULL_TIME_CONSTANT * (Ship.REFERENCE_PRESSURE / pressure) ** exponent
+
+    def _friction_power(self, pressure: float, kelvin: float) -> float:
+        """The heat friction puts into the hull, in W: the stagnation heating (see FRICTION_CONSTANT) of the speed
+        through the gas, on the frontal area. The gas is the giant's (its density from its molecular weight)."""
+        import game_environment as gem
+        giant = gem.current_environment.fixed_body
+        density = pressure / (giant.specific_gas_constant * kelvin)
+        flux = Ship.FRICTION_CONSTANT * math.sqrt(density / Ship.NOSE_RADIUS) * self.scoop_speed() ** 3  # W/m^2
+        return flux * self.WIDTH * self.HEIGHT
+
+    def _exchange_with_gas(self, pressure: float, kelvin: float, delta_time: float) -> None:
+        """The temperature moves towards the gas's, over the hull's time constant, and friction heats it on top. The heat
+        shield divides the difference at equilibrium, by 5 per level, and the friction too: the ship settles at
+        TEMP_DEFAULT + (gas - TEMP_DEFAULT) / shield, plus the friction through the hull. Where that is below the floor,
+        the systems hold the floor, and that costs energy: the heat leaking through the shield, the hull's conductance
+        over the shield times the gap."""
+        gas = kelvin - 273.15
+        shield = 5.0 ** self.heat_shield.value
+        time_constant = self._time_constant(pressure)
+        # Friction is a steady rate of heat, which over the time constant offsets the target by its heat over the hull.
+        friction = self._friction_power(pressure, kelvin) * time_constant / (shield * Ship.HULL_CAPACITY)
+        target = Ship.TEMP_DEFAULT + (gas - Ship.TEMP_DEFAULT) / shield + friction
+        passive = self.temperature + (target - self.temperature) * (1.0 - math.exp(-delta_time / time_constant))
+        if passive < Ship.TEMP_DEFAULT:
+            conductance = Ship.HULL_CAPACITY / time_constant  # W/K
+            power = conductance * (Ship.TEMP_DEFAULT - target)  # W: the pull of the passive equilibrium through the hull
+            self.energy -= power * delta_time / 3600.0  # Wh
+            self.temperature = Ship.TEMP_DEFAULT
+        else:
+            self.temperature = passive
+
+    def _crushed(self) -> bool:
+        """The gas around the ship is at PRESSURE_MAX or more: the absolute pressure, as the bar's full mark is. Bound,
+        there is no such gas (Navigation.ambient)."""
+        ambient = self.navigation.ambient()
+        return ambient is not None and ambient[0] >= self.PRESSURE_MAX
 
     def _live_through(self, days: float) -> Ship:
         """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked), the
@@ -344,14 +417,6 @@ class Ship(Updatable):
             hours = days * 24 # Duh
             temp_diff: float = (Ship.TEMP_DEFAULT - self.temperature) * (1 - 0.9**hours)
             self.temperature += temp_diff # Stabilizing.
-        else:
-            star = gem.current_environment.nearest_system.star
-            dist: float = self.navigation.distance_to_body_centre(star)
-            heat_radius = star.default_heat_radius
-            if dist < heat_radius:
-                death_radius = self.death_radius(star)
-                fall = Ship.TEMP_DEFAULT * (dist - death_radius) / (heat_radius - death_radius)
-                self.temperature = Ship.TEMP_MAX - fall
 
         # Maintenance thresholds:
         if self.maintenance <= Ship.MAINTENANCE_WARNING < old_maintenance:
@@ -362,10 +427,6 @@ class Ship(Updatable):
             self.notification.set("WARNING: It's getting hot in here. You wanna take your clothes off.")
         elif old_temperature <= 45 < self.temperature:
             self.notification.set("CRITICAL: The controls burn when you touch them. Leave this place.")
-        elif self.temperature <= -10 < old_temperature:
-            self.notification.set("WARNING: Chilling. Watch the temperature drop. Get a blanket.")
-        elif self.temperature <= -35 < old_temperature:
-            self.notification.set("CRITICAL: Freezing. Leave this place or take measures *now*.")
         elif self.cargo_hold.air <= CargoHold.WARNING_DAYS['air'] < old_air:
             self.notification.set('WARNING: Ship needs air refill. Remain near an outpost.')
         elif self.cargo_hold.air <= 2.0 < old_air:
@@ -379,11 +440,15 @@ class Ship(Updatable):
             self.owner.game_over('Your ship falls appart due to lack of maintenance. Your death is horrible but swift.')
         elif self.energy <= 0.0:
             self.owner.game_over('Your ship becomes a silent frozen box. Your death is slow but calm at the end.')
-        elif self.temperature <= self.TEMP_MIN:
-            self.owner.game_over('You freeze inside your ship. How this could happen, nobody knows.')
         elif self.temperature > self.TEMP_MAX:
-            self.owner.game_over('You die of a heat stroke inside your ship. Better than burning alive or dying of' \
-            ' the massive radioactivity around here, at least.')
+            self.owner.game_over(
+                'You die of a heat stroke inside your ship. Better than burning alive or dying of'
+                ' the massive radioactivity around here, at least.'
+                )
+        elif self._crushed():
+            self.owner.game_over(
+                'Your ship cracks, then implodes, unable to withstand the pressure. A quick death.'
+                )
         elif self.cargo_hold.air <= 0.0:
             self.owner.game_over('You die of CO2 intoxication. A somehow funny death but you are anyway dead.')
         elif self.cargo_hold.water <= -2.0:  # Dying of thirst after 2 days without water.

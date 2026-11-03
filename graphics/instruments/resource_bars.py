@@ -21,7 +21,7 @@ GRADIENT = ((0.0, BINDING_MARK_RED), (0.5, AMBER), (1.0, BINDING_NEAR_GREEN))
 GRAVITY_GRADIENT = ((0.0, GRAVITY_GREEN), (0.5, GRAVITY_AMBER), (1.0, GRAVITY_RED))
 WARNING_COLOUR = AMBER  # the maintenance warning level, a vertical line across its bar
 TEMPERATURE_MIN_WIDTH = 3  # pixels: the bar's width when the temperature is the ideal one
-TEMPERATURE_IDEAL = 25  # degrees: the green line. The colour moves away from it towards either extreme of the scale.
+TEMPERATURE_IDEAL = 25  # degrees: the scale's least and the green line. The colour moves away from it as it heats up.
 CREDIT_SYMBOL = 'Ȼ'
 ROW_LABELS = ('Credits', 'Maintenance', 'Energy', 'Temperature', 'Gravity', 'Pressure', 'Outside')
 ATMOSPHERE_ROWS = ('Pressure', 'Outside')  # the gas around the ship (a bar, and a value in K), shown only while in one
@@ -49,13 +49,9 @@ def format_credits(value: float) -> str:
 
 
 def temperature_stress(ship: Ship) -> float:
-    """How far the ship's temperature is from TEMPERATURE_IDEAL: 0 there, 1 at either end of the scale (Ship.TEMP_MIN,
-    Ship.TEMP_MAX), linear on each side."""
-    temperature = ship.temperature
-    if temperature >= TEMPERATURE_IDEAL:
-        stress = (temperature - TEMPERATURE_IDEAL) / (ship.TEMP_MAX - TEMPERATURE_IDEAL)
-    else:
-        stress = (TEMPERATURE_IDEAL - temperature) / (TEMPERATURE_IDEAL - ship.TEMP_MIN)
+    """How far the ship's temperature is above TEMPERATURE_IDEAL: 0 there and below it (the systems hold it there, see
+    Ship.TEMP_DEFAULT), 1 at Ship.TEMP_MAX, linear between."""
+    stress = (ship.temperature - TEMPERATURE_IDEAL) / (ship.TEMP_MAX - TEMPERATURE_IDEAL)
     return max(0.0, min(1.0, stress))
 
 
@@ -99,15 +95,15 @@ def _draw_over_bar(surface: pygame.Surface, font: Any, text: str, origin: Tuple[
 
 
 def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship) -> None:
-    """The scale from Ship.TEMP_MIN to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the ship's temperature,
+    """The scale from TEMPERATURE_IDEAL to Ship.TEMP_MAX, with a bar from TEMPERATURE_IDEAL to the ship's temperature,
     coloured by its stress. Equal values give a single line of TEMPERATURE_MIN_WIDTH pixels."""
     temperature = ship.temperature
     pygame.draw.rect(surface, ACCENT_DIM, track, 1)
     inner = track.inflate(-4, -4)
 
     def x_of(value: float) -> int:
-        return inner.left + int(inner.width * max(0.0, min(1.0, (value - ship.TEMP_MIN)
-                                                           / (ship.TEMP_MAX - ship.TEMP_MIN))))
+        return inner.left + int(inner.width * max(0.0, min(1.0, (value - TEMPERATURE_IDEAL)
+                                                           / (ship.TEMP_MAX - TEMPERATURE_IDEAL))))
 
     x_ideal, x_now = x_of(TEMPERATURE_IDEAL), x_of(temperature)
     left, right = min(x_ideal, x_now), max(x_ideal, x_now)

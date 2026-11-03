@@ -1,0 +1,2 @@
+# For the cockpit texture generators in tools/ (generate_cockpit_*.py). Not needed to run or build the game.
+Pillow==12.3.0

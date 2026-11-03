@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import math
 import pygame
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
 from common.paths import resource_path
 from ..constants import (
@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 
 PANEL_TITLE_GAP = 6  # pixels between a panel's title and its box
 
-_cockpit_background: Optional[pygame.Surface] = None
-_windshield_frame_texture: Optional[pygame.Surface] = None
-# (w, h, console height, the cockpit background it was made from, the scaled console background)
+# By texture file (the ship's COCKPIT_TEXTURE) and window size.
+_cockpit_backgrounds: Dict[Tuple[str, int, int], pygame.Surface] = {}
+_windshield_frame_textures: Dict[Tuple[str, int, int], pygame.Surface] = {}
+# (w, h, console height, the cockpit background it was made from, the console's band of it)
 _console_background: Optional[Tuple[int, int, int, pygame.Surface, pygame.Surface]] = None
 
 
@@ -56,17 +57,28 @@ def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int,
 
 
 # region Textures
-def get_cockpit_background(w: int, h: int) -> pygame.Surface:
-    """Load, scale, and apply gradient darkening to cockpit texture.
+def cover(image: pygame.Surface, size: Tuple[int, int]) -> pygame.Surface:
+    """`image` scaled to fill `size` with its proportions kept, cropped to its middle: a texture is never stretched."""
+    width, height = size
+    scale = max(width / image.get_width(), height / image.get_height())
+    scaled = pygame.transform.smoothscale(image, (round(image.get_width() * scale), round(image.get_height() * scale)))
+    crop = pygame.Rect(0, 0, width, height)
+    crop.center = scaled.get_rect().center
+    return scaled.subsurface(crop).copy()
+
+
+def get_cockpit_background(w: int, h: int, texture: str) -> pygame.Surface:
+    """Load, fit to the window (see cover), and apply gradient darkening to the cockpit texture file `texture`
+    (in textures/, the ship's COCKPIT_TEXTURE).
 
     Left side gradually darkened, right side normal brightness.
     """
-    global _cockpit_background  # noqa: PLW0603 - a module-level cache, like the other textures
-    if _cockpit_background is None:
-        texture_path = resource_path('textures', 'cockpit_background.png')
+    key = (texture, w, h)
+    if key not in _cockpit_backgrounds:
+        texture_path = resource_path('textures', texture)
         try:
             image = pygame.image.load(texture_path)
-            result = pygame.transform.scale(image, (w, h))
+            result = cover(image, (w, h))
 
             # Apply gradient darkening: left side dark, right side normal.
             gradient_overlay = pygame.Surface((w, h))
@@ -76,38 +88,39 @@ def get_cockpit_background(w: int, h: int) -> pygame.Surface:
                 pygame.draw.line(gradient_overlay, (brightness, brightness, brightness), (x, 0), (x, h), 1)
 
             result.blit(gradient_overlay, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
-            _cockpit_background = result
+            _cockpit_backgrounds[key] = result
         except (pygame.error, FileNotFoundError) as e:
             logger.error(f"Failed to load cockpit background texture from {texture_path}: {e}")
             # Create fallback solid color surface
             fallback = pygame.Surface((w, h))
             fallback.fill((40, 50, 60))
-            _cockpit_background = fallback
-    return _cockpit_background
+            _cockpit_backgrounds[key] = fallback
+    return _cockpit_backgrounds[key]
 
 
-def get_console_background(w: int, h: int, console_height: int) -> pygame.Surface:
-    """The cockpit background scaled to the console's size (w x console_height), cached.
+def get_console_background(w: int, h: int, console_height: int, texture: str) -> pygame.Surface:
+    """The bottom band of the cockpit background that the console covers (w x console_height), cached.
 
-    It is converted to per-pixel alpha, the format of the overlay it is blitted onto every frame:
-    blitting an opaque surface onto a per-pixel-alpha one takes a much slower path (about 13 ms
-    versus 1.3 ms for a full console)."""
+    It is cut from the background, not scaled, so the texture keeps its proportions and joins the part above the
+    console at the same place. It is converted to per-pixel alpha, the format of the overlay it is blitted onto every
+    frame: blitting an opaque surface onto a per-pixel-alpha one takes a much slower path (about 13 ms versus 1.3 ms
+    for a full console)."""
     global _console_background  # noqa: PLW0603 - a module-level cache, like the other textures
-    background = get_cockpit_background(w, h)
+    background = get_cockpit_background(w, h, texture)
     cached = _console_background
     if cached is None or cached[:3] != (w, h, console_height) or cached[3] is not background:
-        scaled = pygame.transform.scale(background, (w, console_height)).convert_alpha()
-        _console_background = (w, h, console_height, background, scaled)
+        band = background.subsurface((0, h - console_height, w, console_height)).convert_alpha()
+        _console_background = (w, h, console_height, background, band)
     return _console_background[4]
 
 
-def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
-    """Cockpit texture masked to the windshield's opaque frame shapes
+def get_windshield_frame_texture(w: int, h: int, texture: str) -> pygame.Surface:
+    """Cockpit texture (file `texture`) masked to the windshield's opaque frame shapes
     (top rail, A-pillars, struts) only — the glass panes between them
     stay transparent so the 3D scene keeps showing through.
     """
-    global _windshield_frame_texture  # noqa: PLW0603 - a module-level cache, like the other textures
-    if _windshield_frame_texture is None:
+    key = (texture, w, h)
+    if key not in _windshield_frame_textures:
         top = int(h * CANOPY_TOP)
         bottom = int(h * CONSOLE_TOP)
         top_inset = w * CANOPY_TOP_INSET
@@ -133,10 +146,10 @@ def get_windshield_frame_texture(w: int, h: int) -> pygame.Surface:
             ]
             pygame.draw.polygon(mask, (255, 255, 255, 255), strut)
 
-        frame_texture = get_cockpit_background(w, h).convert_alpha()
+        frame_texture = get_cockpit_background(w, h, texture).convert_alpha()
         frame_texture.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-        _windshield_frame_texture = frame_texture
-    return _windshield_frame_texture
+        _windshield_frame_textures[key] = frame_texture
+    return _windshield_frame_textures[key]
 # endregion
 
 

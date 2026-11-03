@@ -7,7 +7,8 @@ the planet (`JovianWorld.cloud_state`) carries east or west, so they drift and s
 they raise and lower the cloud tops, thicken and thin the gas, brighten the slopes the sun faces and shadow the others,
 and the colour of the gas changes with the depth (`deep_colour`). Storms (`JovianWorld.storms`) swirl the clouds, tint them and
 raise their tops; lightning (`JovianWorld.lightning`), mostly in the storms, lights the gas round each flash from below,
-a glow on the night side.
+a glow on the night side. Rings (`JovianWorld.ring`) lie in the equatorial plane: a ray meets them once, they are lit by
+the star and shaded by the planet, and they dim what is behind them; where a ring lies beyond the gas, the gas hides it.
 With the star behind a giant its thin haze, lit above the planet's
 shadow and scattering forward, rings the limb as a crescent. The giants are drawn under the sky texture (the star
 covers those behind it, and they cover it otherwise): the sky is made transparent over each (`sky_erasers`), and the
@@ -88,6 +89,13 @@ uniform float step_height;  // the altitude, in scale heights, a step may cover
 uniform float band_count;
 uniform float band_phase;
 uniform float band_contrast;
+const int RING_N = 64;
+uniform float ring_on;           // 1 where the giant has rings
+uniform float ring_inner;        // m from the centre
+uniform float ring_outer;
+uniform float ring_mean;         // the mean optical depth of the rings: what their shadow on the planet is made of
+uniform float ring_opacity[RING_N];  // the optical depth of the rings, from the inner edge out
+uniform vec3 ring_colour;
 uniform sampler3D noise;       // random lattice values, see lattice_noise
 uniform vec3 prime_x;          // the planet's prime meridian, in the camera frame (it turns with the spin)
 uniform vec3 prime_y;          // 90 degrees east of it
@@ -241,8 +249,83 @@ vec3 storm_swirl(vec3 up, out float amount) {
     return normalize(up);
 }
 
-// What the ray u from the camera gathers: the light the gas scatters towards it (premultiplied), and its opacity.
-vec4 trace(vec3 u) {
+// The rings, in the equatorial plane (normal: the pole) through the centre. Their optical depth is looked up by the
+// radius in the plane; a ray meets the plane once, and crosses it more obliquely the more it runs along it.
+float ring_radius(vec3 p) {
+    return length(p - dot(p, pole) * pole);
+}
+
+float ring_tau_at(float r) {
+    if (ring_on < 0.5 || r < ring_inner || r > ring_outer) {
+        return 0.0;
+    }
+    float f = clamp((r - ring_inner) / (ring_outer - ring_inner), 0.0, 1.0) * float(RING_N - 1);
+    int i = int(min(floor(f), float(RING_N - 2)));
+    return mix(ring_opacity[i], ring_opacity[i + 1], f - float(i));  // interpolated: no steps on screen
+}
+
+// The share of the sun's light that the rings let through to the point q (outside the planet). Their shadow on the
+// planet is made of the mean optical depth, with soft edges, not of the rings' own structure: the gaps would make a
+// dashed line where the sun is nearly in the ring plane. And a ring has a thickness, so the slant has a limit. With
+// the sun that close to the ring plane the shadow is a line thinner than a pixel, which no sampling draws cleanly: it
+// fades out below a few degrees of elevation.
+float ring_shadow(vec3 q) {
+    float cosine = dot(light, pole);
+    if (ring_on < 0.5 || abs(cosine) < 1e-5) {
+        return 1.0;
+    }
+    float s = -dot(q, pole) / cosine;
+    if (s <= 0.0) {
+        return 1.0;
+    }
+    float share = (ring_radius(q + light * s) - ring_inner) / (ring_outer - ring_inner);
+    if (share <= 0.0 || share >= 1.0) {
+        return 1.0;
+    }
+    float edge = smoothstep(0.0, 0.06, share) * (1.0 - smoothstep(0.94, 1.0, share));
+    return mix(1.0, exp(-ring_mean * edge * min(1.0 / abs(cosine), 6.0)), smoothstep(0.01, 0.06, abs(cosine)));
+}
+
+// 0 where the planet hides the sun from the point q, 1 where it does not.
+float planet_shadow(vec3 q) {
+    float pl = dot(pole, light);
+    float pq = dot(pole, q);
+    float a = inv_a2 + shape * pl * pl;
+    float b = dot(q, light) * inv_a2 + shape * pl * pq;
+    float c = dot(q, q) * inv_a2 + shape * pq * pq - 1.0;
+    float disc = b * b - a * c;
+    if (disc <= 0.0 || c <= 0.0) {
+        return 1.0;
+    }
+    return (-b - sqrt(disc)) / a > 0.0 ? 0.0 : 1.0;
+}
+
+// The ring a ray meets (premultiplied colour and opacity), and how far along the ray it is.
+vec4 ring_at(vec3 u, out float t_ring) {
+    t_ring = 1e30;
+    float cosine = dot(u, pole);
+    if (ring_on < 0.5 || abs(cosine) < 1e-5) {
+        return vec4(0.0);
+    }
+    t_ring = -dot(camera, pole) / cosine;
+    if (t_ring <= 0.0) {
+        t_ring = 1e30;
+        return vec4(0.0);
+    }
+    vec3 p = camera + u * t_ring;
+    float tau = ring_tau_at(ring_radius(p));
+    if (tau <= 0.0) {
+        return vec4(0.0);
+    }
+    float alpha = 1.0 - exp(-tau * min(1.0 / abs(cosine), 12.0));  // a ring has a thickness: no solid line edge-on
+    float lit = (0.3 + abs(dot(pole, light))) * planet_shadow(p);
+    return vec4(ring_colour * sun_gain * lit * alpha, alpha);
+}
+
+// What the ray u from the camera gathers from the gas: the light it scatters towards it (premultiplied), and its
+// opacity; t_enter is where the ray enters the gas (far away when it misses it).
+vec4 gas_trace(vec3 u, out float t_enter) {
+    t_enter = 1e30;
     float pu = dot(pole, u);
     float pc = dot(pole, camera);
     float a = inv_a2 + shape * pu * pu;
@@ -254,6 +337,7 @@ vec4 trace(vec3 u) {
     }
     float root = sqrt(disc);
     float t = max((-b - root) / a, 0.0);
+    t_enter = t;
     float t_end = (-b + root) / a;
     if (t_end <= 0.0) {
         return vec4(0.0);
@@ -262,6 +346,7 @@ vec4 trace(vec3 u) {
     float transmission = 1.0;
     vec3 gathered = vec3(0.0);
     bool cloud_seen = false;
+    float deck_shadow = 1.0;  // the share of the sun's light the rings let through to the deck
     float cloud = 0.0;     // the fine clouds where the ray first meets the deck
     for (int march = 0; march < MAX_STEPS; march++) {
         if (t >= t_end || transmission < 0.004) {
@@ -330,6 +415,7 @@ vec4 trace(vec3 u) {
         if (!cloud_seen && column > 0.15) {
             // The fine clouds, looked up once per ray where it first meets the deck.
             cloud_seen = true;
+            deck_shadow = ring_shadow(p);  // the rings' shadow on the deck, once per ray: a whole band, not steps of it
             cloud = cloud_field(up_swirl, altitude, footprint, cloud_octaves);
         }
         // How the sun lights the slope of the cloud top: from the clouds here to those a short way towards the sun.
@@ -366,7 +452,7 @@ vec4 trace(vec3 u) {
             flash_light += flash_colour * flash_shape[flash].y * exp(-chord / (width * width))
                            * exp(-penetration * abs(column - flash_column));
         }
-        float lit = sun * relief_light;
+        float lit = sun * relief_light * deck_shadow;
         vec3 source = deep_colour(tint / 255.0 * mix(vec3(1.0), storm_colour, min(storm_amount, 1.0) * smoothstep(0.05, 0.5, column)), column) * bands * shade * deck
                       * (sun_gain * lit * scattering + ambient * exp(-2.0 * column));
 
@@ -375,6 +461,22 @@ vec4 trace(vec3 u) {
         t += ds;
     }
     return vec4(gathered, 1.0 - transmission);
+}
+
+// The gas and the rings: a ring between the camera and the gas lies over it, one beyond the gas lies under it, so the
+// gas hides it where the gas is opaque and the sky shows through where it is not.
+vec4 trace(vec3 u) {
+    float t_enter;
+    vec4 gas = gas_trace(u, t_enter);
+    if (ring_on < 0.5) {
+        return gas;
+    }
+    float t_ring;
+    vec4 ring = ring_at(u, t_ring);
+    if (t_ring < t_enter) {
+        return ring + (1.0 - ring.a) * gas;
+    }
+    return gas + (1.0 - gas.a) * ring;
 }
 
 void main() {
@@ -696,15 +798,17 @@ class GiantGl:
         pole = ship.attitude.camera_components(Vector3(0.0, 0.0, 1.0))
 
         top_q = 1.0 + GIANT_HAZE_TOP * world.scale_height / equatorial
+        # the screen box must hold the rings too, out to their outer edge
+        reach_q = top_q if world.ring is None else max(top_q, world.ring.outer / equatorial)
         pole_on_camera = pole.dot(camera)
         q_camera = math.sqrt(camera.dot(camera) / equatorial ** 2
                              + (1.0 / polar ** 2 - 1.0 / equatorial ** 2) * pole_on_camera ** 2)
-        if q_camera < top_q:
+        if q_camera < reach_q:
             x0, y0, x1, y1 = 0, 0, width, view_h
         else:
             camera_distance = camera.length()
             centre = camera * (-1.0 / camera_distance)
-            outer_angle = math.asin(min(equatorial * top_q / camera_distance, 0.999))
+            outer_angle = math.asin(min(equatorial * reach_q / camera_distance, 0.999))
             max_angle = math.atan(math.hypot(width / 2, max(horizon_y, view_h - horizon_y)) / focal)
             if math.acos(max(-1.0, min(1.0, centre.z))) - outer_angle > max_angle:
                 return
@@ -742,6 +846,14 @@ class GiantGl:
         GL.glUniform1f(uniform("band_count"), world.band_count)
         GL.glUniform1f(uniform("band_phase"), world.band_phase)
         GL.glUniform1f(uniform("band_contrast"), world.band_contrast)
+        ring = world.ring
+        GL.glUniform1f(uniform("ring_on"), 0.0 if ring is None else 1.0)
+        GL.glUniform1f(uniform("ring_inner"), 0.0 if ring is None else ring.inner)
+        GL.glUniform1f(uniform("ring_outer"), 0.0 if ring is None else ring.outer)
+        GL.glUniform1f(uniform("ring_mean"), 0.0 if ring is None else sum(ring.opacity) / len(ring.opacity))
+        GL.glUniform3f(uniform("ring_colour"), *(0.0, 0.0, 0.0) if ring is None else ring.colour)
+        opacity = [0.0] * JovianWorld.RING_SAMPLES if ring is None else list(ring.opacity)
+        GL.glUniform1fv(uniform("ring_opacity"), JovianWorld.RING_SAMPLES, np.array(opacity, dtype=np.float32))
 
         spin, first_cell, cell_angles = world.cloud_state(date_time)
         prime_x = ship.attitude.camera_components(Vector3(math.cos(spin), math.sin(spin), 0.0))

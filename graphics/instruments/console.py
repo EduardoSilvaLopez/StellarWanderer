@@ -42,7 +42,7 @@ class Console:
         height = h - top
 
         # Draw textured background (scaled once and cached, not every frame)
-        surface.blit(get_console_background(w, h, height), (0, top))
+        surface.blit(get_console_background(w, h, height, ship.COCKPIT_TEXTURE), (0, top))
 
         pygame.draw.line(surface, CONSOLE_EDGE_COLOR, (0, top), (w, top), 2)
         pygame.draw.rect(surface, HULL_DARK, (0, top + 2, w, max(3, int(height * 0.06))))

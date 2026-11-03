@@ -4,10 +4,11 @@ of the message dialogs, a scrollable list and one Close button.
 
 The systems are those of the player's knowledge (knowledge.py), as a list of contents of their bodies, each with a
 check box for its visibility. Each entry is the markdown of its body (see `ItemDialog`): its markdown headings and
-bullets are drawn as headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones the player has talked to,
-and those of a mission they took, "Not met yet"): each is a card, with the portrait beside the fields of
-`Person.description_fields()`, and under both a comment box across the card that the player can write in (saved with
-the person, see Person.set_comment). A system or a person that is not in memory is generated again from its key or seed."""
+bullets are drawn as headings and 'label: value' lines. The people are those in `GameEnvironment.persons` (the ones
+the player has talked to, and those of a mission they took, "Not met yet"): each is a card, with the portrait beside
+the fields of `Person.description_fields()`, and under both a comment box across the card that the player can write
+in (saved with the person, see Person.set_comment). A system or a person that is not in memory is generated again from
+its key or seed."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
@@ -128,9 +129,9 @@ class _ListDialog(MessageDialog):
 
 
 class ItemDialog(_ListDialog):
-    """The knowledge base's entry of one item (see KnownSystemsDialog): its markdown text, scrolled. With `on_forget`, an
-    asteroid's Forget button comes first; while `forget_blocked` (a mission is about the asteroid) it is dimmed and does
-    nothing, and the entry says why. Results: ('close', None) on Close, Esc or a right-click; ('exit', None) if the
+    """The knowledge base's entry of one item (see KnownSystemsDialog): its markdown text, scrolled. With `on_forget`,
+    an asteroid's Forget button comes first; while `forget_blocked` (a mission is about the asteroid) it is dimmed and
+    does nothing, and the entry says why. Results: ('close', None) on Close, Esc or a right-click; ('exit', None) if the
     window closes."""
 
     FORGET_BLOCKED = 'A mission is about this asteroid: it can be forgotten once the mission is over.'
@@ -185,9 +186,9 @@ def _draw_check(surface: pygame.Surface, rect: pygame.Rect, state: str, locked: 
 
 
 class KnownSystemsDialog(_ListDialog):
-    """The bodies the pilot knows, as a list of contents: each stellar system, with its star, its portal base, its belts,
-    its planets (each with its moons) and its free asteroids nested under it, and the asteroids of a belt under the
-    belt. Each item but the system has a check box, checked when it is shown: unchecked, it is hidden (no label, no
+    """The bodies the pilot knows, as a list of contents: each stellar system, with its star, its portal base, its
+    belts, its planets (each with its moons) and its free asteroids nested under it, and the asteroids of a belt under
+    the belt. Each item but the system has a check box, checked when it is shown: unchecked, it is hidden (no label, no
     target). The four check boxes at the top do the same for all the planets, moons, belts or free asteroids. What a
     mission is about cannot be hidden, and an asteroid of one cannot be forgotten, while the mission is open. A click on
     an item's name opens its entry (ItemDialog), with a Forget button for an asteroid. The list keeps its scroll
@@ -280,20 +281,25 @@ class KnownSystemsDialog(_ListDialog):
                   locked=self._locked(asteroid), toggle=lambda: self._toggle_item(asteroid),
                   open_=self._open_item('Asteroid', asteroid.markdown, forget=asteroid), gap=ROW_GAP)
 
-    def _open_item(self, title: str, text: Callable[[], str], forget: Optional[Asteroid] = None) -> Callable[[], None]:
-        """The action of a row: opens its entry over the list. `text` is called then, so the entry is the current one."""
+    def _open_item(self, title: str, text: Callable[[], str],
+                   forget: Optional[Asteroid] = None) -> Callable[[], None]:
+        """The action of a row: opens its entry over the list. `text` is called then, so the entry is the current
+        one."""
         def open_() -> None:
-            on_forget = (lambda: self._forget(forget)) if forget is not None else None
-            blocked = forget is not None and self._locked(forget)
-            self._detail = ItemDialog(title, text(), on_forget, forget_blocked=blocked)
+            if forget is None:
+                self._detail = ItemDialog(title, text())
+            else:
+                asteroid: Asteroid = forget
+                self._detail = ItemDialog(title, text(), lambda: self._forget(asteroid),
+                                          forget_blocked=self._locked(asteroid))
         return open_
     # endregion
 
     # region Changes
     @staticmethod
     def _locked(item) -> bool:
-        """Whether a mission is about the item: an asteroid of one, or a belt with one of its asteroids. Such an item can
-        be neither hidden nor forgotten."""
+        """Whether a mission is about the item: an asteroid of one, or a belt with one of its asteroids. Such an item
+        can be neither hidden nor forgotten."""
         from galaxies.asteroid import Asteroid
         from galaxies.asteroid_belt import AsteroidBelt
         if isinstance(item, Asteroid):
@@ -308,7 +314,10 @@ class KnownSystemsDialog(_ListDialog):
 
     @staticmethod
     def _state(items: list) -> str:
-        """The state of a group's check box: 'on' when all are shown, 'off' when all are hidden, else 'mixed'."""
+        """The state of a group's check box: 'on' when all are shown, 'off' when all are hidden or there are none, else
+        'mixed'."""
+        if not items:
+            return 'off'
         shown = [not item.hidden for item in items]
         if all(shown):
             return 'on'
@@ -392,10 +401,10 @@ class KnownPeopleDialog(_ListDialog):
     and typed into like a comment. A comment that makes its card stop matching drops the focus with the card."""
 
     def __init__(self) -> None:
-        self._people: dict = {}  # seed -> Person, for each card that could be found again
+        self._people: dict[int, Person] = {}  # seed -> Person, for each card that could be found again
         # (seed, index of the card's block, box inside that block)
-        self._boxes: List[Tuple[float, int, pygame.Rect]] = []
-        self._focus: Optional[float] = None  # the seed of the person whose comment is being typed
+        self._boxes: List[Tuple[int, int, pygame.Rect]] = []
+        self._focus: Optional[int] = None  # the seed of the person whose comment is being typed
         self._query: str = ''  # what the search box holds
         self._search_focused: bool = False  # whether the keys write into the search box
         super().__init__('People')
@@ -457,8 +466,9 @@ class KnownPeopleDialog(_ListDialog):
 
     def _card(self, person: Optional[Person], seed: int, first_met_at: Optional[str],
               width: int) -> Tuple[pygame.Surface, Optional[pygame.Rect]]:
-        """One person: the portrait on the left, the name and the fields beside it, and under both, across the whole card,
-        the comment box (when the person could be found again). Returns the card and the box's rectangle inside it."""
+        """One person: the portrait on the left, the name and the fields beside it, and under both, across the whole
+        card, the comment box (when the person could be found again). Returns the card and the box's rectangle inside
+        it."""
         text_width = width - PORTRAIT_SIZE[0] - PORTRAIT_GAP
         name = person.get_full_name() if person is not None else 'Unknown person'
         fields = self._fields(person, seed, first_met_at)
@@ -500,7 +510,7 @@ class KnownPeopleDialog(_ListDialog):
             card.blit(line, (x, y))
             y += line.get_height() + 2
 
-        if box is not None:
+        if person is not None and box is not None:
             self._draw_box(card, box, person, seed == self._focus)
         return card, box
 
@@ -520,7 +530,7 @@ class KnownPeopleDialog(_ListDialog):
     # endregion
 
     # region Focus and typing
-    def _box_at(self, position: Tuple[int, int]) -> Optional[float]:
+    def _box_at(self, position: Tuple[int, int]) -> Optional[int]:
         """The seed of the person whose comment box is at a mouse position (dialog coordinates), or None. A box scrolled
         out of the text area cannot be clicked."""
         if not self.text_rect.collidepoint(position):
@@ -557,9 +567,11 @@ class KnownPeopleDialog(_ListDialog):
         self._layout_text()
 
     def _change_comment(self, text: str) -> None:
+        if self._focus is None:
+            return
         self._people[self._focus].set_comment(text)
         self._layout_text()
-        if self._focus not in (seed for seed, _, _ in self._boxes):
+        if not any(seed == self._focus for seed, _, _ in self._boxes):
             self._set_focus(None)  # the card no longer matches the search: its box is gone, so is the typing
         self._reveal_focused_box()
 

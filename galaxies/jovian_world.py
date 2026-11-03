@@ -27,6 +27,18 @@ def _smoothstep(edge0: float, edge1: float, value: float) -> float:
 
 
 @dataclass(frozen=True)
+class Ring:
+    """A ring of a giant, in its equatorial plane: from `inner` to `outer` metres from its centre, with the optical depth
+    of its material at evenly spaced radii (`opacity`, from the inner edge out), its colour (0 to 1 per channel, lit by the
+    star as white) and its kind (a key of JovianWorld.RING_KINDS). Cosmetic: no mass, no pull, nothing saved."""
+    inner: float
+    outer: float
+    opacity: Tuple[float, ...]
+    colour: Tuple[float, float, float]
+    kind: str
+
+
+@dataclass(frozen=True)
 class Storm:
     """A vortex in the clouds of a giant at a date: where (latitude and longitude on the planet, rad), how wide (m), how
     it turns (`twist`, rad at its centre: its sign is the sense of the turn), how strong it is (0 to 1: it grows when it
@@ -89,8 +101,8 @@ class JovianWorld(World):
     '''A giant planet: no surface, no ground, all atmosphere. It is a gas giant (mostly hydrogen and helium) or an ice
     giant (a smaller envelope over a deep fluid of water, ammonia and methane), see `GiantClass`. The class is drawn
     from the temperature of the orbit: the colder, the likelier an ice giant, as the outer giants of the Solar System.
-    Its moons are generated largest first (`_generate_moons`), each a `RockyWorld`; rings and outposts are not generated
-    yet.
+    Its moons are generated largest first (`_generate_moons`), each a `RockyWorld`. Some have rings (`_generate_rings`),
+    cosmetic only: they interact with nothing.
 
     Size and spin. The mass is drawn log-normally within the range of its class. The radius, the mean one (of a sphere
     of the same volume), follows from the mass: it grows with it up to about the mass of Saturn, as the small giants do,
@@ -174,6 +186,16 @@ class JovianWorld(World):
     # are opaque at about the 1 bar level, which is what makes the cloud tops the visible surface; it is tuned by eye.
     MASS_EXTINCTION = 5.0e-4  # m^2/kg
     MAX_WIND_CELLS = 16  # the most wind cells a giant has (see cloud_state)
+    # Rings, cosmetic (see Ring). A giant has them with RING_CHANCE. Each kind: its chance, where the inner and the
+    # outer edges lie in radii of the giant (outer ones are cut by the Roche limit of the ring's particles), the density
+    # of the particles (kg/m3), the optical depth range, its colour, and its name for the almanack.
+    RING_CHANCE = 0.5
+    RING_SAMPLES = 64  # the radial samples of a ring's optical depth
+    RING_KINDS = {
+        'broad': (0.25, (1.2, 1.5), (1.9, 2.4), 920.0, (0.3, 0.9), (0.9, 0.87, 0.78), 'bright and broad'),
+        'dusty': (0.45, (1.25, 1.4), (1.7, 1.9), 2000.0, (0.01, 0.04), (0.45, 0.4, 0.36), 'faint and dusty'),
+        'narrow': (0.30, (1.5, 1.9), (2.0, 2.5), 1000.0, (0.05, 0.3), (0.35, 0.35, 0.37), 'narrow and dark'),
+    }
     # Lightning, in the water clouds deep below the cloud tops. Jupiter flashes a few times a second over the whole
     # planet, each flash a diffuse glow of some hundred kilometres that lasts a fraction of a second.
     LIGHTNING_RATE = 0.45  # flashes per second over the whole planet, away from the storms (the storms flash more)
@@ -277,9 +299,48 @@ class JovianWorld(World):
         self.moon_limit: float = RockyWorld.moon_limit_in_radii(self.distance_to_parent, star.mass, self.density) \
             * self.radius
         self._generate_moons()
+        self._generate_rings()
         self._log_creation()
 
     # region Generation
+    def _generate_rings(self) -> None:
+        """The rings, if the giant has them: their own stream from the seed, drawn last, so nothing else moves. The outer
+        edge is cut at the Roche limit of the ring's particles (2.44 R (density / particle density)^(1/3), for a fluid
+        giant), which is why a dense giant has no rings beyond a few radii. The optical depth has a broad profile, with
+        gaps, as the real rings do."""
+        self.ring: Optional[Ring] = None
+        ring_random = random.Random(seeds.derive(self.seed, 'rings'))
+        if ring_random.random() >= JovianWorld.RING_CHANCE:
+            return
+        kinds = list(JovianWorld.RING_KINDS.items())
+        roll, cumulative, kind = ring_random.random(), 0.0, kinds[-1][0]
+        for name, (chance, *_rest) in kinds:
+            cumulative += chance
+            if roll < cumulative:
+                kind = name
+                break
+        _, inner_share, outer_share, particle_density, depth_range, colour, _ = JovianWorld.RING_KINDS[kind]
+        radius = self.equatorial_radius
+        inner = radius * ring_random.uniform(*inner_share)
+        outer = min(radius * ring_random.uniform(*outer_share),
+                    2.44 * radius * (self.density / particle_density) ** (1.0 / 3.0))
+        if outer <= inner * 1.05:
+            return
+        depth = ring_random.uniform(*depth_range)
+        # gaps as wide as the real ones (a few per cent of the ring's width at least): narrower ones alias on screen
+        gaps = [(ring_random.random(), ring_random.uniform(0.02, 0.06), ring_random.uniform(0.3, 1.0))
+                for _ in range(ring_random.randint(6, 10) if kind == 'narrow' else ring_random.randint(1, 3))]
+        phase = ring_random.uniform(0.0, math.tau)
+        opacity: List[float] = []
+        for index in range(JovianWorld.RING_SAMPLES):
+            x = (index + 0.5) / JovianWorld.RING_SAMPLES
+            value = depth * math.sqrt(min(1.0, 4.0 * x * (1.0 - x))) * (0.85 + 0.15 * math.sin(8.0 * x + phase))
+            for centre, width, share in gaps:
+                if abs(x - centre) < width:
+                    value *= 1.0 - share
+            opacity.append(value)
+        self.ring = Ring(inner, outer, tuple(opacity), colour, kind)
+
     @staticmethod
     def _radius_of_mass(mass: float) -> float:
         """The mean radius (m) of a giant of the mass (kg), before the scatter: the lesser of the two laws."""
@@ -659,6 +720,9 @@ class JovianWorld(World):
             f"* Mean molecular weight: {1000 * self.mean_molecular_weight:.2f} g/mol\n"
             f"* The atmosphere thins out {int(edge / 1000)} Km above the clouds\n"
         )
+        if self.ring is not None:
+            text += (f"* Rings, {JovianWorld.RING_KINDS[self.ring.kind][6]}: from {self.ring.inner / 1000:,.0f} to "
+                     f"{self.ring.outer / 1000:,.0f} Km from the centre\n")
         if self.great_storm is not None:
             sine, _, radius, twist = self.great_storm
             text += (f"* A great storm, {int(2 * radius / 1000):,} Km across, has turned {'clockwise' if twist < 0 else 'anticlockwise'}"

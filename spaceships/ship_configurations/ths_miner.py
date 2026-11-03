@@ -8,6 +8,7 @@ class ThsMiner(Ship):
     """The standard miner of Those-Who-Share. Its hull is a box of 4 m high, 4 m wide and 8 m deep."""
 
     NAME = 'THS miner'
+    COCKPIT_TEXTURE = 'cockpit_ths_miner.png'
     ENERGY_MAX = 1500e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 0.8  # The maximum is 1. Better ships will decrease this.
     PRESSURE_MAX = 2.5e5 # Pa . 1e5 is one atmosphere.

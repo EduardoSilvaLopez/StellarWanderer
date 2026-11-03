@@ -11,9 +11,7 @@ there is gas above and sunlight left in it.
 Heat: a red vignette on the edges of the whole view, its opacity the hot side of the temperature's stress (see
 `resource_bars.temperature_stress`): none at the ideal temperature or colder, full at Ship.TEMP_MAX.
 
-Frost: the cold side, a pale blue vignette, none at the ideal temperature or warmer, full at Ship.TEMP_MIN.
-
-Both follow `ship.temperature`, so they change when the temperature does.
+The vignette follows `ship.temperature`, so it changes when the temperature does.
 """
 
 from __future__ import annotations
@@ -21,9 +19,10 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import math
 import numpy as np
 import pygame
+from galaxies.jovian_world import JovianWorld
 from .constants import (
     STARLIGHT_TINT_MAX, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER,
-    FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER, ATMOSPHERE_TINT_MAX,
+    ATMOSPHERE_TINT_MAX,
     GIANT_LIGHT_PENETRATION,
 )
 from .instruments.resource_bars import TEMPERATURE_IDEAL, temperature_stress
@@ -38,9 +37,9 @@ def sunlight_in_gas(environment: GameEnvironment, ship: Ship) -> Optional[Tuple[
     """In the atmosphere of a giant: the share of the star's light that reaches the ship (as the shader lights the gas
     around it, the diffuse light feeling only GIANT_LIGHT_PENETRATION of the column above), and how much gas is above
     it (0 to 1, from nothing to opaque). None anywhere else."""
-    if ship.navigation.ambient() is None:
-        return None
     giant = environment.fixed_body
+    if ship.navigation.ambient() is None or not isinstance(giant, JovianWorld):
+        return None
     date_time = environment.date_time
     relative_position = ship.position.as_vector() - giant.calculate_stellar_position(date_time)
     distance = relative_position.length()
@@ -75,16 +74,16 @@ class Starlight:
 
 
 class AtmosphereLight:
-    """The colour of the clouds on the cockpit, in the atmosphere of a giant: the light the gas around the ship scatters,
-    the colour the giant is drawn in. It grows with the gas above and fades as the sunlight is used up, so it is strongest
-    in the upper layers and gone in the dark below."""
+    """The colour of the clouds on the cockpit, in the atmosphere of a giant: the light the gas around the ship
+    scatters, the colour the giant is drawn in. It grows with the gas above and fades as the sunlight is used up, so it
+    is strongest in the upper layers and gone in the dark below."""
 
     @staticmethod
     def tint_cockpit(overlay: pygame.Surface, environment: GameEnvironment, ship: Ship) -> None:
         gas = sunlight_in_gas(environment, ship)
-        if gas is None:
-            return
         giant = environment.fixed_body
+        if gas is None or not isinstance(giant, JovianWorld):
+            return
         colour = LitWorlds.light_tint(environment.nearest_system.star.color, giant.surface_colour)
         share = ATMOSPHERE_TINT_MAX * gas[0] * gas[1]
         added = tuple(int(c * share) for c in colour)
@@ -134,10 +133,3 @@ class HeatVignette:
             _draw_vignette(overlay, w, h, ship, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER)
 
 
-class FrostVignette:
-    """Pale blue edges on the view as the ship cools down."""
-
-    @staticmethod
-    def draw(overlay: pygame.Surface, w: int, h: int, ship: Ship) -> None:
-        if ship.temperature < TEMPERATURE_IDEAL:
-            _draw_vignette(overlay, w, h, ship, FROST_VIGNETTE_COLOUR, FROST_VIGNETTE_MAX_ALPHA, FROST_VIGNETTE_INNER)

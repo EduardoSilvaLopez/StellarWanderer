@@ -202,8 +202,7 @@ class Navigation:
             self._bind_to(body)
             environment.targeted_body = body  # bound, the target is the world the ship stands on
         self._announce_compensation()
-        if not ship.is_bound:
-            ship.check_heat()
+        ship.update_heat(delta_time)
 
         if ship.is_bound:
             world = environment.fixed_world

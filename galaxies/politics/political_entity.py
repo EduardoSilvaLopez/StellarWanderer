@@ -62,7 +62,7 @@ class PoliticalEntity:
 
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         name="Those-Who-Share",
-        color=(192, 0, 0),
+        color=(230, 100, 100),
         icon_filename="PoliticalEntity.1.png",
         titles={
          float('-inf'): 'Prisoner',

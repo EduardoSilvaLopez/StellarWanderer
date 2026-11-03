@@ -14,7 +14,7 @@ from .distant_stars import DistantStars
 from .local_star import view_of, erase, sun_visibility
 from .star_gl import StarGl
 from .star_surface import visor_strength
-from .starlight import Starlight, AtmosphereLight, HeatVignette, FrostVignette
+from .starlight import Starlight, AtmosphereLight, HeatVignette
 from .debug_fps import DebugFps
 from .lit_worlds import LitWorlds
 from .outpost_markers import OutpostMarkers
@@ -45,9 +45,10 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    The sun is drawn in OpenGL, under the sky: the sky (the fixed stars, the worlds farther than the sun, a hole
-    where the sun is, the worlds nearer than the sun, the targeted body) is an RGBA texture with per-pixel alpha,
-    transparent where nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
+    The sky is layered, from the back: the fixed stars (a texture of their own), the giants (their haze and rings cover
+    the stars; see graphics/giant_gl.py), the sun, and the rest of the sky (the worlds farther than the sun, a hole where
+    the sun is, the worlds nearer than it, the targeted body), an RGBA texture with per-pixel alpha, transparent where
+    nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
     sun, straight on the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See
     graphics/star_gl.py. The giants (graphics/giant_gl.py) are under the sky too, after the sun: the sky is made
     transparent over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed
@@ -60,8 +61,10 @@ class OpenGLGui:
     over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes."""
 
     def __init__(self) -> None:
+        self.star_surface: Optional[pygame.Surface] = None  # the fixed stars: under the giants, the rest of the sky over them
         self.world_surface: Optional[pygame.Surface] = None
         self.overlay_surface: Optional[pygame.Surface] = None
+        self.star_texture: Optional[int] = None
         self.world_texture: Optional[int] = None
         self.overlay_texture: Optional[int] = None
         self.dialog_texture: Optional[int] = None
@@ -103,15 +106,17 @@ class OpenGLGui:
         DebugFps.tick()
 
         ship = player.ship
-        self.world_surface.fill((0, 0, 0, 0))  # transparent: what is behind the sky (the Milky Way) shows through
+        self.star_surface.fill((0, 0, 0, 0))  # transparent: what is behind the sky (the Milky Way) shows through
+        self.world_surface.fill((0, 0, 0, 0))
         frame_watch.mark('sky fill')
-        DistantStars.draw(self.world_surface, width, height, environment, ship)
+        DistantStars.draw(self.star_surface, width, height, environment, ship)
         frame_watch.mark('distant stars')
         erasers = GiantGl.sky_erasers(environment, ship, width, height)
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True, erasers=erasers)
         view = view_of(environment, ship, width, height)
         if view is not None:
-            erase(self.world_surface, view, width, height)  # the sun shows through the sky here
+            erase(self.star_surface, view, width, height)  # the sun shows through the stars here
+            erase(self.world_surface, view, width, height)  # and through the sky
         OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False, erasers=erasers)
         frame_watch.mark('other worlds')
         OrbitPath.draw(self.world_surface, width, height, environment, ship)
@@ -135,7 +140,6 @@ class OpenGLGui:
         PortalGl.tint_cockpit(self.overlay_surface, environment, ship)
         frame_watch.mark('cockpit tint')
         HeatVignette.draw(self.overlay_surface, width, height, ship)
-        FrostVignette.draw(self.overlay_surface, width, height, ship)
         frame_watch.mark('vignettes')
         DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
 
@@ -144,6 +148,9 @@ class OpenGLGui:
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         MilkyWay.draw(width, height, ship, environment.date_time)
+        # The layers, from the back: the stars, the giants (their haze and rings cover the stars), the sun, the giants in
+        # front of it, and then the rest of the sky (the worlds, moons and the orbit line, which the giants' erasers cut)
+        self._draw_texture(self.star_surface, self.star_texture)
         GiantGl.draw(width, height, environment, ship, behind_star=True)
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
@@ -216,8 +223,10 @@ class OpenGLGui:
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
         if self.world_surface is None or self.world_surface.get_size() != size:
+            self.star_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.world_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
+            self.star_texture = self._make_texture(width, height)
             self.world_texture = self._make_texture(width, height)
             self.overlay_texture = self._make_texture(width, height)
             self.dialog_texture = self._make_texture(width, height)

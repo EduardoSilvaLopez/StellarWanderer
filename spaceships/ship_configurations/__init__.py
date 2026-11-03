@@ -3,5 +3,6 @@ Ship.by_name and CargoHold.by_name), so a saved ship can be built again."""
 
 from spaceships.ship_configurations.ths_miner import ThsMiner
 from spaceships.ship_configurations.ths_shabby_miner import ShabbyThsMiner
+from spaceships.ship_configurations.ths_versatile import ThsVersatile
 
-__all__ = ['ThsMiner', 'ShabbyThsMiner']
+__all__ = ['ThsMiner', 'ShabbyThsMiner', 'ThsVersatile']
