@@ -107,7 +107,7 @@ GRAVITY OF TREASON I (Rep 50-100)
 
   * Gravity, step 3.
 
-* JOVIAN PLANETS II (current one) (100-200)
+* JOVIAN PLANETS II (100-200)
   * Jumping to Jovian moons, to make more missions to increase sympathy and open the path.
   * Stevedores help unload.
   * Next step is to draw it.
@@ -130,12 +130,8 @@ GRAVITY OF TREASON I (Rep 50-100)
   
 STARTED: Extra time: 167h15' + 8:00 -
 
-* (JOVIAN PLANETS II)
-  * Extra: Improve the sounds for real.
-  * Extra: "Realistic speed" in "ideas".
   * Extra: Retirement.
-  * Extra: Keep talking with theartlav:
-    https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
+  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
   * Extra: Binding slowly.
 
 > BACKLOG
@@ -145,6 +141,9 @@ STARTED: Extra time: 167h15' + 8:00 -
   * Rat
   * Selling ore
   * Extra: A career as law enforcement, if "rat".
+  * Extra: Improve the sounds for real.
+  * Extra: Did theartlav reply?
+    https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in THS)
   * Cities

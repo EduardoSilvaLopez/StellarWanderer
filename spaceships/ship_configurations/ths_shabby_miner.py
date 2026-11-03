@@ -19,6 +19,7 @@ class ShabbyThsMiner(Ship):
     HEIGHT = 4
     WIDTH = 4
     DEPTH = 6
+    MASS = 15000  # Kg
 
     class ShabbyHold(CargoHold):
         CAPACITY = 2000

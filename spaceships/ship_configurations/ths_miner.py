@@ -19,6 +19,7 @@ class ThsMiner(Ship):
     HEIGHT = 4
     WIDTH = 4
     DEPTH = 8
+    MASS = 12000  # Kg
 
     class StandardHold(CargoHold):
         CAPACITY = 10000

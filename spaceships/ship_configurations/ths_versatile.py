@@ -19,6 +19,7 @@ class ThsVersatile(Ship):
     HEIGHT = 4
     WIDTH = 4
     DEPTH = 6
+    MASS = 10000  # Kg
 
     class StandardHold(CargoHold):
         CAPACITY = 5000
