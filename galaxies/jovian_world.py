@@ -155,7 +155,6 @@ class JovianWorld(World):
     ICE_TEMPERATURE_MIDPOINT = 85.0  # K
     ICE_TEMPERATURE_WIDTH = 12.0  # K
     INTERNAL_MASS_EXPONENT = 0.4  # the heat of the interior grows with this power of the mass
-    OUTPOSTS_ON_MOONS = True  # its moons are new, so they have outposts like a planet's (see World)
 
     # The moons (see _generate_moons). The expected number above MOON_REFERENCE_RADIUS is MOONS_ABOVE_REFERENCE for the
     # mass of Jupiter, growing with the power MOON_COUNT_MASS_EXPONENT of the mass, and the number above a radius falls

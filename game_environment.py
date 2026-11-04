@@ -21,7 +21,7 @@ class GameEnvironment:
         self.date_time = date_time
         if galaxy_alterations:
             galaxy_alterations['date_time'] = date_time
-        self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations)
+        self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations, date_time)
         # The body whose fixed zone the ship is in (the nearest one, if several), or None outside every fixed zone.
         self.fixed_body: Optional[Body] = None
         # Always set: the body the instruments show and the braking is measured against. While unbound the Tab key

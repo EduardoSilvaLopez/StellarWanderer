@@ -10,6 +10,7 @@ where `keys` place the child in its parent. The chain, from the galaxy seed give
     planet or moon -> Km2 -> rock, ore field
     asteroid belt (an orbit) -> sector of a tier and epoch -> its asteroids (drawn together); a relevant asteroid ->
     orbit (see asteroid_belt.py)
+    galaxy -> history -> the history of each system, down the tree of colonies (see history/expansion_history.py)
 
 Quadrants (QUADRANT_SIZE ly) and districts (DISTRICT_SIZE ly) only feed the seed for now (see fixed_stars.py): when they
 are used for generation later, the seeds of everything already generated stay the same. The keys of a region are its

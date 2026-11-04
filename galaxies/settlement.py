@@ -62,8 +62,9 @@ class Settlement(Updatable):
     kind: SettlementKind
     name: str  # each kind sets its own name
 
-    def __init__(self, seed: int) -> None:
+    def __init__(self, seed: int, size: int = 1) -> None:
         self.seed: int = seed
+        self.size: int = size  # how big it has grown in its system's history; nothing uses it yet, and it is not saved
         self.is_altered: bool = False
         self.focus: SettlementFocus = SettlementFocus.RESOURCE_EXTRACTION  # default
         self.staff: List[Person] = []  # every member of every role, in the order of roles

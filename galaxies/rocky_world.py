@@ -187,12 +187,6 @@ class RockyWorld(World):
             self.saved_alterations = own_alterations
             self.saved_alterations['date_time'] = saved_alterations['date_time']
 
-        # Outposts: on a planet, and on a moon only where its planet allows them (the moons of a giant, which did not
-        # exist before; the others keep their values).
-        self.outposts: dict = {}
-        if not self.parent_planet or self.parent_planet.OUTPOSTS_ON_MOONS:
-            self._generate_outposts(my_random)
-
         # Register mines in its Km2:
         self.registered_mines: List[tuple] = []
         if self.saved_alterations and 'Km2s' in self.saved_alterations:
@@ -232,20 +226,6 @@ class RockyWorld(World):
         self.km2s: List[Km2] = []
         self._learn()
         self._log_creation()
-
-    def _generate_outposts(self, my_random: random.Random) -> None:
-        """The outposts of this world: a count drawn from its stream, then each one from its own seed (see Outpost).
-        One is generated at least on the initial planet. Their alterations are the saved ones of this world."""
-        from galaxies.outpost import Outpost
-        outposts_count = int(abs(my_random.gauss(1.5, 0.5)))
-        if self._is_initial_planet() and outposts_count <= 0:
-            outposts_count = 1
-
-        all_outposts_alterations = self.saved_alterations.get('outposts') if self.saved_alterations else None
-        for _ in range(outposts_count):
-            # Added one by one, so each outpost sees the previous ones when it takes its index.
-            outpost = Outpost(self, all_outposts_alterations)
-            self.outposts[outpost.get_alterations_key()] = outpost  # May overwrite, it is intentional.
 
     def _is_initial_planet(self) -> bool:
         return self.parent_planet is None\

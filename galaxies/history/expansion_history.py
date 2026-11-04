@@ -1,3 +1,10 @@
+"""The expansion of mankind from Sol: which systems were colonised, when, by which entity, and how many settlements
+each has and how big they are. The history is a pure function of the galaxy's seed and of the date it is run to, so the
+galaxy makes it again whenever it is made (a new game, a load) and nothing of it is saved. `simulation_script.py` runs
+it without the game."""
+
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 import logging
 import random
@@ -8,14 +15,17 @@ from galaxies import seeds
 logger = logging.getLogger(__name__)
 
 class ExpansionProfile:
+    """How an entity expands: the odds of founding a star or a settlement, the size a system needs before it founds a
+    star, and the speed of its technology."""
+
     def __init__(
             self,
             entity: str,
             slots_for_new_star: int,
             slots_for_new_settlement: int,
-            size_for_new_star,
+            size_for_new_star: int,
             tech_factor: float
-            ):
+            ) -> None:
         self.entity = entity
         self.slots_for_new_star = slots_for_new_star
         self.slots_for_new_settlement = slots_for_new_settlement
@@ -23,10 +33,13 @@ class ExpansionProfile:
         self.tech_factor = tech_factor
 
 LowTechImperialist = ExpansionProfile("The Shining Throne", 6, 10, 130, 0.8)  # Median 51 with cities
-TechConservative = ExpansionProfile("Those-Who-Share", 2, 8, 350, 1)  # Median 16 with cities
+TechConservative = ExpansionProfile("Those-Who-Share", 2, 8, 340, 1)  # Median 16 with cities. Reduce for more.
 TechOrganic = ExpansionProfile("United Diversity", 3, 6, 595, 1)  # Median 9 with cities
 
 class SystemHistory:
+    """The history of one system: when and by whom it was founded, and its settlements, in the order they were founded
+    (the first is the portal base), each with the size it has grown to."""
+
     SECS_PER_YEAR = 365.2425 * 24 * 60 * 60
     NEW_STAR_AVG = 10 * SECS_PER_YEAR
     NEW_STAR_SIG = 2 * SECS_PER_YEAR
@@ -45,8 +58,8 @@ class SystemHistory:
             ) -> None:
         self.full_history: ExpansionHistory = full_history
         self.index: int = index
-        self.seed: int = index if origin is None else seeds.derive(origin.seed, 'sh', self.index)
-        self.my_random = random.Random(self.seed)
+        self.seed: int = full_history.seed if origin is None else seeds.derive(origin.seed, 'sh', self.index)
+        self.my_random: random.Random = random.Random(self.seed)
         self.chain: str = "sol" if origin is None else origin.chain + ">" + str(index)
         self.founded_at: datetime = founded_at
         self.origin: SystemHistory = origin  # type: ignore
@@ -112,30 +125,30 @@ class SystemHistory:
         return result
 
 class ExpansionHistory:
-    all_systems: List[SystemHistory] = []
+    """Every system colonised from Sol up to `now`, oldest first. The two flags remember whether the first system of
+    Those-Who-Share and of The Shining Throne was founded: they belong to the run, not to the class, so two runs of the
+    same seed give the same history."""
 
-    def __init__(self, called_seed: int, now: datetime):
-        logger.info(
-            f"Started with seed {called_seed}: to {now.strftime('%Y-%m-%d')}."
-            )
-
+    def __init__(self, galaxy_seed: int, now: datetime) -> None:
+        self.galaxy_seed: int = galaxy_seed
+        self.seed: int = seeds.derive(galaxy_seed, 'history')
+        self.now: datetime = now
         self.was_ths_founded: bool = False
         self.was_tst_founded: bool = False
 
-        sol_system = SystemHistory(self, called_seed, datetime(518,1,1), None, now)
+        sol_system = SystemHistory(self, 0, datetime(518,1,1), None, now)
         sol_system.size = 5000
         sol_system.settlements = [100] # Blatant lie which represents the wish for expansion in sol.
-        sol_system.chain = 'sol'
-        self.all_systems = [
-                sol_system,
-            ]
-
-        # Run:
+        self.all_systems: List[SystemHistory] = [sol_system]
         self.all_systems.extend(sol_system.run())
 
-        # Log the results, one block per entity:
+        # The ones founded after `now` are not part of the history yet.
         self.all_systems = [system for system in self.all_systems if system.founded_at <= now]
-        self.all_systems.sort(key=lambda s : s.founded_at)
+        self.all_systems.sort(key=lambda system: system.founded_at)
+
+    def log_results(self) -> None:
+        """Logs the systems of each entity, then how many each has and how many have cities."""
+        logger.info(f"Expansion history of galaxy {self.galaxy_seed}: to {self.now.strftime('%Y-%m-%d')}.")
         by_entity: Dict[str, List[SystemHistory]] = {}
         for system in self.all_systems:
             by_entity.setdefault(system.profile.entity, []).append(system)
@@ -145,12 +158,12 @@ class ExpansionHistory:
             big = sum(1 for system in systems if max(system.settlements) >= SystemHistory.SIZE_OF_CITY)
             text += f"\n\n{entity}: {len(systems)} systems, {big} with cities"
             for system in systems:
-                system.settlements.sort(key=lambda s:s, reverse=True)
+                largest = sorted(system.settlements, reverse=True)  # a copy: the list is in the order of foundation
                 settlement_list: str = ''
                 for i in range(0, 5):
-                    if len(system.settlements) > i+1:
-                        settlement_list += str(system.settlements[i]) + ', '
-                if len(system.settlements) > 5:
+                    if len(largest) > i:
+                        settlement_list += str(largest[i]) + ', '
+                if len(largest) > 5:
                     settlement_list += '...'
                 text += (
                     f"\n- System '{system.chain}',"

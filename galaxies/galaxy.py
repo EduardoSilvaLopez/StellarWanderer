@@ -1,11 +1,13 @@
-'''The whole galaxy. We won't have more than one.'''
+'''The whole galaxy. We won't have more than one. Its history (galaxies/history) is made with it, up to the game date.'''
 
 from __future__ import annotations
 import copy
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from galaxies import fixed_stars
 from galaxies.constants import INITIAL_STAR_POSITION
+from galaxies.history.expansion_history import ExpansionHistory
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
@@ -16,8 +18,10 @@ if TYPE_CHECKING:
 
 class Galaxy:
 
-    def __init__(self, user_given_seed: int, saved_alterations: dict) -> None:
+    def __init__(self, user_given_seed: int, saved_alterations: dict, date_time: datetime) -> None:
         self.seed: int = user_given_seed
+        self.history: ExpansionHistory = ExpansionHistory(user_given_seed, date_time)
+        self.history.log_results()
         # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
         self.fixed_stars: dict[tuple[int, int, int], Star] = {
             cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)

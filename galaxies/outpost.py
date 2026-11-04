@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class Outpost(Settlement):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
-    Outposts belong to planets, and to the moons of giants (`RockyWorld.outposts`, keyed by "lon lat"; the initial planet
-    always has at least one).
+    Outposts belong to rocky worlds (`RockyWorld.outposts`, keyed by "lon lat"). They are meant to come from the
+    settlements of the history of their system (galaxies/history); nothing creates them yet.
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
 
@@ -48,11 +48,11 @@ class Outpost(Settlement):
     DEPTH = 12.0
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
 
-    def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict]) -> None:
+    def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict], size: int = 1) -> None:
         self.planet = planet
         self.index = len(planet.outposts)
         seed = seeds.derive(planet.seed, 'outpost', self.index)
-        super().__init__(seed)
+        super().__init__(seed, size)
         self.my_random: random.Random = random.Random(self.seed)
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity

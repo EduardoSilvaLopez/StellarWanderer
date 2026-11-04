@@ -45,7 +45,6 @@ class World(Body):
 
     WORLD_MIN_RADIUS = 300000  # Spherical celestial object.
     GRAVITATIONAL_CONSTANT = 6.674e-11  # m^3 kg^-1 s^-2
-    OUTPOSTS_ON_MOONS = False  # whether the moons of this world may have outposts (the giants' moons, see JovianWorld)
 
     # Orbit shape: |N(0, sigma)|, capped.
     ECCENTRICITY_SIGMA = 0.1
