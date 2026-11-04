@@ -62,7 +62,7 @@ class Player:
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
-        # The conversation tags of the chat (see outpost_chat.py): one set for the pilot, not per person, saved sorted.
+        # The conversation tags of the chat (see settlement_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
         self.flags: set[str] = set()
 

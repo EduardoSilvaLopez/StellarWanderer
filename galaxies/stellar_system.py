@@ -25,7 +25,7 @@ from galaxies.world import World
 
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
-    from galaxies.history.expansion_history import SystemHistory
+    from galaxies.politics.expansion_history import SystemHistory
 
 logger = logging.getLogger(__name__)
 

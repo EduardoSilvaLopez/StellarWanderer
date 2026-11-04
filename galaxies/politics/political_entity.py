@@ -8,7 +8,7 @@ from common.paths import resource_path
 import logging
 
 from galaxies.people.person import Ethnicity
-import galaxies.history.expansion_profile as ep
+import galaxies.politics.expansion_profile as ep
 
 logger = logging.getLogger(__name__)
 

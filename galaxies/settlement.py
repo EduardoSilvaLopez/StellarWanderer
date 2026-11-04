@@ -215,6 +215,11 @@ class Settlement(Updatable):
     def coordinator(self) -> Optional[Person]:
         return self._first_on_duty(COORDINATOR)
 
+    @property
+    def officer_for_leaving(self) -> Optional[Person]:
+        """The one who has the say when a pilot wants to leave (see SettlementOnLeaving): the coordinator."""
+        return self.coordinator
+
     def person_with_seed(self, seed: int) -> Optional[Person]:
         """The staff member of this settlement with that seed, or None if the seed is not one of its staff."""
         self.generate_staff()

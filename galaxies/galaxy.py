@@ -1,4 +1,4 @@
-'''The whole galaxy. We won't have more than one. Its history (galaxies/history) is made with it, up to the game date.'''
+'''The whole galaxy. We won't have more than one. Its history (galaxies/politics) is made with it, up to the game date.'''
 
 from __future__ import annotations
 import copy
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from galaxies import fixed_stars
 from galaxies.constants import EPOCH, INITIAL_STAR_POSITION
-from galaxies.history.expansion_history import ExpansionHistory, SystemHistory
+from galaxies.politics.expansion_history import ExpansionHistory, SystemHistory
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 

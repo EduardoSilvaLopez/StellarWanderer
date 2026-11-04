@@ -30,7 +30,7 @@ class Outpost(Settlement):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
     Outposts belong to rocky worlds (`RockyWorld.outposts`, keyed by "lon lat"). They are the settlements of the history
-    of their system (galaxies/history) after the portal base; `StellarSystem._place_settlements` makes them, so only
+    of their system (galaxies/politics) after the portal base; `StellarSystem._place_settlements` makes them, so only
     the initial system has any so far.
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).

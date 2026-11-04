@@ -139,7 +139,7 @@ class OreMine(Updatable):
 
     def _sells_for_credits(self) -> bool:
         """Whether this mine sells its extraction for credits: the pilot has sold the mine codes of this mine's system
-        (the flag `sold mine codes <system seed>` of the Those-Who-Share standing, see outpost_chat.traitor_ready)."""
+        (the flag `sold mine codes <system seed>` of the Those-Who-Share standing, see settlement_chat.traitor_ready)."""
         import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
         from galaxies.politics import political_entity
         system = self.parent_field.parent_km2.parent_world.stellar_system

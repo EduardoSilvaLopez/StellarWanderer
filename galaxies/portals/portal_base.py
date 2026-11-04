@@ -24,6 +24,7 @@ from galaxies.settlement_kind import SettlementKind
 from galaxies.world import World
 
 if TYPE_CHECKING:
+    from galaxies.people.person import Person
     from galaxies.stellar_system import StellarSystem
     from spaceships.ship import Ship
 
@@ -174,6 +175,11 @@ class PortalBase(Body, Settlement):
         relative_z = position.z - self.height
         return (abs(position.x) < self.MOUTH_WIDTH / 2.0 * scale and abs(position.y) < self.MOUTH_HEIGHT / 2.0 * scale
                 and mouth_z <= relative_z <= mouth_z + self.DOCKING_DEPTH * scale)
+
+    @property
+    def officer_for_leaving(self) -> Optional[Person]:
+        """The Komisar, who has the say when a pilot wants to leave (see SettlementOnLeaving)."""
+        return self._first_on_duty(KOMISAR)
 
     def place_after_leaving(self, ship: Ship) -> None:
         """The ship is put in front of the hangar, at rest, facing the star with the base behind it (forward along -z, up

@@ -59,7 +59,7 @@ from .staff_list import StaffList
 if TYPE_CHECKING:
     from galaxies.settlement import Settlement
     from galaxies.people.conversation import Conversation
-    from galaxies.people.conversations.outpost_chat import OutpostChat
+    from galaxies.people.conversations.settlement_chat import SettlementChat
     from galaxies.people.person import Person
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
@@ -183,7 +183,7 @@ def _draw_wrapped(surface: pygame.Surface, x: int, width: int, top: int, text: s
 class OutpostScreenDialog(Dialog):
     """The screen of `outpost` (galaxies/outpost.py): its name, then the world, star and political entity it is in,
     then the radio group. Its picture is chosen from its seed, so the same outpost always shows the same picture.
-    The Leave button leaves it: the result is ('close', None). The decision is the coordinator's OutpostLeaving
+    The Leave button leaves it: the result is ('close', None). The decision is the coordinator's SettlementOnLeaving
     conversation (the coordinator's portrait replaces the dockmaster's while it runs): if the outpost is still handling
     the ship it asks first, in the panel, and Yes leaves with what is done so far; No goes back to the option. The
     conversation reports its decision to `_on_leave_decided`. While the pilot is inside,
@@ -219,7 +219,7 @@ class OutpostScreenDialog(Dialog):
     and Enter and the space do not press the options then). A click selects a card; Tab goes over the cards and Enter
     or Space selects the focused one. The
     conversation tags are on the left, under a search box that filters them (typing goes there while it is focused, as
-    the people's does), and the chat log is in the middle (ChatView): a click on a tag starts an OutpostChat
+    the people's does), and the chat log is in the middle (ChatView): a click on a tag starts a SettlementChat
     with the selected person, in the same log, and a click on an open reply chooses it. Tags and replies are also
     reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
     and starts an empty log. Leaving the option ends the conversation."""
@@ -279,7 +279,7 @@ class OutpostScreenDialog(Dialog):
         self._chat_tags: Optional[ChatTags] = None  # the conversation tags, on the left of Chat
         self._chat_view: Optional[ChatView] = None  # the chat log, in the middle of Chat
         self._chat_log: Optional[ChatLog] = None  # the chat with the person selected (see _sync_chat_log)
-        self._chat_conversation: Optional[OutpostChat] = None  # the conversation the last tag started
+        self._chat_conversation: Optional[SettlementChat] = None  # the conversation the last tag started
         self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat (tags, log, people), where last drawn
         self._focus_visible: bool = False
         self._leave_conversation: Optional[Conversation] = None  # the coordinator's, while the Leave is being decided
@@ -572,8 +572,8 @@ class OutpostScreenDialog(Dialog):
 
     def _start_tag(self, tag: str) -> None:
         """A tag starts its conversation with the person selected, in the same log as the chat before (see
-        OutpostChat). Nothing happens while the chat is not active (see _chat_active)."""
-        from galaxies.people.conversations.outpost_chat import OutpostChat  # local: the conversations need the dialogs
+        SettlementChat). Nothing happens while the chat is not active (see _chat_active)."""
+        from galaxies.people.conversations.settlement_chat import SettlementChat  # local: the conversations need the dialogs
         from galaxies.people.player import current_player
         self._sync_chat_log()
         if not self._chat_active():
@@ -582,7 +582,7 @@ class OutpostScreenDialog(Dialog):
             raise Exception("No chat log: no person is selected.")
         if self._chat_conversation is not None:
             self._chat_conversation.close()
-        self._chat_conversation = OutpostChat(current_player, self._chat_log.person, self._chat_log, tag)
+        self._chat_conversation = SettlementChat(current_player, self._chat_log.person, self._chat_log, tag)
         self._chat_conversation.start()
 
     def _choose_reply(self, index: int) -> None:
@@ -1046,23 +1046,23 @@ class OutpostScreenDialog(Dialog):
     # endregion
 
     def _try_leave(self) -> None:
-        """The Leave button: the option is set aside and the coordinator's OutpostLeaving conversation decides, asking
+        """The Leave button: the option is set aside and the coordinator's SettlementOnLeaving conversation decides, asking
         the pilot if the outpost is still handling the ship."""
         if self._leave_conversation is not None:
             return
-        if self.outpost.coordinator is None:  # nobody to ask
+        if self.outpost.officer_for_leaving is None:  # nobody to ask
             self._leaving = True
             return
         # local: the conversation needs the outpost and the people, which need the dialogs
-        from galaxies.people.conversations.outpost_leaving import OutpostLeaving
+        from galaxies.people.conversations.settlement_on_leaving import SettlementOnLeaving
         from galaxies.people.player import current_player
         self._close_option()
-        self._leave_conversation = OutpostLeaving(current_player, self.outpost.coordinator, self.outpost,
+        self._leave_conversation = SettlementOnLeaving(current_player, self.outpost.officer_for_leaving, self.outpost,
                                                   self._on_leave_decided, self._show)
         self._leave_conversation.start()
 
     def _on_leave_decided(self, leaves: bool) -> None:
-        """What OutpostLeaving tells the screen. True: the screen ends, and the outpost stops the handling with what it
+        """What SettlementOnLeaving tells the screen. True: the screen ends, and the outpost stops the handling with what it
         has done (Outpost.leave, called by main when the screen closes). False: the option starts again."""
         self._leave_conversation = None
         if leaves:

@@ -1,5 +1,5 @@
-"""The pilot wants to leave the outpost. The Coordinator may have something to tell them before the departure. This
-can change their opinion."""
+"""The pilot wants to leave a settlement. Its coordinator (the Komisar, at a portal base) may have something to tell them
+before the departure. This can change their opinion."""
 
 from __future__ import annotations
 from typing import Callable, List, Optional
@@ -17,20 +17,20 @@ from ..person import Person
 from ..conversation import Conversation
 
 
-class OutpostLeaving(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, outpost: Settlement, on_decided: Callable[[bool], object],
+class SettlementOnLeaving(Conversation):
+    def __init__(self, player: Player, interlocutor: Person, settlement: Settlement, on_decided: Callable[[bool], object],
                  show: ShowMessage = show_message) -> None:
         super().__init__(player, interlocutor, show)
-        self.outpost: Settlement = outpost
+        self.settlement: Settlement = settlement
         self.on_decided: Callable[[bool], object] = on_decided
 
         standing = self.player._standing()
         if standing is None:
             raise Exception("No standing available.")
-        if self.outpost.player_reputation_on_entering is None:
+        if self.settlement.player_reputation_on_entering is None:
             raise Exception("No reputation recorded on entering.")
         entity: PoliticalEntity = standing.entity
-        self.old_rep: float = self.outpost.player_reputation_on_entering
+        self.old_rep: float = self.settlement.player_reputation_on_entering
         self.new_rep: float = self.player.reputation
         old_title: str = entity.title_for(self.old_rep)
         new_title: str = entity.title_for(self.new_rep)
@@ -39,23 +39,24 @@ class OutpostLeaving(Conversation):
         self.title: str = "Good news" if self.title_has_improved else "Not ready yet"
 
     def start(self) -> None:
-        if not self.title_has_improved and self.outpost.handling_due_at is None:
+        if not self.title_has_improved and self.settlement.handling_due_at is None:
             self._decide(True)
             return
 
         it: str = self.generate_introduction_text()
+        speaker: str = f"{self.interlocutor.role.name} {self.interlocutor.surname} speaks.\n\n"
 
         title_improved_text: str = self._higher_title_effects(self.old_rep) if self.title_has_improved else ''
 
-        if self.outpost.dockmaster is None:
+        if self.settlement.dockmaster is None:
             raise Exception("No dockmaster.")
-        not_ready_text: str = '' if self.outpost.handling_due_at is None \
+        not_ready_text: str = '' if self.settlement.handling_due_at is None \
             else (
-                f"{self.outpost.dockmaster.role.name} {self.outpost.dockmaster.surname} says"
+                f"{self.settlement.dockmaster.role.name} {self.settlement.dockmaster.surname} says"
                 " the ship is not ready yet. Do you want to leave anyway?"
                 )
 
-        text: str = it + (title_improved_text if self.title_has_improved else not_ready_text)
+        text: str = speaker + it + (title_improved_text if self.title_has_improved else not_ready_text)
 
         buttons: List[str] = ['Ok'] if self.title_has_improved else ['Yes', 'No']
 

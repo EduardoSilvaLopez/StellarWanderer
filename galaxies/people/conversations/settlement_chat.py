@@ -1,4 +1,4 @@
-"""A conversation of the outpost's chat (the Chat option of the outpost screen): started by a conversation tag, with the
+"""A conversation of the settlement's chat (the Chat option of the outpost screen): started by a conversation tag, with the
 person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
 
 The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and
@@ -8,8 +8,8 @@ in the same log. `start` says the tag as the pilot's line, then the answer
 (for the presentation tag, the pilot's line is Player.present_yourself).
 Flags can be written to mark important events of the conversation.
 
-Note for Claude: before writing or reworking a `talk_*` method here, read temp/ideas/outpost_chat_methods.md (the rules,
-the pattern to follow and how to test). Do not read it for any other task.
+Note for Claude: before writing or reworking a `talk_*` method here, read temp/ideas/settlement_chat_methods.md (the
+rules, the pattern to follow and how to test). Do not read it for any other task.
 """
 
 from __future__ import annotations
@@ -50,11 +50,21 @@ def pretty_date(dt: datetime) -> str:
             case _:
                 ordinal = f"{dt.day}th"
 
-    return f"{dt.strftime('%B')}, the {ordinal}"
+    return f"{dt.strftime('%B')} {ordinal}"
 
-class OutpostChat(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, log: ChatLog, tag: str) -> None:
+
+def founding_when(founded: datetime, now: datetime) -> str:
+    """How long ago a settlement was founded, as a talk says it: 'this year', 'last year', 'two years ago'... up to four
+    years, and the year itself from five years on."""
+    years: int = now.year - founded.year
+    words: dict[int, str] = {0: 'this year', 1: 'last year', 2: 'two years ago', 3: 'three years ago',
+                             4: 'four years ago'}
+    return words.get(years, str(founded.year))
+
+class SettlementChat(Conversation):
+    def __init__(self, place: Settlement, player: Player, interlocutor: Person, log: ChatLog, tag: str) -> None:
         super().__init__(player, interlocutor)
+        self.place: Settlement = place
         self.log: ChatLog = log  # the chat of the outpost screen: the texts go there
         self.tag: str = tag  # the conversation tag that started this conversation
         self.reactions: dict[str, Callable[[], str]] = self.reactions_index()
@@ -119,6 +129,7 @@ class OutpostChat(Conversation):
             'komisar': self.talk_komisar,
             'life': self.talk_life,
             'noobie': self.talk_noobie,
+            'outpost': self.talk_outpost,
             'Paladin Xi': self.talk_paladin_xi,
             'PGMs': self.talk_pgms,
             'portal': self.talk_portal,
@@ -794,6 +805,15 @@ class OutpostChat(Conversation):
             "Well, that's... no offense intended. Paladin Xi finished your training recently, yes? So..."
             " that's it."
         )
+    def talk_outpost(self) -> str:
+        founded: datetime = self.place.founded_at
+        now: datetime = self.date_time
+        when: str = founding_when(founded, now)
+        if (founded.month, founded.day) != (now.month, now.day):
+            return f"This place was founded at {pretty_date(founded)}, {when}."
+        if founded.year == now.year:
+            return "This place was founded today. Happy founding!"
+        return f"This place was founded as of today, {when}. Happy founding!"
     def talk_portal(self) -> str:
         return (
             "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
