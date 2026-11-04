@@ -10,7 +10,7 @@ from galaxies.history.expansion_history import ExpansionHistory
 
 def main() -> None:
     configure_logging()
-    ExpansionHistory(1, datetime(700, 1, 1))
+    ExpansionHistory(4, datetime(700, 1, 1))
 
 if __name__ == '__main__':
     main()

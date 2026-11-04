@@ -1120,12 +1120,12 @@ class OutpostChat(Conversation):
             'size': (40, (
                 "Bloated. The Moon.", "Big. Not good.", "Fifty systems. Wow.",
             ), (
-                "Fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated giant,"
-                " that's all they are. Big.",
-                "Fifty systems with cities, against our fifteen. And the Moon, the most crowded world by far. Big, yes."
-                " Big is not the same as good.",
-                "Fifty systems with cities. Fifteen ours. And the Moon, with more people than anywhere else. Imagine"
-                " being part of that.",
+                "About fifty systems with cities and the Moon on top, the most crowded world there is. A fat, bloated"
+                " giant, that's all they are. Big.",
+                "About fifty systems with cities, against our fifteen or so. And the Moon, the most crowded world by"
+                " far. Big, yes. Big is not the same as good.",
+                "About fifty systems with cities. Fifteen or so ours. And the Moon, with more people than anywhere"
+                " else. Imagine being part of that.",
             )),
             'money': (30 + 0.6 * loy, (
                 "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",

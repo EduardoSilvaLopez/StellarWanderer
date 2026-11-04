@@ -19,7 +19,7 @@ from galaxies import seeds
 from galaxies.body import Body
 from galaxies.people.role import (COM_OFFICER, DOCKMASTER, GUNNER, JANITOR, KOMISAR, RINGMASTER, SECURITY, STEVEDORE)
 from galaxies.portals.portal_base_solid import PortalBaseSolid
-from galaxies.settlement import Settlement
+from galaxies.settlement import Settlement, SettlementFocus
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world import World
 
@@ -75,6 +75,7 @@ class PortalBase(Body, Settlement):
         self.solid: PortalBaseSolid = PortalBaseSolid(self.radius)  # what a ship cannot fly through
         self.name: str = self._generate_name(my_random)
         Settlement.__init__(self, self.seed)
+        self.focus: SettlementFocus = SettlementFocus.ADMINISTRATION
         if saved is not None:  # what the settlement saved in its system (see StellarSystem.get_alterations)
             self._read_alterations(saved)
             self.hidden = bool(saved.get('hidden', False))

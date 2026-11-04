@@ -3,12 +3,12 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 * HISTORY
   * Ore distribution: a bit more in non-ore-rich.
 
-> STARTED: Extra time: 167h15' + 8:00 - 11:45
+> STARTED: Extra time: 167h15' + 8:00 - 11:45 + 14:30 - 19:15
 
 > BACKLOG
 
-  * Start again, check the balance of everything.
   * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
+  * Start again, check the balance of everything.
   * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
   * Extra: Binding slowly.
   * Extra: Retirement.

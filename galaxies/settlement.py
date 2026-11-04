@@ -5,6 +5,7 @@ saved (see Outpost, PortalBase)."""
 
 from __future__ import annotations
 from abc import abstractmethod
+from enum import Enum
 import math
 import random
 import logging
@@ -35,6 +36,12 @@ REST_HOURS = 8
 
 logger = logging.getLogger(__name__)
 
+class SettlementFocus(Enum):
+    RESOURCE_EXTRACTION = 0
+    INDUSTRY = 1
+    DEFENCE = 2
+    RESEARCH = 4
+    ADMINISTRATION = 5
 
 class Settlement(Updatable):
     """What a settlement does for the pilot's ship, and who works there. Its place (`stellar_position`), its save
@@ -58,6 +65,7 @@ class Settlement(Updatable):
     def __init__(self, seed: int) -> None:
         self.seed: int = seed
         self.is_altered: bool = False
+        self.focus: SettlementFocus = SettlementFocus.RESOURCE_EXTRACTION  # default
         self.staff: List[Person] = []  # every member of every role, in the order of roles
         self.on_duty: Dict[Role, List[Person]] = {}  # the members on duty of each role, one for each team
         self.last_visited: Optional[datetime] = None
