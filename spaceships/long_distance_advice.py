@@ -36,10 +36,11 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      the energy, the way a long-haul trip eases off its top speed to spare fuel.
    - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
      `RESERVE_WITH_SERVICES` (20 %) if the target has an outpost or is a base. A change of speed costs
-     `Navigation.ENERGY_PER_SPEED` per m/s that the speed changes by, not per m/s of velocity: thrust across the
-     velocity turns the ship at no cost. Changing the velocity from `u` to `v` along the line (the drift cancelled on
-     the way) and then stopping costs `energy_cost`, which for no drift is `2 * v - u_r` (as before). The plan cannot
-     cost more than the energy above the reserve divided by `ENERGY_PER_SPEED`.
+     the change of kinetic energy: `energy_per_speed_squared(mass)` per (m/s)^2 that the squared speed changes by, so
+     the budget is in (m/s)^2. Thrust across the velocity turns the ship at no cost. Changing the velocity from `u` to
+     `v` along the line (the drift cancelled on the way) and then stopping costs `energy_cost`, which for no drift is
+     `2 * v^2 - u_r^2`. The plan cannot cost more than the energy above the reserve divided by
+     `energy_per_speed_squared`.
    - Keep the supplies (air, water and food, a day of each per day) at the end at the same shares of their maxima:
      the time left of the plan, `eta`, and of the last leg, cannot exceed the days that the supply with the least above
      its reserve has.
@@ -102,7 +103,6 @@ import numpy as np
 
 from common import audio
 from galaxies.world import World
-from .navigation import Navigation
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -144,22 +144,23 @@ class Plan:
 
 
 def energy_cost(peak: float, radial: float, drift: float) -> float:
-    """The change of speed, in m/s, that a plan costs: from the velocity (`radial`, `drift`) to `peak` along the line,
-    then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. Its speed
-    falls to `closest` on the way when there is a drift, so the cost is the fall and the rise: `start + peak - 2 * closest`,
-    then `peak` for the brake."""
-    start = math.hypot(radial, drift)
+    """The change of kinetic energy of a plan, in (m/s)^2: from the velocity (`radial`, `drift`) to `peak` along the line,
+    then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. The squared
+    speed falls to `closest` on the way when there is a drift, so the cost is the fall and the rise, `start^2 - closest^2`
+    and `peak^2 - closest^2`, then `peak^2` for the brake."""
+    start_sq = radial * radial + drift * drift
     dx = peak - radial
     length_sq = dx * dx + drift * drift
     t = 0.0 if length_sq == 0.0 else min(1.0, max(0.0, -(radial * dx - drift * drift) / length_sq))
     closest = math.hypot(radial + t * dx, drift * (1.0 - t))
-    return start + 2.0 * peak - 2.0 * closest
+    return start_sq + 2.0 * peak * peak - 2.0 * closest * closest
 
 
 def peak_limit(budget: float, radial: float, drift: float) -> float:
-    """The highest peak speed whose plan costs no more than `budget` (see `energy_cost`), by bisection: the cost rises
-    with the peak. The budget must cover stopping, which costs the speed `hypot(radial, drift)`."""
-    low, high = 0.0, budget + math.hypot(radial, drift) + 1.0
+    """The highest peak speed whose plan costs no more than `budget` (in (m/s)^2, see `energy_cost`), by bisection: the
+    cost rises with the peak. The budget must cover stopping, which costs the squared speed `radial^2 + drift^2`."""
+    start = math.hypot(radial, drift)
+    low, high = 0.0, math.sqrt(budget + start * start) + 1.0  # the cost at `high` is above the budget
     for _ in range(60):
         middle = (low + high) / 2.0
         low, high = (middle, high) if energy_cost(middle, radial, drift) <= budget else (low, middle)
@@ -169,9 +170,10 @@ def peak_limit(budget: float, radial: float, drift: float) -> float:
 def make_plan(distance: float, radial: float, drift: float, acceleration: float, brake: float,
               budget: float) -> Plan | None:
     """The plan for a trip of `distance` m (to the point where the advice ends) by a ship that comes closer at
-    `radial` m/s (negative: moves away) and drifts across at `drift`, with `budget` m/s of change of speed (the energy
-    above the reserve); None if the budget does not even stop the ship."""
-    stop_cost = math.hypot(radial, drift)
+    `radial` m/s (negative: moves away) and drifts across at `drift`, with `budget` (m/s)^2 of change of kinetic energy
+    (the energy above the reserve divided by the ship's energy_per_speed_squared); None if the budget does not even stop
+    the ship."""
+    stop_cost = radial * radial + drift * drift
     if budget < stop_cost * (1.0 - ENERGY_SLACK):
         return None
     budget = max(budget, stop_cost * (1.0 + 1e-6))
@@ -274,8 +276,8 @@ class LongDistanceAdvisor:
         reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
             else advisor.RESERVE_WITHOUT_OUTPOST
         spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
-        leg_speed_change, leg_time = advisor._final_leg(accelerations, end_distance)
-        budget = spare_energy / Navigation.ENERGY_PER_SPEED - leg_speed_change
+        leg_energy, leg_time = advisor._final_leg(accelerations, end_distance)
+        budget = spare_energy / ship.energy_per_speed_squared(ship.mass) - leg_energy
         hold = ship.cargo_hold
         spare_days = min(hold.air - reserve * hold.air_max, hold.water - reserve * hold.water_max,
                          hold.food - reserve * hold.food_max)
@@ -303,10 +305,10 @@ class LongDistanceAdvisor:
     @staticmethod
     def _final_leg(accelerations: tuple[float, float], end_distance: float) -> tuple[float, float]:
         """What the pilot's last leg costs, kept back by the plan: a trip of `end_distance` (where the plan ends, from
-        the surface) from rest, flown flat out. The change of speed it takes (accelerating and braking), in m/s, and its
-        time, in s."""
+        the surface) from rest, flown flat out. The change of kinetic energy it takes (accelerating and braking), in
+        (m/s)^2, and its time, in s."""
         leg = make_plan(end_distance, 0.0, 0.0, *accelerations, 1.0e12)
-        return 2.0 * leg.peak_speed, leg.eta
+        return 2.0 * leg.peak_speed * leg.peak_speed, leg.eta
 
     @staticmethod
     def _trip(position: np.ndarray, velocity: np.ndarray, body: Body, date: datetime,
@@ -352,9 +354,11 @@ class LongDistanceAdvisor:
         reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
             else advisor.RESERVE_WITHOUT_OUTPOST
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
-        leg_speed_change, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
-        budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / Navigation.ENERGY_PER_SPEED
-                  - leg_speed_change)
+        leg_energy, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
+        # the ship without its ore, its raw water and its mines: the warning must not change with the cargo
+        mass = ship.MASS + ship.cargo_hold.supplies_mass()
+        budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / ship.energy_per_speed_squared(mass)
+                  - leg_energy)
         plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0, advisor.PLAN_END_DISTANCE)[0]
         if plan is None:
             return 'energy'

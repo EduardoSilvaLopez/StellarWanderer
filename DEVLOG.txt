@@ -5,14 +5,16 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 2026-11-04 (10/11)
 
-> STARTED: Extra time: 173h00' + 5:15-7:30 + 9:45-
-
   * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
-  * Start again, check the balance of everything.
+  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
+  
+> STARTED: Extra time: 173h00' + 5:15-7:30 + 9:45-11:15 + 12:30 -
 
+
+  * Start again, check the balance of everything: Energy consumption and its economy. Settlements.
+  
 > BACKLOG
 
-  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
   * Cargo revamp: The left side is for upgrades, the right side for cargo including mines, ore, raw water.
   * [Prolly] Outpost size 2. Check ERROR.
   * [Prolly] Portal base size 2. Check ERROR.

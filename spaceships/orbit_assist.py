@@ -78,9 +78,12 @@ class OrbitAssist:
         if periapsis < Navigation.BIND_RADIUS_MULTIPLE * body.radius:
             return "the ship would land before it could orbit. Thrust sideways to raise the lowest point"
         circular_speed = math.sqrt(mu / radius)
-        circularise = (OrbitAssist._target_velocity(r_vec, v_vec, mu, radius) - v_vec).length()
+        target_velocity = OrbitAssist._target_velocity(r_vec, v_vec, mu, radius)
         landing = circular_speed * (1.0 - math.sqrt(2.0 * body.radius / (body.radius + radius)))
-        required = Navigation.ENERGY_PER_SPEED * (circularise + landing)
+        # the kinetic energy of the change of speed to the orbit, and of the landing, for the ship's mass
+        required = ship.energy_per_speed_squared(ship.mass) * (
+            abs(target_velocity.length() ** 2 - v_vec.length() ** 2)
+            + abs(circular_speed ** 2 - (circular_speed - landing) ** 2))
         if ship.energy < OrbitAssist.LANDING_MARGIN * required:
             return "not enough energy to orbit and land"
         radial_speed = v_vec.dot(r_vec) / radius

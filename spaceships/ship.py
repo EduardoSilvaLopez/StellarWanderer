@@ -70,8 +70,8 @@ class Ship(Updatable):
     TEMP_MAX = 50  # above it the pilot dies of the heat
     HULL_TIME_CONSTANT = 600.0  # s: a passive ship in a bar of gas takes this long to close 63% of a difference
     REFERENCE_PRESSURE = 1.0e5  # Pa: the pressure of HULL_TIME_CONSTANT (the exchange falls with pressure)
-    # J/K: the heat the ship holds, which with the time constant sets its conductance. The ship's mass is not modelled: this
-    # is an estimate, about 20 t of hull at 500 J/(kg K). Revisit it if the mass ever is.
+    # J/K: the heat the ship holds, which with the time constant sets its conductance. The heat is not the ship's mass
+    # (see Ship.mass): it is an estimate, about 20 t of hull at 500 J/(kg K).
     HULL_CAPACITY = 1.0e7
     # Friction in a gas: q = k * sqrt(density / nose radius) * speed**3 (W/m^2), on the frontal area. k is the Sutton-Graves
     # constant for a hydrogen-helium atmosphere (Jupiter, mass fraction of helium 0.238): 0.0447 in the report's units,
@@ -94,6 +94,10 @@ class Ship(Updatable):
     WIDTH: ClassVar[float]  # m, of the hull
     HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
     DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
+    MASS: ClassVar[float]  # kg, of the ship without its hold's contents (see mass)
+    # the share of the energy the engines draw that goes into the change of speed (the rest is lost)
+    ENGINE_EFFICIENCY: ClassVar[float] = 0.9
+    ENGINE_EXHAUST_SPEED: ClassVar[float] = 27000.0  # m/s, the speed the engines throw their mass out at
 
     # Every configuration, by qualified name.
     by_name: ClassVar[dict[str, type[Ship]]] = {}
@@ -108,6 +112,22 @@ class Ship(Updatable):
     @property
     def energy_max(self) -> float:
         return self.ENERGY_MAX
+
+    @property
+    def mass(self) -> float:
+        """kg, the ship and what its hold holds: the mass the engines push, which the energy of a change of speed
+        depends on (see energy_per_speed_squared)."""
+        return self.MASS + self.cargo_hold.used_capacity()
+
+    def energy_per_speed_squared(self, mass: float) -> float:
+        """Wh per (m/s)^2 that a change of speed of a ship of `mass` kg costs: the change of its kinetic energy, drawn
+        from the battery through the engines' efficiency."""
+        return mass / (2.0 * self.ENGINE_EFFICIENCY * 3600.0)
+
+    def energy_per_hover_speed(self, mass: float) -> float:
+        """Wh per m/s of pull that the engines cancel to hold still, for a ship of `mass` kg. The engines throw mass out at
+        ENGINE_EXHAUST_SPEED to push against the pull: their power is the thrust times that speed, over the efficiency."""
+        return mass * self.ENGINE_EXHAUST_SPEED / (2.0 * self.ENGINE_EFFICIENCY * 3600.0)
 
     @property
     def precariousness(self) -> float:

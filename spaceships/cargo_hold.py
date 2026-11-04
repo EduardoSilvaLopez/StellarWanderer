@@ -110,6 +110,10 @@ class CargoHold(ABC):
     def free_capacity(self) -> float:
         return self.capacity - self.used_capacity()
 
+    def supplies_mass(self) -> float:
+        """Kg of air, water and food in the hold: what a ship carries without its ore, its raw water or its mines."""
+        return self.air * CargoHold.AIR_WEIGHT + self.water * CargoHold.WATER_WEIGHT + self.food * CargoHold.FOOD_WEIGHT
+
     def load(self, supply: Supply, units: float) -> float:
         """Takes up to `units` of `supply` from the outpost into the hold: up to the supply's maximum and the room left.
         Whole units only for a supply that comes in whole units. Returns the units taken."""
