@@ -16,10 +16,15 @@ only drawn: the scanner's box, HEIGHT and CLEARED_RADIUS do not include it.
 Windows, lamps and indicator lights are painted after the weathering, so they stay bright; at night they dim with the
 rest, as the lighting is applied by vertex colour. To regenerate the texture: python tools/generate_outpost_texture.py
 (numpy + pygame, seeded, so the result is repeatable; the previous texture is kept as outpost.Backup.png).
+
+From Outpost.PAD_FROM_SIZE the ground under the building is a flat concrete square, with the building in one corner, and
+a dark ring painted on it, the landing pad. The concrete is a public domain photo
+(common/resources/textures/concrete.png), mirrored over the square, two metres to a tile. The pad is drawn first, on
+the ground in the outpost's frame, before the buildings.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import math
 import logging
 import os
@@ -56,17 +61,33 @@ POLE_INSET = 0.8  # from the corner of the roof
 FLAG_WIDTH = 3.0  # a rigid flag, held out by a rod (a flag cannot wave without air)
 FLAG_HEIGHT = 2.0
 
+# The ground of the pad, lifted a little so it does not fight the terrain nor the ring.
+SQUARE_LIFT = 0.02  # metres
+RING_LIFT = 0.04
+CONCRETE_PATH = resource_path('textures', 'concrete.png')  # a public domain photo of concrete
+CONCRETE_TILE_METRES = 2.0  # the photo's width on the ground, repeated over the square
+RING_COLOUR = (38, 38, 40)  # very dark grey, painted on the concrete
+RING_SEGMENTS = 96
+
 
 class Outposts:
     """Render outpost buildings within the camera transform set up by the caller (see Rocks.draw).
     Each face is lit by the sun from its own normal (see SurfaceLight)."""
 
     _texture_id: Optional[int] = None
+    _concrete_texture_id: Optional[int] = None
 
     @staticmethod
     def draw(outposts: List[Outpost], player_x: float, player_z: float, light: SurfaceLight) -> None:
         if not outposts:
             return
+        pads = [outpost for outpost in outposts if outpost.has_pad]
+        if pads:
+            GL.glEnable(GL.GL_TEXTURE_2D)
+            GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_concrete_texture())
+            for outpost in pads:
+                Outposts._draw_pad(outpost, player_x, player_z, light)
+            GL.glDisable(GL.GL_TEXTURE_2D)
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_texture())
         for outpost in outposts:
@@ -74,13 +95,12 @@ class Outposts:
         GL.glDisable(GL.GL_TEXTURE_2D)
 
     @staticmethod
-    def _draw_outpost(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        width = outpost.WIDTH / 2.0
-        depth = outpost.DEPTH / 2.0
-        height = outpost.HEIGHT
+    def _corner_maker(outpost: Outpost, player_x: float,
+                      player_z: float) -> Callable[[float, float, float], Tuple[float, float, float]]:
+        """Maps the outpost's local coordinates (metres from its centre: x along the width, z on the door axis, y up)
+        to the view. The camera is subtracted in double precision, before glVertex3f (see Rocks.draw)."""
         angle = math.radians(outpost.orientation)
-        cos_a, sin_a = math.cos(angle), math.sin(angle)  # rotation, as in corner() below
-        # Double precision: subtract the camera before anything reaches glVertex3f (see Rocks.draw).
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
         origin_x = outpost.longitude - player_x
         origin_z = outpost.latitude - player_z
 
@@ -88,6 +108,50 @@ class Outposts:
             x2 = lx * cos_a + lz * sin_a
             z2 = -lx * sin_a + lz * cos_a
             return (origin_x + x2, ly, origin_z + z2)
+        return corner
+
+    @staticmethod
+    def _draw_pad(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        """The concrete square, with the outpost in its corner, and the landing pad's ring on it."""
+        corner = Outposts._corner_maker(outpost, player_x, player_z)
+        up = light.brightness(0.0, 1.0, 0.0)
+        left = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN
+        back = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN
+        side = outpost.PAD_SQUARE
+
+        def vertex(lx: float, ly: float, lz: float) -> None:
+            """A point of the pad: its texture coordinates are the metres from the square's corner, over the tile."""
+            GL.glTexCoord2f((lx - left) / CONCRETE_TILE_METRES, (lz - back) / CONCRETE_TILE_METRES)
+            GL.glVertex3f(*corner(lx, ly, lz))
+
+        # The texture is modulated by the colour, so the light is the colour and the concrete is the texture.
+        GL.glColor3ub(*light.shade((255, 255, 255), up))
+        GL.glBegin(GL.GL_QUADS)
+        for lx, lz in ((left, back), (left + side, back), (left + side, back + side), (left, back + side)):
+            vertex(lx, SQUARE_LIFT, lz)
+        GL.glEnd()
+
+        centre_x = left + outpost.PAD_CENTRE[0]
+        centre_z = back + outpost.PAD_CENTRE[1]
+        inner = outpost.PAD_RADIUS - outpost.PAD_LINE / 2.0
+        outer = outpost.PAD_RADIUS + outpost.PAD_LINE / 2.0
+        GL.glColor3ub(*light.shade(RING_COLOUR, up))
+        GL.glBegin(GL.GL_QUAD_STRIP)
+        for step in range(RING_SEGMENTS + 1):
+            cos_t = math.cos(2.0 * math.pi * step / RING_SEGMENTS)
+            sin_t = math.sin(2.0 * math.pi * step / RING_SEGMENTS)
+            vertex(centre_x + inner * cos_t, RING_LIFT, centre_z + inner * sin_t)
+            vertex(centre_x + outer * cos_t, RING_LIFT, centre_z + outer * sin_t)
+        GL.glEnd()
+
+    @staticmethod
+    def _draw_outpost(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        width = outpost.WIDTH / 2.0
+        depth = outpost.DEPTH / 2.0
+        height = outpost.HEIGHT
+        angle = math.radians(outpost.orientation)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)  # rotation, as in _corner_maker
+        corner = Outposts._corner_maker(outpost, player_x, player_z)
 
         def quad(
                 face: Tuple[int, int, int, int], normal: Tuple[float, float, float],
@@ -168,6 +232,31 @@ class Outposts:
         """Texture coordinates of an atlas region: (u0, v0, u1, v1), with v = 0 at the first image row."""
         x, y, w, h = region
         return x / ATLAS_WIDTH, y / ATLAS_HEIGHT, (x + w) / ATLAS_WIDTH, (y + h) / ATLAS_HEIGHT
+
+    @staticmethod
+    def _get_concrete_texture() -> int:
+        if Outposts._concrete_texture_id is None:
+            with frame_watch.timed('concrete texture'):
+                if os.path.exists(CONCRETE_PATH):
+                    surface = pygame.image.load(CONCRETE_PATH).convert()
+                else:
+                    logger.error(f"Concrete texture missing: {CONCRETE_PATH}. Using a plain grey texture.")
+                    surface = pygame.Surface((64, 64)).convert()
+                    surface.fill((140, 140, 136))
+                pixels = pygame.image.tostring(surface, 'RGBA', False)
+                width, height = surface.get_size()
+
+                texture = GL.glGenTextures(1)
+                GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+                # Mirrored, so the photo joins with itself at every edge without being edited.
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_MIRRORED_REPEAT)
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_MIRRORED_REPEAT)
+                GLU.gluBuild2DMipmaps(GL.GL_TEXTURE_2D, GL.GL_RGBA, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE,
+                                      pixels)
+                Outposts._concrete_texture_id = texture
+        return Outposts._concrete_texture_id
 
     @staticmethod
     def _get_texture() -> int:

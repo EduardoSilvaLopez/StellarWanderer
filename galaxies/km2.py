@@ -26,7 +26,6 @@ class Km2:
 
     def __init__(self, parent_world: RockyWorld, longitude: int, latitude: int,
                  saved_alterations: Optional[dict]) -> None:
-        from galaxies.outpost import Outpost  # local: the outpost module needs the world, which needs this one
         self.parent_world = parent_world
         self.longitude: int = longitude
         self.latitude: int = latitude
@@ -52,15 +51,14 @@ class Km2:
 
         all_rocks_alterations: Optional[dict] = own.get('rocks')
         molten_rocks: Optional[dict] = own.get('molten_rocks')
-        outpost_center = ((self.outpost.longitude, self.outpost.latitude)
-                          if self.outpost else None)
+        clearing = self._outposts_clearing_here()
         rich_ore_count: int = 0
         for _ in range(rocks_count):
             rock_lon = self.longitude + my_random.randint(0, 999)
             rock_lat = self.latitude + my_random.randint(0, 999)
-            if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat
-                                             - outpost_center[1]) < Outpost.CLEARED_RADIUS:
-                continue  # COULD still collide with an outpost of a nearby Km - this would be funny, not a bug.
+            if any(math.hypot(rock_lon - outpost.longitude, rock_lat - outpost.latitude) < outpost.clearing_radius
+                   for outpost in clearing):
+                continue
             rock_key = f"{rock_lon} {rock_lat}"
             if molten_rocks is not None and rock_key in molten_rocks:
                 logger.debug(f"Molten rock detected at ({rock_key})")
@@ -85,6 +83,17 @@ class Km2:
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} "
                          f"ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+
+    def _outposts_clearing_here(self) -> List[Outpost]:
+        """The outposts of the world whose cleared ground reaches this Km2, which may be the ones of the Km2s around."""
+        found: List[Outpost] = []
+        for outpost in self.parent_world.outposts.values():
+            nearest_longitude = min(max(outpost.longitude, self.longitude), self.longitude + self.SIZE)
+            nearest_latitude = min(max(outpost.latitude, self.latitude), self.latitude + self.SIZE)
+            if math.hypot(outpost.longitude - nearest_longitude,
+                          outpost.latitude - nearest_latitude) < outpost.clearing_radius:
+                found.append(outpost)
+        return found
 
     def _make_external_fields(self, rocks_alterations: Optional[dict]) -> None:
         """Turns into an external field each ore-rich rock whose conversion date (ExternalMine.conversion_date) has

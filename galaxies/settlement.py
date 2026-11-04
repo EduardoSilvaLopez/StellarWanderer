@@ -56,6 +56,7 @@ class Settlement(Updatable):
 
     # What each kind has: each role with the number of teams that work it at once (each team has its shift members and
     # a substitute). Outposts have one team of each role; the portal base has what is listed for it (its first version).
+    # A kind whose teams depend on its size overrides `teams_now`.
     roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
@@ -68,7 +69,7 @@ class Settlement(Updatable):
         self.enlargement_dates: List[datetime] = list(enlargement_dates)
         self.is_altered: bool = False
         self.focus: SettlementFocus = SettlementFocus.RESOURCE_EXTRACTION  # default
-        self.staff: List[Person] = []  # every member of every role, in the order of roles
+        self.staff: List[Person] = []  # every member made so far, in the order they were made
         self.on_duty: Dict[Role, List[Person]] = {}  # the members on duty of each role, one for each team
         self.last_visited: Optional[datetime] = None
         self.player_reputation_on_entering: Optional[float] = None
@@ -87,8 +88,8 @@ class Settlement(Updatable):
 
     @property
     def size(self) -> int:
-        """How big it has grown (nothing uses it yet): the enlargements that are already in the past, as the history
-        may hold some that are still to happen."""
+        """How big it has grown: the enlargements that are already in the past, as the history may hold some that are
+        still to happen."""
         import game_environment as gem  # local: the environment imports the galaxy
         now = gem.current_environment.date_time
         return sum(1 for enlarged in self.enlargement_dates if enlarged <= now)
@@ -179,11 +180,17 @@ class Settlement(Updatable):
         raise NotImplementedError
 
     # region Staff
+    def teams_now(self) -> Dict[Role, int]:
+        """The teams of each role working here now (see `roles`)."""
+        return self.roles
+
     def generate_staff(self) -> Settlement:
-        """Creates the staff, once: later calls change nothing, so the same people are always returned."""
-        if not self.staff:
-            self.staff = [self._generate_member(role, index) for role in self.roles
-                          for index in range(self.roles[role] * self._team_size(role))]
+        """Creates the members of the teams that are there now, and keeps those made before. A member's seed comes from
+        its role and index alone, so a team that comes later (see teams_now) brings the same people."""
+        for role, teams in self.teams_now().items():
+            made = sum(1 for person in self.staff if person.role is role)
+            for index in range(made, teams * self._team_size(role)):
+                self.staff.append(self._generate_member(role, index))
         return self
 
     def roster(self, role: Role) -> List[Person]:
@@ -192,8 +199,8 @@ class Settlement(Updatable):
         return [person for person in self.staff if person.role is role]
 
     def on_duty_list(self) -> List[Person]:
-        """Everyone on duty now, in the order of `roles`."""
-        return [person for role in self.roles for person in self.on_duty.get(role, [])]
+        """Everyone on duty now, in the order of the roles."""
+        return [person for role in self.teams_now() for person in self.on_duty.get(role, [])]
 
     def _first_on_duty(self, role: Role) -> Optional[Person]:
         people = self.on_duty.get(role)
@@ -265,7 +272,7 @@ class Settlement(Updatable):
         members = self.roster(role)
         size = self._team_size(role)
         on_duty: List[Person] = []
-        for team in range(self.roles[role]):
+        for team in range(self.teams_now()[role]):
             team_members = members[team * size:(team + 1) * size]
             if self._substitute_covers(role, shift_start, team):
                 on_duty.append(team_members[role.shifts])
@@ -275,7 +282,7 @@ class Settlement(Updatable):
 
     def _pick_all_on_duty(self, now: datetime) -> None:
         shift_start = self._shift_start(now, now.hour // SHIFT_HOURS)
-        for role in self.roles:
+        for role in self.teams_now():
             self._pick_on_duty(role, shift_start)
 
     @staticmethod
@@ -322,7 +329,7 @@ class Settlement(Updatable):
     # region Visits
     def prepare(self) -> Settlement:
         ''' Prepare for visit.'''
-        if self.size > 1:  # no effect of the size exists yet: this marks where one is to be made
+        if self.size >= 3:  # no effect of sizes from 3 on exists yet: this marks where one is to be made
             logger.error(f"TODO: Size {self.size} for {self.kind.value}")
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8

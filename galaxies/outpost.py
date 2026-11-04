@@ -3,11 +3,12 @@ import copy
 import random
 import math
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from common.vector3 import Vector3
 
 from galaxies import seeds
+from galaxies.people.role import STEVEDORE, Role
 from galaxies.rocky_world import RockyWorld
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world_surface import SurfaceType
@@ -33,7 +34,9 @@ class Outpost(Settlement):
     of their system (galaxies/politics) after the portal base; `StellarSystem._place_settlements` makes them, so only
     the initial system has any so far.
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
-    the planet. Rocks are not generated within CLEARED_RADIUS of an outpost's centre (Km2).
+    the planet. Rocks are not generated within `clearing_radius` of an outpost's centre (Km2), which grows with the
+    size. From PAD_FROM_SIZE the outpost has a concrete square and a landing pad on the ground (drawn by
+    graphics/outposts.py).
 
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
     can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
@@ -47,7 +50,16 @@ class Outpost(Settlement):
     HEIGHT = 6.0
     WIDTH = 24.0
     DEPTH = 12.0
-    CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)
+    CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)  # the clearing of size 1
+    CLEARED_RADIUS_WITH_PAD = 100.0  # m, the clearing from PAD_FROM_SIZE on
+    PAD_FROM_SIZE = 2
+    PAD_SQUARE = 50.0  # m, the side of the square; the building stands in one of its corners, PAD_MARGIN from each edge
+    PAD_MARGIN = 5.0  # m
+    PAD_CENTRE = (35.0, 35.0)  # m, the pad's centre from the square's corner, along the width and the door axis
+    PAD_RADIUS = 10.0  # m, to the middle of the painted ring
+    PAD_LINE = 0.5  # m, the ring's thickness
+    # The teams each size adds to the staff, from that size on: a size 2 outpost has one team of stevedores.
+    SIZE_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}}
 
     def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict],
                  enlargement_dates: list[datetime]) -> None:
@@ -136,6 +148,25 @@ class Outpost(Settlement):
     def place_details(self) -> list[str]:
         system = self.planet.parent_orbit.parent_stellar_system
         return [self.planet.name, system.star.name, system.political_entity.name]
+    # endregion
+
+    # region Size
+    @property
+    def clearing_radius(self) -> float:
+        """How far from its centre the ground is cleared of rocks: it grows with the pad."""
+        return self.CLEARED_RADIUS_WITH_PAD if self.has_pad else self.CLEARED_RADIUS
+
+    @property
+    def has_pad(self) -> bool:
+        return self.size >= self.PAD_FROM_SIZE
+
+    def teams_now(self) -> Dict[Role, int]:
+        teams = dict(self.roles)
+        for size, added in self.SIZE_TEAMS.items():
+            if self.size >= size:
+                for role, count in added.items():
+                    teams[role] = teams.get(role, 0) + count
+        return teams
     # endregion
 
     # region Place
