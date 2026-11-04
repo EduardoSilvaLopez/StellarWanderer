@@ -1,5 +1,5 @@
-"""The people of an outpost that can be chatted with now, as a list of cards (the Chat of the outpost screen, see
-outpost_screen.py). Who is listed is Outpost.available_staff: not on vacation, not working and not resting.
+"""The people of an outpost that can be chatted with now, as a list of cards (the Chat of the settlement screen, see
+settlement_screen.py). Who is listed is Outpost.available_staff: not on vacation, not working and not resting.
 
 Each card has the portrait on the left, then the name and the role, the last time the pilot met the person, and the
 comment (read-only here, cut to COMMENT_LINES lines). A click selects a card: it is outlined with the accent colour, and

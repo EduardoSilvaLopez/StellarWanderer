@@ -1,4 +1,5 @@
-"""A conversation of the settlement's chat (the Chat option of the outpost screen): started by a conversation tag, with the
+"""A conversation of the settlement's chat (the Chat option of the settlement screen): started by a conversation tag,
+with the
 person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
 
 The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and
@@ -65,7 +66,7 @@ class SettlementChat(Conversation):
     def __init__(self, place: Settlement, player: Player, interlocutor: Person, log: ChatLog, tag: str) -> None:
         super().__init__(player, interlocutor)
         self.place: Settlement = place
-        self.log: ChatLog = log  # the chat of the outpost screen: the texts go there
+        self.log: ChatLog = log  # the chat of the settlement screen: the texts go there
         self.tag: str = tag  # the conversation tag that started this conversation
         self.reactions: dict[str, Callable[[], str]] = self.reactions_index()
         self.flags = interlocutor.interactions.setdefault(self.date_time.replace(microsecond=0), [])
@@ -97,7 +98,7 @@ class SettlementChat(Conversation):
         """The person says `text` in the chat. The expressions of `text` that are tags of the reactions become the
         pilot's conversation tags, from now on. Time passes."""
         import game_environment as gem
-        gem.current_environment.date_time += timedelta(seconds=60)
+        gem.current_environment.clock.advance(60)
 
         text: str = generator()
         words, tags = parse_marks(text, self.reactions.keys())
@@ -123,6 +124,7 @@ class SettlementChat(Conversation):
             'Founders': self.talk_founders,
             'gunner': self.talk_gunner,
             'Happy birthday': self.talk_happy_birthday,
+            'Happy founding': self.talk_happy_founding,
             'hobby': self.talk_hobby,
             'janitor': self.talk_janitor,
             'job': self.talk_job,
@@ -412,16 +414,26 @@ class SettlementChat(Conversation):
             "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
             " simply fucking far away. Others are... in the belt. And those are worse."
         )
+
     def talk_base(self) -> str:
         if isinstance(self.interlocutor.residency, PortalBase):
-            return (
-                "It's still small but we have some amenities already."
-            )
+            founded: datetime = self.place.founded_at
+            now: datetime = self.date_time
+            when: str = founding_when(founded, now)
+            if (founded.month, founded.day) != (now.month, now.day):
+                return (
+                    f"This place was founded at {pretty_date(founded)}, {when}."
+                    "We are still small, but have some amenities."
+                )
+            if founded.year == now.year:
+                return "How on Catherine did you arrive here so soon!?"
+            return f"This place was founded as of today, {when}. Happy founding!"
         return (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
             " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's life."
             " Almost like a planet."
         )
+
     def talk_belt(self) -> str:
         return (
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
@@ -563,6 +575,19 @@ class SettlementChat(Conversation):
                 return f"Oh, dear! {correction_text}\n\nBut thanks anyway, don't worry."
             else:
                 return f"Huh? {correction_text} And this was weird."
+
+    def talk_happy_founding(self) -> str:
+        # Apolitical and about the place: no trait of the person matters, only the date of the founding.
+        founded: datetime = self.place.founded_at
+        now: datetime = self.date_time
+
+        if (founded.month, founded.day) == (now.month, now.day):
+            # Every member of the staff hears about it, the interlocutor included.
+            for member in self.place.generate_staff().staff:
+                member.adjust_sympathy(2)
+            return "<Everybody around>"
+        self.interlocutor.adjust_sympathy(-5)
+        return f"<Looks weirdly> This place was founded at {pretty_date(founded)}, {founding_when(founded, now)}."
 
     def talk_janitor(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -805,15 +830,20 @@ class SettlementChat(Conversation):
             "Well, that's... no offense intended. Paladin Xi finished your training recently, yes? So..."
             " that's it."
         )
+
     def talk_outpost(self) -> str:
-        founded: datetime = self.place.founded_at
-        now: datetime = self.date_time
-        when: str = founding_when(founded, now)
-        if (founded.month, founded.day) != (now.month, now.day):
-            return f"This place was founded at {pretty_date(founded)}, {when}."
-        if founded.year == now.year:
-            return "This place was founded today. Happy founding!"
-        return f"This place was founded as of today, {when}. Happy founding!"
+        from galaxies.outpost import Outpost
+        if isinstance(self.place, Outpost):
+            founded: datetime = self.place.founded_at
+            now: datetime = self.date_time
+            when: str = founding_when(founded, now)
+            if (founded.month, founded.day) != (now.month, now.day):
+                return f"This place was founded at {pretty_date(founded)}, {when}. Don't expect too much, ok?"
+            if founded.year == now.year:
+                return "This place was founded today. Happy founding! And... WOW!"
+            return f"This place was founded as of today, {when}. Happy founding!"
+        return "A place where you can get resupplied. Vital, for long trips."
+
     def talk_portal(self) -> str:
         return (
             "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"

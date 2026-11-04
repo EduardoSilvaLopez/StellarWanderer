@@ -299,11 +299,6 @@ class Navigation:
         pressure, temperature = body.ambient_at(relative_position)
         return (pressure, temperature) if pressure >= JovianWorld.ATMOSPHERE_EDGE_PRESSURE else None
 
-    def is_hovering(self) -> bool:
-        """True while bound above the ground in a gravity: the flight assist is holding the ship up, which costs energy
-        whether it moves or not."""
-        return self.gravity() > 0.0 and self.ship.position.y > self.ship.HEIGHT + Navigation.BRAKED
-
     def _apply_gravity(self, delta_time: float, altitude_accel_input: float) -> None:
         """Pulls the bound ship down by the gravity. The flight assist, always on, holds it up while no climb or descent
         is asked: it cancels the pull with the engines (all of it up to UP_DOWN_ACC, the engines' whole power; a world

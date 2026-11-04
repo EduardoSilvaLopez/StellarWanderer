@@ -1,6 +1,6 @@
 """Long distance advice: whether to accelerate, stay or decelerate to reach the targeted body, shown under the proximity
-meter's "Target" (see graphics/instruments/proximity_meter.py), with a mark in the window where the target will be
-(graphics/lead_marker.py). The instruments and the main loop use it (`LongDistanceAdvisor.update` runs once per
+meter's "Target" (see graphics/instruments/proximity_meter.py). The instruments and the main loop use it
+(`LongDistanceAdvisor.update` runs once per
 frame), and so do the missions, to warn about a trip the ship may not manage (`LongDistanceAdvisor.shortage`).
 
 The algorithm
@@ -144,9 +144,12 @@ class Plan:
 
 
 def energy_cost(peak: float, radial: float, drift: float) -> float:
-    """The change of kinetic energy of a plan, in (m/s)^2: from the velocity (`radial`, `drift`) to `peak` along the line,
-    then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. The squared
-    speed falls to `closest` on the way when there is a drift, so the cost is the fall and the rise, `start^2 - closest^2`
+    """The change of kinetic energy of a plan, in (m/s)^2: from the velocity (`radial`, `drift`) to `peak` along the
+    line,
+    then to rest. The thrust is a straight change of velocity, and only the change of the speed itself costs. The
+    squared
+    speed falls to `closest` on the way when there is a drift, so the cost is the fall and the rise, `start^2 -
+    closest^2`
     and `peak^2 - closest^2`, then `peak^2` for the brake."""
     start_sq = radial * radial + drift * drift
     dx = peak - radial
@@ -355,8 +358,8 @@ class LongDistanceAdvisor:
             else advisor.RESERVE_WITHOUT_OUTPOST
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         leg_energy, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
-        # the ship without its ore, its raw water and its mines: the warning must not change with the cargo
-        mass = ship.MASS + ship.cargo_hold.supplies_mass()
+        # the ship and its equipment, without its cargo: the warning must not change with the cargo
+        mass = ship.MASS + ship.equipment_mass()
         budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / ship.energy_per_speed_squared(mass)
                   - leg_energy)
         plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0, advisor.PLAN_END_DISTANCE)[0]

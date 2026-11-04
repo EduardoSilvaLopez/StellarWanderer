@@ -30,8 +30,9 @@ class Console:
 
     The left cluster shows one of two meters, chosen by `Ship.is_bound`: the AltitudeMeter while bound (ALT), the
     ProximityMeter while unbound (FIXED or TARGET), whose bar and indicators are columns the height of the map's screen.
-    The readouts (position, attitude, speed) are beside the meter: bound beside the altitude bar, unbound between the
-    proximity bar and the map. The name of the reference body is drawn in the top bar by Cockpit
+    The readouts (position, attitude, speed) are beside the meter: bound beside the altitude bar, unbound beside the
+    proximity bar with the target's distance, approach and drift above them. The name of the reference body is drawn in
+    the top bar by Cockpit
     (LocationInfo.draw_name). Pitch and roll use the same body as the position box, which is the fixed body while fixed,
     else the star. Yaw, pitch and roll are shown as angle plus rate (Δ, deg/s); see Player for their meaning."""
 
@@ -80,21 +81,27 @@ class Console:
         draw_beveled_panel(surface, screen, depth=depth)
 
         # Left cluster, as tall as the map's screen. Bound: the altitude bar, with the readouts beside it. Unbound: the
-        # target's indicators, then the proximity bar, then the readouts between the bar and the map.
+        # proximity bar, with the target's distance, approach and drift and the ship's readouts beside it, and in the
+        # column left of it the target's name, the ORBIT and TRAVEL buttons, then the long distance advice.
         if ship.is_bound:
             AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
             LocationInfo.draw_readouts(surface, fonts, h, ship, cluster_left + bar_w + int(w * 0.03), cluster_top - 10,
                                        line_spacing)
         else:
             indicators_w = int(w * 0.115)
-            indicators_rect = pygame.Rect(cluster_left, screen.top, indicators_w, screen.height)
             bar_rect = pygame.Rect(cluster_left + indicators_w + int(w * 0.01), screen.top, bar_w, screen.height)
             ProximityMeter.draw_bar(surface, h, ship, bar_rect)
-            ProximityMeter.draw_indicators(surface, fonts, h, ship, indicators_rect)
             readouts_left = bar_rect.right + int(w * 0.015)
-            LocationInfo.draw_readouts(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
-            OrbitButton.draw(surface, fonts, h, ship, cluster_left, screen.bottom, indicators_w)
-            TravelButton.draw(surface, fonts, h, ship, cluster_left, screen.bottom, indicators_w)
+            ProximityMeter.draw_approach(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
+            LocationInfo.draw_readouts(surface, fonts, h, ship, readouts_left, screen.top + 4 + line_spacing * 4,
+                                       line_spacing)
+            target_top = screen.top + 4
+            ProximityMeter.draw_target(surface, fonts, h, cluster_left, target_top)
+            OrbitButton.draw(surface, fonts, h, ship, cluster_left, target_top + line_spacing, indicators_w)
+            TravelButton.draw(surface, fonts, h, ship, cluster_left, OrbitButton.rect.bottom + OrbitButton.GAP,
+                              indicators_w)
+            ProximityMeter.draw_advice(surface, fonts, h, cluster_left, TravelButton.rect.bottom + line_spacing,
+                                       line_spacing)
 
         if ship.is_bound:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)

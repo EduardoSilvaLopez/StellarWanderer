@@ -17,10 +17,10 @@ class LocationInfo:
 
     The name is the reference body and its system: the fixed body while the ship is fixed, else the star. Its name is
     the system's alone when it is the star. It is drawn large and centred in the top bar, above the windshield. The
-    readouts are the position of the ship (bound: altitude, longitude, latitude, each with its rate Δ; unbound: the
-    distance to the targeted body), the attitude (yaw, pitch, roll, each with its rate Δ) and the speed: the length of
-    the velocity vector over all three axes, shown without a sign. The target's own state is not shown here (see
-    ProximityMeter)."""
+    readouts are the position of the ship (bound: altitude, longitude, latitude, each with its rate Δ; unbound: none,
+    the target's distance is read by ProximityMeter), the attitude (yaw, pitch, roll, each with its rate Δ) and the
+    speed: the length of the velocity vector over all three axes, shown without a sign. The target's own state is not
+    shown here (see ProximityMeter)."""
 
     @staticmethod
     def _reference_body() -> Body:
@@ -62,9 +62,6 @@ class LocationInfo:
             for label, position, velocity in axis_lines:
                 grouped = f'{int(position):,}'.replace(',', '.')  # thousands separated by dots: 12.345
                 texts.append(f'{label}: {grouped} Δ {int(velocity)}')
-        else:
-            distance = ship.navigation.distance_to_body_centre(gem.current_environment.targeted_body)
-            texts.append(f'Distance: {format_compact_distance(distance)}')
 
         body = LocationInfo._reference_body()  # pitch and roll: relative to the reference body, which the name shows
         date_time = gem.current_environment.date_time

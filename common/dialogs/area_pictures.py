@@ -1,9 +1,10 @@
 """The pictures of the areas of a screen: the files of common/resources/backgrounds named <prefix>*, chosen from
 the seed of the place, so the same place always shows the same picture.
 
-The outpost's files are outpost.<area>.*; the portal base's are portal_base.<area>.*. An area with no file has no
-picture: the screen then falls back to what its place says (the outpost keeps its Dockmaster picture), and the portal
-base shows black. A file is kept as it is; `cover` and `darken` make it fit the screen and fade it.
+Each kind of settlement has its own set of files (AREA_PICTURE_PREFIXES): the outpost's are outpost.<area>.*, the
+portal base's portal_base.<area>.*. An area with no file has no picture: the screen then falls back to what its kind
+of settlement says (the outpost keeps its Dockmaster picture, the portal base shows black). A file is kept as it is;
+`cover` and `darken` make it fit the screen and fade it.
 """
 
 from __future__ import annotations
@@ -14,13 +15,25 @@ from typing import Dict, List, Optional, Tuple
 import pygame
 
 from common.paths import resource_path
+from galaxies.settlement_kind import SettlementKind
 
-PORTAL_BASE_AREA_PREFIXES = {  # the picture of each area of the portal base, if a file of that prefix exists
-    'Dockmaster': 'portal_base.dockmaster.',
-    'Cargo': 'portal_base.cargo.',
-    'Missions': 'portal_base.missions.',
-    'Chat': 'portal_base.chat.',
-    'Leave': 'portal_base.leave.',
+# The picture of each area, for each kind of settlement: a file of common/resources/backgrounds named <prefix>*, if one
+# exists.
+AREA_PICTURE_PREFIXES: Dict[SettlementKind, Dict[str, str]] = {
+    SettlementKind.OUTPOST: {
+        'Dockmaster': 'outpost.dockmaster.',
+        'Cargo': 'outpost.cargo.',
+        'Missions': 'outpost.mission.',
+        'Chat': 'outpost.chat.',
+        'Leave': 'outpost.leave.',  # the Leave is being decided: its picture covers the right side
+    },
+    SettlementKind.PORTAL_BASE: {
+        'Dockmaster': 'portal_base.dockmaster.',
+        'Cargo': 'portal_base.cargo.',
+        'Missions': 'portal_base.mission.',
+        'Chat': 'portal_base.chat.',
+        'Leave': 'portal_base.leave.',
+    },
 }
 
 

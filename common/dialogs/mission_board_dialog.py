@@ -399,7 +399,7 @@ class CompleteHereColumn(MissionList):
 
 
 class OutpostMissions:
-    """The missions of an outpost's screen (outpost_screen.py), side by side."""
+    """The missions of an settlement's screen (settlement_screen.py), side by side."""
 
     def __init__(self, board: MissionBoard) -> None:
         self.columns: Tuple[MissionList, MissionList] = (AvailableColumn(board), CompleteHereColumn(board))

@@ -6,7 +6,6 @@ saved (see Outpost, PortalBase)."""
 from __future__ import annotations
 from abc import abstractmethod
 from enum import Enum
-import math
 import random
 import logging
 from datetime import datetime, timedelta
@@ -73,11 +72,10 @@ class Settlement(Updatable):
         self.on_duty: Dict[Role, List[Person]] = {}  # the members on duty of each role, one for each team
         self.last_visited: Optional[datetime] = None
         self.player_reputation_on_entering: Optional[float] = None
-        # While the settlement works on the pilot's ship: when it will be ready, last checked and if it includes ore
-        # unloading. It gets saved / loaded to restart on load if needed.
+        # While the settlement works on the pilot's ship: when it will be ready and last checked. It gets saved / loaded
+        # to restart on load if needed.
         self.handling_due_at: Optional[datetime] = None
         self.handling_checked_at: Optional[datetime] = None
-        self.handling_unloads: bool = False  # the ore and the raw water of the hold are unloaded by the handling
         # local: the board needs the player, which needs missions
         from galaxies.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this place is in memory
@@ -106,7 +104,6 @@ class Settlement(Updatable):
         if 'handling_due_at' in saved:
             self.handling_due_at = datetime.strptime(saved['handling_due_at'], DATE_FORMAT)
             self.handling_checked_at = datetime.strptime(saved['handling_checked_at'], DATE_FORMAT)
-            self.handling_unloads = saved['handling_unloads']
 
     def _alterations_of_visits(self, alterations: dict) -> None:
         """Adds the keys of the visit and the handling to `alterations`, when they are set."""
@@ -116,7 +113,6 @@ class Settlement(Updatable):
             alterations['handling_due_at'] = self.handling_due_at.strftime(DATE_FORMAT)
             if self.handling_checked_at:
                 alterations['handling_checked_at'] = self.handling_checked_at.strftime(DATE_FORMAT)
-            alterations['handling_unloads'] = self.handling_unloads
         if self.last_visited is not None:
             alterations['last_visited'] = self.last_visited.strftime(DATE_FORMAT)
 
@@ -350,52 +346,39 @@ class Settlement(Updatable):
         if time_to_repair < 0:
             time_to_repair = 0.0
 
-        time_to_unload: float = 0.0
-        stevedores = self._stevedores_on_duty()
-        if self.handling_unloads:
-            # The time one person takes, shared by the stevedores on duty, or done by the dockmaster alone.
-            time_one_person = ship.cargo_hold.ore / Settlement.UNLOAD_ORE_PER_SECOND \
-                + ship.cargo_hold.raw_water / Settlement.UNLOAD_RAW_WATER_PER_SECOND
-            time_to_unload = time_one_person / (stevedores or 1)
+        return int(max(time_to_charge, time_to_repair))
 
-        if stevedores > 0:
-            return int(max(time_to_charge, time_to_repair, time_to_unload))  # Stevedores unload beside the repairs.
-        return int(max(time_to_charge, time_to_repair + time_to_unload))  # The dockmaster unloads after the repairs.
-
-    def _stevedores_on_duty(self) -> int:
-        """How many stevedores are on duty: they unload the hold while the dockmaster repairs the ship."""
+    def stevedores_on_duty(self) -> int:
+        """How many stevedores are on duty now."""
         return len([p for p in self.on_duty_list() if p.role == STEVEDORE])
 
-    @staticmethod
-    def unloading_text(ship: Ship) -> str:
-        """What the Dockmaster would unload from the hold, as he asks for it: 'the ore', 'the raw water', both, or ''
-        when there is nothing of either."""
-        cargo = (('the ore', ship.cargo_hold.ore), ('the raw water', ship.cargo_hold.raw_water))
-        names = [name for name, amount in cargo if amount > 0]
-        return ' and '.join(names)
+    def shared_seconds(self, seconds: float) -> float:
+        """Game seconds that `seconds` of one person's work takes here: the pilot and the stevedores on duty share
+        it."""
+        return seconds / (self.stevedores_on_duty() + 1)
+
+    def unloading_seconds(self, key: str, kilograms: float) -> float:
+        """Game seconds for the pilot to give `kilograms` of ore or raw water (`key`) to the outpost, at the rate of
+        UNLOAD_*_PER_SECOND, shared with the stevedores on duty (see shared_seconds)."""
+        per_second = {'ore': self.UNLOAD_ORE_PER_SECOND, 'raw_water': self.UNLOAD_RAW_WATER_PER_SECOND}[key]
+        return self.shared_seconds(kilograms / per_second)
 
     def is_ready(self, ship: Ship) -> bool:
-        """Whether the Dockmaster has nothing to offer `ship`: no handling is going on, no ore or raw water to unload,
-        and its energy and maintenance are within READY_MARGIN of full (energy_max, MAX_MAINTENANCE). A handling going
-        on is not judged: it still brings the ship to full."""
+        """Whether the Dockmaster has nothing to offer `ship`: no handling is going on, and its energy and maintenance
+        are within READY_MARGIN of full (energy_max, MAX_MAINTENANCE). A handling going on is not judged: it still
+        brings the ship to full."""
         full = 1 - self.READY_MARGIN
-        return (self.handling_due_at is None and ship.cargo_hold.ore == 0 and ship.cargo_hold.raw_water == 0
+        return (self.handling_due_at is None
                 and ship.energy >= ship.energy_max * full and ship.maintenance >= self.get_max_maintenance() * full)
 
-    def handling_going(self, now: datetime) -> bool:
-        """Whether the handling of the ship is still under way at `now`. Its due date stays set after it ends, until
-        the pilot leaves."""
-        return self.handling_due_at is not None and now < self.handling_due_at
-
-    def start_handle(self, ship: Ship, extra_seconds: float = 0.0) -> Settlement:
+    def start_handle(self, ship: Ship) -> Settlement:
         """The settlement starts working on the pilot's `ship`, from the state it is in now: it will be ready after
-        get_time_to_handle, and `extra_seconds` more (work the ship's hold is about to lose, such as raw water
-        unloaded at delivery). A handle already going is first brought up to date, then restarted. The ship
+        get_time_to_handle. A handle already going is first brought up to date, then restarted. The ship
         is near, so `prepare` has put the settlement in the update queue, which wakes it when the handle is due. The
         dates are saved with the settlement."""
         now = gem.current_environment.date_time
         self.update_handle(ship, now)
-        self.handling_due_at = now + timedelta(seconds=self.get_time_to_handle(ship) + extra_seconds)
+        self.handling_due_at = now + timedelta(seconds=self.get_time_to_handle(ship))
         self.handling_checked_at = now
         return self.set_altered()
 
@@ -411,7 +394,6 @@ class Settlement(Updatable):
             ship.energy += energy_change
             gpp.current_player.adjust_reputation_by_supply("energy", -energy_change)
 
-            repair_left = (self.get_max_maintenance() - ship.maintenance) / self.MAINTENANCE_PER_SECOND
             if ship.maintenance < self.get_max_maintenance():
                 if self.get_max_maintenance() - ship.maintenance < self.MAINTENANCE_PER_SECOND * seconds:
                     # Avoid epsilon changes.
@@ -422,22 +404,6 @@ class Settlement(Updatable):
                     ship.maintenance += maintenance_change
                 gpp.current_player.adjust_reputation_by_supply("maintenance", -maintenance_change)
 
-            if self.handling_unloads:
-                # The stevedores unload from the start; without them, the dockmaster unloads once the repairs are done.
-                # The ore goes first, then the raw water, with the time the ore did not take.
-                stevedores = self._stevedores_on_duty()
-                unloaders = stevedores or 1
-                unload_seconds = seconds if stevedores else seconds - min(seconds, max(0.0, repair_left))
-                hold = ship.cargo_hold
-                ore_change = min(hold.ore, math.floor(self.UNLOAD_ORE_PER_SECOND * unloaders * unload_seconds))
-                hold.ore -= ore_change
-                water_time = unload_seconds - ore_change / (self.UNLOAD_ORE_PER_SECOND * unloaders) if hold.ore == 0 \
-                    else 0.0
-                water_change = min(hold.raw_water, self.UNLOAD_RAW_WATER_PER_SECOND * unloaders * water_time)
-                hold.raw_water -= water_change
-                gpp.current_player.adjust_reputation_by_supply("ore", ore_change)
-                gpp.current_player.adjust_reputation_by_supply("raw_water", water_change)
-
             self.handling_checked_at = until
         return self
 
@@ -445,11 +411,11 @@ class Settlement(Updatable):
         self.update_handle(ship, now)
         self.handling_due_at = None
         self.handling_checked_at = None
-        self.handling_unloads = False
         return self
 
     def leave(self, ship: Ship, now: datetime) -> int:
-        """The pilot leaves the settlement, after its question if a handling is going on (see OutpostScreenDialog): the
+        """The pilot leaves the settlement, after its question if a handling is going on (see SettlementScreenDialog):
+        the
         handling stops with what it has done so far. Returns the seconds leaving takes (TIME_TO_LEAVE), which the caller
         adds to the game time."""
         self.stop_handle(ship, now)

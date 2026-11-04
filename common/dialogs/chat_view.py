@@ -1,4 +1,5 @@
-"""The chat of the outpost screen (the Chat option): the conversation tags on the left, the chat log in the middle (see
+"""The chat of the settlement screen (the Chat option): the conversation tags on the left, the chat log in the middle
+(see
 galaxies/people/chat_log.py for what it holds). Both are lists in the rectangle `place` gives, with a scroll bar beside
 them, scrolled with the wheel, Page Up and Page Down, and the scroll bar.
 
@@ -8,9 +9,11 @@ the tag, as if the pilot had said it (while `tags_active`). The replies are bubb
 under the lines, without numbers; choosing one calls `on_reply` with its index. The view follows the newest line, until
 the player scrolls up.
 
-ChatTags draws the tags in the order given, one row each, under a search box (see search_box.py) that shows only the tags
-containing its text; the box stays put while the rows scroll. A click on a tag calls `on_tag` with it, but only while the
-tags are `active` (a person is selected and no reply is open, see the outpost screen)."""
+ChatTags draws the tags in the order given, one row each, under a search box (see search_box.py) that shows only the
+tags
+containing its text; the box stays put while the rows scroll. A click on a tag calls `on_tag` with it, but only while
+the
+tags are `active` (a person is selected and no reply is open, see the settlement screen)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Tuple

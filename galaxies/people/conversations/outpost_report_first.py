@@ -1,5 +1,6 @@
-"""The report to the outpost's dockmaster (the Dockmaster button of the outpost screen, which shows its messages in its
-own panel). A stub: what is said is still to be written."""
+"""The report to the outpost's dockmaster (the Dockmaster button of the settlement screen, which shows its messages in
+its own panel). The handling of the ship starts with the Ok: a pilot who walks away from the dockmaster without it
+leaves the ship as it is. A stub: what is said is still to be written."""
 
 from __future__ import annotations
 from typing import Optional
@@ -34,34 +35,13 @@ class OutpostReportFirst(Conversation):
         time_str: str = self._time_as_string(int(time_to_handle))
         handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
-        # A handling still under way keeps its unloading as it is: the question comes once it is done.
-        going: bool = self.outpost.handling_going(self.date_time)
-        unloading: str = '' if going else self.outpost.unloading_text(self.player.ship)
-        do_ask: bool = unloading != ''
-        ore_question: str = f"\n\nShall we start unloading {unloading}, {self.interlocutor.get_player_title()}?" \
-            if do_ask else ''
-
-        text: str = oit + it + handle_info + ore_question
-
-        if do_ask:
-            self.show(Message(
-                    title=self.title,
-                    text=text,
-                    buttons=['Yes', 'Not yet, please'],
-                    open_sound='radio_open'
-                    ), self._finish
-                )
-        else:
-            # Information only: the handling starts now, not when its Ok is pressed, so that a click away from the
-            # message does not leave the ship unhandled (the screen does not wait for the Ok, see OutpostScreenDialog).
-            self._start_handling(going and self.outpost.handling_unloads)
-            self.show(Message(
-                    title=self.title,
-                    text=text,
-                    buttons=['Ok'],
-                    open_sound='radio_open'
-                    ), self._info_closed
-                )
+        self.show(Message(
+                title=self.title,
+                text=oit + it + handle_info,
+                buttons=['Ok'],
+                open_sound='radio_open'
+                ), self._ok
+            )
 
     def _generate_outpost_introduction_text(self) -> str:
          return (
@@ -78,23 +58,10 @@ class OutpostReportFirst(Conversation):
             return "in " + str(1 + (time_in_secs // 60)) + " minutes"
         return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
-    def _start_handling(self, unloads: bool) -> None:
-        """The handling of the ship starts (repair and recharge), unloading the hold if `unloads`, unless it takes no
-        time at all. The levels up to now are given first, with the unloading they had."""
-        self.outpost.update_handle(self.player.ship, self.date_time)
-        self.outpost.handling_unloads = unloads
-
+    def _ok(self, chosen_button: Optional[int]) -> OutpostReportFirst:
+        """The Ok of the message: the handling of the ship starts (repair and recharge), unless it takes no time at
+        all, and the conversation is over. A message closed by a click away never gets here."""
         if self.outpost.get_time_to_handle(self.player.ship): # Skip by absurd amounts.
             self.outpost.start_handle(self.player.ship)
-
-    def _finish(self, chosen_button: Optional[int]) -> OutpostReportFirst:
-        """The answer to Yes or Not yet: Yes unloads the hold, then the handling starts."""
-        self._start_handling(chosen_button == 0)
-        self.interlocutor.last_communication_at = self.date_time
-        self.close()
-        return self
-
-    def _info_closed(self, chosen_button: Optional[int]) -> OutpostReportFirst:
-        """The Ok of the information message: the conversation is over. The handling started in start."""
         self.close()
         return self

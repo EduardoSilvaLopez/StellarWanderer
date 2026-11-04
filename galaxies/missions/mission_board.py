@@ -1,7 +1,8 @@
 """The mission board of an outpost, for a pilot whose reputation is MIN_REPUTATION or more. It is the Missions option of
-the outpost's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it opens.
+the settlement's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it
+opens.
 A pilot below MIN_REPUTATION sees no offers, but still the missions they took from here (the Taken column), so that the
-option is there while one is open here (see OutpostScreenDialog._shows_option).
+option is there while one is open here (see SettlementScreenDialog._shows_option).
 
 The board belongs to its settlement (`Settlement.mission_board`), and so do its offers: they stay on the board while the
 settlement is in memory. They are not saved: an offer is drawn from its settlement, kind and day alone, and lives at
@@ -14,7 +15,8 @@ board.
 
 The scan asteroid and scoop star offers are the exception: they are made at the portal base only and live on its board
 (`OFFERED_AT_BASE`). An outpost shows them (`shown_offers`) and takes them through that board, so no offer is on two
-boards. A scan asteroid is delivered at any settlement of the system (`DELIVERED_ANYWHERE`), a scoop star at the base."""
+boards. A scan asteroid is delivered at any settlement of the system (`DELIVERED_ANYWHERE`), a scoop star at the
+base."""
 
 from __future__ import annotations
 from datetime import datetime, timedelta
@@ -24,7 +26,8 @@ import logging
 
 from common import audio
 import galaxies.people.player as player_module
-from galaxies.missions import Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock, ScoopGiant, ScoopStar
+from galaxies.missions import (Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock,
+                               ScoopGiant, ScoopStar)
 from galaxies.missions.terms import check_terms
 import game_environment as gem
 
@@ -36,15 +39,15 @@ logger = logging.getLogger(__name__)
 
 MIN_REPUTATION = 20.0  # the board is for pilots the outposts trust (the same reputation for every political entity)
 DATE_FORMAT = '%Y-%m-%d %H:%M'  # the deadlines on the board
-KINDS = (DeliverOre, DeliverPackage, DeliverWater, ScanRock, ScanAsteroid, ScoopStar, ScoopGiant)  # what a board offers: a new kind of mission
-# comes here
+# what a board offers: a new kind of mission comes here
+KINDS = (DeliverOre, DeliverPackage, DeliverWater, ScanRock, ScanAsteroid, ScoopStar, ScoopGiant)
 LOOK_BACK_DAYS = max(terms.deadline_days_max for kind in KINDS for terms in kind.TERMS.values()
                      if terms is not None)  # an older offer
 # has expired, whatever its kind and settlement
 check_terms(KINDS)  # every kind has terms for every kind of settlement: stop here, at start-up, if one is missing
 
-OFFERED_AT_BASE = (ScanAsteroid, ScoopStar, ScoopGiant)  # the kinds made at a system's portal base only: their offers live on its
-# board
+# the kinds made at a system's portal base only: their offers live on its board
+OFFERED_AT_BASE = (ScanAsteroid, ScoopStar, ScoopGiant)
 DELIVERED_ANYWHERE = (ScanAsteroid,)  # of those, the ones any settlement of the system takes (the others, at the base)
 LOCAL_KINDS = tuple(kind for kind in KINDS if kind not in OFFERED_AT_BASE)  # the others, made at every settlement
 

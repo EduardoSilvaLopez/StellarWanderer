@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Conversation(ABC):
     """A conversation shows its messages through `show`: show_message, a dialog over the cockpit, unless the one who
-    starts it gives another place, such as the panel of the outpost screen. A subclass sets its own `title`, the
+    starts it gives another place, such as the panel of the settlement screen. A subclass sets its own `title`, the
     heading of its messages."""
 
     def __init__(self, player: Player, interlocutor: Person, show: ShowMessage = show_message) -> None:

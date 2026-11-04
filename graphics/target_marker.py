@@ -1,6 +1,6 @@
 """The target marker: an X on the canopy where the targeted body is, or on the canopy's border in the direction to it
 when the body is out of view. Drawn while unbound only (while bound, the target is the world under the ship).
-`TargetMarker.place` gives the same placement to any other mark (graphics/lead_marker.py)."""
+`TargetMarker.place` gives the same placement to any other mark."""
 
 from __future__ import annotations
 from typing import Any, List, Optional, Tuple, TYPE_CHECKING

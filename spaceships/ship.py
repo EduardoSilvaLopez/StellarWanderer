@@ -49,6 +49,13 @@ class Ship(Updatable):
         HeatShieldOne = 1
         HeatShieldTwo = 2
 
+    # kg the equipment changes the hull's MASS by (see equipment_mass): the scoop takes some away, the solar panels add
+    # some, and a heat shield adds a share of MASS.
+    SCOOP_MASS = -200.0
+    SOLAR_PANELS_MASS = 100.0
+    HEAT_SHIELD_MASS_SHARE = {HeatShield.HeatShieldNone: 0.0, HeatShield.HeatShieldOne: 0.05,
+                              HeatShield.HeatShieldTwo: 0.20}
+
     COCKPIT_TEXTURE = 'cockpit_background.png'  # the cockpit's texture, a file of textures/ (shabby miner by default)
     ANGULAR_ACC = 10.0  # degrees per second squared
     ANGULAR_BRAKE = 30.0  # degrees per second squared
@@ -94,7 +101,7 @@ class Ship(Updatable):
     WIDTH: ClassVar[float]  # m, of the hull
     HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
     DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
-    MASS: ClassVar[float]  # kg, of the ship without its hold's contents (see mass)
+    MASS: ClassVar[float]  # kg, of the hull, without its equipment and its hold's contents (see mass)
     # the share of the energy the engines draw that goes into the change of speed (the rest is lost)
     ENGINE_EFFICIENCY: ClassVar[float] = 0.9
     ENGINE_EXHAUST_SPEED: ClassVar[float] = 27000.0  # m/s, the speed the engines throw their mass out at
@@ -115,9 +122,19 @@ class Ship(Updatable):
 
     @property
     def mass(self) -> float:
-        """kg, the ship and what its hold holds: the mass the engines push, which the energy of a change of speed
-        depends on (see energy_per_speed_squared)."""
-        return self.MASS + self.cargo_hold.used_capacity()
+        """kg, the ship, its equipment and what its hold holds: the mass the engines push, which the energy of a change
+        of speed depends on (see energy_per_speed_squared)."""
+        return self.MASS + self.equipment_mass() + self.cargo_hold.used_capacity()
+
+    def equipment_mass(self) -> float:
+        """kg the equipment changes the hull by, from the ship's fields: the scoop, the heat shield's share of MASS and
+        the solar panels (see the class constants)."""
+        mass = self.MASS * self.HEAT_SHIELD_MASS_SHARE[self.heat_shield]
+        if self.has_scoop:
+            mass += self.SCOOP_MASS
+        if self.has_solar_panels:
+            mass += self.SOLAR_PANELS_MASS
+        return mass
 
     def energy_per_speed_squared(self, mass: float) -> float:
         """Wh per (m/s)^2 that a change of speed of a ship of `mass` kg costs: the change of its kinetic energy, drawn

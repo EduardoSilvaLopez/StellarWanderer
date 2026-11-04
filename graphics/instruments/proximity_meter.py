@@ -1,5 +1,5 @@
 """Proximity meter: the vicinity of the targeted body (distance, approach speed), shown while unbound. The bar and the
-indicators are two columns of the console, drawn separately."""
+instruments that read the target are drawn separately, in the columns the console gives them."""
 
 from __future__ import annotations
 import math
@@ -18,6 +18,15 @@ if TYPE_CHECKING:
 Colour = Tuple[int, int, int]
 
 
+def _draw_pair(surface: pygame.Surface, label_font: Any, left: int, top: int, label: str, label_col: Colour,
+               value: str, value_col: Colour) -> None:
+    """A label and its value on one row, the value right after the label."""
+    label_surf = label_font.render(label, True, label_col)
+    surface.blit(label_surf, (left, top))
+    value_left = left + label_surf.get_width() + label_font.size(' ')[0]
+    surface.blit(label_font.render(value, True, value_col), (value_left, top))
+
+
 class ProximityMeter:
     """Proximity meter showing the vicinity of the targeted body (`GameEnvironment.targeted_body`).
 
@@ -26,12 +35,9 @@ class ProximityMeter:
     from centre at the bottom, FIXED_ZONE_RADIUS_MULTIPLE x radius at the top. Outside the fixed zone the bar stays
     empty.
 
-    The indicators are a column to the left of the bar, one row each, top down: the label FIXED, green, while the target
-    is the body the frame is fixed on, else TARGET, then the target's name; "Distance:"; "Approaching:"; "Drift:". Each
-    value sits on its label's row, after the label. Below them, while `LongDistanceAdvisor.current` holds advice, "Long distance
-    advice:" in the advice colour, after a free row, and under it ACCELERATE, STAY or DECELERATE, each in its own
-    colour, with the time left of that phase (`Advisory.phase_time`), and under it the ETA, the date and time of
-    arrival as the clock shows them; "Too far" when no plan keeps the reserves.
+    The instruments that read the target are drawn beside it: `draw_approach` (Distance, Approaching, Drift) above the
+    ship's readouts, `draw_target` (the label FIXED, green, while the target is the body the frame is fixed on, else
+    TARGET, then the target's name) in the left column, and `draw_advice` under the ORBIT and TRAVEL buttons.
 
     The "Approaching" readout is the signed rate of change of the distance to the targeted body
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
@@ -40,6 +46,13 @@ class ProximityMeter:
     "Distance" and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds:
     keeping its direction relative to the body, the ship reaches the surface even braking with only
     `Navigation.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
+
+    The long distance advice, while `LongDistanceAdvisor.current` holds it: "Long distance advice:" in the advice
+    colour,
+    then ACCELERATE, STAY or DECELERATE, each in its own colour, with the time left of that phase
+    (`Advisory.phase_time`),
+    and under it the ETA, the date and time of arrival as the clock shows them; "Too far" when no plan keeps the
+    reserves.
     """
 
     @staticmethod
@@ -93,50 +106,52 @@ class ProximityMeter:
             pygame.draw.line(surface, ACCENT_LABEL, (left, y_of(apoapsis)), (right, y_of(apoapsis)), 2)
 
     @staticmethod
-    def draw_indicators(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, column: pygame.Rect) -> None:
-        """The target's state, the name on the first row, then the distance, approach and drift, each value on the same
-        line after its label, from the top of `column`."""
+    def draw_target(surface: pygame.Surface, fonts: Any, h: int, left: int, top: int) -> None:
+        """The target's state and name on one row at `top`."""
         import game_environment as gem
         body = gem.current_environment.targeted_body
-
+        is_fixed = body is gem.current_environment.fixed_body
         label_font = fonts.get(max(9, int(h * 0.017)))
-        row_height = label_font.get_height() + 2
-        gap = label_font.size(' ')[0]
-        pad = 4
-        left = column.left + pad
+        _draw_pair(surface, label_font, left, top, 'FIXED' if is_fixed else 'TARGET',
+                   BINDING_NEAR_GREEN if is_fixed else ACCENT, body.name, ACCENT)
 
-        in_fixed_zone = ship.navigation.in_fixed_zone(body)
-        collision_warning = in_fixed_zone and ship.navigation.collision_warning(body)
+    @staticmethod
+    def draw_approach(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int,
+                      row_height: int) -> None:
+        """The distance, approach and drift of the target, one per row from `top`, `row_height` apart."""
+        import game_environment as gem
+        body = gem.current_environment.targeted_body
+        label_font = fonts.get(max(9, int(h * 0.017)))
+
+        collision_warning = ship.navigation.in_fixed_zone(body) and ship.navigation.collision_warning(body)
         label_colour = SPEED_WARNING_RED if collision_warning else ACCENT_LABEL  # the labels of distance and approach
         approach_colour = SPEED_WARNING_RED if collision_warning else ACCENT
 
-        def draw_pair(row: int, label: str, label_col: Colour, value: str, value_col: Colour) -> None:
-            """A label and its value on one row, the value right after the label."""
-            label_surf = label_font.render(label, True, label_col)
-            row_y = column.top + pad + row * row_height
-            surface.blit(label_surf, (left, row_y))
-            surface.blit(label_font.render(value, True, value_col), (left + label_surf.get_width() + gap, row_y))
-
         centre_dist = format_compact_distance(ship.navigation.distance_to_body_centre(body))
-        is_fixed = body is gem.current_environment.fixed_body
-        draw_pair(0, 'FIXED' if is_fixed else 'TARGET', BINDING_NEAR_GREEN if is_fixed else ACCENT, body.name, ACCENT)
-        draw_pair(1, 'Distance:', label_colour, centre_dist, ACCENT)
-        draw_pair(2, 'Approaching:', label_colour, format_compact_speed(ship.navigation.approach_speed(body)),
-                  approach_colour)
-        draw_pair(3, 'Drift:', ACCENT_LABEL, f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)
+        _draw_pair(surface, label_font, left, top, 'Distance:', label_colour, centre_dist, ACCENT)
+        _draw_pair(surface, label_font, left, top + row_height, 'Approaching:', label_colour,
+                   format_compact_speed(ship.navigation.approach_speed(body)), approach_colour)
+        _draw_pair(surface, label_font, left, top + 2 * row_height, 'Drift:', ACCENT_LABEL,
+                   f'{format_compact_distance(ship.navigation.drift_speed(body))}/s', ACCENT)
 
+    @staticmethod
+    def draw_advice(surface: pygame.Surface, fonts: Any, h: int, left: int, top: int, row_height: int) -> None:
+        """The long distance advice, while there is one: its heading, then the advice with its phase time, then the ETA
+        (see the class docstring)."""
         advisory = LongDistanceAdvisor.current
-        if advisory is not None:
-            draw_pair(5, 'Long distance advice:', ADVICE_COLOR, '', ACCENT)
-            if advisory.advice is None:
-                draw_pair(6, 'Too far', SPEED_WARNING_RED, '', ACCENT)
-            else:
-                word_colour = {Advice.ACCELERATE: ADVICE_ACCELERATE_COLOR, Advice.STAY: ADVICE_STAY_COLOR,
-                               Advice.DECELERATE: ADVICE_DECELERATE_COLOR}[advisory.advice]
-                phase = '' if advisory.phase_time is None else format_compact_duration(advisory.phase_time)
-                draw_pair(6, advisory.advice.name, word_colour, phase, ACCENT)
-                if advisory.arrival is not None:
-                    arrival = advisory.arrival
-                    stamp = (f'{arrival.year}-{arrival.month:02d}-{arrival.day:02d} '
-                             f'{arrival.hour:02d}:{arrival.minute:02d}')
-                    draw_pair(7, 'ETA:', ACCENT_LABEL, stamp, ACCENT)
+        if advisory is None:
+            return
+        label_font = fonts.get(max(9, int(h * 0.017)))
+        _draw_pair(surface, label_font, left, top, 'Long distance advice:', ADVICE_COLOR, '', ACCENT)
+        if advisory.advice is None:
+            _draw_pair(surface, label_font, left, top + row_height, 'Too far', SPEED_WARNING_RED, '', ACCENT)
+            return
+        word_colour = {Advice.ACCELERATE: ADVICE_ACCELERATE_COLOR, Advice.STAY: ADVICE_STAY_COLOR,
+                       Advice.DECELERATE: ADVICE_DECELERATE_COLOR}[advisory.advice]
+        phase = '' if advisory.phase_time is None else format_compact_duration(advisory.phase_time)
+        _draw_pair(surface, label_font, left, top + row_height, advisory.advice.name, word_colour, phase, ACCENT)
+        if advisory.arrival is not None:
+            arrival = advisory.arrival
+            stamp = (f'{arrival.year}-{arrival.month:02d}-{arrival.day:02d} '
+                     f'{arrival.hour:02d}:{arrival.minute:02d}')
+            _draw_pair(surface, label_font, left, top + 2 * row_height, 'ETA:', ACCENT_LABEL, stamp, ACCENT)

@@ -55,7 +55,7 @@ class Km2:
         outpost_center = ((self.outpost.longitude, self.outpost.latitude)
                           if self.outpost else None)
         rich_ore_count: int = 0
-        for _ in range(int(rocks_count)):
+        for _ in range(rocks_count):
             rock_lon = self.longitude + my_random.randint(0, 999)
             rock_lat = self.latitude + my_random.randint(0, 999)
             if outpost_center and math.hypot(rock_lon - outpost_center[0], rock_lat
@@ -84,7 +84,7 @@ class Km2:
 
         if self.is_altered:
             logger.debug(f"Km2 created at {self.longitude}, {self.latitude}. {len(self.rocks)} rocks, {rich_ore_count} "
-            f"ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
+                         f"ore-rich, {len(self.molten_rocks)} molten, {len(self.ore_fields)} ore fields.")
 
     def _make_external_fields(self, rocks_alterations: Optional[dict]) -> None:
         """Turns into an external field each ore-rich rock whose conversion date (ExternalMine.conversion_date) has
@@ -120,7 +120,7 @@ class Km2:
     def get_alterations_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)
 
-    def get_alterations(self) -> dict:
+    def get_alterations(self) -> Optional[dict]:
         alterations = {}
 
         # Rocks - only altered

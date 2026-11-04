@@ -1,6 +1,6 @@
 """The small buttons under the political entity's icon: what the pilot knows of the stellar systems and of the people,
 the specifications of the ship (below the stellar systems), and, when there is a mission to see (see shows_missions),
-the pending missions, below the people. The outpost screen shows the same buttons in one row (KNOWLEDGE_ORDER), with
+the pending missions, below the people. The settlement screen shows the same buttons in one row (KNOWLEDGE_ORDER), with
 the same drawing (CockpitButtons.draw_button)."""
 
 from __future__ import annotations

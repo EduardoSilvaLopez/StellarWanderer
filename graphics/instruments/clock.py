@@ -17,8 +17,10 @@ class Clock:
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
              topleft: Optional[Tuple[int, int]] = None, dangerous: bool = False) -> None:
-        """Draw the ship time display: at the upper right of a w x h window, or with its top left at `topleft` when given
-        (the outpost screen puts it over its name). `dangerous` (see Player.is_time_scale_dangerous) paints the whole box
+        """Draw the ship time display: at the upper right of a w x h window, or with its top left at `topleft` when
+        given
+        (the settlement screen puts it over its name). `dangerous` (see Player.is_time_scale_dangerous) paints the whole
+        box
         red."""
         digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
         label_font = fonts.get(max(10, int(h * 0.018)))

@@ -108,10 +108,10 @@ UNITED_DIVERSITY: PoliticalEntity = PoliticalEntity(
             "Prime",
         ]
         , hobbies_sociable= [
-            "TODO",
+            "TBD",
         ]
         , hobbies_asocial= [
-            "TODO",
+            "TBD",
         ]
     )
 
@@ -360,13 +360,13 @@ THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
             'New Earth',
         ]
         , portal_base_names= [
-            "TODO",
+            "TBD",
         ]
         , hobbies_sociable= [
-            "TODO",
+            "TBD",
         ]
         , hobbies_asocial= [
-            "TODO",
+            "TBD",
         ]
     )
 

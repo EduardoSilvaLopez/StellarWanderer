@@ -23,28 +23,23 @@ class OutpostReportFurther(Conversation):
         self.outpost.update_handle(self.player.ship, self.date_time)  # handling going on: the levels as they are now
         time_to_handle: float = self.outpost.get_time_to_handle(self.player.ship)
 
-        handle_info_or_question: str = "Your ship is ready."
-        do_ask: bool = False
+        text: str = "Your ship is ready."
         time_str: str = self._time_as_string(int(time_to_handle))
         ready: bool = self.outpost.is_ready(self.player.ship)  # nothing to offer, even if a few seconds are left
-        going: bool = self.outpost.handling_going(self.date_time)  # its unloading stays as it is until it is done
+        starts: bool = False
         if time_to_handle > 0 and not ready:
-            handle_info_or_question = f"Your ship will be ready {time_str}."
-        elif not going and (unloading := self.outpost.unloading_text(self.player.ship)):
-            handle_info_or_question = f"Shall we start unloading {unloading}? It should be ready in {time_str}."
-            do_ask = True
-
-        text: str = handle_info_or_question
-
-        # Prepare the buttons:
-        buttons = ['<Accept>', '<Reject>'] if do_ask else ['Ok.']
+            if self.outpost.handling_due_at is None:  # never started (the Ok of the first report was not given)
+                text = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
+                starts = True
+            else:
+                text = f"Your ship will be ready {time_str}."
 
         self.show(Message(
                 title=self.title,
                 text=text,
-                buttons=buttons,
+                buttons=['Ok.'],
                 open_sound='radio_open'
-                ), self._unload_answered if do_ask else self._finish
+                ), self._start_and_finish if starts else self._finish
             )
 
     @staticmethod
@@ -55,13 +50,10 @@ class OutpostReportFurther(Conversation):
             return "in " + str(1 + (time_in_secs // 60)) + " minutes"
         return "in " + str(1 + (time_in_secs // (60 * 60))) + " hours"
 
-    def _unload_answered(self, chosen_button: Optional[int]) -> OutpostReportFurther:
-        self.outpost.update_handle(self.player.ship, self.date_time)  # the levels up to the answer, with the old choice
-        self.outpost.handling_unloads = chosen_button == 0
-        if chosen_button == 0:
-            self.outpost.start_handle(self.player.ship)
-        self._finish(chosen_button)
-        return self
+    def _start_and_finish(self, chosen_button: int) -> OutpostReportFurther:
+        """The Ok of the offer to start the handling: it starts, as it does with the first report's."""
+        self.outpost.start_handle(self.player.ship)
+        return self._finish(chosen_button)
 
     def _finish(self, chosen_button: int) -> OutpostReportFurther:
         self.interlocutor.last_communication_at = self.date_time

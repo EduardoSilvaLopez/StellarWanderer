@@ -16,19 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class Rock(Updatable):
-    TEMP_RISE_RATE = 500.0  # Temp. raise for a 1 square cube rock in 1 second.
-    BASE_COOLING_PERIOD = 60 * 60  # Once per hour.
-    COOLING_FACTOR = 0.999  # Loose 0.1% of their temperature. For 1m3.
-    TEMP_MAX_MU = 7.57 # Gives around 2000
+    TEMP_RISE_RATE = 500.0  # Temperature rise per second for a 1 m3 rock; the rise falls with the volume.
+    BASE_COOLING_PERIOD = 60 * 60  # Seconds, for a 1 m3 rock; bigger rocks cool more slowly (see update).
+    COOLING_FACTOR = 0.999  # Share of the temperature kept per base cooling period, for a 1 m3 rock.
+    TEMP_MAX_MU = 7.57  # Log-median of the melting temperature in kelvin: about 1 940 K.
     TEMP_MAX_SIGMA = 0.2
-    ORE_RICH_THRESHOLD = 0.99975
+    ORE_RICH_THRESHOLD = 0.999
     # the adjectives a rock can have (see _generate_adjective)
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.
     CENTRE_MIN = -0.15  # Share of its size the centre may sink at most, so the top of the rock stays visible.
 
     # region Generation
-    def __init__(self, parent_km2: Km2, longitude: int, latitude: int, saved_parent_alterations: dict) -> None:
+    def __init__(self, parent_km2: Km2, longitude: int, latitude: int,
+                 saved_parent_alterations: Optional[dict]) -> None:
         self.parent_km2: Km2 = parent_km2
         my_random: random.Random = random.Random(seeds.derive(parent_km2.seed, 'rock', longitude, latitude))
         self.size: float = abs(my_random.lognormvariate(math.log(10), 0.8))
@@ -68,7 +69,7 @@ class Rock(Updatable):
                     self.next_update_at = self.last_updated_at + timedelta(seconds=1)
                     update_queue.add(self)
                 logger.info(f"Altered rock loaded at {self.longitude}, {self.latitude} with temperature "
-                f"{self.temperature}°. Queue size: {len(update_queue)}")
+                            f"{self.temperature} K. Queue size: {len(update_queue)}")
 
     def _generate_composition(self, my_random: random.Random) -> float:
         if my_random.random() < self.parent_km2.parent_world.ore_prevalence:
@@ -80,12 +81,12 @@ class Rock(Updatable):
     def _generate_initial_color(self, my_random: random.Random) -> tuple:
         # Ore-rich are yellow-ish
         if self.is_ore_rich():
-            base_r = 112 + int(88 * self.get_purity()) + my_random.randint(0, 8)
-            base_g = 112 + int(88 * self.get_purity()) + my_random.randint(0, 8)
+            base_r = 160 + int(64 * self.get_purity()) + my_random.randint(0, 8)
+            base_g = 160 + int(64 * self.get_purity()) + my_random.randint(0, 8)
             base_b = 32 + my_random.randint(0, 8)
         else:
-            base_r = 104 + my_random.randint(0, 32)
-            base_g = 104 + my_random.randint(0, 32)
+            base_r = 96 + my_random.randint(0, 32)
+            base_g = 96 + my_random.randint(0, 32)
             base_b = 88 + my_random.randint(0, 32)
 
         return (base_r, base_g, base_b)
@@ -108,10 +109,10 @@ class Rock(Updatable):
         return (self.composition - Rock.ORE_RICH_THRESHOLD) / (1.0 - Rock.ORE_RICH_THRESHOLD)
 
     def ore_per_m3(self) -> float:
-        '''Ore (in Kg) per cubic meter of rock. 100% pure would be ~2,500,000,000 Kg. Normal is 2 Kg :D'''
+        '''Ore, in kg per cubic metre of rock: capped at 2.5e9 kg, the pure ore.'''
         if not self.is_ore_rich():
             return 0.0
-        return min(2500000000, 1/(1.0 - self.get_purity()))
+        return min(2_500_000_000, 1 / (1.0 - self.get_purity()))
     # endregion
 
     # region Heat
@@ -139,6 +140,8 @@ class Rock(Updatable):
 
     # region Updating
     def get_next_update(self) -> datetime:
+        if not self.next_update_at:
+            raise Exception("Updating but no next update.")
         return self.next_update_at
 
     def update(self, game_date_time: datetime) -> None:
@@ -147,7 +150,7 @@ class Rock(Updatable):
             return
 
         if self.next_update_at is None:
-            return  # Already running.
+            return  # Not queued: it has cooled down, or was never heated.
 
         cooling_period = self.BASE_COOLING_PERIOD * self.size**0.66
         if self.last_updated_at is None:
@@ -194,14 +197,14 @@ class Rock(Updatable):
         self.next_update_at = None
         update_queue.remove(self)
         logger.info(f"Rock won't be updated anymore, at ({self.longitude}, {self.latitude}). Queue size: "
-        f"{len(update_queue)}")
+                    f"{len(update_queue)}")
     # endregion
 
     # region Alterations
     def get_alterations_key(self) -> str:
         return str(self.longitude) + ' ' + str(self.latitude)
 
-    def get_alterations(self) -> dict:
+    def get_alterations(self) -> Optional[dict]:
         result: dict = {}
         if self.temperature > 0.0:
             result['temperature'] = self.temperature

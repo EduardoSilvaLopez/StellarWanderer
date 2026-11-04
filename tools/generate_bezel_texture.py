@@ -1,4 +1,5 @@
-"""Generate common/resources/textures/bezel.png, the frame round a screen of the outpost (common/dialogs/outpost_screen.py).
+"""Generate common/resources/textures/bezel.png, the frame round a screen of the outpost
+(common/dialogs/settlement_screen.py).
 
 Run from the project root:  python tools/generate_bezel_texture.py  (it reuses the wear and rivet helpers of
 generate_outpost_texture.py, so it must stay in tools/).

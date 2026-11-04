@@ -5,6 +5,7 @@ from typing import Optional
 from galaxies.body import Body
 from galaxies.constants import EPOCH as EPOCH_DATE, INITIAL_STAR_POSITION
 from galaxies.galaxy import Galaxy
+from galaxies.game_clock import GameClock
 from galaxies.orbit_layout import OrbitLayout
 from galaxies.stellar_system import StellarSystem
 from galaxies.world import World
@@ -18,7 +19,7 @@ class GameEnvironment:
 
     def __init__(self, galactic_seed: int, date_time: datetime.datetime, galaxy_alterations: Optional[dict],
                  people_alterations: Optional[dict]) -> None:
-        self.date_time = date_time
+        self.clock = GameClock(date_time)
         if galaxy_alterations:
             galaxy_alterations['date_time'] = date_time
         self.galaxy: Galaxy = Galaxy(galactic_seed, galaxy_alterations, date_time)
@@ -32,6 +33,11 @@ class GameEnvironment:
         self.last_fixed_body: Body = None
         self.nearest_system: StellarSystem = None
         self.persons: dict = people_alterations if people_alterations else {}
+
+    @property
+    def date_time(self) -> datetime.datetime:
+        """The game's date, read from the clock, which is the one that moves (see GameClock)."""
+        return self.clock.now
 
     def generate_default(self) -> None:
         self.nearest_system = self.galaxy.add_stellar_system(self.galaxy.fixed_star_at(INITIAL_STAR_POSITION))

@@ -75,12 +75,11 @@ class Player:
     # region Time scale
     def is_time_scale_dangerous(self) -> bool:
         """Whether the time compression is clearly dangerous at the ship's state (bound or unbound). Only while the ship
-        has a speed (the same speed the console shows) or hovers (it burns energy): a ship standing still on the ground
-        is never dangerous. Compensating a pull unbound burns energy as hovering does, so it has the bound limit."""
+        has a speed (the same speed the console shows): a ship standing still, hovering or not, is never dangerous.
+        Compensating a pull unbound burns energy as hovering does, so it has the bound limit."""
         burning = self.ship.is_bound or self.ship.navigation.compensates_pull()
         limit = self.TIME_SCALE_DANGER_BOUND if burning else self.TIME_SCALE_DANGER_UNBOUND
-        return self.time_scale >= limit and (
-            self.ship.velocity.as_vector().length() > 0.0 or self.ship.navigation.is_hovering())
+        return self.time_scale >= limit and self.ship.velocity.as_vector().length() > 0.0
 
     def wished_time_scale(self) -> int:
         """The time scale the pilot has asked for: the current one, except during a trip (TRAVEL), when it is the one

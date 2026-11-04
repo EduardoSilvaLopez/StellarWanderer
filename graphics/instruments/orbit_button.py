@@ -1,6 +1,6 @@
-"""The ORBIT button, bottom left of the cockpit while the ship is unbound, the left half of its row (the TRAVEL button
-has the right one, see travel_button.py): the sideways speed an orbit needs, as a bar the drift fills over the whole
-row's width, and the button that starts the ORBIT assist (spaceships/orbit_assist.py), or leaves the orbit."""
+"""The ORBIT button, in the cockpit's left column while the ship is unbound, under the target's name: the sideways speed
+an orbit needs, as a bar the drift fills over the column's width, then the button that starts the ORBIT assist
+(spaceships/orbit_assist.py), or leaves the orbit. The TRAVEL button sits under it (see travel_button.py)."""
 
 from __future__ import annotations
 import math
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 class OrbitButton:
     """The ORBIT button and its bar. The bar's target is the circular speed at the ship's distance; it is red while the
     lowest point of the path is under the bind shell, and green once the path clears it (the darker set of the gravity
-    bar). Its place is that of the last
-    draw, and a click counts only in the cockpit (see hit)."""
+    bar). The bar's row is kept while it is not lit, so the buttons do not move. Its place is that of the last draw,
+    and a click counts only in the cockpit (see hit)."""
 
     rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
-    GAP = 4  # pixels between the ORBIT and TRAVEL buttons
+    GAP = 4  # pixels between the bar, the ORBIT button and the TRAVEL button
 
     @staticmethod
     def enabled(ship: Ship) -> bool:
@@ -41,24 +41,23 @@ class OrbitButton:
                                                             or OrbitButton.enabled(ship))
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, bottom: int, width: int) -> None:
-        """The bar above the button, the button at the bottom: the bar `width` wide from `left`, the button the left half
-        of that."""
+    def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int, width: int) -> None:
+        """The bar at `top`, `width` wide from `left`, and the button under it, the same width."""
         if ship.is_bound:
             return
         label_font = fonts.get(max(9, int(h * 0.017)))
         height = label_font.get_height() + 6
-        OrbitButton.rect = pygame.Rect(left, bottom - height, (width - OrbitButton.GAP) // 2, height)
-        running = ship.navigation.orbit is not None
         lit = OrbitButton.enabled(ship)
+        if lit:
+            OrbitButton._draw_bar(surface, label_font, ship, left, top, width)
+        OrbitButton.rect = pygame.Rect(left, top + height + OrbitButton.GAP, width, height)
+        running = ship.navigation.orbit is not None
         colour = ACCENT if running else (BINDING_NEAR_GREEN if lit else ACCENT_DIM)
         if running:
             pygame.draw.rect(surface, colour, OrbitButton.rect, border_radius=3)
         pygame.draw.rect(surface, colour, OrbitButton.rect, 1, border_radius=3)
         text = label_font.render('ORBIT', True, READOUT_BG if running else colour)
         surface.blit(text, text.get_rect(center=OrbitButton.rect.center))
-        if lit:
-            OrbitButton._draw_bar(surface, label_font, ship, left, OrbitButton.rect.top - height, width)
 
     @staticmethod
     def _draw_bar(surface: pygame.Surface, label_font: Any, ship: Ship, left: int, top: int, width: int) -> None:

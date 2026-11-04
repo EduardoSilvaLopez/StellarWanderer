@@ -11,19 +11,18 @@ Controls:
     S          brake (linear and rotational)
     SPACE      switch the scanner beam on (heats a targeted rock, collects ore from a targeted mine); with the scoop
                open over an icy world, at rest, the scoop takes raw water instead; on a targeted
-               outpost, enter it (the ship must be landed): a screen over the whole window, the other state of the
+               settlement, enter it (the ship must be landed): a screen over the whole window, the other state of the
                game, where it goes on; its Leave button leaves it
     M          place mine
     Keypad 5   open or close the scoop's view in the scanner's place (with a scoop installed, up to 100 m/s at x1; with
                the time compressed, only while the ship is stationary)
     O          show or hide the orbit of the targeted body
-    Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside an outpost; Esc
+    Esc       open the starting dialog (new game, load, save, exit game), in the cockpit and inside a settlement; Esc
                again resumes. Game time is paused while a dialog is open.
 """
 
 from __future__ import annotations
 from collections import defaultdict
-from datetime import datetime, timedelta
 from functools import partial
 from typing import Optional, Tuple
 import math
@@ -49,7 +48,7 @@ from common.savefile import Savefile
 from common.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, ShipSpecificationsDialog,
     StartingDialog, PilotIdentityDialog, confirm,
-    PendingMissionsDialog, OutpostScreenDialog, next_pending_message, run_in_window, show_message
+    PendingMissionsDialog, SettlementScreenDialog, next_pending_message, run_in_window, show_message
 )
 from galaxies.outpost import Outpost
 from galaxies.portals.portal_base import PortalBase
@@ -76,10 +75,8 @@ WINDOW_ICON_SIZE = (32, 32)  # the installer's icon (presentation/game_icon.png)
 MIN_SIZE = (640, 400)
 FPS = 60
 
-# datetime tops out at year 9999
-MAX_ELAPSED = (datetime.max.replace(microsecond=0) - gem.GameEnvironment.EPOCH).total_seconds()
 EPOCH = gem.GameEnvironment.EPOCH
-# the keyboard while the outpost screen is open: no key is held, so the ship is not flown
+# the keyboard while the settlement screen is open: no key is held, so the ship is not flown
 NO_KEYS = defaultdict(bool)
 
 
@@ -122,8 +119,8 @@ def run_modal_dialog(
         ) -> Tuple[DialogResult, pygame.Surface]:
     """Show `dialog` above the frozen game until it returns a result.
 
-    Game time is paused for as long as this runs: nothing that advances it (elapsed, date and
-    time, movement, scanner, the update queue) is called here, the game frame behind the dialog
+    Game time is paused for as long as this runs: nothing that advances it (the game clock, movement,
+    scanner, the update queue) is called here, the game frame behind the dialog
     is just re-rendered unchanged. Returns the result and the (possibly resized) window."""
     player = player_module.current_player
     if player.ship.laser.firing:
@@ -150,32 +147,37 @@ def run_modal_dialog(
     return result, screen
 
 
-def draw_outpost_view(outpost_screen: OutpostScreenDialog, fonts: FontCache, size: Tuple[int, int]) -> pygame.Surface:
-    """What the window shows while the pilot is inside an outpost: its screen, with the clock over its name, on the left
-    (OutpostScreenDialog.clock_topleft), and the cockpit's notification bar along the bottom, under both blocks. The gui
+def draw_settlement_view(settlement_screen: SettlementScreenDialog, fonts: FontCache,
+                         size: Tuple[int, int]) -> pygame.Surface:
+    """What the window shows while the pilot is inside a settlement: its screen, with the clock over its name, on the
+    left
+    (SettlementScreenDialog.clock_topleft), and the cockpit's notification bar along the bottom, under both blocks. The
+    gui
     draws it (OpenGLGui.full_screen_source), and the dialogs over it."""
-    layer = outpost_screen.compose_overlay(size)
+    layer = settlement_screen.compose_overlay(size)
     player = player_module.current_player
     Clock.draw(layer, fonts, gem.current_environment.date_time, player.time_scale, *size,
-               topleft=outpost_screen.clock_topleft(size), dangerous=player.is_time_scale_dangerous())
-    bar_height = outpost_screen.notification_height(size)
+               topleft=settlement_screen.clock_topleft(size), dangerous=player.is_time_scale_dangerous())
+    bar_height = settlement_screen.notification_height(size)
     notification_bar.draw(layer, fonts, size[0], size[1] - bar_height, bar_height, player.ship)
     return layer
 
 
-def sync_outpost_screen(
-        player: player_module.Player, outpost_screen: Optional[OutpostScreenDialog], gui: OpenGLGui, fonts: FontCache
-        ) -> Optional[OutpostScreenDialog]:
-    """The screen of the outpost the pilot is inside (`Player.inside`), or None in the cockpit: it is made when they
+def sync_settlement_screen(
+        player: player_module.Player, settlement_screen: Optional[SettlementScreenDialog], gui: OpenGLGui,
+        fonts: FontCache
+        ) -> Optional[SettlementScreenDialog]:
+    """The screen of the settlement the pilot is inside (`Player.inside`), or None in the cockpit: it is made when they
     have just gone in, or a load or a new game has put them somewhere else, and the gui is told to draw it in place of
     the cockpit. Call it after anything that may change where the pilot is."""
     inside = player.inside
     if inside is None:
-        outpost_screen = None
-    elif outpost_screen is None or outpost_screen.outpost is not inside:
-        outpost_screen = OutpostScreenDialog(inside)
-    gui.full_screen_source = None if outpost_screen is None else partial(draw_outpost_view, outpost_screen, fonts)
-    return outpost_screen
+        settlement_screen = None
+    elif settlement_screen is None or settlement_screen.settlement is not inside:
+        settlement_screen = SettlementScreenDialog(inside)
+    gui.full_screen_source = None if settlement_screen is None \
+        else partial(draw_settlement_view, settlement_screen, fonts)
+    return settlement_screen
 
 
 def open_knowledge(
@@ -231,17 +233,14 @@ def manage_missions(
             return False, screen
 
 
-def start_game(action: str, value: str | int) -> float:
-    """Replace the current game with a new one ('new', seed) or a saved one ('load', path).
-
-    Returns the elapsed ship seconds since EPOCH of the game that starts."""
+def start_game(action: str, value: str | int) -> None:
+    """Replace the current game with a new one ('new', seed) or a saved one ('load', path)."""
     update_queue.clear()
     audio.stop_loops()
     if action == 'load':
         if not isinstance(value, str):
             raise Exception("A saved game is loaded from its file path.")
         Savefile.load_from_file(value)
-        elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
     else:
         if not isinstance(value, int):
             raise Exception("A new game starts from its galactic seed.")
@@ -255,10 +254,8 @@ def start_game(action: str, value: str | int) -> float:
         player_module.current_player.spawn_in_environment(gem.current_environment)
 
         logger.debug("New game created.")
-        elapsed = 0.0
     player = player_module.current_player
     player.ship.notification.set(f"Welcome, Pilot {player.surname}.")
-    return elapsed
 
 
 def show_welcome(player: player_module.Player) -> None:
@@ -321,20 +318,20 @@ def save_from_menu(
 
 def open_start_menu(
         screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
-        elapsed: float, game_running: bool
-        ) -> Tuple[bool, pygame.Surface, float]:
-    """The starting dialog, and the game it chooses. Returns (keep running, window, elapsed ship seconds)."""
+        game_running: bool
+        ) -> Tuple[bool, pygame.Surface]:
+    """The starting dialog, and the game it chooses. Returns (keep running, window)."""
     # Above the frozen game. With game_running False (after a death) there is no resuming: only a new game, a load,
     # or exit.
     result, screen = run_modal_dialog(StartingDialog(game_running=game_running), screen, gui, fonts, clock)
     if result[0] == 'exit':
-        return False, screen, elapsed
+        return False, screen
     if result[0] == 'save':
         keep_running, screen = save_from_menu(result[1], screen, gui, fonts, clock)
-        return keep_running, screen, elapsed
+        return keep_running, screen
     if result[0] in ('new', 'load'):
-        elapsed = start_game(*result)
-    return True, screen, elapsed
+        start_game(*result)
+    return True, screen
 
 
 def main() -> None:
@@ -364,12 +361,12 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     fonts = FontCache()
-    elapsed = start_game(*choice)  # seconds of ship time since EPOCH
+    start_game(*choice)
     gui = OpenGLGui()
     gui.preload_textures()
 
     running = True
-    outpost_screen: Optional[OutpostScreenDialog] = None  # the inside of an outpost, while it is open
+    settlement_screen: Optional[SettlementScreenDialog] = None  # the inside of a settlement, while it is open
     while running:
         # Messages asked for by game code (show_message) open here, at the start of a frame.
         running, screen = show_pending_messages(screen, gui, fonts, clock)
@@ -391,14 +388,14 @@ def main() -> None:
 
         # A death: once its message is closed, the game is over and the starting dialog takes over.
         if player.is_dead:
-            running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=False)
+            running, screen = open_start_menu(screen, gui, fonts, clock, game_running=False)
             continue
 
-        outpost_screen = sync_outpost_screen(player, outpost_screen, gui, fonts)
+        settlement_screen = sync_settlement_screen(player, settlement_screen, gui, fonts)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            # the time scale, the save and the load work in the outpost screen too
+            # the time scale, the save and the load work in the settlement screen too
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_PLUS:
                 player.increase_time_scale()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_MINUS:
@@ -410,29 +407,31 @@ def main() -> None:
                 audio.stop_loops()
                 with frame_watch.timed('load'):
                     Savefile.load_last()
-                player = player_module.current_player  # a load may put the pilot inside an outpost (synced below)
-                elapsed = (gem.current_environment.date_time - EPOCH).total_seconds()
-            # the starting dialog opens in both states of the game: in the cockpit, and inside an outpost
+                player = player_module.current_player  # a load may put the pilot inside a settlement (synced below)
+            # the starting dialog opens in both states of the game: in the cockpit, and inside a settlement
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running, screen, elapsed = open_start_menu(screen, gui, fonts, clock, elapsed, game_running=True)
+                running, screen = open_start_menu(screen, gui, fonts, clock, game_running=True)
                 player = player_module.current_player
-            # while the pilot is inside an outpost, its screen takes the events
-            elif outpost_screen is not None:
+            # while the pilot is inside a settlement, its screen takes the events
+            elif settlement_screen is not None:
                 if event.type == pygame.VIDEORESIZE:
                     screen = resize_window(event.w, event.h)
-                elif (result := outpost_screen.handle_event(event)) is not None:
-                    if result[0] == 'knowledge':  # a knowledge button: its dialog, then the screen goes on
-                        keep_running, screen = open_knowledge(result[1], screen, gui, fonts, clock)
-                        running = running and keep_running
-                        continue
-                    running = result[0] != 'exit'
-                    if result[0] == 'close':  # the Leave button: the pilot is back in the cockpit, which takes time too
-                        leaving_seconds = outpost_screen.outpost.leave(player.ship, gem.current_environment.date_time)
-                        player.leave_settlement()
-                        audio.play(OutpostScreenDialog.CLOSE_SOUND)
-                        elapsed = min(elapsed + leaving_seconds, MAX_ELAPSED)
+                else:
+                    result = settlement_screen.handle_event(event)
+                    if result is not None:
+                        if result[0] == 'knowledge':  # a knowledge button: its dialog, then the screen goes on
+                            keep_running, screen = open_knowledge(result[1], screen, gui, fonts, clock)
+                            running = running and keep_running
+                            continue
+                        running = result[0] != 'exit'
+                        if result[0] == 'close':  # the Leave button: the pilot is back in the cockpit, takes time too
+                            leaving_seconds = settlement_screen.settlement.leave(player.ship,
+                                                                                 gem.current_environment.date_time)
+                            player.leave_settlement()
+                            audio.play(SettlementScreenDialog.CLOSE_SOUND)
+                            gem.current_environment.clock.advance(leaving_seconds)
             elif event.type == pygame.KEYDOWN:
-                # the inside of the outpost in the scanner: the other state of the game (see Player.inside)
+                # the inside of the settlement in the scanner: the other state of the game (see Player.inside)
                 if event.key == pygame.K_SPACE:
                     ship = player.ship
                     outpost = ship.scanner.targeted_outpost
@@ -444,8 +443,8 @@ def main() -> None:
                             )
                     elif outpost is not None:
                         player.enter_settlement(outpost)
-                        elapsed = min(elapsed + Outpost.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
-                        audio.play(OutpostScreenDialog.OPEN_SOUND)
+                        gem.current_environment.clock.advance(Outpost.TIME_TO_ENTER)  # going in takes time
+                        audio.play(SettlementScreenDialog.OPEN_SOUND)
                     elif ship.scanner.in_base_zone():  # fixed to the base: SPACE docks when stopped inside
                         base = gem.current_environment.nearest_system.portal_base
                         speed = (ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()).length()
@@ -458,8 +457,8 @@ def main() -> None:
                         else:
                             base.prepare()  # its staff on duty, and its place in the queue
                             player.enter_settlement(base)
-                            elapsed = min(elapsed + base.TIME_TO_ENTER, MAX_ELAPSED)  # going in takes time
-                            audio.play(OutpostScreenDialog.OPEN_SOUND)
+                            gem.current_environment.clock.advance(base.TIME_TO_ENTER)  # going in takes time
+                            audio.play(SettlementScreenDialog.OPEN_SOUND)
                 elif event.key == pygame.K_KP_5:
                     player.ship.toggle_scoop()
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
@@ -488,8 +487,6 @@ def main() -> None:
             elif event.type == pygame.VIDEORESIZE:
                 screen = resize_window(event.w, event.h)
 
-        outpost_screen = sync_outpost_screen(player, outpost_screen, gui, fonts)  # the events may have moved the pilot
-
         # The world map zooms while the mouse is over it, and drags with the left button (polled once per frame).
         focused = pygame.mouse.get_focused()
         left_pressed = focused and pygame.mouse.get_pressed()[0] and player.ship.is_bound
@@ -506,8 +503,11 @@ def main() -> None:
         portal_limit = math.inf if player.inside else ship.navigation.portal_base_time_limit()
         player.limit_time_scale(dt, portal_limit)
         delta_game_seconds = dt * player.time_scale
-        elapsed = min(elapsed + delta_game_seconds, MAX_ELAPSED)
-        gem.current_environment.date_time = EPOCH + timedelta(seconds=elapsed)
+        gem.current_environment.clock.advance(delta_game_seconds)
+
+        # The events may have moved the pilot. After the date, not before: going in takes time, and the screen (with
+        # the dockmaster's report) must be made at the date of arrival.
+        settlement_screen = sync_settlement_screen(player, settlement_screen, gui, fonts)
 
         # In orbit (from the press of ORBIT) and on a trip (TRAVEL) the turn keys work and S only stops the turns; a
         # translation key gives the controls back.
@@ -606,10 +606,10 @@ def main() -> None:
         frame_watch.mark('ship')
         update_queue.update(gem.current_environment.date_time)
         LongDistanceAdvisor.update(player, gem.current_environment)
-        elapsed = min(elapsed + PortalDefence.update(player, gem.current_environment), MAX_ELAPSED)  # a forced return
+        gem.current_environment.clock.advance(PortalDefence.update(player, gem.current_environment))  # a forced return
         frame_watch.mark('queue and advice')
 
-        gui.draw(screen, fonts, gem.current_environment, player)  # the outpost screen, if the pilot is inside one
+        gui.draw(screen, fonts, gem.current_environment, player)  # the settlement screen, if the pilot is inside one
         frame_watch.mark('draw')
         pygame.display.flip()
         frame_watch.mark('flip')

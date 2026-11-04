@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 from abc import ABC
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional
 
 
 if TYPE_CHECKING:
@@ -110,10 +110,6 @@ class CargoHold(ABC):
     def free_capacity(self) -> float:
         return self.capacity - self.used_capacity()
 
-    def supplies_mass(self) -> float:
-        """Kg of air, water and food in the hold: what a ship carries without its ore, its raw water or its mines."""
-        return self.air * CargoHold.AIR_WEIGHT + self.water * CargoHold.WATER_WEIGHT + self.food * CargoHold.FOOD_WEIGHT
-
     def load(self, supply: Supply, units: float) -> float:
         """Takes up to `units` of `supply` from the outpost into the hold: up to the supply's maximum and the room left.
         Whole units only for a supply that comes in whole units. Returns the units taken."""
@@ -141,21 +137,27 @@ class CargoHold(ABC):
 
 @dataclass(frozen=True)
 class Supply:
-    """What an outpost gives a hold, in the cargo list: `key` is the hold's attribute that holds the stock, `weight` the
-    room one unit takes, `maximum` the most the hold takes (from the hold itself), and `whole` says the units are whole
-    (mines). The list SUPPLIES is what the outpost's cargo view shows, one row each."""
+    """A kind of stock the outpost's cargo view handles: `key` is the hold's attribute that holds the stock, `weight`
+    the room one unit takes, `maximum` the most the hold takes (from the hold itself, None when it takes no maximum),
+    `whole` says the units are whole, and `takeable` says the outpost gives it to the pilot as well as taking it."""
 
     key: str
     label: str
     unit: str
     weight: float
-    maximum: Callable[[CargoHold], float]
+    maximum: Optional[Callable[[CargoHold], float]] = None
     whole: bool = False
+    takeable: bool = True
 
 
-SUPPLIES: tuple[Supply, ...] = (
+# The cargo list of the outpost's cargo view: air, water and food both ways, ore and raw water only given.
+CARGO: tuple[Supply, ...] = (
     Supply('air', 'Air', 'days', CargoHold.AIR_WEIGHT, lambda hold: hold.air_max),
     Supply('water', 'Water', 'days', CargoHold.WATER_WEIGHT, lambda hold: hold.water_max),
     Supply('food', 'Food', 'days', CargoHold.FOOD_WEIGHT, lambda hold: hold.food_max),
-    Supply('mines', 'Mines', 'mines', CargoHold.MINE_WEIGHT, lambda hold: CargoHold.MINES_MAX, whole=True),
+    Supply('ore', 'Ore', 'kg', CargoHold.ORE_WEIGHT, whole=True, takeable=False),
+    Supply('raw_water', 'Raw water', 'kg', CargoHold.RAW_WATER_WEIGHT, takeable=False),
 )
+# The mines are equipment: they stay in the hold, but the outpost's equipment rows handle them.
+MINES = Supply('mines', 'Mines', 'mines', CargoHold.MINE_WEIGHT, lambda hold: CargoHold.MINES_MAX, whole=True)
+SUPPLIES: dict[str, Supply] = {supply.key: supply for supply in (*CARGO, MINES)}

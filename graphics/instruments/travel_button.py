@@ -1,13 +1,13 @@
-"""The TRAVEL button, bottom left of the cockpit while the ship is unbound, the right half of the ORBIT button's row
-(see orbit_button.py): it starts the TRAVEL autopilot (spaceships/travel_assist.py), which flies the ship to the
-targeted body, or gives the controls back."""
+"""The TRAVEL button, in the cockpit's left column while the ship is unbound, under the ORBIT button (see
+orbit_button.py):
+it starts the TRAVEL autopilot (spaceships/travel_assist.py), which flies the ship to the targeted body, or gives the
+controls back."""
 
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 
 from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, READOUT_BG
-from .orbit_button import OrbitButton
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -29,15 +29,14 @@ class TravelButton:
                                                              or TravelAssist.enabled(ship))
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, bottom: int, width: int) -> None:
-        """The button at the bottom, the right half of the row `width` wide from `left`."""
+    def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int, width: int) -> None:
+        """The button at `top`, `width` wide from `left`."""
         from spaceships.travel_assist import TravelAssist
         if ship.is_bound:
             return
         label_font = fonts.get(max(9, int(h * 0.017)))
         height = label_font.get_height() + 6
-        half = (width - OrbitButton.GAP) // 2
-        TravelButton.rect = pygame.Rect(left + width - half, bottom - height, half, height)
+        TravelButton.rect = pygame.Rect(left, top, width, height)
         running = ship.navigation.travel is not None
         colour = ACCENT if running else (BINDING_NEAR_GREEN if TravelAssist.enabled(ship) else ACCENT_DIM)
         if running:

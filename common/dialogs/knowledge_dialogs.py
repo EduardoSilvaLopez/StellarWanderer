@@ -19,7 +19,7 @@ from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
 from .dialog import DialogResult
 from . import search_box
 from .messages import Message
-from .outpost_screen import HEAT_SHIELD_OPTIONS
+from .settlement_screen import HEAT_SHIELD_OPTIONS
 
 if TYPE_CHECKING:
     from galaxies.asteroid import Asteroid
