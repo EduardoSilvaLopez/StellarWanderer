@@ -6,8 +6,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from galaxies import fixed_stars
-from galaxies.constants import INITIAL_STAR_POSITION
-from galaxies.history.expansion_history import ExpansionHistory
+from galaxies.constants import EPOCH, INITIAL_STAR_POSITION
+from galaxies.history.expansion_history import ExpansionHistory, SystemHistory
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
@@ -22,6 +22,8 @@ class Galaxy:
         self.seed: int = user_given_seed
         self.history: ExpansionHistory = ExpansionHistory(user_given_seed, date_time)
         self.history.log_results()
+        # The history of the initial star, which gives the system its entity and its settlements (the other stars have none).
+        self.initial_history: SystemHistory = self.history.initial_system(EPOCH)
         # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
         self.fixed_stars: dict[tuple[int, int, int], Star] = {
             cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)
@@ -61,6 +63,8 @@ class Galaxy:
             system = self.system_of_key(full_keys.partition('|')[0])
             if system is None:
                 raise KeyError(f"No stellar system {full_keys} in this galaxy.")
+            if system.portal_base is None:
+                raise KeyError(f"No portal base in stellar system {full_keys}.")
             return system.portal_base
         return self.outpost_of(full_keys)
 

@@ -146,7 +146,7 @@ class Scanner:
         import game_environment as gem
         environment = gem.current_environment
         base = environment.nearest_system.portal_base
-        if not base.is_shown or not self.ship.navigation.in_fixed_zone(base):
+        if base is None or not base.is_shown or not self.ship.navigation.in_fixed_zone(base):
             return
         if base.contains_hangar(self.ship.position.as_vector()):  # flown in through the mouth: at the base
             self.target = base
@@ -285,9 +285,10 @@ class Scanner:
         return self
 
     def in_base_zone(self) -> bool:
-        """Whether the ship is in the fixed zone of the portal base of its system."""
+        """Whether the ship is in the fixed zone of the portal base of its system (False if it has none)."""
         import game_environment as gem
-        return self.ship.navigation.in_fixed_zone(gem.current_environment.nearest_system.portal_base)
+        base = gem.current_environment.nearest_system.portal_base
+        return base is not None and self.ship.navigation.in_fixed_zone(base)
 
     def deactivate(self) -> Scanner:
         self.ship.laser.cease_fire()

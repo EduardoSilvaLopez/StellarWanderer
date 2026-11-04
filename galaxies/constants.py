@@ -1,3 +1,7 @@
+from datetime import datetime
+
+EPOCH = datetime(700, 1, 1)  # the date of a new game; the initial system is chosen from the history as of this date
+
 # Galactic coordinates are in light-years, with the galactic centre at the origin.
 INITIAL_STAR_POSITION = (26010.0, 10.0, 10.0)  # the centre of its sector, so the star sits in the middle of the region
 
@@ -7,9 +11,9 @@ STAR_COLOUR_VIVIDNESS = 1.0
 
 # A world's surface (galaxies/world_surface.py). Its colour is this share of the colour of its surface type, the rest a
 # random vivid colour of about the same brightness: 1.0 is the plain colour of the type, 0.0 is entirely random.
-WORLD_COLOUR_REALISM = 0.7
-WORLD_VIVID_SATURATION_MIN = 0.45  # the random vivid colour's saturation (HSV) is drawn between these two
-WORLD_VIVID_SATURATION_MAX = 0.85
+WORLD_COLOUR_REALISM = 0.85
+WORLD_VIVID_SATURATION_MIN = 0.30  # the random vivid colour's saturation (HSV) is drawn between these two
+WORLD_VIVID_SATURATION_MAX = 0.60
 WORLD_BRIGHTNESS_JITTER = 0.08  # each world's colour is scaled by 1 plus or minus up to this
 # the share of its star's light a world reflects, for its temperature: one value for all worlds
 WORLD_BOND_ALBEDO = 0.15

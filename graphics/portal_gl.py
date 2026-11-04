@@ -93,6 +93,8 @@ class PortalGl:
         if ship.is_bound:
             return
         portal = environment.nearest_system.portal
+        if portal is None:
+            return
         level = PortalGl.intensity(portal, PortalGl._relative_centre(portal, ship, environment))
         added = int(PortalGl.TINT_MAX * level)
         if added > 0:

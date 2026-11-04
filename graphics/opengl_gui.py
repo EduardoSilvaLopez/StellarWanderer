@@ -161,7 +161,7 @@ class OpenGLGui:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
-        if not ship.is_bound:
+        if not ship.is_bound and environment.nearest_system.portal is not None:
             # The Portal's glare hides the sky (the stars and the planets), not the base nor the asteroids, which come
             # after it; the Portal and the base are drawn the farthest first, as each is drawn over what is behind it.
             PortalGl.draw_glare(width, height, ship, environment)

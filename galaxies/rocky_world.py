@@ -163,7 +163,7 @@ class RockyWorld(World):
 
         self.rocks_prevalence: float = my_random.random()
         self.ore_prevalence: float = (1.0 - Rock.ORE_RICH_THRESHOLD) * my_random.random()
-        if isinstance(self.parent_planet, RockyWorld) and self.parent_planet._is_initial_planet():
+        if isinstance(self.parent_planet, RockyWorld) and self.parent_planet.is_initial_planet():
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.8 + 0.2 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * (0.8 + 0.2 * my_random.random())
@@ -202,11 +202,11 @@ class RockyWorld(World):
             while moons_count < 0:
                 moons_count = int(my_random.gauss(2.0, 1.0))
             # Initial moon's clause.
-            if not moons_count and self._is_initial_planet():
+            if not moons_count and self.is_initial_planet():
                 moons_count = 1
             # A planet too close to its star has no room for a stable moon: it has none. (The layout of the initial
             # system leaves room for the initial planet's moon.)
-            if not self._is_initial_planet() and self.moon_limit < RockyWorld.MOON_MIN_ROOM_RADII * self.radius:
+            if not self.is_initial_planet() and self.moon_limit < RockyWorld.MOON_MIN_ROOM_RADII * self.radius:
                 moons_count = 0
             for _ in range(moons_count):
                 self.moons.append(RockyWorld(parent_orbit=None, parent_planet=self,
@@ -227,7 +227,7 @@ class RockyWorld(World):
         self._learn()
         self._log_creation()
 
-    def _is_initial_planet(self) -> bool:
+    def is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
             and (self.stellar_system.x, self.stellar_system.y,

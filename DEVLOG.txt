@@ -5,29 +5,33 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 2026-11-04 (10/11)
 
-> STARTED: Extra time: 173h00' + 5:15-
-
-
-> BACKLOG
+> STARTED: Extra time: 173h00' + 5:15-7:30 + 9:45-
 
   * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
   * Start again, check the balance of everything.
+
+> BACKLOG
+
   * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
-  * Extra: Binding slowly.
-  * Extra: Retirement.
+  * Cargo revamp: The left side is for upgrades, the right side for cargo including mines, ore, raw water.
+  * [Prolly] Outpost size 2. Check ERROR.
+  * [Prolly] Portal base size 2. Check ERROR.
 
 * PATH OF TREASON
   * I am trying to reach the path of the traitor. Very hard to reach.
   * Traitor only if does not like their job.
   * Rat
   * Selling ore
-  * Extra: A career as law enforcement, if "rat".
+  * Extra: Retirement.
   * Extra: Improve the sounds for real.
   * Extra: Did theartlav reply?
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
-* INTERSTELLAR TRAVEL VIA BASE (200-500 in THS)
-  * Cities
+* INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
+  * Assigning the history to the new systems.
+  * Cities.
+  * Extra: A career as law enforcement, if "rat".
+  * Extra: Binding slowly.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
 
@@ -39,6 +43,7 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Extra: Collision damage, also from rocks.
 
 * ABANDONING THOSE-WHO-SHARE
+  * Filling up the other entities.
   * Conversion mechanics.
   * United Diversity
   * The Shining Throne
@@ -89,7 +94,7 @@ Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns int
 Fold All Regions (Ctrl+K Ctrl+8)
 Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
 
-GIANT_SUN_GAIN sets the brightness.
-GIANT_LIGHT_PENETRATION (now 0.15) sets how quickly the light dies with depth.
-GIANT_LIMB_DARKENING sets the darker edge.
-JovianWorld.MASS_EXTINCTION sets how opaque the clouds are.
+Colors of rocky worlds. To increase realism.
+WORLD_COLOUR_REALISM = 0.85
+WORLD_VIVID_SATURATION_MIN = 0.30  # the random vivid colour's saturation (HSV) is drawn between these two
+WORLD_VIVID_SATURATION_MAX = 0.60

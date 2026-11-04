@@ -65,7 +65,8 @@ class PortalBase(Body, Settlement):
     FLOOR_RADIUS_FRACTION = 0.98  # of the outer radius: 2 m of shielding at 100 m
     FLOOR_GRAVITY = 0.981  # m/s^2, a tenth of the Earth's
 
-    def __init__(self, stellar_system: StellarSystem, saved: Optional[dict] = None) -> None:
+    def __init__(self, stellar_system: StellarSystem, enlargement_dates: list[datetime],
+                 saved: Optional[dict] = None) -> None:
         self._stellar_system: StellarSystem = stellar_system
         self.seed: int = seeds.derive(stellar_system.seed, 'portal base')
         my_random: random.Random = random.Random(self.seed)
@@ -74,7 +75,7 @@ class PortalBase(Body, Settlement):
         self.height: float = float(PortalBase.HEAT_RADIUS_MULTIPLE * stellar_system.star.default_heat_radius)  # m
         self.solid: PortalBaseSolid = PortalBaseSolid(self.radius)  # what a ship cannot fly through
         self.name: str = self._generate_name(my_random)
-        Settlement.__init__(self, self.seed)
+        Settlement.__init__(self, self.seed, enlargement_dates)
         self.focus: SettlementFocus = SettlementFocus.ADMINISTRATION
         if saved is not None:  # what the settlement saved in its system (see StellarSystem.get_alterations)
             self._read_alterations(saved)

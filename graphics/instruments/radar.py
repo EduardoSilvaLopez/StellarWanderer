@@ -54,8 +54,10 @@ class Radar:
         system = gem.current_environment.targeted_body.stellar_system
         found: List[Tuple[Vector3, Tuple[int, int, int], int]] = [
             (Vector3(0.0, 0.0, 0.0), system.star.color, RADAR_STAR_DOT_RADIUS),
-            (system.portal_base.calculate_stellar_position(date_time), RADAR_BASE_COLOR, RADAR_BASE_DOT_RADIUS),
         ]
+        if system.portal_base is not None:
+            found.append((system.portal_base.calculate_stellar_position(date_time), RADAR_BASE_COLOR,
+                          RADAR_BASE_DOT_RADIUS))
         for world in system.get_all_worlds():
             colour, radius = (RADAR_MOON_COLOR, RADAR_MOON_DOT_RADIUS) if world.parent_planet \
                 else (RADAR_WORLD_COLOR, RADAR_WORLD_DOT_RADIUS)

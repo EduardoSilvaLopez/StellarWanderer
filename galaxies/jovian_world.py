@@ -403,7 +403,7 @@ class JovianWorld(World):
             alterations['hidden'] = True
         return alterations or None
 
-    def _is_initial_planet(self) -> bool:
+    def is_initial_planet(self) -> bool:
         return False  # the start is in an earthlike planet's system
 
     def _generate_moons(self) -> None:

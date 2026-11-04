@@ -110,14 +110,15 @@ class ObjectLabels:
             surface.blit(label_surf, rect)
 
         base = system.portal_base
-        base_vector = base.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
-        projected = project_to_camera(ship, base_vector, w, horizon_y, focal_length_px)
-        if base.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
-            label_surf, rect = ObjectLabels._render_label(
-                label_font, base.name, format_compact_distance(base_vector.length()),
-                int(projected[0]), int(projected[1])
-            )
-            surface.blit(label_surf, rect)
+        if base is not None:
+            base_vector = base.calculate_stellar_position(environment.date_time) - ship.position.as_vector()
+            projected = project_to_camera(ship, base_vector, w, horizon_y, focal_length_px)
+            if base.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
+                label_surf, rect = ObjectLabels._render_label(
+                    label_font, base.name, format_compact_distance(base_vector.length()),
+                    int(projected[0]), int(projected[1])
+                )
+                surface.blit(label_surf, rect)
 
         # Draw labels for all worlds in the stellar system. get_all_worlds() lists each
         # planet before its moons, so the planet's label rectangle is known for its moons.

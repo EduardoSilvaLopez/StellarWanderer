@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import math
 import random
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import galaxies.constants
@@ -14,14 +15,17 @@ from galaxies.asteroid_belt import AsteroidBelt
 from galaxies.body import Body
 from galaxies.orbit import Orbit
 from galaxies.orbit_layout import OrbitKind, OrbitLayout
+from galaxies.outpost import Outpost
 from galaxies.portals.portal import Portal
 from galaxies.portals.portal_base import PortalBase
 from galaxies.politics import political_entity
+from galaxies.rocky_world import RockyWorld
 from galaxies.star import Star
 from galaxies.world import World
 
 if TYPE_CHECKING:
     from galaxies.galaxy import Galaxy
+    from galaxies.history.expansion_history import SystemHistory
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +39,13 @@ class StellarSystem:
         self.seed: int = seeds.derive(star.seed, 'system')
         my_random: random.Random = random.Random(self.seed)
 
-        self.political_entity = political_entity.THOSE_WHO_SHARE \
+        # Only the initial star has a history so far; it gives the system its entity.
+        self.history: SystemHistory | None = parent_galaxy.initial_history \
             if star.position == galaxies.constants.INITIAL_STAR_POSITION else None
+        self.political_entity: political_entity.PoliticalEntity | None = \
+            self.history.entity if self.history is not None else None
+        # When the system was colonised, which is also when its portal base was founded.
+        self.founded_at: datetime | None = self.history.founded_at if self.history is not None else None
         self.star: Star = star  # the system's star, as a body ships can navigate to
         self.star.attach_to(self)
         self.name: str = self.star.name + " System"
@@ -51,9 +60,10 @@ class StellarSystem:
             own_alterations['date_time'] = saved_alterations['date_time']
             self.saved_alterations = own_alterations
         self.star.hidden = bool((self.saved_alterations or {}).get('star', {}).get('hidden', False))
-        # Every system has one for now. Made after its saved state, which holds the base's visits and handling.
-        self.portal_base: PortalBase = PortalBase(self, (self.saved_alterations or {}).get('portal_base'))
-        self.portal: Portal = Portal(self.portal_base)  # its Portal: nothing about it is saved
+        # A system has a portal base, and the Portal it protects, only if its history says so (see _place_settlements):
+        # the pilot may arrive by hand to one that has neither.
+        self.portal_base: PortalBase | None = None
+        self.portal: Portal | None = None
 
         self.orbits: list[Orbit] = self._generate_orbits(my_random)
 
@@ -66,7 +76,33 @@ class StellarSystem:
         self.consumed_free: set[int] = {int(offer_seed) for offer_seed in
                                         (self.saved_alterations or {}).get('consumed_free', [])}
 
-        # ESIHERE: History.
+        self._place_settlements()
+
+    def _place_settlements(self) -> None:
+        """Gives the system the settlements of its history: the first is the portal base (with the Portal it protects),
+        each other one an outpost on a rocky world (a planet or a moon) other than the initial moon. The first outpost
+        goes to the initial planet, so the pilot has one near; each of the rest is drawn from a seed of its own, so its
+        world does not change when the history grows. A system without a history has no settlement at all. The base is
+        made after the system's saved state, which holds its visits and handling."""
+        if self.history is None:
+            return
+        settlements: list[list[datetime]] = self.history.settlements
+        self.portal_base = PortalBase(self, settlements[0], (self.saved_alterations or {}).get('portal_base'))
+        self.portal = Portal(self.portal_base)  # nothing about it is saved
+        rocky_worlds = [world for world in self.get_all_worlds() if isinstance(world, RockyWorld)]
+        initial_planet = next((world for world in rocky_worlds if world.is_initial_planet()), None)
+        initial_moon = initial_planet.moons[0] if initial_planet is not None and initial_planet.moons else None
+        eligible = [world for world in rocky_worlds if world is not initial_moon]
+        now = self.parent_galaxy.history.now
+        for number, dates in enumerate(settlements[1:], start=1):
+            if dates[0] > now:  # not founded yet: the history knows it, the system does not
+                continue
+            if number == 1 and initial_planet is not None:
+                world = initial_planet
+            else:
+                world = random.Random(seeds.derive(self.seed, 'settlement', number)).choice(eligible)
+            outpost = Outpost(world, (world.saved_alterations or {}).get('outposts'), dates)
+            world.outposts[outpost.get_alterations_key()] = outpost  # May overwrite: the key is the place.
 
     def consume_free_asteroid(self, offer_seed: int) -> None:
         """The scoop has taken the free-living asteroid of the offer whole: it is gone, and the system is altered."""
@@ -131,9 +167,10 @@ class StellarSystem:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
     def get_all_bodies(self) -> list[Body]:
-        """The star first, then the portal base, then every world (each planet before its moons), then the asteroids of
+        """The star first, then the portal base (if it has one), then every world (each planet before its moons), then the asteroids of
         the ongoing missions."""
-        return [self.star, self.portal_base] + self.get_all_worlds() + self.mission_asteroids()
+        base = [] if self.portal_base is None else [self.portal_base]
+        return [self.star] + base + self.get_all_worlds() + self.mission_asteroids()
 
     def mission_asteroids(self) -> list[Asteroid]:
         """The asteroids of the pilot's accepted, not yet finished scan missions whose target is in this system. They
@@ -186,9 +223,9 @@ class StellarSystem:
         return result + list(self.free_asteroids.values())
 
     def settlements(self) -> list:
-        """Every settlement of the system: its outposts, world by world, then the portal base."""
+        """Every settlement of the system: its outposts, world by world, then the portal base if it has one."""
         outposts = [outpost for world in self.get_all_worlds() for outpost in world.outposts.values()]
-        return outposts + [self.portal_base]
+        return outposts + ([] if self.portal_base is None else [self.portal_base])
 
     def get_all_worlds(self) -> list[World]:
         result: list[World] = []
@@ -214,7 +251,7 @@ class StellarSystem:
         if self.is_altered:
             if self.star.hidden:
                 alterations['star'] = {'hidden': True}
-            base_alterations = self.portal_base.get_alterations()
+            base_alterations = self.portal_base.get_alterations() if self.portal_base is not None else None
             if base_alterations:
                 alterations['portal_base'] = base_alterations
             for orbit in self.orbits:

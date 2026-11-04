@@ -8,6 +8,7 @@ from common.paths import resource_path
 import logging
 
 from galaxies.people.person import Ethnicity
+import galaxies.history.expansion_profile as ep
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,12 @@ class PoliticalEntity:
             self, name: str,
             color: tuple,
             icon_filename: str,
+            expansion_profile: ep.ExpansionProfile,
             titles: dict,
-            names_1: List[str],
-            names_2: List[str],
+            settlement_names_1: List[str],
+            settlement_names_2: List[str],
             exchange_reputation_changes: dict,
-            settlements: List[tuple],
+            biggest_cities: List[tuple],
             planets: List[(str)],
             portal_base_names: List[(str)],
             hobbies_sociable: List[(str)],
@@ -30,11 +32,12 @@ class PoliticalEntity:
         self.color: tuple = color
         self.icon: Optional[pygame.Surface] = None
         self._load_icon(icon_filename)
+        self.expansion_profile: ep.ExpansionProfile = expansion_profile
         self.titles = titles
-        self.settlement_names_1: List[str] = names_1
-        self.settlement_names_2: List[str] = names_2
+        self.settlement_names_1: List[str] = settlement_names_1
+        self.settlement_names_2: List[str] = settlement_names_2
         self.exchange_reputation_changes: dict = exchange_reputation_changes
-        self.settlements = settlements
+        self.settlements = biggest_cities
         self.planets = planets
         self.portal_base_names = portal_base_names
         self.hobbies_sociable: List[str] = hobbies_sociable  # what the people do for fun (see Person._generate_hobby)
@@ -60,10 +63,63 @@ class PoliticalEntity:
         return self.settlement_names_1[my_random.randint(0, len(self.settlement_names_1) - 1)]\
             + " " + self.settlement_names_2[my_random.randint(0, len(self.settlement_names_2) - 1)]
 
+UNITED_DIVERSITY: PoliticalEntity = PoliticalEntity(
+        name="United Diversity",
+        color=(100, 100, 230),
+        icon_filename="PoliticalEntity.UnitedDiversity.png",
+        expansion_profile=ep.TechOrganic,
+        titles={
+         float('-inf'): 'Prisoner',
+            0: 'Citizen',
+            100: 'Mister',
+        },
+        settlement_names_1=[
+            "AFAIK",
+            "FAFO",
+            "GOAT",
+            "LOL",
+            "NA",
+            "ORLY",
+            "TBD",
+            "WTF",
+        ],
+        settlement_names_2=[
+            "",
+        ],
+        exchange_reputation_changes={
+            "maintenance": 0.0,
+            "energy": 0.0,
+            "credits": 0.0,
+            "air": 0.001,
+            "water": 0.001,
+            "food": 0.001,
+            "mines": 0.0,
+            "ore": 0.0,
+            "raw_water": 0.01,
+        },
+        biggest_cities=[
+            ('Carela ', Ethnicity.WHITE),
+        ]
+        , planets= [
+            'Moon',
+            'Mars',
+        ]
+        , portal_base_names= [
+            "Prime",
+        ]
+        , hobbies_sociable= [
+            "TODO",
+        ]
+        , hobbies_asocial= [
+            "TODO",
+        ]
+    )
+
 THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         name="Those-Who-Share",
         color=(230, 100, 100),
-        icon_filename="PoliticalEntity.1.png",
+        icon_filename="PoliticalEntity.ThoseWhoShare.png",
+        expansion_profile=ep.TechConservative,
         titles={
          float('-inf'): 'Prisoner',
             -30: 'Dependent',
@@ -80,7 +136,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             5000: 'Champion',
             10000: 'Premier'
         },
-        names_1=[
+        settlement_names_1=[
             "Arduous",
             "Beneficial",
             "Burdensome",
@@ -104,7 +160,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "Weighty",
             "Worthwhile"
         ],
-        names_2=[
+        settlement_names_2=[
             "Aim",
             "Assignment",
             "Charge",
@@ -140,7 +196,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "ore": 0.008,
             "raw_water": 0.001,
         },
-        settlements=[
+        biggest_cities=[
             ('Jiùjīnshān, Ài', Ethnicity.BLACK),
             ('Niǔyuē, Shèqū', Ethnicity.BLACK),
             ('Bālí, Tón-lǐ-xīn', Ethnicity.WHITE),
@@ -261,5 +317,62 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         ]
     )
 
+THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
+        name="The Shining Throne",
+        color=(100, 196, 196),
+        icon_filename="PoliticalEntity.TheShiningThrone.png",
+        expansion_profile=ep.LowTechImperialist,
+        titles={
+         float('-inf'): 'Prisoner',
+            -100: 'Slave',
+            0: 'Self',
+            100: 'Servant',
+            200: 'Follower',
+            500: 'Knight',
+            1000: 'Sire',
+            2000: 'Baron',
+            5000: 'Count',
+            10000: 'Duke',
+            20000: 'King',
+            50000: 'Emperor',
+        },
+        settlement_names_1=[
+            "",
+        ],
+        settlement_names_2=[
+            "Cottage",
+        ],
+        exchange_reputation_changes={
+            "maintenance": 0.0,
+            "energy": 5e-13,
+            "credits": 1.0,
+            "air": 0.006,
+            "water": 0.003,
+            "food": 0.006,
+            "mines": 0.0,
+            "ore": 0.016,
+            "raw_water": 0.01,
+        },
+        biggest_cities=[
+            ('Glorious Seat, New Earth', Ethnicity.BLACK),
+        ]
+        , planets= [
+            'New Earth',
+        ]
+        , portal_base_names= [
+            "TODO",
+        ]
+        , hobbies_sociable= [
+            "TODO",
+        ]
+        , hobbies_asocial= [
+            "TODO",
+        ]
+    )
+
 # The entities by name: a save names its citizenship, and a name that is not here loads as None.
-ENTITIES: dict[str, PoliticalEntity] = {THOSE_WHO_SHARE.name: THOSE_WHO_SHARE}
+ENTITIES: dict[str, PoliticalEntity] = {
+    UNITED_DIVERSITY.name: UNITED_DIVERSITY,
+    THOSE_WHO_SHARE.name: THOSE_WHO_SHARE,
+    THE_SHINING_THRONE.name: THE_SHINING_THRONE,
+    }

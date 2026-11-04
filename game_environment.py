@@ -3,7 +3,7 @@ import logging
 import math
 from typing import Optional
 from galaxies.body import Body
-from galaxies.constants import INITIAL_STAR_POSITION
+from galaxies.constants import EPOCH as EPOCH_DATE, INITIAL_STAR_POSITION
 from galaxies.galaxy import Galaxy
 from galaxies.orbit_layout import OrbitLayout
 from galaxies.stellar_system import StellarSystem
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class GameEnvironment:
-    EPOCH = datetime.datetime(700, 1, 1)
+    EPOCH = EPOCH_DATE
 
     def __init__(self, galactic_seed: int, date_time: datetime.datetime, galaxy_alterations: Optional[dict],
                  people_alterations: Optional[dict]) -> None:
@@ -89,7 +89,7 @@ class GameEnvironment:
         if self.targeted_body is not body:
             return
         for candidate in (self.nearest_system.star, self.nearest_system.portal_base):
-            if candidate.is_shown:
+            if candidate is not None and candidate.is_shown:
                 self.targeted_body = candidate
                 return
 

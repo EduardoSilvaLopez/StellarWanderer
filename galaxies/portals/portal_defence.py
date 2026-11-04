@@ -51,6 +51,8 @@ class PortalDefence:
         the seconds of game time that what it did takes (0 for nearly always)."""
         system = environment.nearest_system
         portal = system.portal
+        if portal is None:  # no Portal here to be warned about
+            return 0.0
         now = environment.date_time
         step = 0.0 if portal.checked_at is None else max(0.0, (now - portal.checked_at).total_seconds())
         portal.checked_at = now

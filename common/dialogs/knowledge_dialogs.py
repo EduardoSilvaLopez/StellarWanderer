@@ -224,7 +224,8 @@ class KnownSystemsDialog(_ListDialog):
             self._row(blocks, width, 0, 'Stellar system', system.name,
                       open_=self._open_item('Stellar system', system.markdown), gap=SECTION_GAP)
             self._body_row(blocks, width, 1, 'Star', system.star)
-            self._body_row(blocks, width, 1, 'Portal base', system.portal_base)
+            if system.portal_base is not None:
+                self._body_row(blocks, width, 1, 'Portal base', system.portal_base)
             for orbit in system.orbits:
                 if isinstance(orbit, AsteroidBelt):
                     self._body_row(blocks, width, 1, 'Asteroid belt', orbit, name='')

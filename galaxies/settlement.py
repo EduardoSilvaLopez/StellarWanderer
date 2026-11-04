@@ -62,9 +62,11 @@ class Settlement(Updatable):
     kind: SettlementKind
     name: str  # each kind sets its own name
 
-    def __init__(self, seed: int, size: int = 1) -> None:
+    def __init__(self, seed: int, enlargement_dates: List[datetime]) -> None:
         self.seed: int = seed
-        self.size: int = size  # how big it has grown in its system's history; nothing uses it yet, and it is not saved
+        # The date of each enlargement in its system's history, from 0 to 1 (the founding) on; the last ones may be
+        # still to come. Not saved: the history gives them again.
+        self.enlargement_dates: List[datetime] = list(enlargement_dates)
         self.is_altered: bool = False
         self.focus: SettlementFocus = SettlementFocus.RESOURCE_EXTRACTION  # default
         self.staff: List[Person] = []  # every member of every role, in the order of roles
@@ -79,6 +81,19 @@ class Settlement(Updatable):
         # local: the board needs the player, which needs missions
         from galaxies.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this place is in memory
+
+    @property
+    def founded_at(self) -> datetime:
+        """When it was founded: its first enlargement."""
+        return self.enlargement_dates[0]
+
+    @property
+    def size(self) -> int:
+        """How big it has grown (nothing uses it yet): the enlargements that are already in the past, as the history
+        may hold some that are still to happen."""
+        import game_environment as gem  # local: the environment imports the galaxy
+        now = gem.current_environment.date_time
+        return sum(1 for enlarged in self.enlargement_dates if enlarged <= now)
 
     def _read_alterations(self, saved: dict) -> None:
         """Reads what the settlement saved (its own keys, see get_alterations), at the load."""
@@ -306,6 +321,8 @@ class Settlement(Updatable):
     # region Visits
     def prepare(self) -> Settlement:
         ''' Prepare for visit.'''
+        if self.size > 1:  # no effect of the size exists yet: this marks where one is to be made
+            logger.error(f"TODO: Size {self.size} for {self.kind.value}")
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
         self._pick_all_on_duty(gem.current_environment.date_time)

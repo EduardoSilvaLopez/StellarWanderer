@@ -516,6 +516,8 @@ class Navigation:
             return
         environment = gem.current_environment
         base = environment.nearest_system.portal_base
+        if base is None:
+            return
         centre = base.calculate_stellar_position(environment.date_time)
         half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)  # right, up, forward: the hull's halves
         end = ship.position.as_vector()
@@ -726,6 +728,8 @@ class Navigation:
             return math.inf
         environment = gem.current_environment
         base = environment.nearest_system.portal_base
+        if base is None:
+            return math.inf
         half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)
         margin = (ship.position.as_vector() - base.calculate_stellar_position(environment.date_time)).length() \
             - base.solid.reach(half_sizes)
