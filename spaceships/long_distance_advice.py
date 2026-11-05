@@ -35,7 +35,7 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      enough that going flat out would eat into the energy reserve (below) is slower than this and coasts, to spare
      the energy, the way a long-haul trip eases off its top speed to spare fuel.
    - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
-     `RESERVE_WITH_SERVICES` (20 %) if the target has an outpost or is a base. A change of speed costs
+     `RESERVE_WITH_SERVICES` (20 %) if the target has a settlement (`Body.has_settlements`). A change of speed costs
      the change of kinetic energy: `energy_per_speed_squared(mass)` per (m/s)^2 that the squared speed changes by, so
      the budget is in (m/s)^2. Thrust across the velocity turns the ship at no cost. Changing the velocity from `u` to
      `v` along the line (the drift cancelled on the way) and then stopping costs `energy_cost`, which for no drift is
@@ -276,8 +276,7 @@ class LongDistanceAdvisor:
         position = np.array(tuple(navigation.stellar_position(date)))
         velocity = np.array(tuple(ship.velocity.as_vector()))
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
-        reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
-            else advisor.RESERVE_WITHOUT_OUTPOST
+        reserve = advisor.RESERVE_WITH_SERVICES if body.has_settlements() else advisor.RESERVE_WITHOUT_OUTPOST
         spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
         leg_energy, leg_time = advisor._final_leg(accelerations, end_distance)
         budget = spare_energy / ship.energy_per_speed_squared(ship.mass) - leg_energy
@@ -354,8 +353,7 @@ class LongDistanceAdvisor:
         centre = np.array(tuple(body.calculate_stellar_position(date)))
         if float(np.linalg.norm(centre - position)) - body.radius <= advisor.FAR_DISTANCE:
             return None
-        reserve = advisor.RESERVE_WITH_SERVICES if getattr(body, 'outposts', None) or getattr(body, 'is_base', False) \
-            else advisor.RESERVE_WITHOUT_OUTPOST
+        reserve = advisor.RESERVE_WITH_SERVICES if body.has_settlements() else advisor.RESERVE_WITHOUT_OUTPOST
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         leg_energy, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
         # the ship and its equipment, without its cargo: the warning must not change with the cargo

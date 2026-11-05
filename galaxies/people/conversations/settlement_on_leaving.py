@@ -10,9 +10,9 @@ from galaxies.people.player import Player
 from galaxies.politics.political_entity import PoliticalEntity
 from galaxies.missions.mission import DONE, Mission
 from galaxies.missions.deliver_ore import DeliverOre
-from spaceships.ship_configurations.ths_miner import TwsMiner
-from spaceships.ship_configurations.ths_shabby_miner import ShabbyTwsMiner
-from spaceships.ship_configurations.ths_versatile import TwsVersatile
+from spaceships.ship_configurations.tws_miner import TwsMiner
+from spaceships.ship_configurations.tws_shabby_miner import ShabbyTwsMiner
+from spaceships.ship_configurations.tws_versatile import TwsVersatile
 from ..person import Person
 from ..conversation import Conversation
 

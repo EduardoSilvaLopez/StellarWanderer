@@ -33,7 +33,7 @@ class CargoHold(ABC):
     WATER_MAX: ClassVar[float]
     FOOD_MAX: ClassVar[float]
 
-    # Every configuration, by qualified name (ShabbyThsMiner.StandardHold, not StandardHold: two holds share that name).
+    # Every configuration, by qualified name (ShabbyTwsMiner.StandardHold, not StandardHold: two holds share that name).
     by_name: ClassVar[dict[str, type[CargoHold]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:

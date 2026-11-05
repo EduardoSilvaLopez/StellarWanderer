@@ -43,10 +43,10 @@ class ScanAsteroid(Mission):
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
             frequency=0.04,
-            taken_by_others=0.01,
+            taken_by_others=0.005,
             deadline_days_min=30,
             deadline_days_max=60,
-            reward=50.0,
+            reward=80.0,  # By instantaneous resolution. 25% is more probable.
             failure_penalty=-2.0
             ),
     }
@@ -253,7 +253,7 @@ class ScanAsteroid(Mission):
         import game_environment as gem
         reputation_change: float = self.terms.reward
         reputation_change *= self.asteroid().semi_major_axis / ScanAsteroid.REPUTATION_BELT_MEAN_DISTANCE
-        reputation_change *= (gem.current_environment.date_time - self.created_at).total_seconds() \
+        reputation_change *= (self.deadline - gem.current_environment.date_time).total_seconds() \
                             / (self.deadline - self.created_at).total_seconds()
         player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: asteroid scanned. "

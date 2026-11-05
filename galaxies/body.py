@@ -59,3 +59,8 @@ class Body:
     @property
     def stellar_system(self) -> StellarSystem:
         raise NotImplementedError
+
+    def has_settlements(self) -> bool:
+        """Whether a ship can dock at this body, or at a settlement on it: what the long distance advice reserves
+        supplies and energy for."""
+        return False

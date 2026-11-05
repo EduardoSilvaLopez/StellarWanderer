@@ -72,8 +72,7 @@ if TYPE_CHECKING:
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
-# The rows only a THS miner (ThsMiner) is offered; the others on every ship.
-THS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')
+TWS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
 HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
@@ -384,7 +383,7 @@ class SettlementScreenDialog(Dialog):
         from spaceships.ship_configurations import TwsMiner  # local: the ship configurations are the game's
         if isinstance(self.ship, TwsMiner):
             return EQUIPMENT
-        return tuple(name for name in EQUIPMENT if name not in THS_MINER_ATTACHMENTS)
+        return tuple(name for name in EQUIPMENT if name not in TWS_MINER_ATTACHMENTS)
 
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The cargo view (see the class): the ship's picture, the levels and the equipment on the left, the room left

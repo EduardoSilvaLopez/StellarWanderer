@@ -95,6 +95,9 @@ class World(Body):
     def stellar_system(self) -> StellarSystem:
         return self.parent_orbit.parent_stellar_system
 
+    def has_settlements(self) -> bool:
+        return bool(self.outposts)
+
     @property
     def kind_title(self) -> str:
         """What the knowledge base calls the world: a planet or a moon."""

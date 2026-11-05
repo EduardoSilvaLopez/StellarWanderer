@@ -28,27 +28,28 @@ class DeliverWater(Mission):
     KIND = 'deliver_water'
     # The numbers that depend on the kind of settlement that asks; the outposts' are tuned, and the portal base's
     # start at a frequency of 0 (no offers yet).
+
+    REWARD_PER_KG_PLANETARY_ICE = 0.005  # per Kg when the planet's system (its moons) has an icy world: a short trip
+    REWARD_PER_KG_STELLAR_ICE = 0.020  # an icy world elsewhere in the star's system
+    REWARD_PER_KG_ASTEROID_OR_BASE = 0.030  # no icy world in the star's system: the water is from an asteroid
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.08,
-            taken_by_others=0.2,
-            deadline_days_min=5,
-            deadline_days_max=10,
-            reward=1.0,
+            frequency=0.02,
+            taken_by_others=0.005,
+            deadline_days_min=20,
+            deadline_days_max=30,
+            reward=1.0,  # See above.
             failure_penalty=-20
             ),
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.06,
-            taken_by_others=0.02,
-            deadline_days_min=5,
-            deadline_days_max=10,
-            reward=1.0,
+            frequency=0.01,
+            taken_by_others=0.005,
+            deadline_days_min=25,
+            deadline_days_max=35,
+            reward=1.0,  # See above.
             failure_penalty=-20
             ),
     }
-    REWARD_PER_KG_PLANETARY_ICE = 0.001  # per Kg when the planet's system (its moons) has an icy world: a short trip
-    REWARD_PER_KG_STELLAR_ICE = 0.005  # an icy world elsewhere in the star's system
-    REWARD_PER_KG_ASTEROID_OR_BASE = 0.01  # no icy world in the star's system: the water is from an asteroid
 
     def __init__(self, asteroid_site: dict | None = None, loaded: bool = False, **common: Any) -> None:
         super().__init__(**common)
@@ -78,8 +79,10 @@ class DeliverWater(Mission):
         """The offer made on the day of `created_at`: its seed is the outpost and the day."""
         seed = of_text(f"{outpost.full_keys()} {DeliverWater.KIND} {created_at.date().isoformat()}")
         # the first draw of the seed, as in __init__
-        days = random.Random(seed).randint(DeliverWater.terms_at(outpost.kind).deadline_days_min,
-                                       DeliverWater.terms_at(outpost.kind).deadline_days_max)
+        days = random.Random(seed).randint(
+            DeliverWater.terms_at(outpost.kind).deadline_days_min,
+            DeliverWater.terms_at(outpost.kind).deadline_days_max
+            )
         return DeliverWater(
             seed=seed,
             issuer=outpost.full_keys(),
@@ -246,7 +249,8 @@ class DeliverWater(Mission):
     def description(self) -> str:
         return (
             f"The water reserves are running low here at {self.issuer_settlement.address()}."
-            "We need ships with scoop to retrieve and deliver us raw water. Only reliable pilots, please."
+            " This is a dangerous situation. We need ships with scoop to retrieve and deliver us raw water."
+            " Only reliable pilots, please."
             )
 
     def progress(self) -> str:
@@ -287,7 +291,10 @@ class DeliverWater(Mission):
             )
 
     def reward_text(self, player: Player) -> str:
-        return f"We thanks Pilot {player.surname} for the raw water, we start its processing immediately."
+        return (
+            f"<People cheering> We thank you very much, Pilot {player.surname}. This was a dangeorous situation."
+            " We won't forget around here what you have done."
+        )
 
     def fail(self, player: Player) -> None:
         reputation_change: float = self.terms.failure_penalty

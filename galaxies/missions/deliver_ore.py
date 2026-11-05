@@ -29,17 +29,17 @@ class DeliverOre(Mission):
         SettlementKind.OUTPOST: Terms(
             frequency=0.35,
             taken_by_others=0.15,
-            deadline_days_min=5,
-            deadline_days_max=15,
-            reward=0.01,
+            deadline_days_min=10,
+            deadline_days_max=20,
+            reward=1.5,  # Times the normal reward.
             failure_penalty=-5.0
             ),
         SettlementKind.PORTAL_BASE: Terms(
             frequency=0.35,
             taken_by_others=0.15,
-            deadline_days_min=10,
-            deadline_days_max=20,
-            reward=0.01,
+            deadline_days_min=15,
+            deadline_days_max=25,
+            reward=2.0,  # Times the normal reward.
             failure_penalty=-5.0
             ),
     }
@@ -100,7 +100,10 @@ class DeliverOre(Mission):
         return f"You carry {player.ship.cargo_hold.ore:g} ore, and the mission asks for {self.quantity}."
 
     def give_reward(self, player: Player) -> None:
-        reputation_change: float = self.terms.reward * self.quantity
+        entity = self.issuer_settlement.stellar_system.political_entity
+        reward_per_unit = self.terms.reward if entity is None \
+             else entity.exchange_reputation_changes['ore'] * self.terms.reward
+        reputation_change: float = reward_per_unit * self.quantity
         player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.quantity} Kg of ore delivered. Reputation +{reputation_change} = "
         f"{player.reputation}")

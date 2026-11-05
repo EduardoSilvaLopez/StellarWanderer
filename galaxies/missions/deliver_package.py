@@ -31,8 +31,8 @@ class DeliverPackage(Mission):
             frequency=0.05,
             taken_by_others=0.015,
             deadline_days_min=5,
-            deadline_days_max=25,
-            reward=2.0,
+            deadline_days_max=30,
+            reward=2.0,  # Constant. But sympathy 40 + 30 + 200/s + 150/s
             failure_penalty=0.1
             ),
         SettlementKind.PORTAL_BASE: Terms(
@@ -40,7 +40,7 @@ class DeliverPackage(Mission):
             taken_by_others=0.02,
             deadline_days_min=10,
             deadline_days_max=40,
-            reward=3.0,
+            reward=3.0,  # Constant. But sympathy 40 + 30 + 200/s + 150/s
             failure_penalty=0.1
             ),
     }

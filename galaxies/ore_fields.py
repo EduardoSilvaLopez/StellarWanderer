@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class OreField:
-    EXTRACTION_PER_SECOND: float = 1 / 3600  # One Kg per hour, later depends on mine.
-
     def __init__(self) -> None:
         self.parent_km2: Km2 = None
         self.longitude: int = 0
@@ -89,10 +87,10 @@ class OreField:
             'mines': [m.serialize() for m in self.mines]
             }
 
-    def extract(self, extraction_power: int, max_extracted: int) -> int:
+    def extract(self, extraction_power: float, max_extracted: float) -> int:
         ''' The field aspects: more extraction with more remaining per area'''
         prevalence_factor = self.remaining_ore / self.radius**2
-        result = min(self.remaining_ore, prevalence_factor * extraction_power, max_extracted)
+        result = int(min(self.remaining_ore, prevalence_factor * extraction_power, max_extracted))
         if result > 0:
             self.remaining_ore -= result
         return result

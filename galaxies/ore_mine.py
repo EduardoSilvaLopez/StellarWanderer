@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class OreMine(Updatable):
+    MAX_EXTRACTION_PER_SECOND: float = 1 / 60  # One Kg per minute absolute maximum, later depends on mine.
     EXTRACTION_POWER: int = 0.5 # To tune the game. Maybe later different kinds of mines.
     EXTRACTION_PERIOD: int = 3600
     MAX_CAPACITY: int = 20000
@@ -124,12 +125,17 @@ class OreMine(Updatable):
         one). The part of a period still running is left for later. What is extracted is ore, except that with the
         mine codes sold (see _sells_for_credits) CREDITS_SHARE of it becomes credits: the field loses the same, and no
         credits come when nothing is extracted."""
-        periods_passed = (game_date_time - self.last_updated_at).total_seconds() // OreMine.EXTRACTION_PERIOD
+        if self.last_updated_at is None:
+            raise Exception("Somehow this mine was never updated, which is not possible at this point.")
+
+        time_passed = (game_date_time - self.last_updated_at).total_seconds()
+        periods_passed = time_passed // OreMine.EXTRACTION_PERIOD
         if periods_passed < 1.0:
             return 0
         self.last_updated_at += timedelta(seconds=periods_passed * OreMine.EXTRACTION_PERIOD)
         extracted = self.parent_field.extract(
-            self.EXTRACTION_POWER * periods_passed, OreMine.MAX_CAPACITY - self.content
+            self.EXTRACTION_POWER * periods_passed,
+            min(OreMine.MAX_CAPACITY - self.content, time_passed * OreMine.MAX_EXTRACTION_PER_SECOND)
             )
         if self._sells_for_credits():
             self.credits += int(extracted * self.CREDITS_SHARE * self.CREDITS_PER_ORE)

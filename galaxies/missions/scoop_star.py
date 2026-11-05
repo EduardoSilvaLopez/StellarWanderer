@@ -29,8 +29,8 @@ class ScoopStar(ScoopBody):
             frequency=0.03,
             taken_by_others=0.01,
             deadline_days_min=10,
-            deadline_days_max=25,
-            reward=25.0,
+            deadline_days_max=20,
+            reward=80.0,  # By instantaneous resolution, 25% of it is more probable.
             failure_penalty=-5.0
             ),
     }

@@ -38,11 +38,11 @@ class ScanRock(Mission):
     # start at a frequency of 0 (no offers yet).
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.10,
+            frequency=0.2,
             taken_by_others=0.1,
-            deadline_days_min=8,
-            deadline_days_max=24,
-            reward=1.5,
+            deadline_days_min=5,
+            deadline_days_max=10,
+            reward=4,  # Constant
             failure_penalty=-5.0
             ),
         SettlementKind.PORTAL_BASE: None,
