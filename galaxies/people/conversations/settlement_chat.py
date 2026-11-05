@@ -583,10 +583,17 @@ class SettlementChat(Conversation):
         now: datetime = self.date_time
 
         if (founded.month, founded.day) == (now.month, now.day):
-            # Every member of the staff hears about it, the interlocutor included.
+            interaction_key: str = f"Happy foundation {self.date_time.year} {self.place.seed}"
+            already_said: bool = False
             for member in self.place.generate_staff().staff:
-                member.adjust_sympathy(2)
-            return "<Everybody around>"
+                if any(interaction_key in lines for lines in member.interactions.values()):
+                    already_said = True
+            if not already_said:
+                self.flags.append(interaction_key)
+                # Every member of the staff hears about it, the interlocutor included.
+                for member in self.place.generate_staff().staff:
+                    member.adjust_sympathy(2)
+            return "<Everybody around cheers>"
         self.interlocutor.adjust_sympathy(-5)
         return f"<Looks weirdly> This place was founded at {pretty_date(founded)}, {founding_when(founded, now)}."
 
