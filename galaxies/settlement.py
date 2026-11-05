@@ -48,7 +48,7 @@ class Settlement(Updatable):
 
     TIME_TO_ENTER = 30 * 60  # seconds of game time that going in takes (half an hour)
     TIME_TO_LEAVE = 30 * 60  # seconds of game time that leaving takes (half an hour)
-    CHARGE_PER_SECOND = 5e7 # Wh.
+    CHARGE_PER_SECOND = 5e8 # Wh.
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
     UNLOAD_RAW_WATER_PER_SECOND = 0.5  # Kg a second, a separate rate for caution: the same number for now
@@ -329,7 +329,7 @@ class Settlement(Updatable):
     # region Visits
     def prepare(self) -> Settlement:
         ''' Prepare for visit.'''
-        if self.size >= 3:  # no effect of sizes from 3 on exists yet: this marks where one is to be made
+        if self.size >= 4:  # no effect of sizes from 4 on exists yet: this marks where one is to be made
             logger.error(f"TODO: Size {self.size} for {self.kind.value}")
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8

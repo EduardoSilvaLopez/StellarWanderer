@@ -22,6 +22,7 @@ import logging
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
+from galaxies.people.role import KOMISAR
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
 from galaxies.portals.portal_base import PortalBase
@@ -429,11 +430,16 @@ class SettlementChat(Conversation):
             if founded.year == now.year:
                 return "How on Catherine did you arrive here so soon!?"
             return f"This place was founded as of today, {when}. Happy founding!"
-        return (
+        text: str = (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
             " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's life."
             " Almost like a planet."
         )
+        # The small outposts have no Komisar: somebody who likes the Community's advisers misses one.
+        if (self.interlocutor.loyalty100 > 20 and self.interlocutor.sociability100 > 20
+                and KOMISAR not in self.interlocutor.residency.teams_now() and random.random() < 0.3):
+            text += " I miss having a Komisar to talk with."
+        return text
 
     def talk_belt(self) -> str:
         return (

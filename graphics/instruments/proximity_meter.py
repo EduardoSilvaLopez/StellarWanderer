@@ -6,7 +6,7 @@ import math
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 from ..constants import (ACCENT, ACCENT_DIM, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR,
-                         ADVICE_DECELERATE_COLOR, ADVICE_STAY_COLOR, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
+                         ADVICE_DECELERATE_COLOR, ADVICE_STAY_COLOR, AMBER, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
 from .common import draw_beveled_panel, bezel_depth
 from common.units import format_compact_distance, format_compact_duration, format_compact_speed
 from spaceships.long_distance_advice import Advice, LongDistanceAdvisor
@@ -51,8 +51,9 @@ class ProximityMeter:
     colour,
     then ACCELERATE, STAY or DECELERATE, each in its own colour, with the time left of that phase
     (`Advisory.phase_time`),
-    and under it the ETA, the date and time of arrival as the clock shows them; "Too far" when no plan keeps the
-    reserves.
+    and under it the ETA, the date and time of arrival as the clock shows them. "Too far" when no plan keeps the
+    reserves, with what is lacking (energy, air, water or food) beside it; the phase time turns amber when the advice
+    is tight: the plan has had to use the energy margin (see `Advisory.tight`).
     """
 
     @staticmethod
@@ -144,12 +145,14 @@ class ProximityMeter:
         label_font = fonts.get(max(9, int(h * 0.017)))
         _draw_pair(surface, label_font, left, top, 'Long distance advice:', ADVICE_COLOR, '', ACCENT)
         if advisory.advice is None:
-            _draw_pair(surface, label_font, left, top + row_height, 'Too far', SPEED_WARNING_RED, '', ACCENT)
+            _draw_pair(surface, label_font, left, top + row_height, 'Too far', SPEED_WARNING_RED,
+                       advisory.shortage or '', ACCENT)
             return
         word_colour = {Advice.ACCELERATE: ADVICE_ACCELERATE_COLOR, Advice.STAY: ADVICE_STAY_COLOR,
                        Advice.DECELERATE: ADVICE_DECELERATE_COLOR}[advisory.advice]
         phase = '' if advisory.phase_time is None else format_compact_duration(advisory.phase_time)
-        _draw_pair(surface, label_font, left, top + row_height, advisory.advice.name, word_colour, phase, ACCENT)
+        _draw_pair(surface, label_font, left, top + row_height, advisory.advice.name, word_colour, phase,
+                   AMBER if advisory.tight else ACCENT)
         if advisory.arrival is not None:
             arrival = advisory.arrival
             stamp = (f'{arrival.year}-{arrival.month:02d}-{arrival.day:02d} '

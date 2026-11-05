@@ -21,6 +21,13 @@ From Outpost.PAD_FROM_SIZE the ground under the building is a flat concrete squa
 a dark ring painted on it, the landing pad. The concrete is a public domain photo
 (common/resources/textures/concrete.png), mirrored over the square, two metres to a tile. The pad is drawn first, on
 the ground in the outpost's frame, before the buildings.
+
+From Outpost.ANNEX_FROM_SIZE the ring becomes a lift platform (landing_pad.png: a disc that suggests it can sink with
+the ship into installations under the ground; it only suggests it), and the annex, a newer and cleaner block, stands
+behind the building (outpost_annex.png, laid out as in tools/generate_annex_texture.py; the pad's texture is made by
+tools/generate_landing_pad_texture.py). Its front wall is inside the building, so the part of it below the building's
+roof is never seen. A 3D antenna dish stands in the middle of its roof (annex_dish.py), on a round deck painted in the
+roof texture.
 """
 
 from __future__ import annotations
@@ -33,6 +40,7 @@ import pygame
 from OpenGL import GL, GLU
 from common.frame_watch import frame_watch
 from common.paths import resource_path
+from .annex_dish import dish_faces
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -43,6 +51,9 @@ logger = logging.getLogger(__name__)
 ATLAS_WIDTH = 2048
 ATLAS_HEIGHT = 1024
 TEXTURE_PATH = resource_path('textures', 'outpost.png')
+ANNEX_ATLAS = (2048, 2048)
+ANNEX_TEXTURE_PATH = resource_path('textures', 'outpost_annex.png')
+LIFT_TEXTURE_PATH = resource_path('textures', 'landing_pad.png')
 
 # Atlas regions (x, y, w, h) in pixels; must match tools/generate_outpost_texture.py.
 FRONT = (0, 0, 960, 240)
@@ -52,6 +63,15 @@ RIGHT = (976, 248, 480, 240)
 ROOF = (0, 496, 960, 480)
 FLAG = (1472, 0, 384, 256)  # the flag, 3:2
 METAL = (1472, 264, 32, 32)  # plain steel, for the flagpole and its fittings
+
+# The annex's atlas regions; must match tools/generate_annex_texture.py.
+ANNEX_FRONT = (0, 0, 960, 480)
+ANNEX_BACK = (976, 0, 960, 480)
+ANNEX_LEFT = (0, 496, 960, 480)
+ANNEX_RIGHT = (976, 496, 960, 480)
+ANNEX_ROOF = (0, 992, 960, 960)
+ANNEX_DISH = (976, 992, 256, 256)  # the dish in plan
+ANNEX_STEEL = (1240, 992, 32, 32)  # plain steel, for the dish's mast, struts and feed
 
 # The flagpole stands on the front left corner of the roof and rises above it. It is only drawn: the
 # outpost's HEIGHT, its box for the scanner and the cleared ground do not include it.
@@ -68,6 +88,7 @@ CONCRETE_PATH = resource_path('textures', 'concrete.png')  # a public domain pho
 CONCRETE_TILE_METRES = 2.0  # the photo's width on the ground, repeated over the square
 RING_COLOUR = (38, 38, 40)  # very dark grey, painted on the concrete
 RING_SEGMENTS = 96
+LIFT_LIFT = 0.04  # metres, the lift platform over the square, as the ring
 
 
 class Outposts:
@@ -76,6 +97,8 @@ class Outposts:
 
     _texture_id: Optional[int] = None
     _concrete_texture_id: Optional[int] = None
+    _annex_texture_id: Optional[int] = None
+    _lift_texture_id: Optional[int] = None
 
     @staticmethod
     def draw(outposts: List[Outpost], player_x: float, player_z: float, light: SurfaceLight) -> None:
@@ -87,11 +110,21 @@ class Outposts:
             GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_concrete_texture())
             for outpost in pads:
                 Outposts._draw_pad(outpost, player_x, player_z, light)
+            lifts = [outpost for outpost in pads if outpost.has_annex]
+            if lifts:
+                GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_lift_texture())
+                for outpost in lifts:
+                    Outposts._draw_lift(outpost, player_x, player_z, light)
             GL.glDisable(GL.GL_TEXTURE_2D)
         GL.glEnable(GL.GL_TEXTURE_2D)
         GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_texture())
         for outpost in outposts:
             Outposts._draw_outpost(outpost, player_x, player_z, light)
+        annexed = [outpost for outpost in outposts if outpost.has_annex]
+        if annexed:
+            GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_annex_texture())
+            for outpost in annexed:
+                Outposts._draw_annex(outpost, player_x, player_z, light)
         GL.glDisable(GL.GL_TEXTURE_2D)
 
     @staticmethod
@@ -112,7 +145,8 @@ class Outposts:
 
     @staticmethod
     def _draw_pad(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        """The concrete square, with the outpost in its corner, and the landing pad's ring on it."""
+        """The concrete square, with the outpost in its corner, and the landing pad's ring on it (the lift platform
+        replaces the ring: see _draw_lift)."""
         corner = Outposts._corner_maker(outpost, player_x, player_z)
         up = light.brightness(0.0, 1.0, 0.0)
         left = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN
@@ -131,6 +165,8 @@ class Outposts:
             vertex(lx, SQUARE_LIFT, lz)
         GL.glEnd()
 
+        if outpost.has_annex:
+            return
         centre_x = left + outpost.PAD_CENTRE[0]
         centre_z = back + outpost.PAD_CENTRE[1]
         inner = outpost.PAD_RADIUS - outpost.PAD_LINE / 2.0
@@ -142,6 +178,78 @@ class Outposts:
             sin_t = math.sin(2.0 * math.pi * step / RING_SEGMENTS)
             vertex(centre_x + inner * cos_t, RING_LIFT, centre_z + inner * sin_t)
             vertex(centre_x + outer * cos_t, RING_LIFT, centre_z + outer * sin_t)
+        GL.glEnd()
+
+    @staticmethod
+    def _draw_lift(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        """The lift platform: the pad's disc, with the image's top towards the building's back, so that its lettering
+        reads from the door side."""
+        corner = Outposts._corner_maker(outpost, player_x, player_z)
+        centre_x = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN + outpost.PAD_CENTRE[0]
+        centre_z = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN + outpost.PAD_CENTRE[1]
+        radius = outpost.PAD_RADIUS
+
+        def vertex(lx: float, lz: float) -> None:
+            GL.glTexCoord2f((lx - centre_x) / (2.0 * radius) + 0.5, (lz - centre_z) / (2.0 * radius) + 0.5)
+            GL.glVertex3f(*corner(lx, LIFT_LIFT, lz))
+
+        GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(0.0, 1.0, 0.0)))
+        GL.glBegin(GL.GL_TRIANGLE_FAN)
+        vertex(centre_x, centre_z)
+        for step in range(RING_SEGMENTS + 1):
+            angle = 2.0 * math.pi * step / RING_SEGMENTS
+            vertex(centre_x + radius * math.cos(angle), centre_z + radius * math.sin(angle))
+        GL.glEnd()
+
+    @staticmethod
+    def _draw_annex(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        """The annex: a box behind the building, with the faces laid out as the building's (see _draw_outpost)."""
+        width = outpost.ANNEX_WIDTH / 2.0
+        height = outpost.ANNEX_HEIGHT
+        front = outpost.ANNEX_CENTRE_Z + outpost.ANNEX_DEPTH / 2.0
+        back = outpost.ANNEX_CENTRE_Z - outpost.ANNEX_DEPTH / 2.0
+        angle = math.radians(outpost.orientation)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        corner = Outposts._corner_maker(outpost, player_x, player_z)
+        side_normal = (cos_a, 0.0, -sin_a)
+        uvs = [(0, 1), (1, 1), (1, 0), (0, 0)]
+
+        def quad(face: Tuple[int, int, int, int], normal: Tuple[float, float, float],
+                 points: List[Tuple[float, float, float]], face_uvs: List[Tuple[float, float]]) -> None:
+            Outposts._quad(light, face, ANNEX_ATLAS, normal, points, face_uvs)
+
+        quad(ANNEX_FRONT, (sin_a, 0.0, cos_a),
+             [corner(-width, 0, front), corner(width, 0, front), corner(width, height, front),
+              corner(-width, height, front)], uvs)
+        quad(ANNEX_BACK, (-sin_a, 0.0, -cos_a),
+             [corner(width, 0, back), corner(-width, 0, back), corner(-width, height, back),
+              corner(width, height, back)], uvs)
+        quad(ANNEX_LEFT, (-side_normal[0], 0.0, -side_normal[2]),
+             [corner(-width, 0, back), corner(-width, 0, front), corner(-width, height, front),
+              corner(-width, height, back)], uvs)
+        quad(ANNEX_RIGHT, side_normal,
+             [corner(width, 0, front), corner(width, 0, back), corner(width, height, back),
+              corner(width, height, front)], uvs)
+        quad(ANNEX_ROOF, (0.0, 1.0, 0.0),
+             [corner(-width, height, front), corner(width, height, front), corner(width, height, back),
+              corner(-width, height, back)], [(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        # The dish in the middle of the roof (graphics/annex_dish.py), its normals turned as the corners are.
+        for kind, points, face_uvs, (nx, ny, nz) in dish_faces():
+            quad(ANNEX_DISH if kind == 'dish' else ANNEX_STEEL, (nx * cos_a + nz * sin_a, ny, -nx * sin_a + nz * cos_a),
+                 [corner(x, height + y, outpost.ANNEX_CENTRE_Z + z) for x, y, z in points], face_uvs)
+
+    @staticmethod
+    def _quad(light: SurfaceLight, face: Tuple[int, int, int, int], atlas: Tuple[int, int],
+              normal: Tuple[float, float, float], points: List[Tuple[float, float, float]],
+              uvs: List[Tuple[float, float]]) -> None:
+        """One textured face, lit from its outward normal (in world terms) by the sun."""
+        u0, v0, u1, v1 = Outposts._uv_rect(face, atlas)
+        GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(*normal)))
+        GL.glBegin(GL.GL_QUADS)
+        for (x, y, z), (u, v) in zip(points, uvs):
+            GL.glTexCoord2f(u0 + (u1 - u0) * u, v0 + (v1 - v0) * v)
+            GL.glVertex3f(x, y, z)
         GL.glEnd()
 
     @staticmethod
@@ -157,14 +265,7 @@ class Outposts:
                 face: Tuple[int, int, int, int], normal: Tuple[float, float, float],
                 points: List[Tuple[float, float, float]], uvs: List[Tuple[float, float]]
                 ) -> None:
-            u0, v0, u1, v1 = Outposts._uv_rect(face)
-            # The outward normal of this face, in world terms, lit by the sun.
-            GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(*normal)))
-            GL.glBegin(GL.GL_QUADS)
-            for (x, y, z), (u, v) in zip(points, uvs):
-                GL.glTexCoord2f(u0 + (u1 - u0) * u, v0 + (v1 - v0) * v)
-                GL.glVertex3f(x, y, z)
-            GL.glEnd()
+            Outposts._quad(light, face, (ATLAS_WIDTH, ATLAS_HEIGHT), normal, points, uvs)
 
         # Outward normals: local +z is (sin a, 0, cos a) in the world, with the same rotation as corner().
         door_normal = (sin_a, 0.0, cos_a)
@@ -228,10 +329,11 @@ class Outposts:
                  uvs)
 
     @staticmethod
-    def _uv_rect(region: Tuple[int, int, int, int]) -> Tuple[float, float, float, float]:
+    def _uv_rect(region: Tuple[int, int, int, int],
+                 atlas: Tuple[int, int] = (ATLAS_WIDTH, ATLAS_HEIGHT)) -> Tuple[float, float, float, float]:
         """Texture coordinates of an atlas region: (u0, v0, u1, v1), with v = 0 at the first image row."""
         x, y, w, h = region
-        return x / ATLAS_WIDTH, y / ATLAS_HEIGHT, (x + w) / ATLAS_WIDTH, (y + h) / ATLAS_HEIGHT
+        return x / atlas[0], y / atlas[1], (x + w) / atlas[0], (y + h) / atlas[1]
 
     @staticmethod
     def _get_concrete_texture() -> int:
@@ -280,3 +382,39 @@ class Outposts:
                 GLU.gluBuild2DMipmaps(GL.GL_TEXTURE_2D, GL.GL_RGBA, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels)
                 Outposts._texture_id = texture
         return Outposts._texture_id
+
+    @staticmethod
+    def _get_annex_texture() -> int:
+        if Outposts._annex_texture_id is None:
+            with frame_watch.timed('annex texture'):
+                Outposts._annex_texture_id = Outposts._upload(ANNEX_TEXTURE_PATH, 'Annex', ANNEX_ATLAS,
+                                                              (200, 204, 208))
+        return Outposts._annex_texture_id
+
+    @staticmethod
+    def _get_lift_texture() -> int:
+        if Outposts._lift_texture_id is None:
+            with frame_watch.timed('lift texture'):
+                Outposts._lift_texture_id = Outposts._upload(LIFT_TEXTURE_PATH, 'Lift platform', (64, 64),
+                                                             (70, 76, 88))
+        return Outposts._lift_texture_id
+
+    @staticmethod
+    def _upload(path: str, label: str, fallback_size: Tuple[int, int], fallback_colour: Tuple[int, int, int]) -> int:
+        """An image as a clamped, mipmapped texture, or a plain colour if the file is missing."""
+        if os.path.exists(path):
+            surface = pygame.image.load(path).convert_alpha()
+        else:
+            logger.error(f"{label} texture missing: {path}. Using a plain texture.")
+            surface = pygame.Surface(fallback_size).convert()
+            surface.fill(fallback_colour)
+        width, height = surface.get_size()
+        pixels = pygame.image.tostring(surface, 'RGBA', False)
+        texture = GL.glGenTextures(1)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR_MIPMAP_LINEAR)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
+        GLU.gluBuild2DMipmaps(GL.GL_TEXTURE_2D, GL.GL_RGBA, width, height, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixels)
+        return texture

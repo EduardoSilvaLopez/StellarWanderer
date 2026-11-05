@@ -333,8 +333,9 @@ class Navigation:
         engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
-        frame when the slowest engine is done. The energy is the kinetic energy that the speed relative to the frame
-        loses, for the ship's mass (see energy_per_speed_squared), whichever engines do it. The frame is the one at the start of the frame, as the state of the
+        frame when the slowest engine is done (the TRAVEL autopilot brakes along the motion instead). The energy is the
+        kinetic energy that the speed relative to the frame loses, for the ship's mass (see energy_per_speed_squared),
+        whichever engines do it. The frame is the one at the start of the frame, as the state of the
         ship is (see `_move_unbound`): braked against the end of it, a moving target would give back, in the next
         frame, the change of its velocity (at high time compression, a moon's orbit would carry the ship away)."""
         ship = self.ship
@@ -350,10 +351,16 @@ class Navigation:
             axes = (ship.attitude.right, ship.attitude.up, ship.attitude.forward)
 
         braked = relative
-        for axis in axes:
-            component = relative.dot(axis)
-            decel = min(ship.BRAKE_ACC * delta_time, abs(component))
-            braked = braked - axis * math.copysign(decel, component)
+        speed = relative.length()
+        if self.travel is not None and not ship.is_bound:
+            # The autopilot brakes straight against the motion, as the advice assumes (BRAKE_ACC along it, inside what
+            # each engine gives): braking axis by axis would swing a velocity that is off the ship's axes sideways.
+            braked = relative * (1.0 - min(ship.BRAKE_ACC * delta_time, speed) / speed) if speed > 0.0 else relative
+        else:
+            for axis in axes:
+                component = relative.dot(axis)
+                decel = min(ship.BRAKE_ACC * delta_time, abs(component))
+                braked = braked - axis * math.copysign(decel, component)
         ship.energy -= ship.energy_per_speed_squared(ship.mass) * abs(relative.length() ** 2 - braked.length() ** 2)
         ship.velocity.set_vector(reference + braked)
 

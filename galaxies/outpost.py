@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Dict, Optional
 from common.vector3 import Vector3
 
 from galaxies import seeds
-from galaxies.outpost_solid import OutpostSolid
-from galaxies.people.role import STEVEDORE, Role
+from galaxies.outpost_solid import OutpostSolid, Part
+from galaxies.people.role import KOMISAR, STEVEDORE, Role
 from galaxies.rocky_world import RockyWorld
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world_surface import SurfaceType
@@ -37,7 +37,9 @@ class Outpost(Settlement):
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within `clearing_radius` of an outpost's centre (Km2), which grows with the
     size. From PAD_FROM_SIZE the outpost has a concrete square and a landing pad on the ground (drawn by
-    graphics/outposts.py).
+    graphics/outposts.py). From ANNEX_FROM_SIZE the pad is a lift platform (the same place and radius) and a newer,
+    bigger block, the annex, stands behind the building and reaches ANNEX_OVERLAP into it, on bare ground: the pad's
+    square does not extend under it, and the annex has no door of its own.
 
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
     can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
@@ -53,14 +55,23 @@ class Outpost(Settlement):
     DEPTH = 12.0
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)  # the clearing of size 1
     CLEARED_RADIUS_WITH_PAD = 100.0  # m, the clearing from PAD_FROM_SIZE on
+    CLEARED_RADIUS_WITH_ANNEX = 150.0  # m, the clearing from ANNEX_FROM_SIZE on
     PAD_FROM_SIZE = 2
     PAD_SQUARE = 50.0  # m, the side of the square; the building stands in one of its corners, PAD_MARGIN from each edge
     PAD_MARGIN = 5.0  # m
     PAD_CENTRE = (35.0, 35.0)  # m, the pad's centre from the square's corner, along the width and the door axis
     PAD_RADIUS = 10.0  # m, to the middle of the painted ring
     PAD_LINE = 0.5  # m, the ring's thickness
-    # The teams each size adds to the staff, from that size on: a size 2 outpost has one team of stevedores.
-    SIZE_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}}
+    ANNEX_FROM_SIZE = 3
+    ANNEX_WIDTH = 30.0  # m, along local x, centred on the building
+    ANNEX_DEPTH = 30.0  # m, behind the building (local -z), sharing its back wall's plane
+    ANNEX_HEIGHT = 15.0  # m, half the side
+    ANNEX_OVERLAP = 2.0  # m, how far the annex reaches into the building from its back wall
+    ANNEX_CENTRE_Z = -DEPTH / 2.0 + ANNEX_OVERLAP - ANNEX_DEPTH / 2.0  # m, along local z
+    # The teams each size adds to the staff, from that size on: a size 2 outpost has one team of stevedores, a size 3
+    # one more and a Komisar (a leader on duty all the time, as at the portal base; the coordinator still decides when
+    # a pilot may leave).
+    SIZE_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}, 3: {STEVEDORE: 1, KOMISAR: 1}}
 
     def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict],
                  enlargement_dates: list[datetime]) -> None:
@@ -79,7 +90,10 @@ class Outpost(Settlement):
                                                     int(self.planet.radius*math.pi/2))
 
         self.orientation: float = self.my_random.random() * 360
-        self.solid: OutpostSolid = OutpostSolid(self.WIDTH, self.HEIGHT, self.DEPTH, self.orientation)
+        building: Part = (self.WIDTH, self.HEIGHT, self.DEPTH, 0.0)
+        annex: Part = (self.ANNEX_WIDTH, self.ANNEX_HEIGHT, self.ANNEX_DEPTH, self.ANNEX_CENTRE_Z)
+        self._building_solid: OutpostSolid = OutpostSolid([building], self.orientation)
+        self._structure_solid: OutpostSolid = OutpostSolid([building, annex], self.orientation)
 
         self.saved_alterations: Optional[dict] = None
         if saved_alterations:
@@ -155,12 +169,24 @@ class Outpost(Settlement):
     # region Size
     @property
     def clearing_radius(self) -> float:
-        """How far from its centre the ground is cleared of rocks: it grows with the pad."""
+        """How far from its centre the ground is cleared of rocks: it grows with the pad and the annex."""
+        if self.has_annex:
+            return self.CLEARED_RADIUS_WITH_ANNEX
         return self.CLEARED_RADIUS_WITH_PAD if self.has_pad else self.CLEARED_RADIUS
 
     @property
     def has_pad(self) -> bool:
         return self.size >= self.PAD_FROM_SIZE
+
+    @property
+    def has_annex(self) -> bool:
+        """Whether the annex stands behind the building. The pad is then a lift platform."""
+        return self.size >= self.ANNEX_FROM_SIZE
+
+    @property
+    def solid(self) -> OutpostSolid:
+        """What a ship cannot fly through, which grows with the annex."""
+        return self._structure_solid if self.has_annex else self._building_solid
 
     def teams_now(self) -> Dict[Role, int]:
         teams = dict(self.roles)

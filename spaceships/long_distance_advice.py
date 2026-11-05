@@ -69,6 +69,8 @@ fast on short orbits, are led as the planets are, and the ship ends up fixed to 
 minutes). The advice ends on entering the zone: the last leg is the pilot's, or the autopilot's brake.
 `ENERGY_MARGIN` of the maximum energy is kept above the reserve: a plan that spent it all would turn into
 "Too far" at its last step (a share of what is left each time would compound, so the margin is a fixed amount).
+The margin is a target, not a limit: when no plan keeps it, the plan is made without it (`Advisory.tight`) and only
+the reserve decides "Too far", which names the store or the energy that is lacking (`Advisory.shortage`).
 
 A frame covers no more than half of the time left of the current piece of advice (`time_limit`), so that time
 compression does not carry the ship past the next one, the braking above all. A change from one of the three pieces of
@@ -128,13 +130,17 @@ class Advisory:
     there is no plan), where the target will be, from the ship (the stellar frame), and the unit vector to thrust in
     (None while staying, or too far). `phase_time` is the time left of the current piece of advice, in seconds: the
     thrust that gets the ship to the plan's speed (or cancels the drift), the coast until it has to brake, the braking
-    to rest with respect to the target."""
+    to rest with respect to the target. On "Too far", `shortage` names what the ship lacks: "energy", or the store that
+    runs out first ("air", "water" or "food"). `tight` is set when the plan has to use the energy margin that
+    plans keep."""
     advice: Advice | None
     eta: float | None
     lead: np.ndarray
     thrust: np.ndarray | None = None
     arrival: datetime | None = None  # when the plan arrives: the next frame starts its search from it
     phase_time: float | None = None
+    shortage: str | None = None
+    tight: bool = False
 
 
 @dataclass(frozen=True)
@@ -208,7 +214,8 @@ class LongDistanceAdvisor:
     DRIFT_TOLERANCE = 0.05  # of the closing speed: the drift beyond which a stay turns into thrust (about 3 degrees)
     DRIFT_FLOOR = 100.0  # m/s: the drift that is never worth advice
     DRIFT_RELEASE = 0.2  # of the tolerance: the thrust that cancels the drift goes on until it is this low
-    ENERGY_MARGIN = 0.02  # of the maximum energy, kept above the reserve: the plan does not spend all of it
+    ENERGY_MARGIN = 0.10  # of the maximum energy, kept above the reserve: the plan does not spend all of it, but a ship
+    # that has spent it is not "Too far" for that (see Advisory.tight)
     DECELERATE_RELEASE = 100.0
     ACCELERATE_TOLERANCE = 0.01
     RESUME_TOLERANCE = 0.05
@@ -277,23 +284,32 @@ class LongDistanceAdvisor:
         velocity = np.array(tuple(ship.velocity.as_vector()))
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         reserve = advisor.RESERVE_WITH_SERVICES if body.has_settlements() else advisor.RESERVE_WITHOUT_OUTPOST
-        spare_energy = ship.energy - (reserve + advisor.ENERGY_MARGIN) * ship.energy_max
+        energy_per_speed_squared = ship.energy_per_speed_squared(ship.mass)
         leg_energy, leg_time = advisor._final_leg(accelerations, end_distance)
-        budget = spare_energy / ship.energy_per_speed_squared(ship.mass) - leg_energy
+        budget = (ship.energy - reserve * ship.energy_max) / energy_per_speed_squared - leg_energy
+        margin = advisor.ENERGY_MARGIN * ship.energy_max / energy_per_speed_squared
         hold = ship.cargo_hold
         spare_days = min(hold.air - reserve * hold.air_max, hold.water - reserve * hold.water_max,
                          hold.food - reserve * hold.food_max)
 
         trip_time = 0.0 if arrival is None or braked else max(0.0, (arrival - date).total_seconds())
-        plan, target, direction, distance, relative, radial, drift = advisor._trip(
-            position, velocity, body, date, accelerations, budget, trip_time, end_distance, 1 if braked else None)
+        trip = advisor._trip(position, velocity, body, date, accelerations, budget - margin, trip_time, end_distance,
+                             1 if braked else None)
+        tight = trip[0] is None  # no plan keeps the margin: it is spent, and the plan may use what is left of it
+        if tight:
+            trip = advisor._trip(position, velocity, body, date, accelerations, budget, trip_time, end_distance,
+                                 1 if braked else None)
+        plan, target, direction, distance, relative, radial, drift = trip
         lead = target - position
         if distance <= end_tolerance and float(np.linalg.norm(relative)) <= advisor.END_SPEED:
             return None  # the plan is done
 
         too_far = plan is None or (plan.eta is not None and (plan.eta + leg_time) / SECONDS_PER_DAY > spare_days)
         if too_far:
-            return Advisory(None, None, lead)
+            stores = {'air': hold.air - reserve * hold.air_max, 'water': hold.water - reserve * hold.water_max,
+                      'food': hold.food - reserve * hold.food_max}
+            lacking = 'energy' if plan is None or plan.eta is None else min(stores, key=stores.get)
+            return Advisory(None, None, lead, shortage=lacking)
         advice = advisor._choose(plan, radial, drift, distance, accelerations[1], previous)
         change = {Advice.ACCELERATE: plan.peak_speed * direction - relative, Advice.DECELERATE: -relative}.get(advice)
         size = 0.0 if change is None else float(np.linalg.norm(change))
@@ -302,7 +318,7 @@ class LongDistanceAdvisor:
             phase_time = max(0.0, (distance - radial * radial / (2.0 * accelerations[1])) / max(radial, 1.0))
         else:
             phase_time = size / (accelerations[0] if advice is Advice.ACCELERATE else accelerations[1])
-        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time)
+        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time, tight=tight)
 
     @staticmethod
     def _final_leg(accelerations: tuple[float, float], end_distance: float) -> tuple[float, float]:

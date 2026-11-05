@@ -444,14 +444,20 @@ class Scanner:
         return t_min if t_min <= t_max else None
 
     def _outpost_entry(self, outpost: Outpost) -> Optional[float]:
-        """t-value where the beam first enters the outpost building, or None. The building is a box of
-        Outpost.WIDTH x HEIGHT x DEPTH standing on the ground at (longitude, latitude), with its width along local x
-        and its depth along local z; the door is on the local +z side, so orientation is the heading the door faces."""
-        from galaxies.outpost import Outpost
-        return self._beam_enters_oriented_box(
-            (outpost.longitude, Outpost.HEIGHT / 2, outpost.latitude),
-            (Outpost.WIDTH / 2, Outpost.HEIGHT / 2, Outpost.DEPTH / 2),
-            0.0,
-            outpost.orientation,
-        )
+        """t-value where the beam first enters the outpost's structure, or None. Each part (the building and, from
+        size 3, the annex: see OutpostSolid) is a box standing on the ground, with its width along local x and its depth
+        along local z, centred at its offset along z; the door is on the local +z side of the building, so orientation
+        is the heading the door faces."""
+        turned = math.radians(outpost.orientation)
+        entries = [
+            self._beam_enters_oriented_box(
+                (outpost.longitude + centre_z * math.sin(turned), height / 2,
+                 outpost.latitude + centre_z * math.cos(turned)),
+                (width / 2, height / 2, depth / 2),
+                0.0,
+                outpost.orientation,
+            )
+            for width, height, depth, centre_z in outpost.solid.parts
+        ]
+        return min((entry for entry in entries if entry is not None), default=None)
     # endregion

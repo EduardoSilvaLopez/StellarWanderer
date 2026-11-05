@@ -3,7 +3,7 @@ pilot does not have to chase a moving target by hand. The advisor works out each
 the aim point, stay, decelerate) and the autopilot does it with the right, up and forward engines together, whatever
 the attitude: the nose stays the pilot's, who may turn and look around, and compress time as far as it is safe (the
 time scale that the caps lower returns by itself, see `Player.limit_time_scale`). Braking is the ship's brake, against
-the target's velocity, as S is.
+the target's velocity as S is, but straight against the motion (see `Navigation._brake`), as the advice assumes.
 
 It ends where the advice does, near the target (inside its fixed zone, for a world: the ship is then fixed to it and
 follows its orbit): it brakes to rest with respect to the target and hands the ship over. The last leg is the pilot's,
@@ -14,6 +14,7 @@ ends, so that the pilot is in control at once.
 """
 
 from __future__ import annotations
+import math
 from datetime import timedelta
 from typing import TYPE_CHECKING, Optional, Tuple
 
@@ -117,7 +118,8 @@ class TravelAssist:
         if advisory.advice is Advice.DECELERATE:
             return NO_THRUST, True
         if advisory.advice is Advice.ACCELERATE and advisory.thrust is not None:
-            return self._thrust_along(Vector3(*(float(component) for component in advisory.thrust))), False
+            direction = Vector3(*(float(component) for component in advisory.thrust))
+            return self._thrust_along(direction, advisory.phase_time, delta_time), False
         return NO_THRUST, False
 
     def leave(self) -> None:
@@ -132,11 +134,13 @@ class TravelAssist:
         if message is not None:
             ship.notification.set(message)
 
-    def _thrust_along(self, direction: Vector3) -> Thrust:
+    def _thrust_along(self, direction: Vector3, phase_time: Optional[float], delta_time: float) -> Thrust:
         """The shares of the three engines that push along `direction` (a unit vector), at the acceleration of the
         forward engine, which the plan assumes: no more than the engines give, whatever the attitude (the side engine is
         the weakest, so the push is weaker when the side of the ship faces the direction: the advice, worked out every
-        frame, follows what the ship does)."""
+        frame, follows what the ship does). A frame longer than the push that is still needed (`phase_time` of the
+        advice, at the forward acceleration) gets only that push, so that time compression does not carry the speed
+        past the plan's."""
         ship = self.ship
         attitude = ship.attitude
         engines = ((attitude.right, ship.RIGHT_LEFT_ACC), (attitude.up, ship.UP_DOWN_ACC),
@@ -145,4 +149,9 @@ class TravelAssist:
         peak = max(abs(share) for share in shares)
         if peak > 1.0:
             shares = [share / peak for share in shares]
+        if phase_time is not None:
+            push = math.sqrt(sum((share * acceleration) ** 2 for share, (_, acceleration) in zip(shares, engines)))
+            needed = phase_time * ship.FORWARD_BACKWARD_ACC
+            if push * delta_time > needed > 0.0:
+                shares = [share * needed / (push * delta_time) for share in shares]
         return shares[0], shares[1], shares[2]
