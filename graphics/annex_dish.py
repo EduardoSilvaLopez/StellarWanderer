@@ -14,7 +14,7 @@ import math
 from typing import List, Literal, Tuple
 
 Point = Tuple[float, float, float]
-Face = Tuple[Literal['dish', 'steel'], List[Point], List[Tuple[float, float]], Point]
+Face = Tuple[Literal['dish', 'steel', 'crate', 'cage'], List[Point], List[Tuple[float, float]], Point]
 
 DISH_RADIUS = 4.0  # m
 DISH_DEPTH = 1.0  # m, of the bowl at its rim

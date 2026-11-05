@@ -3,18 +3,18 @@ import copy
 import random
 import math
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from common.vector3 import Vector3
 
 from galaxies import seeds
 from galaxies.outpost_solid import OutpostSolid, Part
-from galaxies.people.role import KOMISAR, STEVEDORE, Role
+from galaxies.people.role import BUREAUCRAT, CAPTAIN, ENGINEER, KOMISAR, RESEARCHER, SECURITY, SMITH, STEVEDORE, Role
 from galaxies.rocky_world import RockyWorld
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world_surface import SurfaceType
 from galaxies.settlement import (  # re-exported: the outposts' staff rota (SHIFT_HOURS) is read from here too
-    DATE_FORMAT, SHIFT_HOURS, Settlement,
+    DATE_FORMAT, SHIFT_HOURS, Settlement, SettlementFocus,
 )
 
 if TYPE_CHECKING:
@@ -39,7 +39,11 @@ class Outpost(Settlement):
     size. From PAD_FROM_SIZE the outpost has a concrete square and a landing pad on the ground (drawn by
     graphics/outposts.py). From ANNEX_FROM_SIZE the pad is a lift platform (the same place and radius) and a newer,
     bigger block, the annex, stands behind the building and reaches ANNEX_OVERLAP into it, on bare ground: the pad's
-    square does not extend under it, and the annex has no door of its own.
+    square does not extend under it, and the annex has no door of its own. From SECOND_PAD_FROM_SIZE there is a second
+    pad beside the first (the concrete grows to hold it), on the same side of the building and at the same distance
+    from its door, and the clearing grows again. Every outpost has a `focus`, drawn from its seed: it matters (it
+    shows in the almanack, `Outpost.known_focus`) from FOCUS_FROM_SIZE, and from size 4 it brings a team of its own
+    (SIZE_FOCUS_TEAMS).
 
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
     can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
@@ -56,12 +60,16 @@ class Outpost(Settlement):
     CLEARED_RADIUS = max(HEIGHT, WIDTH, DEPTH)  # the clearing of size 1
     CLEARED_RADIUS_WITH_PAD = 100.0  # m, the clearing from PAD_FROM_SIZE on
     CLEARED_RADIUS_WITH_ANNEX = 150.0  # m, the clearing from ANNEX_FROM_SIZE on
+    CLEARED_RADIUS_WITH_SECOND_PAD = 200.0  # m, the clearing from SECOND_PAD_FROM_SIZE on
     PAD_FROM_SIZE = 2
     PAD_SQUARE = 50.0  # m, the side of the square; the building stands in one of its corners, PAD_MARGIN from each edge
     PAD_MARGIN = 5.0  # m
     PAD_CENTRE = (35.0, 35.0)  # m, the pad's centre from the square's corner, along the width and the door axis
     PAD_RADIUS = 10.0  # m, to the middle of the painted ring
     PAD_LINE = 0.5  # m, the ring's thickness
+    PAD_SPACING = 24.0  # m, between the centres of two pads, along the width
+    SECOND_PAD_FROM_SIZE = 4
+    FOCUS_FROM_SIZE = 4
     ANNEX_FROM_SIZE = 3
     ANNEX_WIDTH = 30.0  # m, along local x, centred on the building
     ANNEX_DEPTH = 30.0  # m, behind the building (local -z), sharing its back wall's plane
@@ -71,7 +79,17 @@ class Outpost(Settlement):
     # The teams each size adds to the staff, from that size on: a size 2 outpost has one team of stevedores, a size 3
     # one more and a Komisar (a leader on duty all the time, as at the portal base; the coordinator still decides when
     # a pilot may leave).
-    SIZE_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}, 3: {STEVEDORE: 1, KOMISAR: 1}}
+    SIZE_GENERIC_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}, 3: {STEVEDORE: 1, KOMISAR: 1}}
+    # The teams a size adds from that size on, by the outpost's focus: from size 4, one full team of a role of its own.
+    SIZE_FOCUS_TEAMS: Dict[int, Dict[SettlementFocus, Dict[Role, int]]] = {
+        4: {
+            SettlementFocus.ADMINISTRATION: {BUREAUCRAT: 1},
+            SettlementFocus.DEFENCE: {SECURITY: 1, CAPTAIN: 1},
+            SettlementFocus.INDUSTRY: {ENGINEER: 1},
+            SettlementFocus.RESEARCH: {RESEARCHER: 1},
+            SettlementFocus.RESOURCE_EXTRACTION: {SMITH: 1},
+        },
+    }
 
     def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict],
                  enlargement_dates: list[datetime]) -> None:
@@ -80,6 +98,7 @@ class Outpost(Settlement):
         seed = seeds.derive(planet.seed, 'outpost', self.index)
         super().__init__(seed, enlargement_dates)
         self.my_random: random.Random = random.Random(self.seed)
+        self.focus = random.Random(seeds.derive(self.seed, 'focus')).choice(list(SettlementFocus))
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
         self.name: str = entity.generate_outpost_name(self.my_random)
@@ -170,6 +189,8 @@ class Outpost(Settlement):
     @property
     def clearing_radius(self) -> float:
         """How far from its centre the ground is cleared of rocks: it grows with the pad and the annex."""
+        if self.has_second_pad:
+            return self.CLEARED_RADIUS_WITH_SECOND_PAD
         if self.has_annex:
             return self.CLEARED_RADIUS_WITH_ANNEX
         return self.CLEARED_RADIUS_WITH_PAD if self.has_pad else self.CLEARED_RADIUS
@@ -184,15 +205,44 @@ class Outpost(Settlement):
         return self.size >= self.ANNEX_FROM_SIZE
 
     @property
+    def has_second_pad(self) -> bool:
+        return self.size >= self.SECOND_PAD_FROM_SIZE
+
+    @property
+    def pad_count(self) -> int:
+        return 2 if self.has_second_pad else 1
+
+    @property
+    def square_width(self) -> float:
+        """The concrete's extent along the width: it grows by the spacing for each pad after the first."""
+        return self.PAD_SQUARE + (self.pad_count - 1) * self.PAD_SPACING
+
+    def pad_centres(self) -> List[Tuple[float, float]]:
+        """The centres of the pads in the outpost's frame (x along the width, z on the door axis), side by side."""
+        left = -self.WIDTH / 2.0 - self.PAD_MARGIN
+        back = -self.DEPTH / 2.0 - self.PAD_MARGIN
+        return [(left + self.PAD_CENTRE[0] + k * self.PAD_SPACING, back + self.PAD_CENTRE[1])
+                for k in range(self.pad_count)]
+
+    @property
+    def known_focus(self) -> Optional[SettlementFocus]:
+        """The focus, once the outpost is big enough for it to count."""
+        return self.focus if self.size >= self.FOCUS_FROM_SIZE else None
+
+    @property
     def solid(self) -> OutpostSolid:
         """What a ship cannot fly through, which grows with the annex."""
         return self._structure_solid if self.has_annex else self._building_solid
 
     def teams_now(self) -> Dict[Role, int]:
         teams = dict(self.roles)
-        for size, added in self.SIZE_TEAMS.items():
+        for size, added in self.SIZE_GENERIC_TEAMS.items():
             if self.size >= size:
                 for role, count in added.items():
+                    teams[role] = teams.get(role, 0) + count
+        for size, by_focus in self.SIZE_FOCUS_TEAMS.items():
+            if self.size >= size:
+                for role, count in by_focus.get(self.focus, {}).items():
                     teams[role] = teams.get(role, 0) + count
         return teams
     # endregion

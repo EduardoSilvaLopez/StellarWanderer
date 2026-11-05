@@ -28,10 +28,15 @@ behind the building (outpost_annex.png, laid out as in tools/generate_annex_text
 tools/generate_landing_pad_texture.py). Its front wall is inside the building, so the part of it below the building's
 roof is never seen. A 3D antenna dish stands in the middle of its roof (annex_dish.py), on a round deck painted in the
 roof texture.
+
+From Outpost.SECOND_PAD_FROM_SIZE there are two pads side by side on a longer concrete rectangle, and, drawn with the
+annex (outpost_yard.py): two groups of small metal crates and cages on the concrete's edges, antenna masts on the old
+roof, and a billboard standing at the back of the concrete, behind the pads and facing them: 8 m high, 2 m over the
+ground, with a poster of the entity (outpost_poster.py, a texture of its own) or a plain grey board.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 import math
 import logging
 import os
@@ -41,6 +46,8 @@ from OpenGL import GL, GLU
 from common.frame_watch import frame_watch
 from common.paths import resource_path
 from .annex_dish import dish_faces
+from .outpost_poster import poster_for
+from .outpost_yard import billboard_faces, mast_faces, poster_quad, yard_faces
 
 if TYPE_CHECKING:
     from galaxies.outpost import Outpost
@@ -72,6 +79,10 @@ ANNEX_RIGHT = (976, 496, 960, 480)
 ANNEX_ROOF = (0, 992, 960, 960)
 ANNEX_DISH = (976, 992, 256, 256)  # the dish in plan
 ANNEX_STEEL = (1240, 992, 32, 32)  # plain steel, for the dish's mast, struts and feed
+ANNEX_CRATE = (1280, 992, 128, 128)  # a metal crate's side
+ANNEX_CAGE = (1416, 992, 128, 128)  # a cage's side
+YARD_REGIONS = {'dish': ANNEX_DISH, 'steel': ANNEX_STEEL, 'crate': ANNEX_CRATE, 'cage': ANNEX_CAGE}
+BILLBOARD_FROM_BACK = 3.0  # m, from the back edge of the concrete to the billboard
 
 # The flagpole stands on the front left corner of the roof and rises above it. It is only drawn: the
 # outpost's HEIGHT, its box for the scanner and the cleared ground do not include it.
@@ -99,6 +110,7 @@ class Outposts:
     _concrete_texture_id: Optional[int] = None
     _annex_texture_id: Optional[int] = None
     _lift_texture_id: Optional[int] = None
+    _poster_texture_ids: Dict[str, int] = {}
 
     @staticmethod
     def draw(outposts: List[Outpost], player_x: float, player_z: float, light: SurfaceLight) -> None:
@@ -125,6 +137,9 @@ class Outposts:
             GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_annex_texture())
             for outpost in annexed:
                 Outposts._draw_annex(outpost, player_x, player_z, light)
+            for outpost in annexed:
+                if outpost.has_second_pad:  # the billboard's poster, a texture of its own
+                    Outposts._draw_poster(outpost, player_x, player_z, light)
         GL.glDisable(GL.GL_TEXTURE_2D)
 
     @staticmethod
@@ -151,7 +166,7 @@ class Outposts:
         up = light.brightness(0.0, 1.0, 0.0)
         left = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN
         back = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN
-        side = outpost.PAD_SQUARE
+        width, depth = outpost.square_width, outpost.PAD_SQUARE
 
         def vertex(lx: float, ly: float, lz: float) -> None:
             """A point of the pad: its texture coordinates are the metres from the square's corner, over the tile."""
@@ -161,45 +176,41 @@ class Outposts:
         # The texture is modulated by the colour, so the light is the colour and the concrete is the texture.
         GL.glColor3ub(*light.shade((255, 255, 255), up))
         GL.glBegin(GL.GL_QUADS)
-        for lx, lz in ((left, back), (left + side, back), (left + side, back + side), (left, back + side)):
+        for lx, lz in ((left, back), (left + width, back), (left + width, back + depth), (left, back + depth)):
             vertex(lx, SQUARE_LIFT, lz)
         GL.glEnd()
 
         if outpost.has_annex:
             return
-        centre_x = left + outpost.PAD_CENTRE[0]
-        centre_z = back + outpost.PAD_CENTRE[1]
         inner = outpost.PAD_RADIUS - outpost.PAD_LINE / 2.0
         outer = outpost.PAD_RADIUS + outpost.PAD_LINE / 2.0
         GL.glColor3ub(*light.shade(RING_COLOUR, up))
-        GL.glBegin(GL.GL_QUAD_STRIP)
-        for step in range(RING_SEGMENTS + 1):
-            cos_t = math.cos(2.0 * math.pi * step / RING_SEGMENTS)
-            sin_t = math.sin(2.0 * math.pi * step / RING_SEGMENTS)
-            vertex(centre_x + inner * cos_t, RING_LIFT, centre_z + inner * sin_t)
-            vertex(centre_x + outer * cos_t, RING_LIFT, centre_z + outer * sin_t)
-        GL.glEnd()
+        for centre_x, centre_z in outpost.pad_centres():
+            GL.glBegin(GL.GL_QUAD_STRIP)
+            for step in range(RING_SEGMENTS + 1):
+                cos_t = math.cos(2.0 * math.pi * step / RING_SEGMENTS)
+                sin_t = math.sin(2.0 * math.pi * step / RING_SEGMENTS)
+                vertex(centre_x + inner * cos_t, RING_LIFT, centre_z + inner * sin_t)
+                vertex(centre_x + outer * cos_t, RING_LIFT, centre_z + outer * sin_t)
+            GL.glEnd()
 
     @staticmethod
     def _draw_lift(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        """The lift platform: the pad's disc, with the image's top towards the building's back, so that its lettering
-        reads from the door side."""
+        """The lift platforms: a disc for each pad, with the image's top towards the building's back."""
         corner = Outposts._corner_maker(outpost, player_x, player_z)
-        centre_x = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN + outpost.PAD_CENTRE[0]
-        centre_z = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN + outpost.PAD_CENTRE[1]
         radius = outpost.PAD_RADIUS
-
-        def vertex(lx: float, lz: float) -> None:
-            GL.glTexCoord2f((lx - centre_x) / (2.0 * radius) + 0.5, (lz - centre_z) / (2.0 * radius) + 0.5)
-            GL.glVertex3f(*corner(lx, LIFT_LIFT, lz))
-
         GL.glColor3ub(*light.shade((255, 255, 255), light.brightness(0.0, 1.0, 0.0)))
-        GL.glBegin(GL.GL_TRIANGLE_FAN)
-        vertex(centre_x, centre_z)
-        for step in range(RING_SEGMENTS + 1):
-            angle = 2.0 * math.pi * step / RING_SEGMENTS
-            vertex(centre_x + radius * math.cos(angle), centre_z + radius * math.sin(angle))
-        GL.glEnd()
+        for centre_x, centre_z in outpost.pad_centres():
+            def vertex(lx: float, lz: float, centre_x: float = centre_x, centre_z: float = centre_z) -> None:
+                GL.glTexCoord2f((lx - centre_x) / (2.0 * radius) + 0.5, (lz - centre_z) / (2.0 * radius) + 0.5)
+                GL.glVertex3f(*corner(lx, LIFT_LIFT, lz))
+
+            GL.glBegin(GL.GL_TRIANGLE_FAN)
+            vertex(centre_x, centre_z)
+            for step in range(RING_SEGMENTS + 1):
+                angle = 2.0 * math.pi * step / RING_SEGMENTS
+                vertex(centre_x + radius * math.cos(angle), centre_z + radius * math.sin(angle))
+            GL.glEnd()
 
     @staticmethod
     def _draw_annex(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
@@ -212,7 +223,9 @@ class Outposts:
         cos_a, sin_a = math.cos(angle), math.sin(angle)
         corner = Outposts._corner_maker(outpost, player_x, player_z)
         side_normal = (cos_a, 0.0, -sin_a)
-        uvs = [(0, 1), (1, 1), (1, 0), (0, 0)]
+        # The world is left-handed (x east, z north), so seen from outside the images run the other way than in a
+        # right-handed one: u is flipped here, and in outpost_yard.poster_quad.
+        uvs = [(1, 1), (0, 1), (0, 0), (1, 0)]
 
         def quad(face: Tuple[int, int, int, int], normal: Tuple[float, float, float],
                  points: List[Tuple[float, float, float]], face_uvs: List[Tuple[float, float]]) -> None:
@@ -232,12 +245,43 @@ class Outposts:
               corner(width, height, front)], uvs)
         quad(ANNEX_ROOF, (0.0, 1.0, 0.0),
              [corner(-width, height, front), corner(width, height, front), corner(width, height, back),
-              corner(-width, height, back)], [(0, 0), (1, 0), (1, 1), (0, 1)])
+              corner(-width, height, back)], [(1, 0), (0, 0), (0, 1), (1, 1)])
 
-        # The dish in the middle of the roof (graphics/annex_dish.py), its normals turned as the corners are.
-        for kind, points, face_uvs, (nx, ny, nz) in dish_faces():
-            quad(ANNEX_DISH if kind == 'dish' else ANNEX_STEEL, (nx * cos_a + nz * sin_a, ny, -nx * sin_a + nz * cos_a),
-                 [corner(x, height + y, outpost.ANNEX_CENTRE_Z + z) for x, y, z in points], face_uvs)
+        def faces(listed: Tuple, lift: float = 0.0, shift_z: float = 0.0) -> None:
+            """Faces from the geometry modules, their normals turned as the corners are."""
+            for kind, points, face_uvs, (nx, ny, nz) in listed:
+                quad(YARD_REGIONS[kind], (nx * cos_a + nz * sin_a, ny, -nx * sin_a + nz * cos_a),
+                     [corner(x, lift + y, shift_z + z) for x, y, z in points], face_uvs)
+
+        faces(dish_faces(), height, outpost.ANNEX_CENTRE_Z)  # the dish in the middle of the roof (annex_dish.py)
+        if outpost.has_second_pad:  # crates, masts and the billboard's stand (outpost_yard.py)
+            left = -outpost.WIDTH / 2.0 - outpost.PAD_MARGIN
+            back = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN
+            faces(yard_faces(outpost.seed, left, left + outpost.square_width, back, back + outpost.PAD_SQUARE))
+            faces(mast_faces(outpost.HEIGHT))
+            path, board_width = poster_for(outpost)
+            board_x, board_z = outpost.pad_centres()[-1][0], back + BILLBOARD_FROM_BACK
+            faces(billboard_faces(board_x, board_z, board_width))
+            if path is None:  # an entity without a poster: a plain grey board
+                points, face_uvs, (nx, ny, nz) = poster_quad(board_x, board_z, board_width)
+                quad(ANNEX_STEEL, (nx * cos_a + nz * sin_a, ny, -nx * sin_a + nz * cos_a),
+                     [corner(*point) for point in points], face_uvs)
+
+    @staticmethod
+    def _draw_poster(outpost: Outpost, player_x: float, player_z: float, light: SurfaceLight) -> None:
+        """The billboard's poster, if its entity has one, with a texture of its own."""
+        path, board_width = poster_for(outpost)
+        if path is None:
+            return
+        angle = math.radians(outpost.orientation)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        corner = Outposts._corner_maker(outpost, player_x, player_z)
+        board_x = outpost.pad_centres()[-1][0]
+        board_z = -outpost.DEPTH / 2.0 - outpost.PAD_MARGIN + BILLBOARD_FROM_BACK
+        points, face_uvs, (nx, ny, nz) = poster_quad(board_x, board_z, board_width)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, Outposts._get_poster_texture(path))
+        Outposts._quad(light, (0, 0, 1, 1), (1, 1), (nx * cos_a + nz * sin_a, ny, -nx * sin_a + nz * cos_a),
+                       [corner(*point) for point in points], face_uvs)
 
     @staticmethod
     def _quad(light: SurfaceLight, face: Tuple[int, int, int, int], atlas: Tuple[int, int],
@@ -390,6 +434,13 @@ class Outposts:
                 Outposts._annex_texture_id = Outposts._upload(ANNEX_TEXTURE_PATH, 'Annex', ANNEX_ATLAS,
                                                               (200, 204, 208))
         return Outposts._annex_texture_id
+
+    @staticmethod
+    def _get_poster_texture(path: str) -> int:
+        if path not in Outposts._poster_texture_ids:
+            with frame_watch.timed('poster texture'):
+                Outposts._poster_texture_ids[path] = Outposts._upload(path, 'Poster', (64, 64), (120, 120, 120))
+        return Outposts._poster_texture_ids[path]
 
     @staticmethod
     def _get_lift_texture() -> int:

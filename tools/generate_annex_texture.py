@@ -19,6 +19,7 @@ Atlas 2048 x 2048, 32 pixels per metre on every face:
     roof (30 x 30 m)                       x 0..960,    y 992..1952
     dish (in plan, 8 m across)             x 976..1232, y 992..1248
     steel (plain patch)                    x 1240..1272, y 992..1024
+    crate side, cage side (size 4 yard)    x 1280..1408 and 1416..1544, y 992..1120
 Keep this layout when replacing the PNG by hand (graphics/outposts.py has the same rectangles).
 
 As for the old building: a world without air or water, so no vents, fans or rain stains. The light pass (lit windows,
@@ -47,6 +48,8 @@ RIGHT = (976, 496, 960, 480)
 ROOF = (0, 992, 960, 960)
 DISH = (976, 992, 256, 256)  # the dish, in plan
 STEEL = (1240, 992, 32, 32)  # plain steel, for the dish's mast, struts and feed
+CRATE = (1280, 992, 128, 128)  # a metal crate's side
+CAGE = (1416, 992, 128, 128)  # a cage's side
 
 BODY = (146, 151, 160)  # between the old building's cladding (180) and the first version of this one (115)
 CELL = (122, 128, 138)
@@ -320,6 +323,41 @@ def paint_dish(rng: np.random.Generator) -> pygame.Surface:
     return old.to_surface(array)
 
 
+def paint_crate(rng: np.random.Generator) -> pygame.Surface:
+    """The side of a metal crate: ribbed steel in a frame with corner brackets and a yellow band."""
+    size = CRATE[2]
+    surface = pygame.Surface((size, size))
+    surface.fill((128, 136, 148))
+    for y in range(14, size - 14, 9):
+        pygame.draw.line(surface, (96, 104, 116), (10, y), (size - 11, y), 2)
+        pygame.draw.line(surface, (160, 168, 180), (10, y + 2), (size - 11, y + 2))
+    pygame.draw.rect(surface, (70, 76, 86), (0, 0, size, size), 8)
+    pygame.draw.rect(surface, EDGE, (0, 0, size, size), 1)
+    for x, y in ((14, 14), (size - 15, 14), (14, size - 15), (size - 15, size - 15)):
+        old.rivet(surface, x, y, 3)
+    pygame.draw.rect(surface, old.HAZARD_A, (8, size // 2 - 5, size - 16, 10))
+    pygame.draw.rect(surface, (40, 44, 52), (8, size // 2 - 5, size - 16, 10), 1)
+    array = old.to_array(surface)
+    array *= (0.94 + 0.12 * old.noise(rng, size, size, 16, 16))[..., None]
+    return old.to_surface(array)
+
+
+def paint_cage(rng: np.random.Generator) -> pygame.Surface:
+    """The side of a cage: a dark box with a frame of bright bars and a grid between them (it is opaque)."""
+    size = CAGE[2]
+    surface = pygame.Surface((size, size))
+    surface.fill((30, 34, 40))
+    for x in range(14, size - 8, 14):
+        pygame.draw.line(surface, (92, 100, 112), (x, 6), (x, size - 7), 1)
+    for y in range(14, size - 8, 14):
+        pygame.draw.line(surface, (92, 100, 112), (6, y), (size - 7, y), 1)
+    pygame.draw.rect(surface, (156, 164, 176), (0, 0, size, size), 6)
+    pygame.draw.rect(surface, (200, 208, 218), (0, 0, size, size), 1)
+    array = old.to_array(surface)
+    array *= (0.94 + 0.12 * old.noise(rng, size, size, 16, 16))[..., None]
+    return old.to_surface(array)
+
+
 def paint_steel(rng: np.random.Generator) -> pygame.Surface:
     patch = pygame.Surface(STEEL[2:])
     patch.fill((156, 162, 172))
@@ -345,6 +383,8 @@ def main() -> None:
         (ROOF, old.finish(paint_roof(rng), rng, 0.15)),
         (DISH, paint_dish(rng)),
         (STEEL, paint_steel(rng)),
+        (CRATE, paint_crate(rng)),
+        (CAGE, paint_cage(rng)),
     )
     for region, face in faces:
         atlas.blit(face, region[:2])

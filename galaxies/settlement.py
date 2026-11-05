@@ -42,6 +42,10 @@ class SettlementFocus(Enum):
     RESEARCH = 4
     ADMINISTRATION = 5
 
+    @property
+    def label(self) -> str:
+        return self.name.replace('_', ' ').capitalize()
+
 class Settlement(Updatable):
     """What a settlement does for the pilot's ship, and who works there. Its place (`stellar_position`), its save
     key and the world it is saved with are the subclass's (see Outpost)."""
@@ -329,7 +333,7 @@ class Settlement(Updatable):
     # region Visits
     def prepare(self) -> Settlement:
         ''' Prepare for visit.'''
-        if self.size >= 4:  # no effect of sizes from 4 on exists yet: this marks where one is to be made
+        if self.size >= 5:  # no effect of sizes from 5 on exists yet: this marks where one is to be made
             logger.error(f"TODO: Size {self.size} for {self.kind.value}")
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8

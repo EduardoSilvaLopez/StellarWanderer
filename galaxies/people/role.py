@@ -31,8 +31,8 @@ COM_OFFICER = Role(
     'person',
     'Communication Officer',
     reputation_bonus=5,
-    personality_bonus=(5, 5, 5),
-    ideal_for=(60, 50, 60), #loy, emp, soc
+    personality_bonus=(5, 5, 5),  #loy, emp, soc
+    ideal_for=(60, 50, 60),
     shifts=3,
     vacation=0.33,
     )
@@ -40,16 +40,36 @@ DOCKMASTER = Role(
     'outpost_dockmaster',
     'Dockmaster',
     reputation_bonus=10,
-    personality_bonus=(-5, -5, -5),
+    personality_bonus=(-5, -5, -5),  #loy, emp, soc
     ideal_for=(65, 45, 50),
     shifts=3,
     vacation=0.33,
+    )
+BUREAUCRAT = Role(
+    'bureaucrat',
+    'Bureaucrat',
+    reputation_bonus=10,
+    personality_bonus=(0, -10, 10),  #loy, emp, soc
+    ideal_for=(50, 45, 55),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
+    )
+ENGINEER = Role(
+    'engineer',
+    'Engineer',
+    reputation_bonus=5,
+    personality_bonus=(0, 0, 0),  #loy, emp, soc
+    ideal_for=(50, 50, 50),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
     )
 GUNNER = Role(
     'gunner',
     'Gunner',
     age_raise=-2,
-    personality_bonus=(10, -10, -10),
+    personality_bonus=(10, -10, -10),  #loy, emp, soc
     ideal_for=(70, 30, 30),
     shifts=3,
     vacation=0.0,
@@ -57,8 +77,19 @@ GUNNER = Role(
 JANITOR = Role(
     'janitor',
     'Janitor',
-    personality_bonus=(0, -5, -5),
+    personality_bonus=(0, -5, -5),  #loy, emp, soc
     ideal_for=(30, 20, 30),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
+    )
+RESEARCHER = Role(
+    'researcher',
+    'Researcher',
+    age_raise=10,
+    reputation_bonus=100,
+    personality_bonus=(5, -10, -10),  #loy, emp, soc
+    ideal_for=(50, 45, 40),
     shifts=3,
     vacation=0.33,
     portrait="hydroponic",
@@ -68,16 +99,27 @@ SECURITY = Role(
     'Security',
     age_raise=-2,
     reputation_bonus=5,
-    personality_bonus=(5, 0, 0),
+    personality_bonus=(5, 0, 0),  #loy, emp, soc
     ideal_for=(60, 45, 50),
     shifts=3,
     vacation=0.33,
+    )
+SMITH = Role(
+    'smith',
+    'Smith',
+    age_raise=0,
+    reputation_bonus=-5,
+    personality_bonus=(-5, -5, -10),  #loy, emp, soc
+    ideal_for=(40, 40, 20),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
     )
 STEVEDORE = Role(
     'stevedore',
     'Stevedore',
     reputation_bonus=-0.8,
-    personality_bonus=(-5, -10, 0),
+    personality_bonus=(-5, -10, 0),  #loy, emp, soc
     ideal_for=(30, 30, 30),
     shifts=3,
     vacation=0.33,
@@ -90,7 +132,7 @@ COORDINATOR = Role(
     'Coordinator',
     age_raise=10,
     reputation_bonus=100.0,
-    personality_bonus=(10, 0, 5),
+    personality_bonus=(10, 0, 5),  #loy, emp, soc
     ideal_for=(70, 50, 60),
     shifts=1,
     vacation=0.0,
@@ -100,18 +142,28 @@ KOMISAR = Role(
     'Komisar',
     age_raise=5,
     reputation_bonus=50.0,
-    personality_bonus=(40, 10, 20),
+    personality_bonus=(40, 10, 20),  #loy, emp, soc
     ideal_for=(80, 50, 80),
     shifts=1,
     vacation=0.0,
     portrait="hydroponic",
+    )
+CAPTAIN = Role(
+    'chief_captain',
+    'Captain',
+    age_raise=10,
+    reputation_bonus=50,
+    personality_bonus=(10, 0, 5),  #loy, emp, soc
+    ideal_for=(65, 45, 60),
+    shifts=1,
+    vacation=0.0,
     )
 RINGMASTER = Role(
     'ringmaster',
     'Ringmaster',
     age_raise=10,
     reputation_bonus=2000.0,
-    personality_bonus=(20, 10, 20),
+    personality_bonus=(20, 10, 20),  #loy, emp, soc
     ideal_for=(90, 40, 65),
     shifts=1,
     vacation=0.0,

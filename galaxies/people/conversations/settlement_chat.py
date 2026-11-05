@@ -119,9 +119,12 @@ class SettlementChat(Conversation):
             'asteroids': self.talk_asteroid,
             'base': self.talk_base,
             'belt': self.talk_belt,
+            'bureaucrat': self.talk_bureaucrat,
             'communication officer': self.talk_communication_officer,
+            'captain': self.talk_protection,
             'coordinator': self.talk_coordinator,
             'dockmaster': self.talk_dockmaster,
+            'engineer': self.talk_engineer,
             'Founders': self.talk_founders,
             'gunner': self.talk_gunner,
             'Happy birthday': self.talk_happy_birthday,
@@ -137,7 +140,8 @@ class SettlementChat(Conversation):
             'PGMs': self.talk_pgms,
             'portal': self.talk_portal,
             'ringmaster': self.talk_ringmaster,
-            'security': self.talk_security,
+            'security': self.talk_protection,
+            'smith': self.talk_smith,
             'space': self.talk_space,
             'stevedore': self.talk_stevedore,
             'Surnemals': self.talk_surnemals,
@@ -446,6 +450,10 @@ class SettlementChat(Conversation):
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
             " and a ton of sealant, at least."
         )
+    def talk_bureaucrat(self) -> str:
+        return (
+            "Administration, inspection, requests, complains... to keep the machine of the Commuity going."
+        )
 
     def talk_communication_officer(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -499,6 +507,10 @@ class SettlementChat(Conversation):
         else:
             return "Responsible for ship maintanance and the cargo."
 
+    def talk_engineer(self) -> str:
+        return (
+            "Design and handle all kinds of machinery, above all heavy industry."
+        )
     def talk_founders(self) -> str:
         return (
             "Well, the ones who founded Those-Who-Share, you know?"
@@ -917,20 +929,28 @@ class SettlementChat(Conversation):
                     " It is to carry a very heavy burden for the Community."
                 )
 
-    def talk_security(self) -> str:
+    def talk_protection(self) -> str:
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
         if soc < 20:
-            return "Handle conflicts."
+            return "Handle conflicts. Protect."
         elif soc < 80:
-            return "A Security officer depends on the Ministry of Protection. You have to wear uniform."
+            return (
+                "Security officers, captains and more are part of the Ministry of Protection."
+                " You have to wear uniform."
+            )
         else:
             return (
                 "Security officers handle the conflicts. Trained to de-escalate, but ready to do what it takes."
-                " You depend on the Ministry of Protection."
+                " Then come the officers: lieutenants, captains and so on, all  depend on the Ministry of Protection."
             )
 
+    def talk_smith(self) -> str:
+        return (
+            "To take the ore miners bring, as well as other materials, and transform it into usable, standardised"
+            " materials. Requires tough people, unlike other engineers."
+        )
     def talk_space(self) -> str:
         return (
             "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"

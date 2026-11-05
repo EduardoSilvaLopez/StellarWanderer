@@ -439,7 +439,9 @@ class RockyWorld(World):
                 f"* Eccentricity: {self.eccentricity:.3f}\n"
                 f"* Inclination: {math.degrees(self.inclination):.1f}°\n"
                 )
-        outposts:str = ', '.join(f"'{o.name}'" for o in self.outposts.values()) if self.outposts else "None"
+        outposts: str = ', '.join(
+            f"'{o.name}'" + (f" ({o.known_focus.label.lower()})" if o.known_focus else '')
+            for o in self.outposts.values()) if self.outposts else "None"
         if self.is_resonant:
             day: str = "* Day: three turns for every two orbits (3:2 resonance)\n"
         elif self.is_tidally_locked:
