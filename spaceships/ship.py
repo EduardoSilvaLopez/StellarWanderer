@@ -444,7 +444,7 @@ class Ship(Updatable):
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
         if not self.is_docked:  # nothing is consumed inside an outpost
-            self.maintenance -= 0.01 * self.precariousness * days
+            self.maintenance -= 0.02 * self.precariousness * days
             self.energy -= 1e5 * days
             self.cargo_hold.air -= days
             self.cargo_hold.water -= days

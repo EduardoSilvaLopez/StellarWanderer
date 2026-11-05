@@ -1,8 +1,10 @@
-United Diversity is the largest political entity of the game's setting, with about stellar systems having cities in the year 700.
+United Diversity is the largest political entity of the game's setting, with about 50 stellar systems having cities in the year 700.
 
-It includes the Moon and, far less populated and still radioactive, the Earth.
+1. HISTORY
 
-Its most important political principles are:
+It is the heir of human civilisation in many senses, but emerged formally during The Rush (513-532) as a synthesis of Militarism and Federalism.
+
+2. POLITICS
 * Human rights, including a Universal Basic Income, basic universal healthcare and the ban on slavery. However, the U.B.I. is provided in a place chosen by the State: it is not warranted to anyone anywhere.
 * Technocracy: The right to vote is given for a time period to those who have served the State recently and shown some political knowledge. Expertise is acknowledged, and science is cherished.
 * Militarism: The Earthean Defence Forces, conceived ONLY as a protection against the ET (extraterrestrial) threat (NEVER against other humans) is highly respected and well paid.
@@ -10,8 +12,10 @@ Its most important political principles are:
 * Capitalism: It is seen as an important engine of prosperity and growth, which must however be controlled to avoid a plutocracy. Nonetheless, producing something society is ready to purchase is considered a clear personal merit, and so wealthy people are admired and entitled to live in luxury.
 * Democracy: Once a citizen has the right to vote, different institutions ensure their ability to affect political life.
 
+5. ECONOMY
 United Diversity is the undisputed economic powerhouse of mankind, has the largest armed forces and the most advanced science. However, it is only second in industrial power (after Those-Who-Share) and punches below its weight in relation to soft power and cultural production (compared to The Shining Throne).
 
+4. CRITICISM
 Points which are criticised overseas and also by their own rebels:
 * The living conditions of those who only have Universal Basic Income. Many live in cells inside standardised buildings with common spaces for cooking and common washrooms, receiving a very small direct allowance. The universal healthcare is very limited. Ghettos do exist.
 * A perceived obsession with money across the society.
@@ -21,13 +25,25 @@ Points which are criticised overseas and also by their own rebels:
 * The Return movement criticises a lack of "Vision" and the treatment of the recovery of Earth as a purely economic investment and not a historical mission.
 * The New Militarists consider it indecisive, too decentralised and weak in the face of the perceived "threat" of other entities.
 
+4.1. URBAN LEGENDS
 These urban legends are believed by some in other political entities:
 * The government is at the service of oligarchs: false, even if they are more influence than normal citizens.
 * People are greedy, obsessed with money: false, even if it is an important mark of societal success.
 * Life focuses around the military: false, even if the New Militarists do exist.
 * They think they are the "only true mankind": false, even if they are well aware of being the number one.
+* They have baby factories because their people are too egoistic to want to have enough children: cruel exaggeration, but "specialised custodians" exist (see below), they do provide a part of the population growth, and otherwise people indeed tend to have less children than in other entities due to a more dynamic private life.
 
+6. DAILY LIFE
 Normal life in United Diversity can only be approximated, as there are heavy cultural differences:
 - Parks, cinemas, shopping malls, coffee shops, restaurants, bars and concerts are common free-time activities, few of them for free. Advertising is very visible.
 - Objects are designed with a practical mind, trying to minimise the price. Minimalistic modular furniture is common. Having the right object for every task is more important than having beautiful or luxurious objects.
 - Education is free for everyone, and the U.B.I. means everybody can attend in principle. However, the U.B.I. is often provided in places where there is no university. There are elite institutions for the rich, and plenty of scientific ones.
+
+6.1. FAMILY
+* During pregnancy, the custody is divided in three "thirds". Biological mothers have right to 2, father to 1. After that, anybody can apply. The mother decides in case of conflict. Unassigned parts go to the State. Children which are 2/3 responsibility of the State live in an orphanage until new custodians can be found. Rejecting custody is socially frowned upon, not finding a new custodian is rare, and so being an orphan is considered a personal catastrophe. Adoption is praised and adopted children accepted by society as equal.
+* Families tend to be distributed, spread over the changes in relationships, stable families are rare.
+* Some adults, often in groups, become "specialised custodians", caring about many children, using the synergies which arise from getting many times the U.B.I. They often are fully trained pedagogues and have no other job. Such "large families" are praised by the State, even if in private some people see them as "baby factories" which provide low quality education and care (there is no scientific evidence of this).
+
+8. GEOGRAPHY
+
+It includes the Moon and, far less populated and still radioactive, the Earth.

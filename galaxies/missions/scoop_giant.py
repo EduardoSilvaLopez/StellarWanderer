@@ -55,6 +55,7 @@ class ScoopGiant(ScoopBody):
 
     def giant_world(self) -> JovianWorld:
         """The giant, found from its place in the system."""
+        from galaxies.jovian_world import JovianWorld
         orbit_key, index = self.giant.split('|')
         for orbit in self.issuer_settlement.stellar_system.orbits:
             if orbit.get_alterations_key() == orbit_key:

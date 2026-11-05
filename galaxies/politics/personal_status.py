@@ -38,6 +38,8 @@ class PersonalStatus:
         old_rep: float = self.reputation
         change: float = self.entity.exchange_reputation_changes[key] * quantity
         new_rep: float = old_rep + change
-        logger.info(f"Reputation in {self.entity.name} changed because of {key}: {old_rep} + {change} = {new_rep}.")
+        logger.info(
+            f"Reputation in {self.entity.name} changed because of {key}: {old_rep:.6f} + {change:.6f} = {new_rep:.6f}."
+            )
         self.reputation = new_rep
 

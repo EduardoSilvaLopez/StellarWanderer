@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 from common.vector3 import Vector3
 
 from galaxies import seeds
+from galaxies.outpost_solid import OutpostSolid
 from galaxies.people.role import STEVEDORE, Role
 from galaxies.rocky_world import RockyWorld
 from galaxies.settlement_kind import SettlementKind
@@ -41,7 +42,7 @@ class Outpost(Settlement):
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
     can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
     is the heading the door faces), but the beam does nothing to them yet, and neither the laser nor the ground
-    affects them yet.
+    affects them yet. A ship cannot fly through the building (`solid`).
 
     What happens inside (the staff, the repairs, the mission board) is the settlement's (galaxies/settlement.py).
     """
@@ -78,6 +79,7 @@ class Outpost(Settlement):
                                                     int(self.planet.radius*math.pi/2))
 
         self.orientation: float = self.my_random.random() * 360
+        self.solid: OutpostSolid = OutpostSolid(self.WIDTH, self.HEIGHT, self.DEPTH, self.orientation)
 
         self.saved_alterations: Optional[dict] = None
         if saved_alterations:

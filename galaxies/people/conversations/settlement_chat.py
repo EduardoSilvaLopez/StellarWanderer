@@ -139,6 +139,7 @@ class SettlementChat(Conversation):
             'security': self.talk_security,
             'space': self.talk_space,
             'stevedore': self.talk_stevedore,
+            'Surnemals': self.talk_surnemals,
             'the network': self.talk_the_network,
             'The Shining Throne': self.talk_the_shining_throne,
             'Those-Who-Share': self.talk_those_who_share,
@@ -605,7 +606,8 @@ class SettlementChat(Conversation):
 
     def talk_job(self) -> str:
         text: str = ''
-        if self.interlocutor.how_happy_with_role() == 0 and self.interlocutor.sociability100 >= 20:
+        how_happy_with_role: int = self.interlocutor.how_happy_with_role()
+        if how_happy_with_role == 0 and self.interlocutor.sociability100 >= 20:
             if self.interlocutor.main_problem_with_role().startswith("+"):
                 if self.interlocutor.main_problem_with_role().endswith("loy"):
                     text = "I wish I worked in something more relevant."
@@ -620,9 +622,9 @@ class SettlementChat(Conversation):
                     text = "I wish I had more time for myself."
                 else:
                     text = "I wish I could concentrate more, focus."
-        elif self.interlocutor.how_happy_with_role() == 1:
+        elif how_happy_with_role == 1:
             text = f"Being {self.interlocutor.role.name} is ok."
-        elif self.interlocutor.how_happy_with_role() == 2:
+        elif how_happy_with_role == 2:
             text = "I really like my job."
         else:
             text = "A job's a job."
@@ -637,7 +639,8 @@ class SettlementChat(Conversation):
             "Dared talk openly." in lines for lines in self.interlocutor.interactions.values()
             )
         if not already_sold and not already_talked_openly \
-            and self.interlocutor.loyalty100 < 20 and self.interlocutor.sympathy100 >= 80:
+                and self.interlocutor.loyalty100 < 20 and self.interlocutor.sympathy100 >= 80 \
+                and how_happy_with_role == 0:
             buttons = ["I like mine.", "I guess it's ok.", "I don't have an option, do I? This or retire."]
             if self.interlocutor.sociability100 < 20:
                 text += "\n\nYou? <stares intensively>"
@@ -921,6 +924,7 @@ class SettlementChat(Conversation):
             " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
             " Just don't. Go to the bases, use the portals, remain in the network"
         )
+
     def talk_stevedore(self) -> str:
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
@@ -935,6 +939,12 @@ class SettlementChat(Conversation):
                 " work alone. Too dangerous, with the inertia."
             )
 
+    def talk_surnemals(self) -> str:
+        return (
+            "Ancient stuff. People born naturally when many came from the tube. Lineages. Ruled, lost, rose again"
+            " around the third century. They say in UniDiv there are still some, but most must have gone to The"
+            " Shining Throne."
+        )
     def talk_the_network(self) -> str:
         return (
             "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
@@ -1003,6 +1013,35 @@ class SettlementChat(Conversation):
                 "They *say* the lower classes have rights, but who knows what happens behind closed doors.",
                 "I've heard the slaves have rights, and the Knights have lots of duties. Things are not how"
                 " people want them to be.",
+            )),
+            'family': (40, (
+                "Lineage. Ugh.", "Families and stations. Hm.", "Stable families. Protected.",
+            ), (
+                "Children are born slaves in the eyes of their law, and the same law lets them be beaten. Lineage"
+                " rules everything there. Fuck that.",
+                "The mother keeps the child first, then the father, then anybody who applies. If nobody takes all three"
+                " parts, the Crown takes over. And lineage matters a lot, too.",
+                "Stable families, familias traditions like the old Surnemals. Weird, yes. But somehow beautiful, no?",
+            )),
+            'education': (30, (
+                "Elite schools. For aristos.", "Schools for servants up.", "Good schools. For some.",
+            ), (
+                "Only servants and above get free school, and only followers get free university. The elite schools"
+                " are for the nobility. Nice system, if you are a noble.",
+                "Free school from servant up, free university from follower up. There are elite schools for the"
+                " nobility too. That's how it is.",
+                "Servants and above get free school, followers get free university. The elite schools are for the"
+                " nobility, but the teaching is good, they say.",
+            )),
+            'decoration': (30, (
+                "Gaudy. Everything.", "Decorated. Sure.", "Beautiful, everything. Yes.",
+            ), (
+                "Everything must be decorated there: the facades, the street lights, the food, even the cutlery."
+                " Even the things for the lowest ranks. What for!? What a waste.",
+                "They decorate everything: facades, lamps, food, vehicles, cutlery. Only the richness changes with"
+                " the rank. What an obsession, yes?",
+                "Everything is decorated there, not only the workplaces. And for everybody, they"
+                " say. It's... not bad.",
             )),
         }
         friend_topics: PoliticalTopics = {
@@ -1122,6 +1161,24 @@ class SettlementChat(Conversation):
                 "We keep to ourselves. Maybe too much, but the others have their own fights.",
                 "We don't need the others to be a community. Our people are enough.",
             )),
+            'family': (40, (
+                "So many with no family.", "Families, the usual.", "Family, looked after.",
+            ), (
+                "Too many people reject their thirds, and the Community takes them and says nothing."
+                " Cold, if you ask me.",
+                "Mother two thirds, father one, and anybody who applies for the rest. Families change, and the"
+                " Community takes the rest. Solidarity, yes?",
+                "Anybody who is ready can take a child, and nobody is turned away. Families change, and the neighbours"
+                " help raise them. That's what the Community is for.",
+            )),
+            'education': (30, (
+                "Great schools. For some.", "School's free. Fine.", "Free school. Good.",
+            ), (
+                "Free school and university... as long as you don't look closer who comes in the best ones.",
+                "School and university are free. Yes, not all are really the same, but that's impossible.",
+                "School and university are free for everybody. It's just normal that the best schools take more"
+                " children of the best people.",
+            )),
         }
         friend_topics: PoliticalTopics = {
             'camps': (30, (
@@ -1149,6 +1206,16 @@ class SettlementChat(Conversation):
                 "<Whispers> The Founders wanted empathy first. We try. That's more than others do.",
                 "<Whispers> The Founders had it right. Empathy first, and nobody left alone. I wouldn't trade this"
                 " square for anything.",
+            )),
+            'children': (30, (
+                "Family kids, Community kids. Shh.", "Kids. Shh.", "Family kids are warm. Shh.",
+            ), (
+                "The Community kids are rational? the family ones are the emotional ones?"
+                " I wouldn't be so sure.",
+                "Between us, I think it's true that family kids are more emotional. Yes, Community ones have their"
+                " camaraderie but when your whole neighbourhood cares about you, you learn that too, believe me.",
+                "It's better to be raised by the Community. Yes, families are nice and good, but nothing beats the"
+                " comrades you made in your alma mater <winks>.",
             )),
         }
         generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
@@ -1249,6 +1316,37 @@ class SettlementChat(Conversation):
                 "They see everybody else, us too, as interesting experiments, not as rivals. A kind of respect we don't"
                 " give.",
             )),
+            'family': (40, (
+                "Orphanages. Ugh.", "Large families. Hm.", "Adoption. Good.",
+            ), (
+                "Custody cut in thirds, and the rest is the State... ok, but children still end up in orphanages."
+                " Not like our centres, they are like... rejected. Sad.",
+                "The custody thirds are as usual: mother two, father one, anybody after that. But families are"
+                " very scattered. And then you have those... big families? Some say they're ok. Others call them"
+                " baby factories <eyes wide open>.",
+                "They have these... specialised-custodian-families, yes? With pedagogy degrees and many children. It's"
+                " strange. But maybe a more... personal than an educative centre?",
+            )),
+            'education': (30, (
+                "Free school, on paper.", "Free school, sure.", "Free for everyone. Good.",
+            ), (
+                "Education is free, they say. But the U.B.I. comes with a place the State picks, often far from"
+                " any university. And the really good schools are *not* free, you can believe me.",
+                "Education is free for everyone and the U.B.I. lets them attend, in principle, but you must *live"
+                " there* to attend, and nobody makes sure of that. Of course not a problem for the rich anyway.",
+                "Education is as free as here, and there are plenty of scientific institutions. The U.B.I. makes"
+                " makes sure you get susteinance. Of course super-duper unis are expensive, but who needs that.",
+            )),
+            'advertising': (30, (
+                "Ads everywhere. Ugh.", "Ads. Whatever.", "Ads. At least honest.",
+            ), (
+                "Ads on every wall and screen, selling you things you don't need, and telling you that you need them"
+                " to be somebody. Crazy.",
+                "Advertising is everywhere, very visible. Parks, cinemas, shops, bars, all shouting at you. That's how"
+                " they sell.",
+                "The ads are everywhere, some are beautiful, and with the variety of stuff they have they better"
+                " tell people about it.",
+            )),
         }
         friend_topics: PoliticalTopics = {
             'poor': (40, (
@@ -1296,7 +1394,7 @@ class SettlementChat(Conversation):
 
     # endregion
 
-    # region Traitor's Path
+# region Traitor's Path
     def traitor_chance(self, answer: int) -> None:
         if answer == 0:
             self.say(self.traitor_glad_for_you)
@@ -1504,4 +1602,4 @@ class SettlementChat(Conversation):
                 break
         return days_to_birthday
 
-    # endregion
+# endregion

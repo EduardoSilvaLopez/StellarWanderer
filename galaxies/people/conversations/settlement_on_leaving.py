@@ -1,5 +1,5 @@
-"""The pilot wants to leave a settlement. Its coordinator (the Komisar, at a portal base) may have something to tell them
-before the departure. This can change their opinion."""
+"""The pilot wants to leave a settlement. Its coordinator (the Komisar, at a portal base) may have something to
+tell them before the departure. This can change their opinion."""
 
 from __future__ import annotations
 from typing import Callable, List, Optional
@@ -18,8 +18,14 @@ from ..conversation import Conversation
 
 
 class SettlementOnLeaving(Conversation):
-    def __init__(self, player: Player, interlocutor: Person, settlement: Settlement, on_decided: Callable[[bool], object],
-                 show: ShowMessage = show_message) -> None:
+    def __init__(
+            self,
+            player: Player,
+            interlocutor: Person,
+            settlement: Settlement,
+            on_decided: Callable[[bool], object],
+            show: ShowMessage = show_message
+            ) -> None:
         super().__init__(player, interlocutor, show)
         self.settlement: Settlement = settlement
         self.on_decided: Callable[[bool], object] = on_decided
@@ -82,7 +88,7 @@ class SettlementOnLeaving(Conversation):
             return (
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
                 "Anytime you want, check the mission board of any outpost. But be careful you really can"
-                "do the thing.\n\n"
+                " do the thing.\n\n"
                 f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
                    if self.interlocutor.loyalty100 > 5 else ''
                 )

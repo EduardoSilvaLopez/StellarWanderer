@@ -390,9 +390,7 @@ class SettlementScreenDialog(Dialog):
         """The cargo view (see the class): the ship's picture, the levels and the equipment on the left, the room left
         in
         the hold and the cargo rows on the right. There is no conversation here."""
-        import game_environment as gem  # local: as in _open_option
         from spaceships.cargo_hold import CARGO, MINES  # local: the ship's hold is the game's, not the dialogs'
-        self.settlement.update_handle(self.ship, gem.current_environment.date_time)  # the levels as they are now
         margin = _margin(height)
         font = body_font(max(14, height // 48))
         row_height, gap = _button_size(height)

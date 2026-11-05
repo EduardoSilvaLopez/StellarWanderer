@@ -12,8 +12,8 @@ from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
 from galaxies import kepler
 from galaxies.jovian_world import JovianWorld
-from galaxies.portals.portal_base_solid import SWEEP_STEP
 from galaxies.rocky_world import RockyWorld
+from galaxies.solid import SWEEP_STEP
 from galaxies.world import World
 import game_environment as gem
 
@@ -364,7 +364,9 @@ class Navigation:
             self._move_unbound(delta_time)
             self._collide_with_portal_base(start)
             return
+        start = ship.position.as_vector()
         ship.position.add_vector(ship.velocity.as_vector() * delta_time)
+        self._collide_with_outposts(start)  # before the wrap at the anti-meridian, which would split the frame's path
 
         world = gem.current_environment.fixed_world
         if world is None:
@@ -538,6 +540,45 @@ class Navigation:
             (x, y, z), velocity_after = resolved
             ship.position.set_vector((centre.x + x, centre.y + y, centre.z + z))
             ship.velocity.set_vector(velocity_after)
+
+    def _collide_with_outposts(self, start: Vector3) -> None:
+        """Bound, the ship's hull comes to rest against the buildings of the outposts of its world (see OutpostSolid),
+        for the motion of the frame from `start` to the ship's position, swept as the portal base's is. The buildings
+        are in the surface frame of a bound ship, so no transform is needed; the longitude is taken round the world."""
+        ship = self.ship
+        world = gem.current_environment.fixed_world
+        if ship.is_docked or not isinstance(world, RockyWorld):
+            return
+        half_sizes = (ship.WIDTH / 2.0, ship.HEIGHT / 2.0, ship.DEPTH / 2.0)
+        attitude = ship.attitude
+        half_turn = math.pi * world.radius
+        for outpost in world.outposts.values():
+            solid = outpost.solid
+            end = ship.position.as_vector()
+            path = end - start
+            longitude = (start.x - outpost.longitude + half_turn) % (2.0 * half_turn) - half_turn
+            relative_start = Vector3(longitude, start.y, start.z - outpost.latitude)
+            samples = Navigation._swept_within_reach(relative_start, path, solid.reach(half_sizes))
+            if not samples:
+                continue
+
+            def offset_at(fraction: float) -> Vector3:
+                return relative_start + path * fraction
+
+            def hull_touches(fraction: float) -> bool:
+                offset = offset_at(fraction)
+                return solid.touches((offset.x, offset.y, offset.z), attitude.right, attitude.up, attitude.forward,
+                                     half_sizes)
+
+            fraction = next((step for step in samples if hull_touches(step)), 1.0)
+            offset = offset_at(fraction)
+            velocity = ship.velocity.as_vector()
+            resolved = solid.resolve((offset.x, offset.y, offset.z), (velocity.x, velocity.y, velocity.z),
+                                     attitude.right, attitude.up, attitude.forward, half_sizes)
+            if resolved is not None:
+                (x, y, z), velocity_after = resolved
+                ship.position.set_vector((outpost.longitude + x, y, outpost.latitude + z))
+                ship.velocity.set_vector(velocity_after)
 
     @staticmethod
     def _swept_within_reach(start: Vector3, path: Vector3, reach: float) -> list[float]:

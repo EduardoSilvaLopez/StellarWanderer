@@ -10,10 +10,11 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * More realistic world surface colors.
   * Start again, check the balance of everything: Energy consumption and its economy. Settlements.
   * Cargo revamp: The left side is for upgrades, the right side for cargo including mines, ore, raw water.
+  * Outpost size 2.
 
-> STARTED: Extra time: 173h00' + 5:15-7:30 + 9:45-11:15 + 12:30 - 14:00
+2026-11-05 (11/11)
 
-  * Outpost size 2. Check ERROR.
+> STARTED: Extra time: 179h00' + 4:15 -
 
 > BACKLOG
 
@@ -21,7 +22,6 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 * PATH OF TREASON
   * I am trying to reach the path of the traitor. Very hard to reach.
-  * Traitor only if does not like their job.
   * Rat
   * Selling ore
   * Extra: Retirement.
@@ -71,7 +71,7 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Branch into types of settlements: laboratories, defence, industry.
   * Unify again into cities but keeping the focus.
 
-* REVAMP PEOPLE: Sexual desire, orientation and identity. Romanticism towards player. Relationships between them. Family. Something about their past.
+* REVAMP PEOPLE: Sexual desire, orientation and identity. Details on childhood (orphan?). Romanticism towards player. Relationships between them. Current familiar relations. Events on their past.
 * AI PERSONALITY?
 * KUIPER: Drawf planets, land on big asteoids.
 * ATMOSPHERE
