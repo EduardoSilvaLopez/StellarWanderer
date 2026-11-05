@@ -31,9 +31,9 @@ class LocationInfo:
                 else environment.targeted_body.stellar_system.star)
 
     @staticmethod
-    def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> None:
+    def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> pygame.Rect:
         """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's
-        height."""
+        height. Returns the rectangle of the visible glyphs, for what is drawn beside it."""
         reference = LocationInfo._reference_body()
         stellar_system = reference.stellar_system
         stellar_label = reference.name + ", " + stellar_system.name \
@@ -43,7 +43,9 @@ class LocationInfo:
         name_text = fonts.render_to_fit(stellar_label, ACCENT, int(w * 0.6), int(bar_height * 0.63))
         # Centre the visible glyphs, not the font's box, which has space above the capitals and below the descenders.
         ink = name_text.get_bounding_rect()
-        surface.blit(name_text, (w // 2 - ink.centerx, bar_height // 2 - ink.centery))
+        origin = (w // 2 - ink.centerx, bar_height // 2 - ink.centery)
+        surface.blit(name_text, origin)
+        return ink.move(origin)
 
     @staticmethod
     def draw_readouts(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int,

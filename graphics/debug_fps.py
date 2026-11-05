@@ -1,4 +1,4 @@
-"""Frames per second, for debugging: plain text in the top-left corner of the window, with no box or other element.
+"""Frames per second, for debugging: plain text in the top-right corner of the window, with no box or other element.
 
 Shown in source runs only (SHOW_FPS). A packaged build (PyInstaller sets sys.frozen) has it off, so nothing is counted
 and nothing is drawn there.
@@ -37,8 +37,8 @@ class DebugFps:
 
     @staticmethod
     def draw(surface: pygame.Surface, font: Any) -> None:
-        """The rate, as text on `surface`, in the top-left corner. Nothing when SHOW_FPS is off."""
+        """The rate, as text on `surface`, in the top-right corner. Nothing when SHOW_FPS is off."""
         if not SHOW_FPS:
             return
         text = font.render(f'{DebugFps._fps:.0f} FPS', True, ACCENT)
-        surface.blit(text, DEBUG_FPS_POSITION)
+        surface.blit(text, text.get_rect(topright=(surface.get_width() - DEBUG_FPS_POSITION[0], DEBUG_FPS_POSITION[1])))

@@ -47,6 +47,7 @@ class Cockpit:
         frame_watch.mark('buttons and political info')
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         frame_watch.mark('console')
-        LocationInfo.draw_name(surface, fonts, w, h)
+        name = LocationInfo.draw_name(surface, fonts, w, h)
         Clock.draw(surface, fonts, date_time, player.time_scale, w, h,
+                   right_middle=(name.left - max(12, int(w * 0.012)), name.centery),
                    dangerous=player.is_time_scale_dangerous())

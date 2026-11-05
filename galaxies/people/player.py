@@ -14,7 +14,7 @@ from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue
 from spaceships.ship import Ship
-from spaceships.ship_configurations import ShabbyThsMiner
+from spaceships.ship_configurations import ShabbyTwsMiner
 import game_environment as gem
 
 if TYPE_CHECKING:
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class Player:
-    """The pilot: who they are (first name, surname, gender), the ship they fly, the time compression they choose and
-    their standing with the political entities. The identity is empty until the new-game dialog asks for it
+    """The pilot: who they are (first name, surname, gender), the ship they fly, the time compression they choose, whether
+    they want to see orbits, and their standing with the political entities. The identity is empty until the new-game dialog asks for it
     (PilotIdentityDialog); a saved game always has it.
 
     The game has two states, equally important: the pilot is in the cockpit, or inside a settlement (`inside`, see
@@ -52,7 +52,7 @@ class Player:
         # The time scale before the caps lowered it last, and the one they lowered it to (see limit_time_scale)
         self._limited_from: int = 1
         self._limited_to: int = 1
-        self.ship: Ship = ShabbyThsMiner(self)
+        self.ship: Ship = ShabbyTwsMiner(self)
         self.credits: int = 0
         self.citizenship: Optional[political_entity.PoliticalEntity] = political_entity.THOSE_WHO_SHARE
         # The pilot's standing with each political entity, by entity (saved by the entity's name).
@@ -65,6 +65,7 @@ class Player:
         # The conversation tags of the chat (see settlement_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
         self.flags: set[str] = set()
+        self.show_orbits: bool = True  # the pilot's choice (O): the orbit of the targeted body is drawn
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -262,6 +263,7 @@ class Player:
             'conversation_tags': sorted(self.conversation_tags),
             'citizenship': self.citizenship.name if self.citizenship is not None else None,
             'flags': sorted(self.flags),
+            'show_orbits': self.show_orbits,
             'political_status': {entity.name: status.serialize() for entity, status in self.political_status.items()}
         }
 
@@ -281,6 +283,7 @@ class Player:
         result.ship = Ship.deserialize(result, loaded_attributes['ship'])
         result.conversation_tags = set(loaded_attributes['conversation_tags'])
         result.flags = set(loaded_attributes['flags'])
+        result.show_orbits = loaded_attributes['show_orbits']
 
         # None when the pilot has no citizenship, or when no entity has the saved name (warned: it cannot happen yet).
         citizenship_name: Optional[str] = loaded_attributes['citizenship']

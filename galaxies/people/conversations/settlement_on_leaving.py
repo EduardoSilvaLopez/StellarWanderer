@@ -10,9 +10,9 @@ from galaxies.people.player import Player
 from galaxies.politics.political_entity import PoliticalEntity
 from galaxies.missions.mission import DONE, Mission
 from galaxies.missions.deliver_ore import DeliverOre
-from spaceships.ship_configurations.ths_miner import ThsMiner
-from spaceships.ship_configurations.ths_shabby_miner import ShabbyThsMiner
-from spaceships.ship_configurations.ths_versatile import ThsVersatile
+from spaceships.ship_configurations.ths_miner import TwsMiner
+from spaceships.ship_configurations.ths_shabby_miner import ShabbyTwsMiner
+from spaceships.ship_configurations.ths_versatile import TwsVersatile
 from ..person import Person
 from ..conversation import Conversation
 
@@ -77,13 +77,13 @@ class SettlementOnLeaving(Conversation):
     def _higher_title_effects(self, old_rep: float) -> str:
         new_title: str = self.player.get_title()
         if old_rep < 10:
-            self.player.ship.change_cargo_hold(ShabbyThsMiner.StandardHold)
+            self.player.ship.change_cargo_hold(ShabbyTwsMiner.StandardHold)
             return (
                 f"You have proven you can do the job without wasting mines.\n\n"
                 f"We decided to repair your cargo hold... {self.interlocutor.get_player_title()}.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 20 or isinstance(self.player.ship.cargo_hold, ShabbyThsMiner.ShabbyHold):
+        elif old_rep < 20 or isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ShabbyHold):
             # The effect is the availability of missions.
             return (
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
@@ -92,25 +92,27 @@ class SettlementOnLeaving(Conversation):
                 f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
                    if self.interlocutor.loyalty100 > 5 else ''
                 )
-        elif old_rep < 50 or isinstance(self.player.ship.cargo_hold, ShabbyThsMiner.StandardHold):
-            self.player.ship.change_cargo_hold(ShabbyThsMiner.ExtendedHold)
+        elif old_rep < 50 or isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.StandardHold):
+            self.player.ship.change_cargo_hold(ShabbyTwsMiner.ExtendedHold)
             return (
                 f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
                 f"We found a cargo extension you could use.\n\n"
                 f"Keep doing the good job.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 100 or isinstance(self.player.ship, ShabbyThsMiner):
-            self.player.ship.upgrade_to(ThsMiner)
+        elif old_rep < 100 or isinstance(self.player.ship, ShabbyTwsMiner):
+            self.player.ship.upgrade_to(TwsMiner)
             return  (
                 "People were asking why you still have to go around with that piece of..."
                 f" no offense intended, {self.interlocutor.get_player_title()}.\n\n"
-                "We consulted and the community thinks you deserve a modern THS miner.\n\n"
-                "It has a thing for solar panels, you can recharge around the sun. If you dare.\n\n"
+                "We consulted and the Community thinks you deserve a modern THS miner.\n\n"
+                "It has better batteries and a connector for solar panels, you can recharge around the sun."
+                " If you dare.\n\n"
                 "Take care of it, will you?\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 200 or isinstance(self.player.ship, ShabbyThsMiner):
+        elif old_rep < 200 and 'Versatile Asked' not in self.player.flags:
+            self.player.flags.add('Versatile Asked')
             done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
             ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if done else 1.0
             if ore_factor <= 0.5:
@@ -119,12 +121,12 @@ class SettlementOnLeaving(Conversation):
                     text=(
                         f"If looks like you have been doing much more than just mining ore... {new_title}."
                         "All according to The Three Aspects, though. Very well!\n\n"
-                        "Maybe you could use a... more polyvalent ship, Pilot? One with less cargo capacity, about"
+                        "Maybe you could use a... more versatile ship, Pilot? One with less cargo capacity, about"
                         " the half. But more acceleration and containers for life support. And a bit more robust.\n\n"
                         " You decide, Pilot, you know better how you can serve."
                     ),
                     buttons=['Yes, please', 'No, thanks.'],
-                    ), self._polyvalent_answered
+                    ), self._versatile_answered
                 )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
 
@@ -133,9 +135,9 @@ class SettlementOnLeaving(Conversation):
     def _answered(self, chosen_button: Optional[int]) -> None:
         self._decide(chosen_button == 0)
 
-    def _polyvalent_answered(self, chosen_button: Optional[int]) -> None:
+    def _versatile_answered(self, chosen_button: Optional[int]) -> None:
         if chosen_button == 0:
-            self.player.ship.upgrade_to(ThsVersatile)
+            self.player.ship.upgrade_to(TwsVersatile)
         self._decide(True)
 
     def _decide(self, leaves: bool) -> None:

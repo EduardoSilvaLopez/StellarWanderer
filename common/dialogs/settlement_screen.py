@@ -381,8 +381,8 @@ class SettlementScreenDialog(Dialog):
     def _equipment(self) -> Tuple[str, ...]:
         """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels only on a THS miner
         (THS_MINER_ATTACHMENTS), the others on every ship."""
-        from spaceships.ship_configurations import ThsMiner  # local: the ship configurations are the game's
-        if isinstance(self.ship, ThsMiner):
+        from spaceships.ship_configurations import TwsMiner  # local: the ship configurations are the game's
+        if isinstance(self.ship, TwsMiner):
             return EQUIPMENT
         return tuple(name for name in EQUIPMENT if name not in THS_MINER_ATTACHMENTS)
 

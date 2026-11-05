@@ -23,14 +23,15 @@ class OrbitPath:
     STEPS = 180
     PARTS = 12  # each piece is tested for a giant in front of it in this many parts
     MARGIN = 1.05  # the clip is this much wider than the view, so lines reach its border
-    shown = True  # toggled with O (main.py): hidden, the line is not drawn
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         from galaxies.asteroid import Asteroid
+        from galaxies.people import player as pem  # local: the player's choice to show orbits (toggled with O)
         from galaxies.world import World
         body = environment.targeted_body
-        if not OrbitPath.shown or ship.is_bound or not isinstance(body, (World, Asteroid)):  # the star has no orbit
+        if not pem.current_player.show_orbits or ship.is_bound or not isinstance(body, (World, Asteroid)):
+            return  # the star has no orbit
             return
         from .instruments.common import view_geometry
         _, horizon_y, focal = view_geometry(h)

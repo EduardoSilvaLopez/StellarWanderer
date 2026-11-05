@@ -1155,8 +1155,7 @@ class SettlementChat(Conversation):
             'culture': (25 + 0.3 * loy, (
                 "Slogans and statues. Meh.", "Posters and songs. Ok.", "Poetry, festivals. Nice.",
             ), (
-                "Nothing made just for beauty, only statues, posters and big screens. Art is for the propaganda, and"
-                " that's sad.",
+                "Nothing made just for beauty, only statues, posters and big screens. Our art is just propaganda.",
                 "Statues, posters, the big screens. For the Community, yes? To remember what we have.",
                 "Poetry and skill competitions in the square, songs, festivals. Nothing useless about them."
                 " Art for the normal people. Feeds the soul.",

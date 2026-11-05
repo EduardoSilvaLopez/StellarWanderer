@@ -4,10 +4,10 @@ from spaceships.cargo_hold import CargoHold
 from spaceships.ship import Ship
 
 
-class ThsVersatile(Ship):
+class TwsVersatile(Ship):
     """A versatile, still mining-oriented ship. Less cargo than a standard miner, though."""
 
-    NAME = 'THS polyvalent'
+    NAME = 'TWS Versatile'
     COCKPIT_TEXTURE = 'cockpit_ths_versatile.png'
     ENERGY_MAX = 2000e9  # Wh
     PRECARIOUSNESS = 0.7  # The maximum is 1. Better ships will decrease this.

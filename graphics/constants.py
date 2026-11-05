@@ -147,7 +147,7 @@ GLARE_RADIUS_SHARE = 0.6  # the glare fades out at this share of the window's he
 GLARE_SIZE_OF_CORONA = 1.0  # the glare's half-size, in corona radii: it follows the sun's apparent size, not the window
 # Debug frame rate (graphics/debug_fps.py): source runs only.
 DEBUG_FPS_WINDOW_SECONDS = 0.5  # the rate is measured over this long
-DEBUG_FPS_POSITION = (12, 10)  # top-left corner of the window, in pixels
+DEBUG_FPS_POSITION = (12, 10)  # (x, y) of the top-right corner of the window, in pixels: the clock is on the left
 # Starlight on the cockpit and the heat vignette (graphics/starlight.py).
 STARLIGHT_TINT_MAX = 0.35  # share of the star's colour added to the cockpit at the death radius and nearer
 HEAT_VIGNETTE_COLOUR = (220, 30, 10)

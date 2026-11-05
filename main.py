@@ -55,7 +55,6 @@ from galaxies.portals.portal_base import PortalBase
 from galaxies.portals.portal_defence import PortalDefence
 from spaceships.long_distance_advice import LongDistanceAdvisor
 from graphics.opengl_gui import OpenGLGui
-from graphics.orbit_path import OrbitPath
 from graphics.instruments.clock import Clock
 from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
@@ -462,7 +461,7 @@ def main() -> None:
                 elif event.key == pygame.K_KP_5:
                     player.ship.toggle_scoop()
                 elif event.key == pygame.K_o:  # shows or hides the orbit of the targeted body (on at the start)
-                    OrbitPath.shown = not OrbitPath.shown
+                    player.show_orbits = not player.show_orbits
                 elif event.key == pygame.K_t:  # the TRAVEL autopilot: starts it, or gives the controls back
                     TravelAssist.press(player.ship)
                 # cycles the target (only unbound: bound, the target is the world); Shift+Tab goes back

@@ -4,11 +4,11 @@ from spaceships.cargo_hold import CargoHold
 from spaceships.ship import Ship
 
 
-class ShabbyThsMiner(Ship):
+class ShabbyTwsMiner(Ship):
     """The ship a Those-Who-Share pilot starts with. Its hull is a box of 4 m high, 4 m wide and 6 m deep.
     Its cargo hold grows with the reputation: first repaired (no longer shabby), then extended."""
 
-    NAME = 'Shabby THS miner'
+    NAME = 'Shabby TWS miner'
     ENERGY_MAX = 200e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     PRECARIOUSNESS = 1  # The maximum. Better ships will decrease this.
     PRESSURE_MAX = 1.5e5 # Pa . 1e5 is one atmosphere.
