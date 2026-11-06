@@ -40,8 +40,8 @@ class ScanRock(Mission):
         SettlementKind.OUTPOST: Terms(
             frequency=0.2,
             taken_by_others=0.1,
-            deadline_days_min=5,
-            deadline_days_max=10,
+            deadline_days_min=2,
+            deadline_days_max=5,
             reward=4,  # Constant
             failure_penalty=-5.0
             ),

@@ -9,7 +9,8 @@ class TwsMiner(Ship):
 
     NAME = 'TWS miner'
     COCKPIT_TEXTURE = 'cockpit_ths_miner.png'
-    ENERGY_MAX = 20e12  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    ENERGY_MAX = 2e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
+    ENGINE_ENERGY_PER_MOMENTUM = 150.0  # J per (kg*m/s): with ENERGY_MAX, 4e6 m/s of change of velocity per battery
     PRECARIOUSNESS = 0.2  # The maximum is 1. Better ships will decrease this.
     PRESSURE_MAX = 2.5e5 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 20.0  # meters per second squared

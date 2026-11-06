@@ -9,7 +9,7 @@ class TwsVersatile(Ship):
 
     NAME = 'TWS Versatile'
     COCKPIT_TEXTURE = 'cockpit_ths_versatile.png'
-    ENERGY_MAX = 2000e9  # Wh
+    ENERGY_MAX = 4e9  # Wh
     PRECARIOUSNESS = 0.15  # The maximum is 1. Better ships will decrease this.
     PRESSURE_MAX = 1e6 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 30.0  # meters per second squared

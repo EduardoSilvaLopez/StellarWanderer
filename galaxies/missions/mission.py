@@ -3,7 +3,8 @@
 A settlement makes its offers on its board (`MissionBoard.update_missions`), which are kept while the settlement is in
 memory and not saved. The scan asteroid offers are the portal base's, so the other settlements of the system show them.
 The ones the pilot takes go to `Player.missions` and stay there for good, with their status (OPEN, DONE
-or FAILED): that list is the only place missions are saved.
+or FAILED) and, once over, `finished_at` (the delivery, or the deadline for a failure): that list is the only place
+missions are saved.
 
 Each kind of mission is a subclass with its own objective (see deliver_ore.py), registered with `register`. A mission
 knows whether the player can complete it (`can_complete`), what that takes from them (`complete`) and what it gives them
@@ -66,6 +67,7 @@ class Mission(Updatable):
                  destination_kind: SettlementKind,
                  accepted_at: Optional[datetime] = None,
                  status: str = OPEN,
+                 finished_at: Optional[datetime] = None,
                  ) -> None:
         self.seed: int = seed  # identifies the offer: the rest of it is drawn from it (see generate)
         self.my_random: random.Random = random.Random(self.seed)
@@ -78,6 +80,8 @@ class Mission(Updatable):
         self.deadline: datetime = deadline  # fixed when the offer is made: taking it does not move it
         self.accepted_at: Optional[datetime] = accepted_at  # None while it is only an offer
         self.status: str = status
+        # When it was delivered or failed; with the status, how it ended. None while OPEN.
+        self.finished_at: Optional[datetime] = finished_at
         # Set by the derived class at creation, like the deadline: when somebody else takes the offer, None if nobody
         # does. It only matters while the mission is an offer on a board; it is not saved.
         self.taken_by_others_at: Optional[datetime] = None
@@ -149,8 +153,10 @@ class Mission(Updatable):
 
     def finish(self, player: Player) -> None:
         """The player delivers it: takes what it asks, closes it and gives the reward. Call only if can_complete."""
+        import game_environment as gem
         self.complete(player)
         self.status = DONE
+        self.finished_at = gem.current_environment.date_time
         update_queue.remove(self)
         self.give_reward(player)
 
@@ -162,6 +168,7 @@ class Mission(Updatable):
         import galaxies.people.player as player_module
         player = player_module.current_player
         self.status = FAILED
+        self.finished_at = self.deadline  # it failed at the deadline, whenever the queue got to it
         player.ship.notification.set(f"WARNING: Mission failed: {self.title()}.")
         audio.play('mission_failed')
         self.fail(player)
@@ -249,6 +256,7 @@ class Mission(Updatable):
             'deadline': self.deadline.isoformat(),
             'accepted_at': None if self.accepted_at is None else self.accepted_at.isoformat(),
             'status': self.status,
+            'finished_at': None if self.finished_at is None else self.finished_at.isoformat(),
         }
 
     @staticmethod
@@ -273,5 +281,6 @@ class Mission(Updatable):
             'deadline': datetime.fromisoformat(source['deadline']),
             'accepted_at': None if source['accepted_at'] is None else datetime.fromisoformat(source['accepted_at']),
             'status': source['status'],
+            'finished_at': None if source['finished_at'] is None else datetime.fromisoformat(source['finished_at']),
         }
     # endregion

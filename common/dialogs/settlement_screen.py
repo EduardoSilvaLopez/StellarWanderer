@@ -72,7 +72,6 @@ if TYPE_CHECKING:
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
-TWS_MINER_ATTACHMENTS = ('Heat Shield', 'Solar Panels')
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
 HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
@@ -200,8 +199,8 @@ class SettlementScreenDialog(Dialog):
     Cargo is left. A take that is refused shows a notification: the Community's when a mine goes over the reputation
     limit, else the ship's.
     Heat Shield (a combo box: None, Heat Shield I costing 10 reputation, Heat Shield II costing 50), Scoop and Solar
-    Panels (toggles, Yes or No). The Heat Shield and the Solar Panels are offered only on a THS miner, so their rows
-    are not there on the other ships (_equipment). An attachment that costs more than the reputation the pilot has now
+    Panels (toggles, Yes or No). The Heat Shield and the Solar Panels are offered only on a TWS miner or Versatile, so
+    their rows are not there on the other ships (_equipment). An attachment that costs more than the reputation the pilot has now
     over the title's floor (the floor of the title held on entering) is refused with the Community's message. The cost
     is charged to the reputation at once, and refunded when it is given back. They are the ship's fields
     (heat_shield, has_scoop, has_solar_panels), saved with the ship.
@@ -292,7 +291,9 @@ class SettlementScreenDialog(Dialog):
             self.selected = BUTTON_LABELS.index('Cargo')
             self._focus = ('option', self.selected)
         self._open_option(True)
-        self.settlement.player_reputation_on_entering = current_player.reputation
+        if self.settlement.player_reputation_on_entering is None:  # a fresh entry, not a screen remade after a load
+            self.settlement.player_reputation_on_entering = current_player.reputation
+            self.settlement.set_altered()  # a save made inside must keep it: the leaving conversation needs it
 
     def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
         """The whole window, at its own scale: nothing is centred or scaled down."""
@@ -378,12 +379,12 @@ class SettlementScreenDialog(Dialog):
         return self._ship_image
 
     def _equipment(self) -> Tuple[str, ...]:
-        """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels only on a THS miner
-        (THS_MINER_ATTACHMENTS), the others on every ship."""
-        from spaceships.ship_configurations import TwsMiner  # local: the ship configurations are the game's
-        if isinstance(self.ship, TwsMiner):
+        """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels only on a TWS miner
+        or a TWS Versatile, the others on every ship."""
+        from spaceships.ship_configurations import TwsMiner, TwsVersatile  # local: the configurations are the game's
+        if isinstance(self.ship, (TwsMiner, TwsVersatile)):
             return EQUIPMENT
-        return tuple(name for name in EQUIPMENT if name not in TWS_MINER_ATTACHMENTS)
+        return tuple(name for name in EQUIPMENT if name not in ('Heat Shield', 'Solar Panels'))
 
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The cargo view (see the class): the ship's picture, the levels and the equipment on the left, the room left

@@ -14,7 +14,7 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 2026-11-05 (11/11)
 
-> STARTED: Extra time: 179h00' + 4:15 - 7:00 + 10:00 - 11:00 + 12:00 - 13:00 + 16:00 -17:45
+> STARTED: Extra time: 185h30' + 6:30 - 7:45 + 12:30 - 13:15 + 18:00 - 
 
 
 > BACKLOG
@@ -87,9 +87,7 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 * ON QUOTA OR HALLUCIONATION PROBLEMS:
   * https://github.com/obra/superpowers#how-it-works
 
-### Learning Python:
-
-https://docs.python.org/3.14/tutorial/modules.html
+## OTHER
 
 ### Edition tricks
 
@@ -101,3 +99,45 @@ Colors of rocky worlds. To increase realism.
 WORLD_COLOUR_REALISM = 0.85
 WORLD_VIVID_SATURATION_MIN = 0.30  # the random vivid colour's saturation (HSV) is drawn between these two
 WORLD_VIVID_SATURATION_MAX = 0.60
+
+### Packages?
+
+common: tech stack commons
+  resources
+  game_logging
+  data presentation
+  wiki
+universe: what exists in the universe
+  people
+    player
+    npc
+    conversations
+  artifacts
+    ore fields
+    ore mines
+    spaceships
+      configurations
+      instruments
+    settlements
+      outposts
+      bases
+      missions
+  bodies
+    asteroids
+    rocky worlds
+    giant worlds
+    stars
+  politics
+    entities
+graphics: how to represent it
+  dialogs
+    settlement
+  cockpit
+    instruments
+    hud
+temp:
+  per seed:
+    save files
+    log files
+  build
+  dist

@@ -44,9 +44,9 @@ class ScanAsteroid(Mission):
         SettlementKind.PORTAL_BASE: Terms(
             frequency=0.04,
             taken_by_others=0.005,
-            deadline_days_min=30,
-            deadline_days_max=60,
-            reward=80.0,  # By instantaneous resolution. 25% is more probable.
+            deadline_days_min=20,
+            deadline_days_max=40,
+            reward=200.0,  # By instantaneous resolution. 25% is more probable.
             failure_penalty=-2.0
             ),
     }

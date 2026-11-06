@@ -13,6 +13,7 @@ from galaxies.missions.deliver_ore import DeliverOre
 from spaceships.ship_configurations.tws_miner import TwsMiner
 from spaceships.ship_configurations.tws_shabby_miner import ShabbyTwsMiner
 from spaceships.ship_configurations.tws_versatile import TwsVersatile
+from spaceships.ship_configurations.tws_hauler import TwsHauler
 from ..person import Person
 from ..conversation import Conversation
 
@@ -130,6 +131,24 @@ class SettlementOnLeaving(Conversation):
                 )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
 
+        elif old_rep < 500 and not isinstance(self.player.ship, TwsVersatile) \
+                and 'Hauler Asked' not in self.player.flags:
+            self.player.flags.add('Hauler Asked')
+            done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
+            self.show(Message(
+                title=self.title,
+                text=(
+                    f"A real miner through and through, yes? Paladin Xi must be proud of you... {new_title}."
+                    "\n\nWe have got a Hauler, and we thought this is exactly your kind of stuff. If you want it."
+                    " It's a real piece, this one. Solid as a rock, food for half a year, and more place for ore"
+                    " you will never... wait, no, maybe YOU can fill up this guy."
+                    "\n\nDo you want it?"
+                ),
+                buttons=['Yes, please', 'No, thanks.'],
+                ), self._hauler_answered
+            )
+            return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+
         return f"People are starting to call you {self.player.get_title()}..."
 
     def _answered(self, chosen_button: Optional[int]) -> None:
@@ -138,6 +157,11 @@ class SettlementOnLeaving(Conversation):
     def _versatile_answered(self, chosen_button: Optional[int]) -> None:
         if chosen_button == 0:
             self.player.ship.upgrade_to(TwsVersatile)
+        self._decide(True)
+
+    def _hauler_answered(self, chosen_button: Optional[int]) -> None:
+        if chosen_button == 0:
+            self.player.ship.upgrade_to(TwsHauler)
         self._decide(True)
 
     def _decide(self, leaves: bool) -> None:

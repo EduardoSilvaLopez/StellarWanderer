@@ -102,9 +102,10 @@ class Ship(Updatable):
     HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
     DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
     MASS: ClassVar[float]  # kg, of the hull, without its equipment and its hold's contents (see mass)
-    # the share of the energy the engines draw that goes into the change of speed (the rest is lost)
-    ENGINE_EFFICIENCY: ClassVar[float] = 0.9
-    ENGINE_EXHAUST_SPEED: ClassVar[float] = 27000.0  # m/s, the speed the engines throw their mass out at
+    # J per (kg*m/s): what the engines draw per kg of the ship for each m/s of change of velocity. The drive throws
+    # nothing out, so no physics fixes it: it is tuned with ENERGY_MAX to the range a battery should give (ENERGY_MAX
+    # * 3600 / (MASS * this) is the change of velocity of a full battery). A configuration may set its own.
+    ENGINE_ENERGY_PER_MOMENTUM: ClassVar[float] = 15.0
 
     # Every configuration, by qualified name.
     by_name: ClassVar[dict[str, type[Ship]]] = {}
@@ -123,7 +124,7 @@ class Ship(Updatable):
     @property
     def mass(self) -> float:
         """kg, the ship, its equipment and what its hold holds: the mass the engines push, which the energy of a change
-        of speed depends on (see energy_per_speed_squared)."""
+        of velocity depends on (see energy_per_delta_v)."""
         return self.MASS + self.equipment_mass() + self.cargo_hold.used_capacity()
 
     def equipment_mass(self) -> float:
@@ -136,15 +137,10 @@ class Ship(Updatable):
             mass += self.SOLAR_PANELS_MASS
         return mass
 
-    def energy_per_speed_squared(self, mass: float) -> float:
-        """Wh per (m/s)^2 that a change of speed of a ship of `mass` kg costs: the change of its kinetic energy, drawn
-        from the battery through the engines' efficiency."""
-        return mass / (2.0 * self.ENGINE_EFFICIENCY * 3600.0)
-
-    def energy_per_hover_speed(self, mass: float) -> float:
-        """Wh per m/s of pull that the engines cancel to hold still, for a ship of `mass` kg. The engines throw mass out at
-        ENGINE_EXHAUST_SPEED to push against the pull: their power is the thrust times that speed, over the efficiency."""
-        return mass * self.ENGINE_EXHAUST_SPEED / (2.0 * self.ENGINE_EFFICIENCY * 3600.0)
+    def energy_per_delta_v(self, mass: float) -> float:
+        """Wh per m/s of change of velocity (thrust, braking, or pull cancelled to hold still) of a ship of `mass` kg.
+        It depends on the change of velocity alone, never on the speed the ship has (see ENGINE_ENERGY_PER_MOMENTUM)."""
+        return mass * self.ENGINE_ENERGY_PER_MOMENTUM / 3600.0
 
     @property
     def precariousness(self) -> float:

@@ -240,11 +240,8 @@ class Navigation:
                 + attitude.forward * (latitude_accel_input * ship.FORWARD_BACKWARD_ACC)
                 + attitude.up * (altitude_accel_input * ship.UP_DOWN_ACC)
             )
-        reference = self.velocity_reference_frame()
-        speed_before = (ship.velocity.as_vector() - reference).length()
         ship.velocity.add_vector(accel * delta_time)
-        speed_after = (ship.velocity.as_vector() - reference).length()
-        ship.energy -= ship.energy_per_speed_squared(ship.mass) * abs(speed_after ** 2 - speed_before ** 2)
+        ship.energy -= ship.energy_per_delta_v(ship.mass) * accel.length() * delta_time
         self._apply_gravity(delta_time, altitude_accel_input)
 
     def gravity(self) -> float:
@@ -302,7 +299,7 @@ class Navigation:
     def _apply_gravity(self, delta_time: float, altitude_accel_input: float) -> None:
         """Pulls the bound ship down by the gravity. The flight assist, always on, holds it up while no climb or descent
         is asked: it cancels the pull with the engines (all of it up to UP_DOWN_ACC, the engines' whole power; a world
-        pulling harder cannot be hovered over), at the energy of the ship's mass per m/s of pull cancelled (see energy_per_hover_speed), so hovering costs energy
+        pulling harder cannot be hovered over), at the energy of the ship's mass per m/s of pull cancelled (see energy_per_delta_v), so hovering costs energy
         for as long as it lasts. With a vertical key held UP_DOWN_ACC is all the push there is, and the pull is not
         cancelled: climbing nets UP_DOWN_ACC - gravity, descending UP_DOWN_ACC + gravity. On the ground, with no climb
         asked, the ground holds the ship up."""
@@ -312,7 +309,7 @@ class Navigation:
             return
         cancelled = min(gravity, ship.UP_DOWN_ACC) if altitude_accel_input == 0.0 else 0.0
         ship.velocity.y -= (gravity - cancelled) * delta_time
-        ship.energy -= ship.energy_per_hover_speed(ship.mass) * cancelled * delta_time
+        ship.energy -= ship.energy_per_delta_v(ship.mass) * cancelled * delta_time
 
     def is_landed(self) -> bool:
         """True when the ship rests on the surface of its world: bound, at the ground (the lowest altitude the ship can
@@ -333,9 +330,8 @@ class Navigation:
         engines, one on each of the ship's axes, the ones the thrust keys use: right, up and forward (while bound, right
         and forward are horizontal, turned by the yaw). Each engine takes up to BRAKE_ACC off its own component,
         whatever the others do: a small component stops as fast as a large one, and the ship is at rest relative to the
-        frame when the slowest engine is done (the TRAVEL autopilot brakes along the motion instead). The energy is the
-        kinetic energy that the speed relative to the frame loses, for the ship's mass (see energy_per_speed_squared),
-        whichever engines do it. The frame is the one at the start of the frame, as the state of the
+        frame when the slowest engine is done (the TRAVEL autopilot brakes along the motion instead). The energy is that of
+        the change of velocity, for the ship's mass (see energy_per_delta_v), whichever engines do it. The frame is the one at the start of the frame, as the state of the
         ship is (see `_move_unbound`): braked against the end of it, a moving target would give back, in the next
         frame, the change of its velocity (at high time compression, a moon's orbit would carry the ship away)."""
         ship = self.ship
@@ -361,7 +357,7 @@ class Navigation:
                 component = relative.dot(axis)
                 decel = min(ship.BRAKE_ACC * delta_time, abs(component))
                 braked = braked - axis * math.copysign(decel, component)
-        ship.energy -= ship.energy_per_speed_squared(ship.mass) * abs(relative.length() ** 2 - braked.length() ** 2)
+        ship.energy -= ship.energy_per_delta_v(ship.mass) * (relative - braked).length()
         ship.velocity.set_vector(reference + braked)
 
     def _update_position(self, delta_time: float) -> None:
@@ -476,14 +472,14 @@ class Navigation:
     def _coast_compensated(self, body: Body, position: Vector3, velocity: Vector3,
                            seconds: float) -> Tuple[Vector3, Vector3]:
         """The position and velocity relative to the body after `seconds` while the engines compensate its pull: a
-        straight line, at the energy of hovering per m/s of pull compensated (see energy_per_hover_speed). What the engines cannot
+        straight line, at the energy of hovering per m/s of pull compensated (see energy_per_delta_v). What the engines cannot
         give at once (`combined_thrust`), near a world that pulls harder, still pulls."""
         distance = position.length()
         if distance == 0.0:
             return position + velocity * seconds, velocity  # at the centre of a giant: no pull
         pull = body.pull_at(distance)
         compensated = min(pull, self.combined_thrust())
-        self.ship.energy -= self.ship.energy_per_hover_speed(self.ship.mass) * compensated * seconds
+        self.ship.energy -= self.ship.energy_per_delta_v(self.ship.mass) * compensated * seconds
         acceleration = position * (-(pull - compensated) / distance)
         return (position + velocity * seconds + acceleration * (0.5 * seconds * seconds),
                 velocity + acceleration * seconds)

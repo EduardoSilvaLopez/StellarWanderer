@@ -429,7 +429,7 @@ class SettlementChat(Conversation):
             if (founded.month, founded.day) != (now.month, now.day):
                 return (
                     f"This place was founded at {pretty_date(founded)}, {when}."
-                    "We are still small, but have some amenities."
+                    " We are still small, but have some amenities."
                 )
             if founded.year == now.year:
                 return "How on Catherine did you arrive here so soon!?"
