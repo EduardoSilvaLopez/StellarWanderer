@@ -11,6 +11,7 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Start again, check the balance of everything: Energy consumption and its economy. Settlements.
   * Cargo revamp: The left side is for upgrades, the right side for cargo including mines, ore, raw water.
   * Outpost size 2.
+  * Hauler
 
 2026-11-05 (11/11)
 

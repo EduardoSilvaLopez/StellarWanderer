@@ -63,6 +63,13 @@ def founding_when(founded: datetime, now: datetime) -> str:
                              4: 'four years ago'}
     return words.get(years, str(founded.year))
 
+def portal_arrival(place: Settlement) -> datetime:
+    """When the Portal of the place's system came, which is when the portal base was founded: the day that every
+    settlement of the system celebrates as the star's ('Happy star')."""
+    arrival: datetime | None = place.stellar_system.founded_at
+    assert arrival is not None  # a settlement only exists in a system with a history, which founds it
+    return arrival
+
 class SettlementChat(Conversation):
     def __init__(self, place: Settlement, player: Player, interlocutor: Person, log: ChatLog, tag: str) -> None:
         super().__init__(player, interlocutor)
@@ -129,6 +136,8 @@ class SettlementChat(Conversation):
             'gunner': self.talk_gunner,
             'Happy birthday': self.talk_happy_birthday,
             'Happy founding': self.talk_happy_founding,
+            'Happy new year': self.talk_happy_new_year,
+            'Happy star': self.talk_happy_star,
             'hobby': self.talk_hobby,
             'janitor': self.talk_janitor,
             'job': self.talk_job,
@@ -152,11 +161,23 @@ class SettlementChat(Conversation):
         }
 
     def talk_present_yourself(self) -> str:
+        # On January 1st the person greets the pilot first, once a year; the greeting makes the tag 'Happy new year'.
+        # The shy (sociability under 10) do not.
+        now: datetime = self.date_time
+        new_year_key: str = f"Happy new year {now.year}"
+        greeting: str = ""
+        if ((now.month, now.day) == (1, 1)
+                and self.interlocutor.sociability100 >= 10
+                and self.interlocutor.sympathy100 >= 20
+                and not any(new_year_key in lines for lines in self.interlocutor.interactions.values())):
+            self.flags.append(new_year_key)
+            greeting = "Happy new year! "
+
         if not any("Presented himself." in lines for lines in self.interlocutor.interactions.values()):
             self.interlocutor.adjust_sympathy(1)
             self.flags.append("Presented himself.")
-            return self.talk_present_yourself_first_time()
-        return self.talk_present_yourself_further_times()
+            return greeting + self.talk_present_yourself_first_time()
+        return greeting + self.talk_present_yourself_further_times()
 
     def talk_present_yourself_first_time(self) -> str:
         # Short names to make the rest more legible
@@ -426,14 +447,18 @@ class SettlementChat(Conversation):
             founded: datetime = self.place.founded_at
             now: datetime = self.date_time
             when: str = founding_when(founded, now)
-            if (founded.month, founded.day) != (now.month, now.day):
-                return (
-                    f"This place was founded at {pretty_date(founded)}, {when}."
-                    " We are still small, but have some amenities."
-                )
-            if founded.year == now.year:
-                return "How on Catherine did you arrive here so soon!?"
-            return f"This place was founded as of today, {when}. Happy founding!"
+
+            text: str = ''
+            if (founded.year, founded.month, founded.day) == (now.year, now.month, now.day):
+                text = "We *just* arrived *today*, how on Catherine are you here!? I mean... happy star! Wow!"
+            elif (founded.month, founded.day) == (now.month, now.day):
+                text = f"This place was founded as of today, {when}. Happy star!"
+            elif founded.year + 5 < now.year:
+                text = f"This place was founded at {pretty_date(founded)}, {when}. We expand!"
+            else:
+                text = f"This place was founded in {when}. Our happy star is {pretty_date(founded)}."
+            return text
+
         text: str = (
             "Have you been there lately? People say Miners do not need it like us. I miss getting out of this"
             " uniform, I tell you. My shorts and a cocktail, looking at a garden. That's life."
@@ -610,10 +635,51 @@ class SettlementChat(Conversation):
                 self.flags.append(interaction_key)
                 # Every member of the staff hears about it, the interlocutor included.
                 for member in self.place.generate_staff().staff:
-                    member.adjust_sympathy(2)
+                    member.adjust_sympathy(5)
             return "<Everybody around cheers>"
         self.interlocutor.adjust_sympathy(-5)
         return f"<Looks weirdly> This place was founded at {pretty_date(founded)}, {founding_when(founded, now)}."
+
+    def talk_happy_star(self) -> str:
+        # Apolitical and about the system: no trait of the person matters, only the day the Portal came. Every
+        # settlement of the system celebrates it, once a year each: the key holds the year and the settlement's seed.
+        star: datetime = portal_arrival(self.place)
+        now: datetime = self.date_time
+
+        if (star.month, star.day) == (now.month, now.day):
+            interaction_key: str = f"Happy star {now.year} {self.place.seed}"
+            already_said: bool = False
+            for member in self.place.generate_staff().staff:
+                if any(interaction_key in lines for lines in member.interactions.values()):
+                    already_said = True
+            if not already_said:
+                self.flags.append(interaction_key)
+                # Every member of the staff hears about it, the interlocutor included.
+                for member in self.place.generate_staff().staff:
+                    member.adjust_sympathy(3)
+            return "<Everybody around cheers>"
+        self.interlocutor.adjust_sympathy(-5)
+        return f"<Looks weirdly> The Portal came on {pretty_date(star)}, {founding_when(star, now)}."
+
+    def talk_happy_new_year(self) -> str:
+        # Apolitical and about the season: no trait of the person matters, only the date. Every settlement celebrates
+        # it, once a year each: the key holds the year and the settlement's seed.
+        now: datetime = self.date_time
+
+        if (now.month, now.day) == (1, 1):
+            interaction_key: str = f"Happy new year {now.year} {self.place.seed}"
+            already_said: bool = False
+            for member in self.place.generate_staff().staff:
+                if any(interaction_key in lines for lines in member.interactions.values()):
+                    already_said = True
+            if not already_said:
+                self.flags.append(interaction_key)
+                # Every member of the staff hears about it, the interlocutor included.
+                for member in self.place.generate_staff().staff:
+                    member.adjust_sympathy(3)
+            return "<Everybody around cheers, some visibly drunk, high, or both>"
+        self.interlocutor.adjust_sympathy(-5)
+        return "<Looks weirdly> That's January 1st..."
 
     def talk_janitor(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -865,11 +931,19 @@ class SettlementChat(Conversation):
             founded: datetime = self.place.founded_at
             now: datetime = self.date_time
             when: str = founding_when(founded, now)
-            if (founded.month, founded.day) != (now.month, now.day):
-                return f"This place was founded at {pretty_date(founded)}, {when}. Don't expect too much, ok?"
-            if founded.year == now.year:
-                return "This place was founded today. Happy founding! And... WOW!"
-            return f"This place was founded as of today, {when}. Happy founding!"
+            star: datetime = portal_arrival(self.place)
+            text: str = ""
+            if (founded.year, founded.month, founded.day) == (now.year, now.month, now.day):
+                text = "We *just* opened operations, so... happy founding, I'd say!"
+            elif (founded.month, founded.day) == (now.month, now.day):
+                text = f"This place was founded as of today, {when}. Happy founding!"
+            elif (star.month, star.day) == (now.month, now.day):
+                text = "Happy star!"
+            elif founded.year + 5 < now.year:
+                text = f"This place was founded at {pretty_date(founded)}, {when}. Don't expect too much, ok?"
+            else:
+                text = f"This place was founded in {when}. Our happy founding is {pretty_date(founded)}."
+            return text
         return "A place where you can get resupplied. Vital, for long trips."
 
     def talk_portal(self) -> str:
