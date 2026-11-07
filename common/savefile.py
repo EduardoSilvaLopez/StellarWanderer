@@ -43,12 +43,6 @@ class Savefile:
 
     # region Saving
     @staticmethod
-    def save() -> bool:
-        '''F5: saves the game under the default name, silently replacing a save of that name (another save on the same
-        game day).'''
-        Savefile.save_as(Savefile.default_name())
-
-    @staticmethod
     def save_as(name: str) -> None:
         '''Saves the current state of the game to `name` (a clean name, see clean_name), from the GameEnvironment and
         Player singletons. Replaces a save of that name.'''
@@ -69,8 +63,12 @@ class Savefile:
         os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
         file_path = data_path(SAVEFILES_DIR, name + '.json')
         logger.info("New savefile's name: " + file_path)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        # A replaced save is a new file: it is written beside the old one and moved over it, so its creation time (what
+        # the savefile list shows) is the time of this save.
+        temp_path = file_path + '.tmp'
+        with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+        os.replace(temp_path, file_path)
     # endregion
 
     # region Loading
@@ -82,7 +80,7 @@ class Savefile:
         savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
-        Savefile.load_from_file(max(savefiles, key=os.path.getmtime))
+        Savefile.load_from_file(max(savefiles, key=os.path.getctime))
 
     @staticmethod
     def load_from_file(filepath: str) -> None:
@@ -118,11 +116,16 @@ class Savefile:
         if player_data['asteroid'] is not None:  # a mission's asteroid was the last fixed body
             body = gem.current_environment.nearest_system.asteroid_from_site(player_data['asteroid'])
         elif player_data['is_last_fixed_portal_base']:
-            body = gem.current_environment.nearest_system.portal_base
+            portal_base = gem.current_environment.nearest_system.portal_base
+            if portal_base is None:
+                raise Exception("The saved last fixed body is a portal base, and its system has none.")
+            body = portal_base
         elif player_data['orbit'] is None:  # the star was the last fixed body
             body = gem.current_environment.nearest_system.star
         else:
             current_orbit = gem.current_environment.nearest_system.get_orbit(float(player_data['orbit']))
+            if current_orbit is None:
+                raise Exception("The saved orbit is not in its system.")
             planet_idx: int = player_data['planet']
             moon_idx: int = player_data['moon']
             if moon_idx is None:

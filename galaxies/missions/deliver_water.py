@@ -34,16 +34,16 @@ class DeliverWater(Mission):
     REWARD_PER_KG_ASTEROID_OR_BASE = 0.030  # no icy world in the star's system: the water is from an asteroid
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.01,
-            taken_by_others=0.002,
+            base_frequency=0.005,
+            taken_by_others=0.001,
             deadline_days_min=20,
             deadline_days_max=30,
             reward=1.0,  # See above.
             failure_penalty=-20
             ),
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.005,
-            taken_by_others=0.002,
+            base_frequency=0.002,
+            taken_by_others=0.001,
             deadline_days_min=25,
             deadline_days_max=35,
             reward=1.0,  # See above.

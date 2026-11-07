@@ -42,7 +42,7 @@ class ScanAsteroid(Mission):
     TERMS = {
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.04,
+            base_frequency=0.04,
             taken_by_others=0.005,
             deadline_days_min=20,
             deadline_days_max=40,

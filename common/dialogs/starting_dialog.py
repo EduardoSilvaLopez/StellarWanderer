@@ -139,7 +139,7 @@ class StartingDialog(Dialog):
         self.savefiles = []
         if os.path.exists(data_path(SAVEFILES_DIR)):
             files = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
-            for filepath in sorted(files, key=os.path.getmtime, reverse=True):
+            for filepath in sorted(files, key=os.path.getctime, reverse=True):
                 filename = os.path.basename(filepath)
                 name = os.path.splitext(filename)[0]
                 created_at = datetime.fromtimestamp(os.path.getctime(filepath)).isoformat(timespec='seconds')

@@ -27,7 +27,7 @@ class DeliverOre(Mission):
     # start at a frequency of 0 (no offers yet).
     TERMS = {
         SettlementKind.OUTPOST: Terms(
-            frequency=0.35,
+            base_frequency=0.35,
             taken_by_others=0.15,
             deadline_days_min=10,
             deadline_days_max=20,
@@ -35,7 +35,7 @@ class DeliverOre(Mission):
             failure_penalty=-5.0
             ),
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.35,
+            base_frequency=0.35,
             taken_by_others=0.15,
             deadline_days_min=15,
             deadline_days_max=25,

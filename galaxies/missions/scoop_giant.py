@@ -31,11 +31,11 @@ class ScoopGiant(ScoopBody):
     TERMS = {
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            frequency=0.05,
+            base_frequency=0.04,
             taken_by_others=0.01,
             deadline_days_min=15,
             deadline_days_max=30,
-            reward=800.0,  # By instantaneous resolution, 25% of it is more probable.
+            reward=160.0,  # By instantaneous resolution, 25% of it is more probable.
             failure_penalty=-5.0
             ),
     }

@@ -81,7 +81,7 @@ NO_KEYS = defaultdict(bool)
 
 def center_window_on_screen(window_title: str, window_size: Tuple[int, int]) -> None:
     """Center a window on the screen. Windows only."""
-    if sys.platform != 'win32':
+    if os.name != 'nt':
         return
 
     try:
@@ -400,8 +400,9 @@ def main() -> None:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_KP_MINUS:
                 player.decrease_time_scale()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
+                # Replaces a save of the same name, which is the same game day (no confirmation, as F5 is quick).
                 with frame_watch.timed('save'):
-                    Savefile.save()
+                    write_save(Savefile.default_name())
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F6:
                 audio.stop_loops()
                 with frame_watch.timed('load'):
@@ -444,8 +445,8 @@ def main() -> None:
                         player.enter_settlement(outpost)
                         gem.current_environment.clock.advance(Outpost.TIME_TO_ENTER)  # going in takes time
                         audio.play(SettlementScreenDialog.OPEN_SOUND)
-                    elif ship.scanner.in_base_zone():  # fixed to the base: SPACE docks when stopped inside
-                        base = gem.current_environment.nearest_system.portal_base
+                    elif (base := gem.current_environment.nearest_system.portal_base) is not None \
+                            and ship.scanner.in_base_zone():  # fixed to the base: SPACE docks when stopped inside
                         speed = (ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()).length()
                         if not base.in_docking_place(ship.position.as_vector()):
                             ship.notification.set("[Com. Officer] To dock, fly into the hangar and stop there.")

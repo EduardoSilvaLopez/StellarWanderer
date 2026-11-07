@@ -102,17 +102,17 @@ class Mission(Updatable):
         return type(self).terms_at(self.issuer_kind)
 
     @classmethod
-    def offered_on(cls, day: datetime, outpost: Settlement) -> Optional[Mission]:
+    def offered_on(cls, day: datetime, settlement: Settlement) -> Optional[Mission]:
         """The offer `outpost` makes on the day of `day`, or None when it makes none that day (it is not offered there,
         its entry is None or its frequency is 0, or the day's chance does not come up). Drawn from the outpost and the
         day only, so it is the same however the board was visited."""
-        terms = cls.TERMS[outpost.kind]
-        if terms is None or terms.frequency == 0:
+        terms = cls.TERMS[settlement.kind]
+        if terms is None or terms.base_frequency == 0:
             return None
-        chance = random.Random(of_text(f"{outpost.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
-        if chance.random() >= terms.frequency:
+        chance = random.Random(of_text(f"{settlement.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
+        if chance.random() >= terms.base_frequency + 0.1 * settlement.size:
             return None
-        return cls.offer(day, outpost, chance)
+        return cls.offer(day, settlement, chance)
 
     @classmethod
     @abstractmethod

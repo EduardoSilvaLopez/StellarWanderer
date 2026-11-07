@@ -19,7 +19,7 @@ from galaxies.settlement_kind import SettlementKind
 
 @dataclass(frozen=True)
 class Terms:
-    frequency: float  # the chance a kind makes an offer on a given day; 0: not offered at this kind of settlement
+    base_frequency: float  # the chance a kind makes an offer on a given day; 0: not offered at this kind of settlement
     taken_by_others: float  # the chance a day that somebody else takes an offer, which then leaves the board
     deadline_days_min: int  # the shortest and the longest deadline of an offer, in days
     deadline_days_max: int
