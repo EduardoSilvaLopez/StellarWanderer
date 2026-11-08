@@ -1,7 +1,7 @@
 """Ship time display."""
 
 from __future__ import annotations
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 from datetime import datetime
 import pygame
 from galaxies.people.player import Player
@@ -9,11 +9,16 @@ from ..constants import ACCENT, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
 
 DANGER_BG = (190, 30, 34)  # the box when the time compression is clearly dangerous
 DANGER_INK = (255, 240, 240)
+BOX_FRAME = 3  # the dark frame round the box, on each side
 
 
 class Clock:
     """Draw clock panel: on one line in the cockpit, beside the system's name, and on two rows over the name of a
-    settlement's screen."""
+    settlement's screen. A panel is drawn again only when what it shows changes (the time to the second, the rate or
+    the danger), and placed from its picture every frame."""
+
+    # Per layout: what the picture was made from, the picture, and the panel's rectangle in it.
+    _panels: Dict[str, Tuple[Tuple, pygame.Surface, pygame.Rect]] = {}
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
@@ -31,6 +36,45 @@ class Clock:
     @staticmethod
     def _draw_one_line(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
                        right_middle: Optional[Tuple[int, int]], dangerous: bool) -> None:
+        key = (Clock._format_ship_time(date_time), time_scale, dangerous, w, h)
+        picture, panel = Clock._panel('line', key,
+                                      lambda: Clock._one_line_picture(fonts, date_time, time_scale, w, h, dangerous))
+        if right_middle is None:
+            panel.topleft = (int(w * 0.015), int(h * 0.025))
+        else:
+            panel.midright = right_middle
+        Clock._place(surface, picture, panel)
+
+    @staticmethod
+    def _draw_two_rows(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
+                       topleft: Tuple[int, int], dangerous: bool) -> None:
+        key = (Clock._format_ship_time(date_time), time_scale, dangerous, w, h)
+        picture, panel = Clock._panel('rows', key,
+                                      lambda: Clock._two_rows_picture(fonts, date_time, time_scale, w, h, dangerous))
+        panel.topleft = topleft
+        Clock._place(surface, picture, panel)
+
+    @staticmethod
+    def _panel(layout: str, key: Tuple, build: Callable[[], Tuple[pygame.Surface, pygame.Rect]]) \
+            -> Tuple[pygame.Surface, pygame.Rect]:
+        """The picture of a layout and the panel's rectangle in it, made again only when `key` changes. The rectangle
+        is a copy, so the caller may move it."""
+        cached = Clock._panels.get(layout)
+        if cached is None or cached[0] != key:
+            picture, panel = build()
+            cached = (key, picture, panel)
+            Clock._panels[layout] = cached
+        return cached[1], cached[2].copy()
+
+    @staticmethod
+    def _place(surface: pygame.Surface, picture: pygame.Surface, panel: pygame.Rect) -> None:
+        """Blits a picture so that its panel lands on `panel`, a rectangle in the window."""
+        origin = (panel.left - BOX_FRAME, panel.top - BOX_FRAME)
+        surface.blit(picture, origin)
+
+    @staticmethod
+    def _one_line_picture(fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
+                          dangerous: bool) -> Tuple[pygame.Surface, pygame.Rect]:
         digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
         rate_font = fonts.get(max(10, int(h * 0.018)))
         ink, rate_color = Clock._inks(time_scale, dangerous)
@@ -40,20 +84,18 @@ class Clock:
         pad = max(6, int(h * 0.011))  # beside the text, and above and below it
         gap = max(6, int(w * 0.004))  # between the time and the rate
         line = max(digits.get_height(), rate.get_height())
-        panel = pygame.Rect(0, 0, digits.get_width() + gap + rate.get_width() + pad * 2, line + pad * 2)
-        if right_middle is None:
-            panel.topleft = (int(w * 0.015), int(h * 0.025))
-        else:
-            panel.midright = right_middle
-
-        Clock._draw_box(surface, panel, dangerous)
+        panel = pygame.Rect(BOX_FRAME, BOX_FRAME, digits.get_width() + gap + rate.get_width() + pad * 2,
+                            line + pad * 2)
+        picture = pygame.Surface(panel.inflate(BOX_FRAME * 2, BOX_FRAME * 2).size)
+        Clock._draw_box(picture, panel, dangerous)
         middle = panel.centery
-        surface.blit(digits, digits.get_rect(midleft=(panel.left + pad, middle)))
-        surface.blit(rate, rate.get_rect(midright=(panel.right - pad, middle)))
+        picture.blit(digits, digits.get_rect(midleft=(panel.left + pad, middle)))
+        picture.blit(rate, rate.get_rect(midright=(panel.right - pad, middle)))
+        return picture, panel
 
     @staticmethod
-    def _draw_two_rows(surface: pygame.Surface, fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
-                       topleft: Tuple[int, int], dangerous: bool) -> None:
+    def _two_rows_picture(fonts: Any, date_time: datetime, time_scale: int, w: int, h: int,
+                          dangerous: bool) -> Tuple[pygame.Surface, pygame.Rect]:
         digit_font = fonts.get(max(12, int(h * 0.024)), bold=True)
         label_font = fonts.get(max(10, int(h * 0.018)))
         ink, rate_color = Clock._inks(time_scale, dangerous)
@@ -67,18 +109,18 @@ class Clock:
         line_gap = max(3, int(h * 0.006))  # between the two lines
         top_line = max(label.get_height(), rate.get_height())
         panel = pygame.Rect(
-            0, 0,
+            BOX_FRAME, BOX_FRAME,
             max(label.get_width() + gap + rate.get_width(), digits.get_width()) + pad * 2,
             top_line + line_gap + digits.get_height() + top_pad * 2,
         )
-        panel.topleft = topleft
-
-        Clock._draw_box(surface, panel, dangerous)
+        picture = pygame.Surface(panel.inflate(BOX_FRAME * 2, BOX_FRAME * 2).size)
+        Clock._draw_box(picture, panel, dangerous)
         # The label on the left and the rate on the right of the top line, the digits centred under them
         top_middle = panel.top + top_pad + top_line // 2
-        surface.blit(label, label.get_rect(midleft=(panel.left + pad, top_middle)))
-        surface.blit(rate, rate.get_rect(midright=(panel.right - pad, top_middle)))
-        surface.blit(digits, digits.get_rect(midtop=(panel.centerx, panel.top + top_pad + top_line + line_gap)))
+        picture.blit(label, label.get_rect(midleft=(panel.left + pad, top_middle)))
+        picture.blit(rate, rate.get_rect(midright=(panel.right - pad, top_middle)))
+        picture.blit(digits, digits.get_rect(midtop=(panel.centerx, panel.top + top_pad + top_line + line_gap)))
+        return picture, panel
 
     @staticmethod
     def _inks(time_scale: int, dangerous: bool) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:

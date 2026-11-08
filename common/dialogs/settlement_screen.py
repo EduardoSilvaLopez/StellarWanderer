@@ -55,7 +55,7 @@ from graphics.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
-from .messages import Message, ResultCallback
+from .messages import Message, ResultCallback, confirm
 from galaxies.people.chat_log import ChatLog
 from .chat_view import ChatTags, ChatView
 from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
@@ -222,7 +222,9 @@ class SettlementScreenDialog(Dialog):
     or Space selects the focused one. The
     conversation tags are on the left, under a search box that filters them (typing goes there while it is focused, as
     the people's does), and the chat log is in the middle (ChatView): a click on a tag starts a SettlementChat
-    with the selected person, in the same log, and a click on an open reply chooses it. Tags and replies are also
+    with the selected person, in the same log, and a click on an open reply chooses it. Each tag has a Pin button, and
+    the pinned tags come first (see _toggle_pin); a right-click on a tag asks to delete it (see _delete_tag). Tags and
+    replies are also
     reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
     and starts an empty log. Leaving the option ends the conversation."""
 
@@ -534,8 +536,9 @@ class SettlementScreenDialog(Dialog):
 
         names = self._chat_tags_now()
         tags_focus = names.index(self._focus[1]) if focus_kind == 'tag' and self._focus[1] in names else None
+        from galaxies.people.player import current_player  # local: as in _chat_tags_now
         self._chat_tags.place(_list_in_panel(surface, tags, margin))
-        self._chat_tags.draw(surface, names, self._chat_active(), tags_focus)
+        self._chat_tags.draw(surface, names, self._chat_active(), current_player.pinned_tags, tags_focus)
 
         reply_focus = self._focus[1] if focus_kind == 'reply' else None
         self._chat_view.place(_list_in_panel(surface, conversation, margin))
@@ -564,11 +567,14 @@ class SettlementScreenDialog(Dialog):
         self._chat_log = None
 
     def _chat_tags_now(self) -> List[str]:
-        """The pilot's conversation tags the tags' search shows, alphabetical: Player.PRESENTATION_TAG comes first."""
+        """The pilot's conversation tags the tags' search shows: the pinned ones in the order they were pinned, then the
+        others alphabetically (Player.PRESENTATION_TAG comes first among them)."""
         from galaxies.people.player import current_player  # local: the player needs the dialogs
         if self._chat_tags is None:
             raise Exception("The chat's tags are not made.")
-        return self._chat_tags.matches(sorted(current_player.conversation_tags, key=str.casefold))
+        pinned = current_player.pinned_tags
+        others = sorted(current_player.conversation_tags - set(pinned), key=str.casefold)
+        return self._chat_tags.matches(pinned + others)
 
     def _chat_active(self) -> bool:
         """Tags start a conversation while a person is selected and no reply is open (the conversation is not over)."""
@@ -593,6 +599,30 @@ class SettlementScreenDialog(Dialog):
             self.settlement, current_player, self._chat_log.person, self._chat_log, tag
             )
         self._chat_conversation.start()
+
+    def _toggle_pin(self, tag: str) -> None:
+        """The Pin or Unpin button of a tag: a pinned tag goes to the end of the pinned ones, an unpinned one leaves
+        them."""
+        from galaxies.people.player import current_player  # local: as in _start_tag
+        if tag in current_player.pinned_tags:
+            current_player.pinned_tags.remove(tag)
+        else:
+            current_player.pinned_tags.append(tag)
+
+    def _delete_tag(self, tag: str) -> None:
+        """Right-click on a tag: after a confirmation, the pilot's list loses it, pinned or not. The presentation tag
+        stays, as the one every pilot starts with."""
+        from galaxies.people.player import Player, current_player  # local: as in _start_tag
+        if tag == Player.PRESENTATION_TAG:
+            return
+
+        def remove() -> None:
+            current_player.conversation_tags.discard(tag)
+            if tag in current_player.pinned_tags:
+                current_player.pinned_tags.remove(tag)
+
+        confirm(title='Delete tag', text=f'Delete the tag "{tag}" from your list?', confirm_label='Delete',
+                on_confirm=remove)
 
     def _choose_reply(self, index: int) -> None:
         """The player chooses a reply of the chat: the log keeps it, and the conversation that offered it is
@@ -1009,7 +1039,7 @@ class SettlementScreenDialog(Dialog):
     def _open_chat(self) -> None:
         """Chat: the people listed now, the tags and an empty chat log. The log is made when a person is selected."""
         self._chat = StaffList(self.settlement)
-        self._chat_tags = ChatTags(self._start_tag)
+        self._chat_tags = ChatTags(self._start_tag, self._delete_tag, self._toggle_pin)
         self._chat_view = ChatView(self._choose_reply, self._start_tag)
         self._chat_log = None
         self._chat_conversation = None

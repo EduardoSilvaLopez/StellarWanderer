@@ -2,7 +2,7 @@
 position, attitude and speed readouts (drawn in whatever column the console gives them)."""
 
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+from typing import Any, Optional, Tuple, TYPE_CHECKING
 import pygame
 from ..constants import CANOPY_TOP, ACCENT
 from common.units import format_compact_distance
@@ -30,6 +30,12 @@ class LocationInfo:
         return (environment.fixed_body if environment.fixed_body is not None
                 else environment.targeted_body.stellar_system.star)
 
+    # The last name drawn, with the label and window it was made for: fitting it to the bar steps the font down a pixel
+    # at a time, too slow for every frame.
+    _name_key: Optional[Tuple[str, int, int]] = None
+    _name_surface: Optional[pygame.Surface] = None
+    _name_ink: Optional[pygame.Rect] = None
+
     @staticmethod
     def draw_name(surface: pygame.Surface, fonts: Any, w: int, h: int) -> pygame.Rect:
         """Draw the reference body's name and its system's, centred in the top bar, as large as fits the bar's
@@ -40,9 +46,15 @@ class LocationInfo:
             if reference.is_world else stellar_system.name
 
         bar_height = int(h * CANOPY_TOP)
-        name_text = fonts.render_to_fit(stellar_label, ACCENT, int(w * 0.6), int(bar_height * 0.63))
-        # Centre the visible glyphs, not the font's box, which has space above the capitals and below the descenders.
-        ink = name_text.get_bounding_rect()
+        key = (stellar_label, w, h)
+        if LocationInfo._name_key != key:
+            name_text = fonts.render_to_fit(stellar_label, ACCENT, int(w * 0.6), int(bar_height * 0.63))
+            # Centre the visible glyphs, not the font's box, which has space above the capitals and below the descenders.
+            LocationInfo._name_surface = name_text
+            LocationInfo._name_ink = name_text.get_bounding_rect()
+            LocationInfo._name_key = key
+        name_text = LocationInfo._name_surface
+        ink = LocationInfo._name_ink
         origin = (w // 2 - ink.centerx, bar_height // 2 - ink.centery)
         surface.blit(name_text, origin)
         return ink.move(origin)

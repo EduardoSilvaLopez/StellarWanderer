@@ -230,13 +230,40 @@ class ChatView(_ScrolledList):
         return True
 
 
-class ChatTags(_ScrolledList):
-    """The conversation tags, in the order given, one row each. Only while `active` does a click start a
-    conversation. The search box at the top of the panel filters them (see `matches`)."""
+def draw_pin_icon(surface: pygame.Surface, box: pygame.Rect, colour: Tuple[int, int, int], unpin: bool) -> None:
+    """A push-pin in `box`: outlined to pin, filled with a slash through it to unpin (the button's action)."""
+    def at(x: float, y: float) -> Tuple[int, int]:
+        return (round(box.left + x * box.width), round(box.top + y * box.height))
 
-    def __init__(self, on_tag: Callable[[str], None]) -> None:
+    head, tip = (0.62, 0.38), (0.22, 0.78)  # the pin leans: its head up and right, its needle down and left
+    axis = (-0.7071, 0.7071)
+    normal = (0.7071, 0.7071)
+
+    def along(distance: float, across: float) -> Tuple[int, int]:
+        return at(head[0] + axis[0] * distance + normal[0] * across,
+                  head[1] + axis[1] * distance + normal[1] * across)
+
+    collar = [along(0.18, 0.12), along(0.26, 0.2), along(0.26, -0.2), along(0.18, -0.12)]
+    needle = [along(0.26, 0.0), at(*tip)]
+    width = 0 if unpin else 1
+    pygame.draw.polygon(surface, colour, collar, width)
+    pygame.draw.line(surface, colour, needle[0], needle[1], 2)
+    pygame.draw.circle(surface, colour, at(*head), max(2, round(0.19 * box.width)), width)
+    if unpin:
+        pygame.draw.line(surface, colour, at(0.05, 0.95), at(0.95, 0.05), 2)
+
+
+class ChatTags(_ScrolledList):
+    """The conversation tags, in the order given, one row each, with a pin button on the right. Only while
+    `active` does a click on the row start a conversation; a right-click on the row asks to delete it (`on_delete`).
+    The search box at the top of the panel filters them (see `matches`)."""
+
+    def __init__(self, on_tag: Callable[[str], None], on_delete: Callable[[str], None],
+                 on_pin: Callable[[str], None]) -> None:
         super().__init__()
         self.on_tag: Callable[[str], None] = on_tag
+        self.on_delete: Callable[[str], None] = on_delete
+        self.on_pin: Callable[[str], None] = on_pin
         self.active: bool = False
         self.query: str = ''  # what the search box holds
         self.search_focused: bool = False  # whether the typed text goes into the search box
@@ -284,8 +311,10 @@ class ChatTags(_ScrolledList):
             return True
         return search_box.swallows(event)
 
-    def draw(self, surface: pygame.Surface, tags: Sequence[str], active: bool, focus: Optional[int] = None) -> None:
-        """The search box, then the rows of `tags`; `focus` is the index of the row the keyboard is on, if any."""
+    def draw(self, surface: pygame.Surface, tags: Sequence[str], active: bool, pinned: Sequence[str],
+             focus: Optional[int] = None) -> None:
+        """The search box, then the rows of `tags` (those in `pinned` with the filled pin); `focus` is the index of the row the
+        keyboard is on, if any."""
         self.active = active
         search_box.draw(surface, self.search_rect, self.query, self.search_focused)
         font = body_font(BODY_SIZE)
@@ -298,9 +327,18 @@ class ChatTags(_ScrolledList):
             row.fill(ROW_FILL)
             focused = focus == index
             pygame.draw.rect(row, ACCENT if focused else ACCENT_DIM, row.get_rect(), 2 if focused else 1)
+            is_pinned = tag in pinned
+            side = row_height - 2 * BUBBLE_PAD
+            button = pygame.Rect(width - BUBBLE_PAD - side, BUBBLE_PAD, side, side)
             caption = font.render(tag, True, TEXT_COLOR if active else DIM_COLOR)
-            row.blit(caption, (BUBBLE_PAD, row_height // 2 - caption.get_height() // 2))
-            blocks.append((row, y, 0, [(row.get_rect(), ('tag', tag))]))
+            caption_room = button.left - 2 * BUBBLE_PAD  # a long tag is cut short before the button
+            row.blit(caption, (BUBBLE_PAD, row_height // 2 - caption.get_height() // 2),
+                     area=pygame.Rect(0, 0, caption_room, caption.get_height()))
+            row.fill(ROW_FILL, button)
+            pygame.draw.rect(row, ACCENT_DIM, button, 1)
+            draw_pin_icon(row, button.inflate(-4, -4), ACCENT if is_pinned else TEXT_COLOR, is_pinned)
+            hits = [(button, ('pin', tag)), (row.get_rect(), ('tag', tag))]  # the button first: it is inside the row
+            blocks.append((row, y, 0, hits))
             y += row_height + BUBBLE_GAP
         if not tags and self.query.strip():
             previous_clip = surface.get_clip()
@@ -311,8 +349,21 @@ class ChatTags(_ScrolledList):
         self._paint(surface, blocks)
 
     def _pressed(self, payload: Any) -> bool:
+        if payload[0] == 'pin':
+            audio.play('ui_click')
+            self.on_pin(payload[1])
+            return True
         if not self.active:
             return False
         audio.play('ui_click')
         self.on_tag(payload[1])
         return True
+
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and self.text_rect.collidepoint(event.pos):
+            for rect, payload in self._hits:
+                if rect.collidepoint(event.pos):
+                    if payload[0] == 'tag':
+                        self.on_delete(payload[1])
+                    return True
+        return super().handle_event(event)

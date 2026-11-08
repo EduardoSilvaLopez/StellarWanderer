@@ -25,7 +25,7 @@ class Cockpit:
 
     @staticmethod
     def draw_console(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
-        """The console: everything below the windshield. It changes slowly, so the caller draws it a few times a second
+        """The console: everything below the windshield. It changes slowly, so the caller draws it every few frames
         (see OpenGLGui) and keeps it in between."""
         Console.draw(surface, fonts, w, h, player.ship, date_time)
         frame_watch.mark('console')

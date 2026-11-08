@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Optional, List, Any, Tuple
 import ctypes
 import math
-import time
 
 import numpy as np
 import pygame
@@ -66,11 +65,11 @@ class OpenGLGui:
     over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes.
 
     What does not change from one frame to the next is not drawn nor uploaded again: the console is redrawn
-    CONSOLE_REFRESH_SECONDS apart (at once when the mouse moves over it), and the sky's layer only when the view, the
+    CONSOLE_REFRESH_FRAMES apart (at once when the mouse moves over it), and the sky's layer only when the view, the
     time or the ship has moved enough to show (`_sky_changed`). A texture is sent to the graphics card straight from the
     surface's memory, and only the rows that changed."""
 
-    CONSOLE_REFRESH_SECONDS = 0.2  # the console shows nothing that needs to be faster
+    CONSOLE_REFRESH_FRAMES = 3  # the console shows nothing that needs to be faster than this
     SKY_TURN_TOLERANCE = 1e-4  # the view's axes may differ this much (about 0.006 degrees) from the sky as drawn
     SKY_SECONDS_TOLERANCE = 2.0  # game seconds the sky may be late
 
@@ -82,7 +81,7 @@ class OpenGLGui:
         self.dialog_texture: Optional[int] = None
         self._uploaded_textures: set = set()
         self._sky_state: Optional[tuple] = None  # what the world layer was last drawn for (see _sky_changed)
-        self._console_drawn_at = -math.inf
+        self._console_frames = self.CONSOLE_REFRESH_FRAMES  # frames since the console was drawn: due at the first
         self._console_mouse: Tuple[int, int] = (-1, -1)
         self._console_scoop_open = False
         # While the pilot is inside an outpost, what takes the whole window in place of the cockpit: it is given the
@@ -260,15 +259,15 @@ class OpenGLGui:
         HeatVignette.draw(overlay, width, height, ship)
 
     def _console_due(self, ship: Ship, lower: pygame.Rect) -> bool:
-        """Whether the console is redrawn in this frame: every CONSOLE_REFRESH_SECONDS, at once when the mouse moves
+        """Whether the console is redrawn in this frame: every CONSOLE_REFRESH_FRAMES, at once when the mouse moves
         over it (a button answers the pointer) or the scoop opens or closes (the cockpit leaves its square empty)."""
-        now = time.perf_counter()
+        self._console_frames += 1
         mouse = pygame.mouse.get_pos()
         moved = mouse != self._console_mouse and lower.collidepoint(mouse)
-        if (now - self._console_drawn_at < self.CONSOLE_REFRESH_SECONDS and not moved
+        if (self._console_frames < self.CONSOLE_REFRESH_FRAMES and not moved
                 and ship.scoop_open == self._console_scoop_open):
             return False
-        self._console_drawn_at, self._console_mouse, self._console_scoop_open = now, mouse, ship.scoop_open
+        self._console_frames, self._console_mouse, self._console_scoop_open = 0, mouse, ship.scoop_open
         return True
 
     def _sky_changed(self, environment: GameEnvironment, ship: Ship, player: Player, width: int, height: int) -> bool:
@@ -308,7 +307,7 @@ class OpenGLGui:
             self.dialog_texture = self._make_texture(width, height)
             self._uploaded_textures = set()
             self._sky_state = None
-            self._console_drawn_at = -math.inf
+            self._console_frames = self.CONSOLE_REFRESH_FRAMES
 
     @staticmethod
     def _make_texture(width: int, height: int) -> int:

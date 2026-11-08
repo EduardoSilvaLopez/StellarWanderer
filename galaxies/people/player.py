@@ -64,6 +64,8 @@ class Player:
         self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
         # The conversation tags of the chat (see settlement_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
+        # The pinned ones, in the order they were pinned: they come first in the chat, and each is one of the tags.
+        self.pinned_tags: list[str] = []
         self.flags: set[str] = set()
         self.show_orbits: bool = True  # the pilot's choice (O): the orbit of the targeted body is drawn
 
@@ -261,6 +263,7 @@ class Player:
             'inside_settlement': self.inside.inside_key() if self.inside is not None else None,
             'missions': [mission.serialize() for mission in self.missions],
             'conversation_tags': sorted(self.conversation_tags),
+            'pinned_tags': list(self.pinned_tags),
             'citizenship': self.citizenship.name if self.citizenship is not None else None,
             'flags': sorted(self.flags),
             'show_orbits': self.show_orbits,
@@ -282,6 +285,7 @@ class Player:
             mission.watch_deadline()
         result.ship = Ship.deserialize(result, loaded_attributes['ship'])
         result.conversation_tags = set(loaded_attributes['conversation_tags'])
+        result.pinned_tags = list(loaded_attributes['pinned_tags'])
         result.flags = set(loaded_attributes['flags'])
         result.show_orbits = loaded_attributes['show_orbits']
 

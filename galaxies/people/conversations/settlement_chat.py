@@ -149,6 +149,7 @@ class SettlementChat(Conversation):
             'Paladin Xi': self.talk_paladin_xi,
             'PGMs': self.talk_pgms,
             'portal': self.talk_portal,
+            'researcher': self.talk_researcher,
             'ringmaster': self.talk_ringmaster,
             'security': self.talk_protection,
             'smith': self.talk_smith,
@@ -981,6 +982,11 @@ class SettlementChat(Conversation):
             "Did you find many out there? I think Iridium is the most important right now, but the whole"
             " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
         )
+    def talk_researcher(self) -> str:
+        return (
+            "From pure scientific theory to engineering research. But more of the latter."
+        )
+
     def talk_ringmaster(self) -> str:
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
         soc: float = self.interlocutor.sociability100
@@ -1620,9 +1626,9 @@ class SettlementChat(Conversation):
         else:
             text += (
                 "<whispering> When you have... max two million, with no upgrades. Or one if you still got the"
-                "shabby ship, you go to the Ringmaster. The credits for the ship. He will hate you. Hell, many people"
-                "here will hate you. But the hypocrits can well use those Credits. You will become a foreigner with a"
-                "ship... your property."
+                " shabby ship, you go to the Ringmaster. The credits for the ship. He will hate you. Hell, many people"
+                " here will hate you. But the hypocrits can well use those Credits. You will become a foreigner with a"
+                " ship... your own... 'property'... 'personal property' <naughty sign>."
                 "\n\nThen you can leave. And be free."
                 )
         self.offer(buttons, self.traitor_ready)
@@ -1630,12 +1636,18 @@ class SettlementChat(Conversation):
 
     def traitor_ready(self, answer: int) -> None:
         self.interlocutor.adjust_sympathy(50)
-        self.flags.append("Dared talk openly.")
+        self.flags.append("Got mine codes.")
         res = self.interlocutor.residency
         if isinstance(res, Settlement):
             seed = res.stellar_system.seed
             self.player.political_status[political_entity.THOSE_WHO_SHARE].flags\
                 .add(f"sold mine codes {seed}")
+        self.say(self.traitor_codes_given)
+
+    def traitor_codes_given(self) -> str:
+        text = "<whispering> Done. Let's not talk about this ever again. Good luck."
+        return text
+
     # endregion
 
     # region Auxiliar methods

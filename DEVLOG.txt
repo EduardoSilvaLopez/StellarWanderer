@@ -19,16 +19,20 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 2026-11-08 (1/11)
 
-> STARTED: Extra time: 186h45' + 7:30 - 
-
 OROGRAPHY:
   * Terrain elevation / sinkage.
   * Mountains.
+  * Better rocks.
+
+> STARTED: Extra time: 186h45' + 3h + 16:45-
+
 
 > BACKLOG
 
 * OROGRAPHY
-  * Craters
+  * Mountain chains.
+  * Craters.
+  * Basins, rivers, canyons.
   * Extra: Strange rocks can be collected proactively and brought to the outpost.
   * Extra: Collision damage, also from rocks.
 
