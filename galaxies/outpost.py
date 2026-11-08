@@ -3,6 +3,7 @@ import copy
 import random
 import math
 import logging
+from functools import cached_property
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from common.vector3 import Vector3
@@ -121,6 +122,7 @@ class Outpost(Settlement):
                 self.saved_alterations = copy.deepcopy(my_alterations)
                 self._read_alterations(self.saved_alterations)
                 self.set_altered()
+        planet.terrain.add_platform(self.longitude, self.latitude)   # the ground is graded under the site
         self._log_generation()
 
     def _log_generation(self) -> Outpost:
@@ -186,6 +188,12 @@ class Outpost(Settlement):
     # endregion
 
     # region Size
+    @cached_property
+    def ground_height(self) -> float:
+        """The height of the ground the building stands on, in metres above the datum: that under its centre (the ground
+        does not change). Everything of the outpost is measured from it."""
+        return self.planet.ground_height(self.longitude, self.latitude)
+
     @property
     def clearing_radius(self) -> float:
         """How far from its centre the ground is cleared of rocks: it grows with the pad and the annex."""

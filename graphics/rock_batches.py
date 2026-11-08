@@ -1,4 +1,5 @@
-"""Rocks drawn from cached arrays: one batch per Km2, one glDrawArrays call per batch.
+"""Rocks of each Km2: the ones with an adjective drawn from cached arrays, one batch per Km2, one glDrawArrays call
+per batch (the others are instances of a set of forms: rock_instances.py).
 
 The geometry of a Km2's rocks is built once, with numpy, into vertex arrays relative to the Km2's corner (each rock
 an irregular boulder of FACES triangles, see rock_shape.py), and only the colours (sun light and heat glow) are
@@ -17,11 +18,14 @@ Km2s still waiting show nothing (or their last batch, if only their rocks change
 ordinary rocks and the rocks with an adjective (finer meshes coloured as minerals, see special_rocks.py). Rocks add
 their heat glow (rock.color above initial_color) after shading, so a hot rock still glows on the dark side. A rock
 whose lowest point would float above the ground is lowered onto it, and one whose top would be hidden is raised to
-show (VISIBLE_TOP_SHARE). The faces wholly under the ground, which no view can see, are not stored at all.
+show (VISIBLE_TOP_SHARE). The faces wholly under the ground, which no view can see, are not stored at all. Over
+relief the rocks sit on the lowest ground under their footprint, and a Km2 near the ship draws its rocks only once the
+terrain under it is built as fine as wanted (`TerrainGl.is_settled`), so that they never hover over or sink into
+a rough mesh.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 import math
 import time
 import weakref
@@ -31,13 +35,17 @@ from OpenGL import GL
 
 from common.frame_watch import frame_watch
 from .constants import SURFACE_STARLIGHT
+from .rock_instances import DOWNWARD_DARKENING, VISIBLE_TOP_SHARE, InstancedRocks
 from .rock_shape import FACES, rock_meshes, rotate
+from .shadowed_surface import ShadowedSurface
 from .special_rocks import SPLITS, special_mesh
+from .terrain_gl import TerrainGl
 
 if TYPE_CHECKING:
     from galaxies.km2 import Km2
     from galaxies.rock import Rock
     from galaxies.rocky_world import RockyWorld
+    from .shadow_map import ShadowMap
     from .surface_light import SurfaceLight
 
 # The cached colours are reused until the sun has moved this far. At 0.1 degrees the brightness changes by less
@@ -50,12 +58,9 @@ _SUN_TOLERANCE_COS = math.cos(math.radians(SUN_TOLERANCE_DEGREES))
 # A frame stops building batches once it has spent this long on them (the one being built is finished).
 BUILD_BUDGET_SECONDS = 0.004
 
-# A rock's top is kept at least this share of its size above the ground, so it is always visible.
-VISIBLE_TOP_SHARE = 0.1
-
-# Faces facing down are a little darker (dust and shadow in the hollows), up to this share, on top of the sun.
-DOWNWARD_DARKENING = 0.18
-
+# Over relief, the faces of a rock down to this share of its size under the ground at its centre are kept, as a slope
+# can show them.
+UNDER_SLOPE_SHARE = 0.3
 
 def settle(centre: np.ndarray, points: np.ndarray, size: np.ndarray) -> None:
     """Puts rocks on the ground, changing `centre` (rocks, 1, 3) in place. `points` (rocks, points, 3) are relative to
@@ -84,6 +89,8 @@ class RockBatch:
         orientation = np.array([rock.orientation for rock in self.rocks], dtype=np.float64)
         centre = np.array([(rock.longitude - self.origin_x, rock.altitude, rock.latitude - self.origin_z)
                            for rock in self.rocks], dtype=np.float64).reshape(count, 1, 3)
+        self.terrain = km2.parent_world.terrain
+        terrain = self.terrain
 
         if special:
             meshes = [special_mesh(rock.shape_seed, rock.adjective) for rock in self.rocks]
@@ -97,13 +104,20 @@ class RockBatch:
                                dtype=np.float64).reshape(count, 1, 3) * tones[..., None]
         faces = triangles.shape[1]
         points = rotate(triangles.reshape(count, faces * 3, 3) * (size / 2.0)[:, None, None], tilt, orientation)
+        # The rock is built on a flat ground at 0 and then raised by the ground it rests on (Rock.ground_height).
+        ground = np.array([rock.ground_height for rock in self.rocks], dtype=np.float64)
         # The scanner's box is not lowered with the rock, which is close enough for aiming.
         settle(centre, points, size)
         corners = (centre + points).reshape(count, faces, 3, 3)
-        # The ground is flat at y = 0 (Rocks._draw_ground), so a face with no corner above it is never seen: left out.
-        visible = (corners[..., 1] > 0.0).any(axis=2)
+        # The ground under a rock is taken as flat at 0 (Rocks._draw_ground, or the terrain's height at the rock's
+        # centre), so a face with no corner above it is never seen: left out. A slope can show some of what a flat
+        # ground hides, so over relief the faces just below it are kept.
+        margin = 0.0 if terrain.relief == 0.0 else (UNDER_SLOPE_SHARE * size)[:, None, None]
+        visible = (corners[..., 1] > -margin).any(axis=2)
         self.face_rock: np.ndarray = np.nonzero(visible)[0]  # the rock of each kept face, for its glow
-        self.positions: np.ndarray = np.ascontiguousarray(corners[visible].reshape(-1, 3), dtype=np.float32)
+        placed = corners[visible]
+        placed[..., 1] += ground[self.face_rock][:, None]
+        self.positions: np.ndarray = np.ascontiguousarray(placed.reshape(-1, 3), dtype=np.float32)
         face_normals = rotate(normals, tilt, orientation)
         down = DOWNWARD_DARKENING * (1.0 - (face_normals[..., 1] + 1.0) / 2.0)
         self.face_normals: np.ndarray = face_normals[visible]
@@ -177,12 +191,27 @@ class RockBatch:
         GL.glPopMatrix()
 
 
-class RockBatches:
-    """One RockBatch per Km2, built on first use and rebuilt when its rock list changes. A Km2 that leaves memory
-    takes its batch with it (weak keys)."""
+    def cast(self, player_x: float, player_z: float) -> None:
+        """Draws the rocks for a shadow map (the caller has set the light's matrices and the depth-only state)."""
+        if not self.rocks:
+            return
+        GL.glPushMatrix()
+        GL.glTranslatef(self.origin_x - player_x, 0.0, self.origin_z - player_z)
+        GL.glEnableClientState(GL.GL_VERTEX_ARRAY)
+        GL.glVertexPointer(3, GL.GL_FLOAT, 0, self.positions)
+        GL.glDrawArrays(GL.GL_TRIANGLES, 0, len(self.positions))
+        GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
+        GL.glPopMatrix()
 
-    # ordinary, special
-    _batches: weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, RockBatch]] = weakref.WeakKeyDictionary()
+
+class RockBatches:
+    """The rocks of each Km2, built on first use and rebuilt when its rock list changes: the ones with an adjective as a
+    RockBatch (meshes of their own, client arrays), the others as InstancedRocks (rock_instances.py). A Km2 that leaves
+    memory takes its batches with it (weak keys)."""
+
+    # special, ordinary
+    _batches: weakref.WeakKeyDictionary[Km2, Tuple[RockBatch, InstancedRocks]] = weakref.WeakKeyDictionary()
+    _shown: weakref.WeakSet[Km2] = weakref.WeakSet()   # the Km2s whose rocks have been shown on settled ground
 
     @staticmethod
     def visible_km2s(world: RockyWorld, player_x: float, player_z: float) -> List[Km2]:
@@ -193,11 +222,31 @@ class RockBatches:
                 and km2.latitude - km2.SIZE * 2 <= player_z < km2.latitude + km2.SIZE * 2]
 
     @staticmethod
-    def draw(km2s: Sequence[Km2], player_x: float, player_z: float, light: SurfaceLight) -> None:
+    def _shown_of(km2s: Sequence[Km2]) -> List[Tuple[RockBatch, InstancedRocks, Km2]]:
+        return [(*RockBatches._batches[km2], km2) for km2 in km2s
+                if km2 in RockBatches._shown and km2 in RockBatches._batches]
+
+    @staticmethod
+    def cast(km2s: Sequence[Km2], player_x: float, player_z: float, light_matrix: np.ndarray, camera_y: float) -> None:
+        """Draws the rocks that are shown, of these Km2s, for a shadow map: the ones with an adjective with the matrices
+        the caller has loaded, the others with `light_matrix`."""
+        shown = RockBatches._shown_of(km2s)
+        InstancedRocks.begin_cast(light_matrix, camera_y)
+        for _, ordinary, _km2 in shown:
+            ordinary.draw(player_x, player_z)
+        InstancedRocks.end()
+        for special, _, _km2 in shown:
+            special.cast(player_x, player_z)
+
+    @staticmethod
+    def draw(km2s: Sequence[Km2], player_x: float, player_z: float, light: SurfaceLight, camera_y: float,
+             shadow: Optional[ShadowMap], rotation: np.ndarray) -> None:
+        """Draws the rocks of the Km2s in the camera the caller has set (`rotation` is its rotation, for the shadows
+        that the rocks with an adjective receive: see ShadowedSurface)."""
         pending = []
         for km2 in km2s:
             batches = RockBatches._batches.get(km2)
-            if batches is None or not (batches[0].is_current(km2) and batches[1].is_current(km2)):
+            if batches is None or not all(batch.is_current(km2) for batch in batches):
                 pending.append(km2)
         pending.sort(key=lambda km2: (km2.longitude + km2.SIZE / 2 - player_x) ** 2
                      + (km2.latitude + km2.SIZE / 2 - player_z) ** 2)
@@ -206,7 +255,22 @@ class RockBatches:
             if built and time.perf_counter() - started >= BUILD_BUDGET_SECONDS:
                 break
             with frame_watch.timed('rock batch build'):
-                RockBatches._batches[km2] = (RockBatch(km2), RockBatch(km2, special=True))
+                RockBatches._batches[km2] = (RockBatch(km2, special=True), InstancedRocks(km2))
         for km2 in km2s:
-            for batch in RockBatches._batches.get(km2, ()):
-                batch.draw(player_x, player_z, light)
+            # Not over a ground that is still rough; but once shown, a Km2 stays shown, or its rocks would blink each
+            # time a finer chunk under it is on its way.
+            if km2 not in RockBatches._shown and TerrainGl.is_settled(km2.parent_world, km2):
+                RockBatches._shown.add(km2)
+        shown = RockBatches._shown_of(km2s)
+        if not shown:
+            return
+        projection = np.asarray(GL.glGetFloatv(GL.GL_PROJECTION_MATRIX), dtype=np.float64).T
+        modelview = np.asarray(GL.glGetFloatv(GL.GL_MODELVIEW_MATRIX), dtype=np.float64).T
+        InstancedRocks.begin(light, projection @ modelview, camera_y, shadow)
+        for _, ordinary, _km2 in shown:
+            ordinary.refresh()
+            ordinary.draw(player_x, player_z)
+        InstancedRocks.end()
+        with ShadowedSurface.receiving(shadow, light, rotation, textured=False):
+            for special, _, _km2 in shown:
+                special.draw(player_x, player_z, light)

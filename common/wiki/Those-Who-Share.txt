@@ -1,35 +1,41 @@
 Those-Who-Share is the second largest political entity of the game's setting, with about 12 stellar systems having cities in the year 700 (they may themselves count in some lesser cities). It has fewer inhabited systems than The Shining Throne, but more population and a larger economy.
 
 1. HISTORY
-It was created by the Founders, a group of believers in a non-capitalist empathy-based society, about 140 years ago.
+It was created by the Founders, a group of believers in a non-capitalist empathy-based society, about 140 years ago. They also believed that mass psychology and social engineering were duties of the State and dangerous in private hands (corporate marketing, political parties...).
 
 2. POLITICAL PRINCIPLES:
 * Human rights, which includes the provision of "all needs" (meaning a minimum standard of living). They use the slogan "From each by their skills, to each by their needs" and also political participation in assemblies in basic democratic institutions, including all means of production (for example, the workers of a factory or the staff of an outpost).
 * Collective property of all means of production, up to the smallest industry or workshop. This combines the strong influence and power of the workers there, with a de-jure property by the State alone, which can intervene in extraordinary cases.
-* Empathy as the most important human trait. Solidarity, generosity, sacrifice for the community... are highly praised. Individualism is frowned upon.
-* Social reputation as a means to distribute wealth beyond the needs. Reputation is not official, it is not a system of points and people do not speak about it like it is a currency, but how people speak about someone reveals and transmits their rank.
-* Social pressure as a means to enforce the law, instead of force, which is used only as a last resort.
+* Empathy, solidarity and compassion (the Three Aspects, see below) as the most important human trait. Generosity, sacrifice for the community... are highly praised. Individualism is frowned upon.
+* Social reputation as a means to distribute wealth beyond the needs. Reputation is not official, it is not a system of points and people do not speak about it like it is a currency, but how people speak about someone reveals and transmits their "rank", from a quite-disliked "Citizen" to a highly respected "Guardian of the Revolution" or beyond.
+* Psychology and social pressure as a means to enforce the law, instead of force, which is used only as a last resort.
 * More skills means more obligations, but also more reputation.
 * Anti-capitalism: Money is banned. Stamps are used as an equivalent, but they have no denomination ("stamp with a value of 5 stamps" does not exist) and are physical. Thus, they are only useful for very small transactions corresponding to the very limited property allowed: clothes, food, personal devices.
-* Pride in not producing "useless things", by which they often mean cultural and artistic products of any kind, unless they serve the political propaganda.
+* Pride in not producing "useless things", by which they often mean costly cultural and artistic products, unless they serve the political propaganda.
 
 2.1. The <number> <noun> tradition.
 Slogans, targets and aspects of ideology are often expressed as "the <number> <noun>". Examples:
 * "{Encourage} The Three Aspects {of good}": Empathy, solidarity and compassion.
 * "{Build} The Three Pillars {of society}": Social engineering, political participation and industry.
 * "{Protect} The Five Spheres {of community}": Friends, colleagues, settlement, Those-Who-Share and mankind.
-* "{Break} The Five Barriers {of empathy}": Aspect (ethnicity), age, sexuality, abilities and accent. The barriers are to be "broken" by treating equally people who are different in those aspects.
+* "{Break} The Five Barriers {of empathy}": Aspect (ethnicity), age, sexuality, abilities and accent. The barriers are to be "broken" by treating equally, people who are different than yourself in those aspects.
 
 3. SOCIAL CLASSES
 People of very low reputation can be sent to "learn again the values of society" to the "polischools" (from "political school") and thus being demoted to the rank of "Student", the same rank as real students. People who keep misbehaving are degraded to "Dependent", which is the rank of children, and in this case means they are under surveillance because they "need special care". Serious crimes make them "prisoners", the lowest rank, and they are then actually imprisoned and forced to work for the State.
 
 Highly reputed people, on the other hand, get better housing, the de-facto permanent use of luxury items and special services. Reputation is indicated by the title used to address them, which is not strictly uniform (the personal opinion of each one can change the title they use towards others) but has a large consensus.
 
+3.1. Dissent and Exile
+
+Dissent must use the official channels, which are protected and allow anonymous criticism and scrutiny by 3rd party agents. Continuous and heavy dissent, which cannot be resolved by the polischools nor by the intervention of Komisars, leads to exile. The individuum is given to choose a border base to be moved and can then apply to live in other political entities. They do not get any resources, but they can keep their meager property and are given all documents which can help them in their new life. They can also change their mind and return - unless they have committed crimes.
+
+Some dissidents manage to negotiate some initial wealth by helping the Community to resolve crimes, often some they did themselves. Those-Who-Share accepts such deals if the crimes are not horrible enough, but such people can, once they left, never come back nor communicate with their former relatives and friends. They are brandmarked as traitors.
+
 4. CRITICISM
 Points which are criticised overseas and also by their own rebels:
-* The discouragement of individual wishes and tastes.
-* The discouragement of artistic production, the love of "dull" decoration, landscapes and architecture.
-* The social pressure people are subjected to.
+* The discouragement of individual dreams and extravagant or rare tastes.
+* The discouragement of sophisticated artistic production, the love of "dull" decoration, landscapes and architecture.
+* The idea of state-controlled social engineering, and the social pressure people are subjected to.
 * The forced labour for prisoners and the "polischools" (from "political schools") for adult "Students".
 * The perceived hypocrisy of the luxuries enjoyed by the highly reputed citizens, which contrasts with a supposed egalitarianism (note however that egalitarianism as such is not explicitly a principle of Those-Who-Share).
 * Their perceived isolationism.
@@ -38,10 +44,10 @@ Points which are criticised overseas and also by their own rebels:
 These urban legends are believed by some in other political entities:
 * People are forced to dress in uniform: false, but derived from the contact with mostly uniformed people.
 * There is no arts, art is discouraged: false, but truly not so encouraged as in The Shining Throne.
-* Workplaces are ugly and monotone, because they are industrial: false, and derived from the aspect of their own industries.
+* Workplaces are ugly and monotone, because they are industrial: false, and derived from the aspect of their own industries (see below on TWS care of their workplaces).
 * Social control is exhaustive and paranoid: false, even Komisars try to convince and befriend instead of coerce, but derived from the fact that social control is part of the official policy.
 * Polischools are brutal prisons to brainwash with deprivation and torture: false, but they truly attempt to convince, even with compassionate means, more like real-life therapy and self-help groups, and they do use advanced psychological techniques. But their whole point is to convince and befriend, not to punish.
-* They are a sect, just bigger: absolutely false, but they do have more focus on ideology than the other big entities.
+* They are a sect, just bigger: absolutely false, but they do have more focus on ideology than the other big entities. Crucial differences: leadership is made of honest believers, and psychologic well-being of the population is extremely important for it.
 
 5. ECONOMY
 Those-Who-Share has the biggest heavy industry of mankind, and also excel at the exploitation of natural resources. They severely lack cultural production and soft power outside their territory, where propaganda does work to an extent: People in Those-Who-Share are usually proud of their sense of a common vision and purpose for the whole "Community", a very important term meaning all citizens.

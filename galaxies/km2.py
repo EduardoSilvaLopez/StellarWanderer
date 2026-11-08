@@ -74,6 +74,10 @@ class Km2:
             if new_rock.is_ore_rich():
                 rich_ore_count += 1
 
+        # The ground the rocks rest on, for all at once (each alone would cost almost as much as all together)
+        for rock, height in zip(self.rocks, Rock.resting_heights(self.rocks, self.parent_world.terrain).tolist()):
+            rock.__dict__['ground_height'] = height
+
         ore_fields: Optional[dict] = own.get('ore_fields')
         if ore_fields:
             self.ore_fields = [OreField.deserialize(self, f) for f in ore_fields]

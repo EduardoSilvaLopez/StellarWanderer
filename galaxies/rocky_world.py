@@ -12,6 +12,7 @@ import galaxies.constants
 from galaxies import seeds
 from galaxies.km2 import Km2
 from galaxies.rock import Rock
+from galaxies.terrain import Terrain
 from galaxies.world import World
 from galaxies.world_surface import SurfaceType, equilibrium_temperature, generate_surface
 
@@ -43,6 +44,9 @@ class RockyWorld(World):
     '''
 
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
+    # How much of its relief a world's ground has (see Terrain): 0, flat, until the graphics draw the ground that the
+    # ship's logic then stands on.
+    TERRAIN_RELIEF = 1.0
 
     # Bulk density, kg/m^3, before the world's weight squeezes it: mean and sigma of a normal draw, lowest, highest. A
     # world of an icy surface is a mix of rock and ice (the icy moons of the giants, Pluto); the others are rock and
@@ -167,6 +171,7 @@ class RockyWorld(World):
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.8 + 0.2 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * (0.8 + 0.2 * my_random.random())
+        self.terrain = Terrain(seeds.derive(self.seed, 'terrain'), self.radius, RockyWorld.TERRAIN_RELIEF)
 
         # Alterations:
         self.is_altered = False
@@ -369,6 +374,11 @@ class RockyWorld(World):
     # endregion
 
     # region Km2s and outposts
+    def ground_height(self, longitude: float, latitude: float) -> float:
+        """The height of the ground at a point of the surface frame, in metres above the datum (the sphere of the
+        world's radius, where a bound ship's y is 0). What stands on the ground or flies over it is measured from it."""
+        return self.terrain.height(longitude, latitude)
+
     def get_km2_at(self, longitude: float, latitude: float) -> Optional[Km2]:
         """Find the right Km2 for a given point... if it exists."""
         new_longitude = (longitude // Km2.SIZE) * Km2.SIZE

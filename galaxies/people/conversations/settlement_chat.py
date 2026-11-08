@@ -9,8 +9,8 @@ in the same log. `start` says the tag as the pilot's line, then the answer
 (for the presentation tag, the pilot's line is Player.present_yourself).
 Flags can be written to mark important events of the conversation.
 
-Note for Claude: before writing or reworking a `talk_*` method here, read temp/ideas/settlement_chat_methods.md (the
-rules, the pattern to follow and how to test). Do not read it for any other task.
+Note for Claude: before writing or reworking a `talk_*` method here, read common/design/settlement_chat_method_howto.md
+(the rules, the pattern to follow and how to test). Do not read it for any other task.
 """
 
 from __future__ import annotations
@@ -128,6 +128,7 @@ class SettlementChat(Conversation):
             'belt': self.talk_belt,
             'bureaucrat': self.talk_bureaucrat,
             'communication officer': self.talk_communication_officer,
+            'custorian thirds': self.talk_custodian_thirds,
             'captain': self.talk_protection,
             'coordinator': self.talk_coordinator,
             'dockmaster': self.talk_dockmaster,
@@ -490,6 +491,25 @@ class SettlementChat(Conversation):
             return "Take care of communications with the ship."
         else:
             return "Talk with the ships and other places. Belong to defence, have to wear uniform."
+
+    def talk_custodian_thirds(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "You have children?"
+        elif soc < 80:
+            return (
+                "Ah, children. Did you know it's a PosDis thing? From the Charismatic Revolution,"
+                " I think. Before, fathers controlled everything, it was called 'daddiarchy'."
+            )
+        else:
+            return (
+                "Children... do you have some? How was the decision? It's not always easy, you know? Sometimes there"
+                " are horrible quarrels before birth, even if the law is clear enough."
+                " And other places organise them differently. But even in The Shining Throne thirds are chosen on"
+                " time, one way or another. It's human nature."
+            )
 
     def talk_coordinator(self) -> str:
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
@@ -1270,7 +1290,7 @@ class SettlementChat(Conversation):
             'family': (40, (
                 "So many with no family.", "Families, the usual.", "Family, looked after.",
             ), (
-                "Too many people reject their thirds, and the Community takes them and says nothing."
+                "Too many people reject their custodian thirds, and the Community takes them and says nothing."
                 " Cold, if you ask me.",
                 "Mother two thirds, father one, and anybody who applies for the rest. Families change, and the"
                 " Community takes the rest. Solidarity, yes?",
@@ -1427,7 +1447,7 @@ class SettlementChat(Conversation):
             ), (
                 "Custody cut in thirds, and the rest is the State... ok, but children still end up in orphanages."
                 " Not like our centres, they are like... rejected. Sad.",
-                "The custody thirds are as usual: mother two, father one, anybody after that. But families are"
+                "The custodian thirds are as usual: mother two, father one, anybody after that. But families are"
                 " very scattered. And then you have those... big families? Some say they're ok. Others call them"
                 " baby factories <eyes wide open>.",
                 "They have these... specialised-custodian-families, yes? With pedagogy degrees and many children. It's"

@@ -207,11 +207,11 @@ class Navigation:
             if world is None:
                 raise Exception("Fixed world is none.")
             km2 = world.get_km2_at(ship.position.x, ship.position.z)
-            if not ship.position.y > RockyWorld.SURROUNDINGS_RADIUS and not self.outruns_rocks \
+            if not self.altitude() > RockyWorld.SURROUNDINGS_RADIUS and not self.outruns_rocks \
                     and (km2 is None or km2 != ship.position.km2):
                 with frame_watch.timed('update surroundings'):
                     world.update_surroundings(
-                        ship.position.y, ship.position.x, ship.position.z, environment.date_time)
+                        self.altitude(), ship.position.x, ship.position.z, environment.date_time)
                 km2 = world.get_km2_at(ship.position.x, ship.position.z)
             ship.position.km2 = km2
         return self
@@ -305,7 +305,7 @@ class Navigation:
         asked, the ground holds the ship up."""
         ship = self.ship
         gravity = self.gravity()
-        if gravity == 0.0 or (ship.position.y <= ship.HEIGHT + Navigation.BRAKED and altitude_accel_input <= 0.0):
+        if gravity == 0.0 or (self.altitude() <= ship.HEIGHT + Navigation.BRAKED and altitude_accel_input <= 0.0):
             return
         cancelled = min(gravity, ship.UP_DOWN_ACC) if altitude_accel_input == 0.0 else 0.0
         ship.velocity.y -= (gravity - cancelled) * delta_time
@@ -315,7 +315,7 @@ class Navigation:
         """True when the ship rests on the surface of its world: bound, at the ground (the lowest altitude the ship can
         have, Ship.HEIGHT), and at rest in the surface frame, which an outpost is fixed in too."""
         ship = self.ship
-        return (ship.is_bound and ship.position.y <= ship.HEIGHT + Navigation.BRAKED
+        return (ship.is_bound and self.altitude() <= ship.HEIGHT + Navigation.BRAKED
                 and ship.velocity.as_vector().length() <= Navigation.BRAKED)
 
     def has_motion_to_brake(self) -> bool:
@@ -379,10 +379,11 @@ class Navigation:
             ship.position.x += half_turn * 2
         elif ship.position.x > half_turn:
             ship.position.x -= half_turn * 2
-        ship.position.y = max(ship.HEIGHT, ship.position.y)
         ship.position.z = max(-half_turn / 2, min(half_turn / 2, ship.position.z))  # between the poles
+        lowest = self.ground_height_at(ship.position.x, ship.position.z) + ship.HEIGHT  # the ground holds the ship up
+        ship.position.y = max(lowest, ship.position.y)
         # no descent faster than the altitude left
-        ship.velocity.y = max(-(ship.position.y - ship.HEIGHT), ship.velocity.y)
+        ship.velocity.y = max(-(ship.position.y - lowest), ship.velocity.y)
 
     def _announce_compensation(self) -> None:
         """Tells the pilot when staying fixed to a body that pulls means compensating its gravity: on entering its fixed
@@ -560,7 +561,8 @@ class Navigation:
             end = ship.position.as_vector()
             path = end - start
             longitude = (start.x - outpost.longitude + half_turn) % (2.0 * half_turn) - half_turn
-            relative_start = Vector3(longitude, start.y, start.z - outpost.latitude)
+            ground = outpost.ground_height  # the solid is measured from the ground its building stands on
+            relative_start = Vector3(longitude, start.y - ground, start.z - outpost.latitude)
             samples = Navigation._swept_within_reach(relative_start, path, solid.reach(half_sizes))
             if not samples:
                 continue
@@ -580,7 +582,7 @@ class Navigation:
                                      attitude.right, attitude.up, attitude.forward, half_sizes)
             if resolved is not None:
                 (x, y, z), velocity_after = resolved
-                ship.position.set_vector((outpost.longitude + x, y, outpost.latitude + z))
+                ship.position.set_vector((outpost.longitude + x, y + ground, outpost.latitude + z))
                 ship.velocity.set_vector(velocity_after)
 
     @staticmethod
@@ -703,9 +705,23 @@ class Navigation:
         return math.dist(self.ship.position.as_vector(),
                          body.calculate_stellar_position(gem.current_environment.date_time))
 
+    def ground_height_at(self, longitude: float, latitude: float) -> float:
+        """The height of the ground, in metres above the datum, at a point of a bound ship's surface frame; 0 unbound,
+        where there is no ground."""
+        world = gem.current_environment.fixed_world
+        if not self.ship.is_bound or world is None:
+            return 0.0
+        return world.ground_height(longitude, latitude)
+
+    def altitude(self) -> float:
+        """A bound ship's height over the ground under it, in metres: what the altimeter shows and what the ship lands,
+        brakes and warns by. Its y is measured from the datum, so the ground's height is taken off."""
+        ship = self.ship
+        return ship.position.y - self.ground_height_at(ship.position.x, ship.position.z)
+
     def altitude_above_surface(self, body: Body) -> float:
         if self.ship.is_bound:
-            return self.ship.position.y
+            return self.altitude()
         return self.distance_to_body_centre(body) - body.radius
 
     def in_fixed_zone(self, body: Body) -> bool:
@@ -819,5 +835,5 @@ class Navigation:
         decel = ship.BRAKE_ACC * Navigation.COLLISION_BRAKE_FRACTION - max(0.0, self.gravity() - ship.UP_DOWN_ACC)
         if decel <= 0.0:
             return True  # the engines cannot stop this fall
-        return ship.position.y <= ship.velocity.y ** 2 / (2.0 * decel)
+        return self.altitude() <= ship.velocity.y ** 2 / (2.0 * decel)
     # endregion

@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-import pygame
+from OpenGL import GL
 
-from common.vector3 import Vector3
 from galaxies.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, FIXED_STAR_SHOW_RADIUS, LIGHT_YEAR_M
 
-from .constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE
+from .constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE, NEAR_CLIP
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
+    from .local_star import StarView
     from spaceships.ship import Ship
 
 
@@ -33,6 +34,8 @@ class DistantStars:
     _source: Optional[list] = None  # the galaxy's list the arrays were made from
     _positions: Optional[np.ndarray] = None  # (n, 3), in meters, in the stellar frame
     _absolute_magnitudes: Optional[np.ndarray] = None  # (n,)
+    _colours: list = []  # of each star
+    _squares: Optional[tuple] = None  # the window size, the vertices and the colours of the squares last made
 
     @staticmethod
     def _star_arrays(environment: GameEnvironment) -> tuple[list, np.ndarray, np.ndarray]:
@@ -42,12 +45,13 @@ class DistantStars:
             DistantStars._source = stars
             DistantStars._positions = np.array([position for _, position in stars], dtype=float).reshape(-1, 3)
             DistantStars._absolute_magnitudes = np.array([star.absolute_magnitude for star, _ in stars], dtype=float)
+            DistantStars._colours = [star.color for star, _ in stars]
         return stars, DistantStars._positions, DistantStars._absolute_magnitudes
 
     @staticmethod
     def visible_dots(environment: GameEnvironment, ship: Ship, w: int, h: int) -> list[tuple[tuple, tuple[int, int]]]:
         """(colour, screen position) for every fixed star in range, bright enough and in front of the camera."""
-        from .instruments.common import project_to_camera, view_geometry
+        from .instruments.common import view_geometry
         _, horizon_y, focal_length_px = view_geometry(h)
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
@@ -64,16 +68,71 @@ class DistantStars:
         if not ship.is_bound:
             forward = ship.attitude.forward
             visible &= offsets @ np.array([forward.x, forward.y, forward.z]) > 0.0
-        dots: list[tuple[tuple, tuple[int, int]]] = []
-        for index in np.flatnonzero(visible):
-            star, (x, y, z) = stars[index]
-            direction = ship.navigation.direction_to_point(Vector3(x, y, z), date_time)
-            projected = project_to_camera(ship, direction, w, horizon_y, focal_length_px)
-            if projected is not None:
-                dots.append((star.color, (int(projected[0]), int(projected[1]))))
-        return dots
+        indices = np.flatnonzero(visible)
+        if not len(indices):
+            return []
+        # What Navigation.direction_to_point and project_to_camera do, for all the stars at once: the direction in the
+        # active frame (bound, through the surface basis), then onto the ship's axes and the screen.
+        vectors = offsets[indices]
+        if ship.is_bound:
+            east, up, north = environment.fixed_world.surface_basis(ship.position.x, ship.position.z, date_time)
+            basis = np.array([[v.x, v.y, v.z] for v in (east, up, north)])
+            vectors = np.stack([vectors[:, 0], -vectors[:, 1], vectors[:, 2]], axis=1) @ basis.T
+        attitude = ship.attitude
+        axes = np.array([[v.x, v.y, v.z] for v in (attitude.right, attitude.up, attitude.forward)])
+        camera = vectors @ axes.T
+        forward = camera[:, 2]
+        in_front = forward > NEAR_CLIP
+        safe = np.where(in_front, forward, 1.0)
+        screen_x = w / 2 + focal_length_px * camera[:, 0] / safe
+        screen_y = horizon_y - focal_length_px * camera[:, 1] / safe
+        margin = 10 * w
+        shown = in_front & (np.abs(screen_x - w / 2) <= margin) & (np.abs(screen_y - horizon_y) <= margin)
+        return [(DistantStars._colours[indices[i]], (int(screen_x[i]), int(screen_y[i])))
+                for i in np.flatnonzero(shown)]
 
     @staticmethod
-    def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        for colour, centre in DistantStars.visible_dots(environment, ship, w, h):
-            pygame.draw.circle(surface, colour, centre, FIXED_STAR_DOT_RADIUS_PX)
+    def draw(w: int, h: int, environment: GameEnvironment, ship: Ship, view: Optional[StarView],
+             refresh: bool) -> None:
+        """The dots as small squares drawn straight into the frame (a layer of their own, drawn and uploaded to the
+        graphics card every frame, cost several milliseconds for a few dozen dots). The sun hides the stars in its
+        corona, as it hid them in the layer (`erase`). The squares are made again only when `refresh` (the sky has
+        changed, see OpenGLGui) or the window has another size; they are drawn at every frame."""
+        cache = DistantStars._squares
+        if refresh or cache is None or cache[0] != (w, h):
+            dots = DistantStars.visible_dots(environment, ship, w, h)
+            hidden = min(math.ceil(view.corona_px), 2 * max(w, h)) if view is not None else 0
+            if view is not None:
+                dots = [(colour, (x, y)) for colour, (x, y) in dots
+                        if math.hypot(x - int(view.x), y - int(view.y)) > hidden]
+            radius = FIXED_STAR_DOT_RADIUS_PX
+            corners = np.array([(-radius, -radius), (radius + 1, -radius), (radius + 1, radius + 1),
+                                (-radius, radius + 1)], dtype=np.float32)
+            centres = np.array([centre for _, centre in dots], dtype=np.float32).reshape(-1, 1, 2)
+            colours = np.array([colour[:3] for colour, _ in dots], dtype=np.uint8).reshape(-1, 1, 3)
+            cache = DistantStars._squares = (
+                (w, h), np.ascontiguousarray((centres + corners).reshape(-1, 2)),
+                np.ascontiguousarray(np.broadcast_to(colours, (len(dots), 4, 3)).reshape(-1, 3)))
+        _, vertices, colours = cache
+        if not len(vertices):
+            return
+        GL.glViewport(0, 0, w, h)
+        GL.glDisable(GL.GL_TEXTURE_2D)
+        GL.glDisable(GL.GL_BLEND)
+        GL.glMatrixMode(GL.GL_PROJECTION)
+        GL.glPushMatrix()
+        GL.glLoadIdentity()
+        GL.glOrtho(0, w, h, 0, -1, 1)
+        GL.glMatrixMode(GL.GL_MODELVIEW)
+        GL.glPushMatrix()
+        GL.glLoadIdentity()
+        GL.glEnableClientState(GL.GL_VERTEX_ARRAY)
+        GL.glEnableClientState(GL.GL_COLOR_ARRAY)
+        GL.glVertexPointer(2, GL.GL_FLOAT, 0, vertices)
+        GL.glColorPointer(3, GL.GL_UNSIGNED_BYTE, 0, colours)
+        GL.glDrawArrays(GL.GL_QUADS, 0, len(vertices))
+        GL.glDisableClientState(GL.GL_COLOR_ARRAY)
+        GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
+        GL.glPopMatrix()
+        GL.glMatrixMode(GL.GL_PROJECTION)
+        GL.glPopMatrix()

@@ -181,8 +181,8 @@ class Ship(Updatable):
         central_km2 = next(km2 for km2 in world.km2s if km2.longitude == 0 and km2.latitude == 0)
         self.position.km2 = central_km2
         self.position.x = central_km2.longitude + 500
-        self.position.y = self.HEIGHT
         self.position.z = central_km2.latitude + 500
+        self.position.y = world.ground_height(self.position.x, self.position.z) + self.HEIGHT
         return self
     # endregion
 
@@ -229,7 +229,7 @@ class Ship(Updatable):
             return False
         if self.is_bound:
             world = environment.fixed_world
-            if not (self.position.y <= Ship.SCOOP_RANGE and isinstance(world, RockyWorld)
+            if not (self.navigation.altitude() <= Ship.SCOOP_RANGE and isinstance(world, RockyWorld)
                     and world.surface_type is SurfaceType.ICE):
                 audio.set_loop('scoop', False)
                 return False

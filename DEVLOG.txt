@@ -13,17 +13,26 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Outpost size 2.
   * Hauler
 
+* AI PERSONALITY: Aborted.
+
 2026-11-05 (11/11)
 
-> STARTED: Extra time: 185h30' + 6:30 - 7:45 + 12:30 - 13:15 + 18:00 - 19:45 + 5:30 - 6:30 + 10:30 -
+2026-11-08 (1/11)
 
-  * As I wait and wait and wait... I decided to advance on the AI integration aspect for dialogues.
+> STARTED: Extra time: 186h45' + 7:30 - 
+
+OROGRAPHY:
+  * Terrain elevation / sinkage.
+  * Mountains.
 
 > BACKLOG
 
-  * [Prolly] Portal base size 2. Check ERROR.
+* OROGRAPHY
+  * Craters
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: Collision damage, also from rocks.
 
-* PATH OF TREASON
+* PATH OF TREASON II
   * I am trying to reach the path of the traitor. Very hard to reach.
   * Rat
   * Selling ore
@@ -39,13 +48,6 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Extra: Binding slowly.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
-
-* OROGRAPHY
-  * Craters
-  * Terrain elevation / sinkage.
-  * Mountains.
-  * Extra: Strange rocks can be collected proactively and brought to the outpost.
-  * Extra: Collision damage, also from rocks.
 
 * ABANDONING THOSE-WHO-SHARE
   * Filling up the other entities.
@@ -75,7 +77,6 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
   * Unify again into cities but keeping the focus.
 
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Details on childhood (orphan?). Romanticism towards player. Relationships between them. Current familiar relations. Events on their past.
-* AI PERSONALITY?
 * KUIPER: Drawf planets, land on big asteoids.
 * ATMOSPHERE
   * Even suggestions of life?
@@ -107,7 +108,7 @@ WORLD_VIVID_SATURATION_MAX = 0.60
 common: tech stack commons
   resources
   game_logging
-  data presentation
+  data_presentation
   wiki
 universe: what exists in the universe
   people
@@ -126,8 +127,8 @@ universe: what exists in the universe
       missions
   bodies
     asteroids
-    rocky worlds
-    giant worlds
+    rocky_worlds
+    jovian_worlds
     stars
   politics
     entities

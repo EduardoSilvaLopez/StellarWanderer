@@ -167,7 +167,7 @@ class ObjectLabels:
         half_world = math.pi * radius  # the ship wraps at the anti-meridian, half the equator away
         east = (outpost.longitude - ship.position.x + half_world) % (2.0 * half_world) - half_world
         north = outpost.latitude - ship.position.z
-        altitude = max(ship.position.y, 0.0)
+        altitude = max(ship.position.y - outpost.ground_height, 0.0)
         ground = math.hypot(east, north)
         distance = math.hypot(ground, altitude)
         if ground == 0.0:

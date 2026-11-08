@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Optional, List, Any, Tuple
+import ctypes
 import math
+import time
+
+import numpy as np
 import pygame
 from OpenGL import GL
 
 from common.frame_watch import frame_watch
-from .constants import SPACE_COLOR, MAX_DEPTH
+from .constants import CONSOLE_TOP, SPACE_COLOR, MAX_DEPTH
 from .cockpit import Cockpit
 from .milky_way import MilkyWay
 from .distant_stars import DistantStars
@@ -26,6 +30,7 @@ from .portal_gl import PortalGl
 from .other_worlds import OtherWorlds
 from .rocks import Rocks
 from .rock_batches import RockBatches
+from .terrain_gl import TerrainGl
 from .ore_fields import OreFields
 from .ore_mines import OreMines
 from .outposts import Outposts
@@ -45,30 +50,41 @@ if TYPE_CHECKING:
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
-    The sky is layered, from the back: the fixed stars (a texture of their own), the giants (their haze and rings cover
-    the stars; see graphics/giant_gl.py), the sun, and the rest of the sky (the worlds farther than the sun, a hole where
-    the sun is, the worlds nearer than it, the targeted body), an RGBA texture with per-pixel alpha, transparent where
+    The sky is layered, from the back: the fixed stars (dots drawn straight in OpenGL), the giants (their haze and rings
+    cover the stars; see graphics/giant_gl.py), the sun, and the rest of the sky (the worlds farther than the sun, a hole
+    where the sun is, the worlds nearer than it, the targeted body), an RGBA texture with per-pixel alpha, transparent where
     nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
     sun, straight on the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See
     graphics/star_gl.py. The giants (graphics/giant_gl.py) are under the sky too, after the sun: the sky is made
-    transparent over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from `Navigation.direction_to_star` and passed
-    down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
+    transparent over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from
+    `Navigation.direction_to_star` and passed down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
     (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at
     about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame
     `image.tostring`.
 
     With the scoop open (Ship.scoop_open) the cockpit leaves the scanner's square empty and the scoop's view is drawn
-    over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes."""
+    over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes.
+
+    What does not change from one frame to the next is not drawn nor uploaded again: the console is redrawn
+    CONSOLE_REFRESH_SECONDS apart (at once when the mouse moves over it), and the sky's layer only when the view, the
+    time or the ship has moved enough to show (`_sky_changed`). A texture is sent to the graphics card straight from the
+    surface's memory, and only the rows that changed."""
+
+    CONSOLE_REFRESH_SECONDS = 0.2  # the console shows nothing that needs to be faster
+    SKY_TURN_TOLERANCE = 1e-4  # the view's axes may differ this much (about 0.006 degrees) from the sky as drawn
+    SKY_SECONDS_TOLERANCE = 2.0  # game seconds the sky may be late
 
     def __init__(self) -> None:
-        self.star_surface: Optional[pygame.Surface] = None  # the fixed stars: under the giants, the rest of the sky over them
         self.world_surface: Optional[pygame.Surface] = None
         self.overlay_surface: Optional[pygame.Surface] = None
-        self.star_texture: Optional[int] = None
         self.world_texture: Optional[int] = None
         self.overlay_texture: Optional[int] = None
         self.dialog_texture: Optional[int] = None
         self._uploaded_textures: set = set()
+        self._sky_state: Optional[tuple] = None  # what the world layer was last drawn for (see _sky_changed)
+        self._console_drawn_at = -math.inf
+        self._console_mouse: Tuple[int, int] = (-1, -1)
+        self._console_scoop_open = False
         # While the pilot is inside an outpost, what takes the whole window in place of the cockpit: it is given the
         # window's size and returns the layer to show. Dialogs are drawn over it (see draw).
         self.full_screen_source: Optional[Callable[[Tuple[int, int]], pygame.Surface]] = None
@@ -76,13 +92,14 @@ class OpenGLGui:
     @staticmethod
     def preload_textures() -> None:
         """Builds the textures of the ore fields, mines and outposts now, while the window is being set up, rather than
-        on the first frame that shows one (a hang of about 0.1 s, see common/frame_watch.py). Needs the OpenGL window
-        to exist; the textures are kept for the whole run."""
+        on the first frame that shows one (a hang of about 0.1 s, see common/frame_watch.py), and starts the helper
+        processes of the terrain. Needs the OpenGL window to exist; the textures are kept for the whole run."""
         OreFields._get_ore_field_texture()
         OreMines._get_mine_texture()
         OreMines._get_mine_texture(inactive=True)
         Outposts._get_texture()
         PortalBaseGl.preload_textures()
+        TerrainGl.preload()
 
     # region Frame
     def draw(self, screen: pygame.Surface, fonts: Any, environment: GameEnvironment, player: Player,
@@ -106,57 +123,69 @@ class OpenGLGui:
         DebugFps.tick()
 
         ship = player.ship
-        self.star_surface.fill((0, 0, 0, 0))  # transparent: what is behind the sky (the Milky Way) shows through
-        self.world_surface.fill((0, 0, 0, 0))
-        frame_watch.mark('sky fill')
-        DistantStars.draw(self.star_surface, width, height, environment, ship)
-        frame_watch.mark('distant stars')
-        erasers = GiantGl.sky_erasers(environment, ship, width, height)
-        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True, erasers=erasers)
+        # The sky and the cockpit's upper part only show above the console, which hides the rest
+        console_top = int(height * CONSOLE_TOP)
+        sky = pygame.Rect(0, 0, width, console_top)
         view = view_of(environment, ship, width, height)
-        if view is not None:
-            erase(self.star_surface, view, width, height)  # the sun shows through the stars here
-            erase(self.world_surface, view, width, height)  # and through the sky
-        OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False, erasers=erasers)
-        frame_watch.mark('other worlds')
-        OrbitPath.draw(self.world_surface, width, height, environment, ship)
-        frame_watch.mark('orbit path')
         # The sun, for the surface while bound (the ground and the disc beyond it are lit by it).
         light = SurfaceLight.of(ship, environment) if ship.is_bound else None
-        if light is not None:
-            FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
-        elif ship.is_bound:
-            LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
-        frame_watch.mark('fixed world')
-        OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
-        frame_watch.mark('outpost markers')
+        sky_redrawn = self._sky_changed(environment, ship, player, width, height)
+        if sky_redrawn:
+            self.world_surface.fill((0, 0, 0, 0), sky)  # transparent: what is behind the sky shows through
+            frame_watch.mark('sky fill')
+            erasers = GiantGl.sky_erasers(environment, ship, width, height)
+            OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=True, erasers=erasers)
+            if view is not None:
+                erase(self.world_surface, view, width, height)  # the sun shows through the sky
+            OtherWorlds.draw(self.world_surface, width, height, environment, ship, behind_star=False, erasers=erasers)
+            frame_watch.mark('other worlds')
+            OrbitPath.draw(self.world_surface, width, height, environment, ship)
+            frame_watch.mark('orbit path')
+            if light is not None:
+                FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
+            elif ship.is_bound:
+                LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
+            frame_watch.mark('fixed world')
+            OutpostMarkers.draw(self.world_surface, width, height, environment, ship)
+            frame_watch.mark('outpost markers')
 
-        self.overlay_surface.fill((0, 0, 0, 0))
-        frame_watch.mark('overlay fill')
-        Cockpit.draw(self.overlay_surface, fonts, width, height, player, environment.date_time)
+        overlay = self.overlay_surface
+        upper = pygame.Rect(0, 0, width, console_top)
+        lower = pygame.Rect(0, console_top, width, height - console_top)
+        overlay.set_clip(upper)
+        Cockpit.draw_upper(overlay, fonts, width, height, player, environment.date_time)
         frame_watch.mark('cockpit')
-        Starlight.tint_cockpit(self.overlay_surface, environment, ship)
-        AtmosphereLight.tint_cockpit(self.overlay_surface, environment, ship)
-        PortalGl.tint_cockpit(self.overlay_surface, environment, ship)
+        self._tint_and_vignette(overlay, environment, ship, width, height)
+        DebugFps.draw(overlay, fonts.get(max(9, int(height * 0.017))))
         frame_watch.mark('cockpit tint')
-        HeatVignette.draw(self.overlay_surface, width, height, ship)
-        frame_watch.mark('vignettes')
-        DebugFps.draw(self.overlay_surface, fonts.get(max(9, int(height * 0.017))))
+        console_redrawn = self._console_due(ship, lower)
+        if console_redrawn:
+            overlay.set_clip(lower)
+            overlay.fill((0, 0, 0, 0), lower)
+            Cockpit.draw_console(overlay, fonts, width, height, player, environment.date_time)
+            self._tint_and_vignette(overlay, environment, ship, width, height)
+        overlay.set_clip(None)
 
         GL.glViewport(0, 0, width, height)
         GL.glClearColor(SPACE_COLOR[0] / 255, SPACE_COLOR[1] / 255, SPACE_COLOR[2] / 255, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         GL.glDisable(GL.GL_DEPTH_TEST)
         MilkyWay.draw(width, height, ship, environment.date_time)
-        # The layers, from the back: the stars, the giants (their haze and rings cover the stars), the sun, the giants in
-        # front of it, and then the rest of the sky (the worlds, moons and the orbit line, which the giants' erasers cut)
-        self._draw_texture(self.star_surface, self.star_texture)
+        frame_watch.mark('milky way')
+        # The layers, from the back: the stars, the giants (their haze and rings cover the stars), the sun, the giants
+        # in front of it, and then the rest of the sky (the worlds, moons and the orbit line, which the giants' erasers
+        # cut)
+        DistantStars.draw(width, height, environment, ship, view, sky_redrawn)
+        frame_watch.mark('distant stars')
         GiantGl.draw(width, height, environment, ship, behind_star=True)
         if view is not None:
             seconds = (environment.date_time - environment.EPOCH).total_seconds()
             StarGl.draw_star(width, height, view, seconds, player.time_scale)
         GiantGl.draw(width, height, environment, ship, behind_star=False)
-        self._draw_texture(self.world_surface, self.world_texture)
+        frame_watch.mark('giants and sun')
+        self._draw_texture(self.world_surface, self.world_texture, [(0, sky.height)] if sky_redrawn else [],
+                           sky.height)
+        frame_watch.mark('world layer')
         if view is not None:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
@@ -173,10 +202,12 @@ class OpenGLGui:
                 PortalGl.draw(width, height, ship, environment)
         sightings = [] if ship.is_bound else Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
-        # Nothing is seen beyond MAX_DEPTH, so above it there is no ground and no rocks to draw; and a ship that outruns
+        # Nothing is seen beyond MAX_DEPTH, so above it there are no rocks to draw (the ground of a world with relief is
+        # seen from higher, see TerrainGl.reach); and a ship that outruns
         # the rocks (see Navigation.outruns_rocks) sees none either.
         km2s, outposts = None, []  # None: no rocks are drawn
-        if light is not None and ship.position.y <= MAX_DEPTH and not ship.navigation.outruns_rocks:
+        reach = TerrainGl.reach(environment.fixed_world)
+        if light is not None and ship.navigation.altitude() <= reach and not ship.navigation.outruns_rocks:
             km2s = RockBatches.visible_km2s(environment.fixed_world, ship.position.x, ship.position.z)
             ore_fields = [field for km2 in km2s for field in km2.ore_fields + km2.external_fields]
             outposts = self._outposts(environment, ship)
@@ -187,7 +218,8 @@ class OpenGLGui:
         frame_watch.mark('surface')
         Laser.draw(width, height, ship)
         GL.glDisable(GL.GL_DEPTH_TEST)
-        self._draw_texture(self.overlay_surface, self.overlay_texture)
+        self._draw_texture(self.overlay_surface, self.overlay_texture,
+                           [(0, height if console_redrawn else console_top)])
         if Scanner.scoop_rect is not None:  # the cockpit has just left the scanner's square empty for it
             ScoopView.draw(Scanner.scoop_rect, (width, height), ship, environment, km2s, outposts, light, sightings)
             frame_watch.mark('scoop')
@@ -219,18 +251,64 @@ class OpenGLGui:
         ]
     # endregion
 
+    def _tint_and_vignette(self, overlay: pygame.Surface, environment: GameEnvironment, ship: Ship, width: int,
+                           height: int) -> None:
+        """What the light and the heat do to the cockpit, within the surface's clip (the part being drawn)."""
+        Starlight.tint_cockpit(overlay, environment, ship)
+        AtmosphereLight.tint_cockpit(overlay, environment, ship)
+        PortalGl.tint_cockpit(overlay, environment, ship)
+        HeatVignette.draw(overlay, width, height, ship)
+
+    def _console_due(self, ship: Ship, lower: pygame.Rect) -> bool:
+        """Whether the console is redrawn in this frame: every CONSOLE_REFRESH_SECONDS, at once when the mouse moves
+        over it (a button answers the pointer) or the scoop opens or closes (the cockpit leaves its square empty)."""
+        now = time.perf_counter()
+        mouse = pygame.mouse.get_pos()
+        moved = mouse != self._console_mouse and lower.collidepoint(mouse)
+        if (now - self._console_drawn_at < self.CONSOLE_REFRESH_SECONDS and not moved
+                and ship.scoop_open == self._console_scoop_open):
+            return False
+        self._console_drawn_at, self._console_mouse, self._console_scoop_open = now, mouse, ship.scoop_open
+        return True
+
+    def _sky_changed(self, environment: GameEnvironment, ship: Ship, player: Player, width: int, height: int) -> bool:
+        """Whether the world layer of the sky has to be drawn again: the view has turned, the time has moved or the ship
+        has gone far enough for the sky to show it, compared with what it was last drawn for. While bound the ship's
+        position matters little (the worlds are far, the ground is a disc under it), so it counts for a share of the
+        world's radius; unbound, for a metre."""
+        attitude = ship.attitude
+        axes = np.array([attitude.right.x, attitude.right.y, attitude.right.z, attitude.up.x, attitude.up.y,
+                         attitude.up.z, attitude.forward.x, attitude.forward.y, attitude.forward.z])
+        position = np.array([ship.position.x, ship.position.y, ship.position.z])
+        seconds = (environment.date_time - environment.EPOCH).total_seconds()
+        kind = (width, height, ship.is_bound, id(environment.targeted_body), id(environment.fixed_world),
+                player.show_orbits)
+        last = self._sky_state
+        if (last is None or last[3] != kind or abs(seconds - last[2]) > self.SKY_SECONDS_TOLERANCE
+                or float(np.abs(axes - last[0]).max()) > self.SKY_TURN_TOLERANCE):
+            changed = True
+        elif ship.is_bound:
+            altitude = max(ship.navigation.altitude(), 20.0)
+            changed = (math.hypot(position[0] - last[1][0], position[2] - last[1][2])
+                       > 1e-5 * environment.fixed_world.radius or abs(position[1] - last[1][1]) > 0.05 * altitude)
+        else:
+            changed = float(np.linalg.norm(position - last[1])) > 1.0
+        if changed:
+            self._sky_state = (axes, position, seconds, kind)
+        return changed
+
     # region Textures
     def _ensure_surfaces(self, width: int, height: int) -> None:
         size = (width, height)
         if self.world_surface is None or self.world_surface.get_size() != size:
-            self.star_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.world_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
             self.overlay_surface = pygame.Surface(size, pygame.SRCALPHA, 32).convert_alpha()
-            self.star_texture = self._make_texture(width, height)
             self.world_texture = self._make_texture(width, height)
             self.overlay_texture = self._make_texture(width, height)
             self.dialog_texture = self._make_texture(width, height)
             self._uploaded_textures = set()
+            self._sky_state = None
+            self._console_drawn_at = -math.inf
 
     @staticmethod
     def _make_texture(width: int, height: int) -> int:
@@ -275,18 +353,47 @@ class OpenGLGui:
             )
             self._uploaded_textures.add(texture)
 
-    def _draw_texture(self, surface: pygame.Surface, texture: int) -> None:
-        """Draws `surface` over the whole window, blended by its alpha, through `texture`."""
+    def _send_rows(self, surface: pygame.Surface, texture: int, first: int, last: int) -> None:
+        """Sends rows first..last of a BGRA surface to the texture, straight from the surface's memory (rows are
+        contiguous, and the memory is only borrowed for the call: see `_draw_texture`)."""
+        width, height = surface.get_size()
+        pixels = np.frombuffer(memoryview(surface.get_buffer()), dtype=np.uint8)
+        address = pixels.ctypes.data + first * width * 4
+        GL.glViewport(0, 0, width, height)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+        GL.glTexSubImage2D(GL.GL_TEXTURE_2D, 0, 0, first, width, last - first, GL.GL_BGRA, GL.GL_UNSIGNED_BYTE,
+                           ctypes.c_void_p(address))
+        del pixels
+
+    def _draw_texture(self, surface: pygame.Surface, texture: int, upload: Optional[List[Tuple[int, int]]] = None,
+                      rows: Optional[int] = None) -> None:
+        """Draws `surface` over the whole window, blended by its alpha, through `texture`. `upload` lists the (first,
+        last) rows that have changed since the last time, the only ones sent (None: all, as is the first time); `rows`
+        is how many rows from the top are drawn (None: all)."""
         width, height = surface.get_size()
         # Keep Pygame's top-to-bottom row order for the top-left screen quad.
-        # A 32-bit surface laid out as BGRA is uploaded as a plain copy of its memory (get_buffer().raw),
-        # about 2.5x faster than converting with image.tostring on every frame. It is deliberately a bytes
-        # copy and not a memoryview of the live buffer: a memoryview can stay exported while OpenGL holds
-        # it (that raised BufferError at start, under the debugger) and would keep the surface locked.
-        if self._is_bgra32(surface):
-            self._upload_texture(texture, width, height, GL.GL_BGRA, surface.get_buffer().raw)
+        # A 32-bit surface laid out as BGRA is uploaded as a plain copy of its memory, about 2.5x faster than converting
+        # with image.tostring on every frame. The memory is borrowed for the call and let go at once, never kept as a
+        # memoryview: one can stay exported while OpenGL holds it (that raised BufferError at start, under the
+        # debugger) and would keep the surface locked.
+        bgra = self._is_bgra32(surface)
+        if upload is None or not bgra or texture not in self._uploaded_textures:
+            if bgra:
+                self._upload_texture(texture, width, height, GL.GL_BGRA, surface.get_buffer().raw)
+            else:
+                self._upload_texture(texture, width, height, GL.GL_RGBA,
+                                     pygame.image.tostring(surface, 'RGBA', False))
         else:
-            self._upload_texture(texture, width, height, GL.GL_RGBA, pygame.image.tostring(surface, 'RGBA', False))
+            for first, last in upload:
+                self._send_rows(surface, texture, first, last)
+        GL.glViewport(0, 0, width, height)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, texture)
+        self._draw_quad(width, height, rows or height)
+
+    @staticmethod
+    def _draw_quad(width: int, height: int, rows: int) -> None:
+        """The textured quad of the top `rows` of a window-sized texture, at the top of the window."""
+        share = rows / height
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
         GL.glEnable(GL.GL_TEXTURE_2D)
@@ -303,10 +410,10 @@ class OpenGLGui:
         GL.glVertex2f(0, 0)
         GL.glTexCoord2f(1, 0)
         GL.glVertex2f(width, 0)
-        GL.glTexCoord2f(1, 1)
-        GL.glVertex2f(width, height)
-        GL.glTexCoord2f(0, 1)
-        GL.glVertex2f(0, height)
+        GL.glTexCoord2f(1, share)
+        GL.glVertex2f(width, rows)
+        GL.glTexCoord2f(0, share)
+        GL.glVertex2f(0, rows)
         GL.glEnd()
         GL.glPopMatrix()
         GL.glMatrixMode(GL.GL_PROJECTION)

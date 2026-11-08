@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+from functools import cached_property
 
 from galaxies import seeds
 from galaxies.ore_mine import ExternalMine, OreMine
@@ -27,6 +28,11 @@ class OreField:
         self.color: tuple = (0, 0, 0)
         self.orientation: float = 0.0
         self.mines: List[OreMine] = []
+
+    @cached_property
+    def ground_height(self) -> float:
+        """The height of the ground under the field's centre, in metres above the datum (the ground does not change)."""
+        return self.parent_km2.parent_world.ground_height(self.longitude, self.latitude)
 
     @staticmethod
     def from_rock(original_rock: Rock) -> OreField:

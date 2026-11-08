@@ -1,9 +1,13 @@
 """Windshield frame and hull rendering."""
 
 from __future__ import annotations
+from typing import Dict, Tuple
+
 import pygame
 from ..constants import CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, HULL_EDGE_COLOR
 from .common import get_windshield_frame_texture
+
+_frame_bytes: Dict[Tuple[str, int, int], bytes] = {}   # the frame's memory, for the window size in use
 
 
 class Canopy:
@@ -11,7 +15,10 @@ class Canopy:
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, texture: str) -> None:
-        """Draw the windshield canopy, its frame in the cockpit texture file `texture`."""
+        """Draw the windshield canopy, its frame in the cockpit texture file `texture`. It starts the cockpit's layer:
+        the rows above the console are replaced, by a plain copy of the frame's memory where the two surfaces share
+        their layout (blending it over a cleared layer, as before, was one of the largest costs of a frame). The rows
+        of the console are left as they are: the console is drawn on its own schedule."""
         top = int(h * CANOPY_TOP)
         bottom = int(h * CONSOLE_TOP)
         top_inset = w * CANOPY_TOP_INSET
@@ -21,7 +28,16 @@ class Canopy:
         # texture masked to their silhouette — the glass panes between them
         # are left untouched so the 3D scene shows through.
         frame_texture = get_windshield_frame_texture(w, h, texture)
-        surface.blit(frame_texture, (0, 0))
+        layout = (surface.get_size(), surface.get_pitch(), surface.get_masks())
+        if (frame_texture.get_size(), frame_texture.get_pitch(), frame_texture.get_masks()) == layout:
+            key = (texture, w, h)
+            if key not in _frame_bytes:
+                _frame_bytes.clear()
+                _frame_bytes[key] = frame_texture.get_buffer().raw[:bottom * frame_texture.get_pitch()]
+            surface.get_buffer().write(_frame_bytes[key])
+        else:
+            surface.fill((0, 0, 0, 0), pygame.Rect(0, 0, w, bottom))
+            surface.blit(frame_texture, (0, 0))
 
         # Top rail edge.
         pygame.draw.line(surface, HULL_EDGE_COLOR, (0, top - 1), (w, top - 1), 2)

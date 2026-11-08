@@ -26,8 +26,9 @@ CUT_DISTANCE_MIN = 0.55
 CUT_DISTANCE_MAX = 0.85
 
 
-def _icosphere() -> Tuple[np.ndarray, np.ndarray]:
-    """Unit vertices (42, 3) and triangles (80, 3) of an icosahedron subdivided once."""
+def _icosphere(subdivisions: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+    """Unit vertices and triangles of an icosahedron subdivided `subdivisions` times (once: 42 and 80, twice: 162 and
+    320)."""
     t = (1.0 + 5.0 ** 0.5) / 2.0
     vertices: List[Tuple[float, float, float]] = [
         (-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t),
@@ -45,10 +46,12 @@ def _icosphere() -> Tuple[np.ndarray, np.ndarray]:
             vertices.append(tuple((vertices[a][i] + vertices[b][i]) / 2.0 for i in range(3)))
         return midpoints[key]
 
-    subdivided = []
-    for a, b, c in faces:
-        ab, bc, ca = midpoint(a, b), midpoint(b, c), midpoint(c, a)
-        subdivided += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
+    subdivided = faces
+    for _ in range(subdivisions):
+        faces, subdivided = subdivided, []
+        for a, b, c in faces:
+            ab, bc, ca = midpoint(a, b), midpoint(b, c), midpoint(c, a)
+            subdivided += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
     unit = np.array(vertices, dtype=np.float64)
     unit /= np.linalg.norm(unit, axis=1)[:, None]
     return unit, np.array(subdivided, dtype=np.int64)
@@ -56,6 +59,8 @@ def _icosphere() -> Tuple[np.ndarray, np.ndarray]:
 
 _UNIT_VERTICES, _TRIANGLES = _icosphere()
 FACES = len(_TRIANGLES)  # 80 triangles per rock
+FINE_DETAIL = 2  # the subdivisions of the finer shapes (rock_meshes' `detail`): 320 triangles
+COARSE_DETAIL = 1  # and of the coarse ones, the same bodies with fewer facets: 80 triangles
 
 
 def rotate(points: np.ndarray, tilt: np.ndarray, orientation: np.ndarray) -> np.ndarray:
@@ -72,7 +77,10 @@ def rotate(points: np.ndarray, tilt: np.ndarray, orientation: np.ndarray) -> np.
 _GOLDEN = np.uint64(0x9E3779B97F4A7C15)
 _MIX_1 = np.uint64(0xBF58476D1CE4E5B9)
 _MIX_2 = np.uint64(0x94D049BB133111EB)
-_UNIFORMS_PER_ROCK = 6 + 3 + len(_UNIT_VERTICES) + FACES + 3 * CUT_PLANES_MAX + 1  # lumps, facets, tones, cuts
+
+
+def _geometry(detail: int) -> Tuple[np.ndarray, np.ndarray]:
+    return (_UNIT_VERTICES, _TRIANGLES) if detail == 1 else _icosphere(detail)
 
 
 def _uniforms(seeds: Sequence[int], count: int) -> np.ndarray:
@@ -87,8 +95,8 @@ def _uniforms(seeds: Sequence[int], count: int) -> np.ndarray:
     return (x >> np.uint64(11)).astype(np.float64) / float(1 << 53)
 
 
-def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """The shapes of rocks, one per seed, in local unit coordinates.
+def rock_meshes(shape_seeds: Sequence[int], detail: int = 1) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The shapes of rocks, one per seed, in local unit coordinates, of an icosphere subdivided `detail` times.
 
     Returns (triangles, normals, tones):
       triangles (rocks, FACES, 3, 3): the three corners of each triangle, outward-wound;
@@ -96,11 +104,14 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
       tones     (rocks, FACES):       a brightness factor near 1 per triangle, for colour variation.
     """
     count = len(shape_seeds)
-    uniform = _uniforms(shape_seeds, _UNIFORMS_PER_ROCK)
-    vertex_count = len(_UNIT_VERTICES)
-    facets_start = 9
+    unit_vertices, unit_triangles = _geometry(detail)
+    vertex_count, face_count = len(unit_vertices), len(unit_triangles)
+    # The numbers of the lumps and the cuts come first, then one for each vertex, then one for each face: so a coarser
+    # shape of a seed is the same body as a finer one (the vertices they share are pulled in alike).
+    cut_start = 9
+    facets_start = cut_start + 3 * CUT_PLANES_MAX + 1
     tones_start = facets_start + vertex_count
-    cut_start = tones_start + FACES
+    uniform = _uniforms(shape_seeds, tones_start + face_count)
 
     height = 2.0 * uniform[:, 0:3] - 1.0  # three random directions, uniform on the sphere
     angle = 2.0 * np.pi * uniform[:, 3:6]
@@ -108,10 +119,10 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
     directions = np.stack((radius * np.cos(angle), radius * np.sin(angle), height), axis=-1)  # (count, 3, 3)
     amplitudes = LUMP_AMPLITUDE * (2.0 * uniform[:, 6:9] - 1.0)
     facets = FACET_MIN + (1.0 - FACET_MIN) * uniform[:, facets_start:tones_start]
-    tones = 1.0 - TONE_RANGE + 2.0 * TONE_RANGE * uniform[:, tones_start:cut_start]
+    tones = 1.0 - TONE_RANGE + 2.0 * TONE_RANGE * uniform[:, tones_start:tones_start + face_count]
 
-    lumps = np.maximum(LUMP_MIN, 1.0 + np.einsum('vk,ndk,nd->nv', _UNIT_VERTICES, directions, amplitudes))
-    shaped = _UNIT_VERTICES[None, :, :] * (lumps * facets)[..., None]
+    lumps = np.maximum(LUMP_MIN, 1.0 + np.einsum('vk,ndk,nd->nv', unit_vertices, directions, amplitudes))
+    shaped = unit_vertices[None, :, :] * (lumps * facets)[..., None]
 
     # Cut: each plane moves the vertices beyond it back onto it. Triangles lying wholly beyond a plane become one flat
     # face; the others are stretched along it, which gives the sharp edges.
@@ -130,7 +141,7 @@ def rock_meshes(shape_seeds: Sequence[int]) -> Tuple[np.ndarray, np.ndarray, np.
 
     vertices = shaped / np.abs(shaped).max(axis=1, keepdims=True)  # fill [-1, 1] on every axis
 
-    triangles = vertices[:, _TRIANGLES]  # (count, FACES, 3, 3)
+    triangles = vertices[:, unit_triangles]  # (count, faces, 3, 3)
     normals = np.cross(triangles[:, :, 1] - triangles[:, :, 0], triangles[:, :, 2] - triangles[:, :, 0])
     inward = (normals * triangles.mean(axis=2)).sum(axis=2) < 0.0  # the shape surrounds the origin
     triangles[inward] = triangles[inward][:, [0, 2, 1]]  # swap two corners: flips the winding

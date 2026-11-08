@@ -28,7 +28,7 @@ class AltitudeMeter:
         world = gem.current_environment.fixed_world
         # Meter spans from surface (altitude=0) to unbinding altitude
         unbinding_altitude = world.radius * (Navigation.UNBIND_RADIUS_MULTIPLE - 1.0)
-        altitude_fraction = ship.position.y / unbinding_altitude if unbinding_altitude > 0 else 0
+        altitude_fraction = ship.navigation.altitude() / unbinding_altitude if unbinding_altitude > 0 else 0
         altitude_fraction = min(1.0, max(0.0, altitude_fraction))
 
         fill_pad = 3

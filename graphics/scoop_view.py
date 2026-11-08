@@ -58,7 +58,7 @@ class ScoopView:
         GL.glFogf(GL.GL_FOG_END, Ship.SCOOP_RANGE)
         GL.glFogfv(GL.GL_FOG_COLOR, (0.0, 0.0, 0.0, 1.0))
         if ship.is_bound:
-            if km2s is not None and light is not None and ship.position.y <= Ship.SCOOP_RANGE:
+            if km2s is not None and light is not None and ship.navigation.altitude() <= Ship.SCOOP_RANGE:
                 ScoopView._draw_surface(viewport, ship, environment, km2s, outposts, light)
         else:
             Asteroids.draw_near(ship, environment, sightings, Ship.SCOOP_RANGE, SCOOP_FOV_DEGREES, 1.0)

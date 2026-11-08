@@ -39,6 +39,8 @@ class OreMines:
     """Render textured cylinders marking ore mines."""
 
     _mine_texture_ids: Dict[bool, int] = {}  # by inactive
+    MINE_SINK = 1.0  # metres: over relief a mine's base goes this far under the ground at its centre (a slope
+    # would show a gap under it)
 
     @staticmethod
     def draw(mines: List[OreMine], player_x: float, player_z: float, light: SurfaceLight,
@@ -90,9 +92,15 @@ class OreMines:
         return points
 
     @staticmethod
+    def _mine_heights(mine: OreMine) -> Tuple[float, float]:
+        """The y of the base and of the top of a mine's cylinder: it stands on the ground at its centre."""
+        flat = mine.parent_field.parent_km2.parent_world.terrain.relief == 0.0
+        base = mine.ground_height + MINE_BASE_HEIGHT
+        return base - (0.0 if flat else OreMines.MINE_SINK), base + mine.MINE_HEIGHT
+
+    @staticmethod
     def _draw_mine_side(mine: OreMine, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        base_y = MINE_BASE_HEIGHT
-        top_y = base_y + mine.MINE_HEIGHT
+        base_y, top_y = OreMines._mine_heights(mine)
         base_pts = OreMines._mine_circle_points(mine, base_y, player_x, player_z)
         top_pts = OreMines._mine_circle_points(mine, top_y, player_x, player_z)
         relative_longitude = mine.longitude - player_x
@@ -112,8 +120,7 @@ class OreMines:
 
     @staticmethod
     def _draw_mine_caps(mine: OreMine, player_x: float, player_z: float, light: SurfaceLight) -> None:
-        base_y = MINE_BASE_HEIGHT
-        top_y = base_y + mine.MINE_HEIGHT
+        base_y, top_y = OreMines._mine_heights(mine)
         relative_longitude = mine.longitude - player_x
         relative_latitude = mine.latitude - player_z
 

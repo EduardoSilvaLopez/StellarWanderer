@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import logging
 import random
+from functools import cached_property
 
 from common.updating import Updatable, update_queue
 from galaxies import seeds
@@ -67,6 +68,11 @@ class OreMine(Updatable):
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
 
     is_external: bool = False  # see ExternalMine
+
+    @cached_property
+    def ground_height(self) -> float:
+        """The height of the ground the mine stands on, in metres above the datum (the ground does not change)."""
+        return self.parent_field.parent_km2.parent_world.ground_height(self.longitude, self.latitude)
 
     def is_inactive(self, game_date_time: datetime) -> bool:
         """Whether the mine looks out of use (see ExternalMine). The player's mines never do."""

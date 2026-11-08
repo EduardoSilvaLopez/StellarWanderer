@@ -204,6 +204,7 @@ GIANT_TARGET_SIZE = 1024  # the side of the square target, pixels
 # Minimum light on any surface, from the stars: a share of full daylight that never goes away, from every direction.
 # Keeps the night readable, so the ground, rocks and buildings do not go black.
 SURFACE_STARLIGHT = 0.30
+SHADOWS_BELOW_TIME_SCALE = 10  # the surface casts shadows only while time runs slower than this (the sun moves)
 WORLD_LIGHT_TINT_MIX = 0.5  # how much the star's colour tints the light (0 = white light, 1 = star colour)
 MIN_VISIBLE_PX = 1.0  # an object (world, ring, base, mission asteroid) whose diameter on screen is less is not drawn
 WORLD_MIN_RADIUS_PX = 0.5  # floor so a distant world stays a lit disc of a pixel across, never smaller

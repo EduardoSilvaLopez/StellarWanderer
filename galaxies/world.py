@@ -162,6 +162,11 @@ class World(Body):
         """The Km2 of a point of the ground, if it is loaded: a world without ground has none."""
         return None
 
+    def ground_height(self, longitude: float, latitude: float) -> float:
+        """The height of the ground at a point, in metres above the datum (the sphere of the world's radius): a world
+        without ground has none, which is the datum."""
+        return 0.0
+
     def update_surroundings(self, center_alt: float, center_lon: float, center_lat: float,
                             game_date_time: datetime) -> None:
         """Loads the Km2s around a point of the ground and stops those left behind: nothing to do without ground."""

@@ -24,8 +24,16 @@ class Cockpit:
     """Renders cockpit instrumentation: hull, console, and clock."""
 
     @staticmethod
-    def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
-        """Draw all cockpit elements.
+    def draw_console(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
+        """The console: everything below the windshield. It changes slowly, so the caller draws it a few times a second
+        (see OpenGLGui) and keeps it in between."""
+        Console.draw(surface, fonts, w, h, player.ship, date_time)
+        frame_watch.mark('console')
+
+    @staticmethod
+    def draw_upper(surface: pygame.Surface, fonts: Any, w: int, h: int, player: Player, date_time: datetime) -> None:
+        """Draw the cockpit above the console, every frame: the canopy (which starts the layer), the markers, the
+        labels, the buttons, the name of the place and the clock.
 
         Args:
             surface: Pygame surface to draw on
@@ -45,8 +53,6 @@ class Cockpit:
         frame_watch.mark('markers and labels')
         CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h), player)
         frame_watch.mark('buttons and political info')
-        Console.draw(surface, fonts, w, h, player.ship, date_time)
-        frame_watch.mark('console')
         name = LocationInfo.draw_name(surface, fonts, w, h)
         Clock.draw(surface, fonts, date_time, player.time_scale, w, h,
                    right_middle=(name.left - max(12, int(w * 0.012)), name.centery),

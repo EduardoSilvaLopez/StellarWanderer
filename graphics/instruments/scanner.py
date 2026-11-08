@@ -7,7 +7,8 @@ import numpy as np
 import pygame
 from ..constants import ACCENT, ACCENT_LABEL, AMBER
 from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
-from ..rock_shape import rock_meshes, rotate
+from ..rock_instances import form_seed
+from ..rock_shape import FINE_DETAIL, rock_meshes, rotate
 from ..special_rocks import special_mesh
 from ..portal_base_hero import PortalBaseHero
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
@@ -229,7 +230,7 @@ class Scanner:
             triangles, normals, colours = special_mesh(rock.shape_seed, rock.adjective)  # the minerals' own colours
             triangles, normals = triangles[None], normals[None]
         else:
-            triangles, normals, tones = rock_meshes([rock.shape_seed])
+            triangles, normals, tones = rock_meshes([form_seed(rock.shape_seed)], detail=FINE_DETAIL)
             colours = np.array(rock.color, dtype=np.float64) * tones[0][:, None]
         points = rotate(triangles.reshape(1, -1, 3), tilt, orientation)[0].reshape(-1, 3, 3)
         normals = rotate(normals, tilt, orientation)[0]

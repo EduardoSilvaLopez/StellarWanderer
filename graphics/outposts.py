@@ -145,17 +145,19 @@ class Outposts:
     @staticmethod
     def _corner_maker(outpost: Outpost, player_x: float,
                       player_z: float) -> Callable[[float, float, float], Tuple[float, float, float]]:
-        """Maps the outpost's local coordinates (metres from its centre: x along the width, z on the door axis, y up)
-        to the view. The camera is subtracted in double precision, before glVertex3f (see Rocks.draw)."""
+        """Maps the outpost's local coordinates (metres from its centre: x along the width, z on the door axis, y up
+        from the ground it stands on) to the view. The camera is subtracted in double precision, before glVertex3f (see
+        Rocks.draw)."""
         angle = math.radians(outpost.orientation)
         cos_a, sin_a = math.cos(angle), math.sin(angle)
         origin_x = outpost.longitude - player_x
         origin_z = outpost.latitude - player_z
+        ground = outpost.ground_height
 
         def corner(lx: float, ly: float, lz: float) -> Tuple[float, float, float]:
             x2 = lx * cos_a + lz * sin_a
             z2 = -lx * sin_a + lz * cos_a
-            return (origin_x + x2, ly, origin_z + z2)
+            return (origin_x + x2, ground + ly, origin_z + z2)
         return corner
 
     @staticmethod

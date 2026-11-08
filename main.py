@@ -26,6 +26,7 @@ from collections import defaultdict
 from functools import partial
 from typing import Optional, Tuple
 import math
+import multiprocessing
 import os
 import sys
 
@@ -39,6 +40,7 @@ import pygame
 import logging
 from common.game_logging import configure_logging
 from graphics.font_cache import FontCache
+from graphics.terrain_gl import TerrainGl
 import game_environment as gem
 from galaxies.people import knowledge
 from common import audio
@@ -575,8 +577,10 @@ def main() -> None:
             assist_thrust_given = any(assist_thrust)
             right_input, up_input, forward_input = assist_thrust
         braking = (keys[pygame.K_s] and not assisted) or travel_brake
+        frame_watch.mark('controls')
         ship.navigation.update_position_and_velocity(
             delta_game_seconds, right_input, up_input, forward_input, braking)
+        frame_watch.mark('navigation')
         thrusting = (
             assist_thrust_given or travel_brake or translating
             or (ship.is_bound and (keys[pygame.K_KP_8] or keys[pygame.K_KP_2]))
@@ -593,7 +597,9 @@ def main() -> None:
         audio.set_loop('attitude', rotating)
         ship.check_scoop()
         ship.collect_probe(delta_game_seconds)
+        frame_watch.mark('scoop and probe')
         ship.scanner.update_target()
+        frame_watch.mark('scanner target')
         if keys[pygame.K_SPACE]:
             if not ship.collect_raw_water(delta_game_seconds):
                 ship.scanner.activate(delta_game_seconds)
@@ -614,8 +620,10 @@ def main() -> None:
         pygame.display.flip()
         frame_watch.mark('flip')
 
+    TerrainGl.shutdown()  # the helper processes of the terrain
     pygame.quit()
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()  # a packaged helper process (see graphics/terrain_helpers.py) starts and ends here
     main()

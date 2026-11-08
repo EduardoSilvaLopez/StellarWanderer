@@ -6,7 +6,9 @@ with WORLD_AMBIENT_LIGHT still visible on the unlit side, as for worlds in the s
 Brightness of a surface = SURFACE_STARLIGHT + (1 - starlight) × max(0, normal · sun). SURFACE_STARLIGHT is a floor
 from the stars, the same from every direction, so the night stays readable. The ground's colour is LitWorlds.light_tint,
 so the dark side is the starlight share of it. Each face is shaded from its own normal, computed on the CPU into
-vertex colours (no GL lighting state). Lit: the ground, ore fields, mines, outposts and rocks, with no shadows."""
+vertex colours (no GL lighting state). Lit: the ground, ore fields, mines, outposts and rocks. The shadows are
+not part of this: the ground, the outposts and the rocks receive them from the shadow map (shadow_map.py,
+shadowed_surface.py), at time scales under SHADOWS_BELOW_TIME_SCALE; ore fields and mines do not yet."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple

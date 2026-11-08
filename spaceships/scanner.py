@@ -113,8 +113,8 @@ class Scanner:
 
         # Bound, the beam slopes down to the ground MAX_LENGTH metres ahead.
         self.end_x = origin[0] + forward[0] * self.MAX_LENGTH
-        self.end_y = 0.0
         self.end_z = origin[2] + forward[2] * self.MAX_LENGTH
+        self.end_y = ship.navigation.ground_height_at(self.end_x, self.end_z)
 
         # No Km2 while bound means too high: nothing is in reach.
         if ship.position.km2 is None:
@@ -402,12 +402,13 @@ class Scanner:
 
     def _rock_entry(self, rock: Rock) -> Optional[float]:
         """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
-        rock.size, centred on (longitude, altitude, latitude), tilted by rock.tilt and turned by rock.orientation.
-        The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is not the whole
-        cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
+        rock.size, centred at its altitude over the ground at (longitude, latitude), tilted by rock.tilt and turned by
+        rock.orientation. The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is
+        not the whole cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
         half = rock.size / 2.0
+        ground = rock.ground_height
         return self._beam_enters_oriented_box(
-            (rock.longitude, rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
+            (rock.longitude, ground + rock.altitude, rock.latitude), (half, half, half), rock.tilt, rock.orientation,
         )
 
     def _mine_entry(self, mine: OreMine) -> Optional[float]:
@@ -436,8 +437,9 @@ class Scanner:
         elif c > 0:  # not moving across the circle, and outside it
             return None
 
-        # Height bounds (Y axis).
-        clipped = self._clip_slab(self.start_y, dy, 0.0, mine.MINE_HEIGHT, t_min, t_max)
+        # Height bounds (Y axis): from the ground to the top of the mine.
+        ground = mine.ground_height
+        clipped = self._clip_slab(self.start_y, dy, ground, ground + mine.MINE_HEIGHT, t_min, t_max)
         if clipped is None:
             return None
         t_min, t_max = clipped
@@ -449,9 +451,10 @@ class Scanner:
         along local z, centred at its offset along z; the door is on the local +z side of the building, so orientation
         is the heading the door faces."""
         turned = math.radians(outpost.orientation)
+        ground = outpost.ground_height
         entries = [
             self._beam_enters_oriented_box(
-                (outpost.longitude + centre_z * math.sin(turned), height / 2,
+                (outpost.longitude + centre_z * math.sin(turned), ground + height / 2,
                  outpost.latitude + centre_z * math.cos(turned)),
                 (width / 2, height / 2, depth / 2),
                 0.0,

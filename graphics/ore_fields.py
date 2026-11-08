@@ -3,6 +3,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
 import math
+import weakref
 
 import numpy as np
 import pygame
@@ -19,6 +20,9 @@ class OreFields:
     """Render textured ore fields on the ground."""
 
     ORE_FIELD_HEIGHT = 0.05  # Small offset above the ground to avoid z-fighting.
+    RELIEF_HEIGHT = 0.25  # The same over relief, where the terrain's mesh is coarser than the field's grid.
+    GRID = 8  # Over relief the field is a grid of this many quads a side, following the ground.
+    _relief_quads: weakref.WeakKeyDictionary[OreField, tuple] = weakref.WeakKeyDictionary()  # by field
     # The texture's paper background is not pure white (it runs from about 224 to 255 grey): every grey at or above this
     # is fully transparent, or the whole quad would show as a faint lighter square.
     TEXTURE_CLEAR_GRAY = 224
@@ -64,6 +68,9 @@ class OreFields:
 
         # Set color for texture modulation (white leaves texture unchanged), lit by the sun on the ground
         GL.glColor3ub(*light.shade(ore_field.color, light.brightness(0.0, 1.0, 0.0)))
+        if ore_field.parent_km2.parent_world.terrain.relief != 0.0:
+            OreFields._draw_over_relief(ore_field, relative_longitude, relative_latitude)
+            return
 
         # Rotation angle in radians
         angle = math.radians(ore_field.orientation)
@@ -86,6 +93,38 @@ class OreFields:
             GL.glTexCoord2f(u, v)
             GL.glVertex3f(world_x, y, world_z)
         GL.glEnd()
+
+    @staticmethod
+    def _draw_over_relief(ore_field: OreField, relative_longitude: float, relative_latitude: float) -> None:
+        """The field as a grid of GRID x GRID quads that follows the ground, kept off it by RELIEF_HEIGHT (a coarser
+        mesh of the terrain can lie a little above the grid between its points). The vertices are built once, relative
+        to the field's centre."""
+        cached = OreFields._relief_quads.get(ore_field)
+        if cached is None:
+            angle = math.radians(ore_field.orientation)
+            local = np.linspace(-1.0, 1.0, OreFields.GRID + 1)
+            lx, lz = np.meshgrid(local, local, indexing="ij")
+            rotated_x = (lx * math.cos(angle) - lz * math.sin(angle)) * ore_field.radius
+            rotated_z = (lx * math.sin(angle) + lz * math.cos(angle)) * ore_field.radius
+            heights = ore_field.parent_km2.parent_world.terrain.heights(ore_field.longitude + rotated_x,
+                                                                        ore_field.latitude + rotated_z)
+            vertices = np.stack([rotated_x, heights + OreFields.RELIEF_HEIGHT, rotated_z], axis=-1)
+            texture = np.stack([(lx + 1.0) / 2.0, (1.0 - lz) / 2.0], axis=-1)
+            corners = [(i + di, j + dj) for i in range(OreFields.GRID) for j in range(OreFields.GRID)
+                       for di, dj in ((0, 0), (1, 0), (1, 1), (0, 1))]
+            rows, columns = zip(*corners)
+            cached = (np.ascontiguousarray(vertices[rows, columns], dtype=np.float32),
+                      np.ascontiguousarray(texture[rows, columns], dtype=np.float32))
+            OreFields._relief_quads[ore_field] = cached
+        vertices, texture = cached
+        moved = vertices + np.array([relative_longitude, 0.0, relative_latitude], dtype=np.float32)
+        GL.glEnableClientState(GL.GL_VERTEX_ARRAY)
+        GL.glEnableClientState(GL.GL_TEXTURE_COORD_ARRAY)
+        GL.glVertexPointer(3, GL.GL_FLOAT, 0, moved)
+        GL.glTexCoordPointer(2, GL.GL_FLOAT, 0, texture)
+        GL.glDrawArrays(GL.GL_QUADS, 0, len(moved))
+        GL.glDisableClientState(GL.GL_TEXTURE_COORD_ARRAY)
+        GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
 
     @staticmethod
     def _load_ore_field_texture_surface() -> pygame.Surface:

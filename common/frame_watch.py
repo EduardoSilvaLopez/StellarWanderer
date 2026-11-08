@@ -11,6 +11,9 @@ is not reported. The last phase is the GPU one: pygame.display.flip is where a s
 calls return before the work is done.
 
 Garbage collections that take longer than GC_SECONDS are logged too, since they hang a frame at random.
+
+Besides the hangs, every PROFILE_SECONDS of watched frames the mean time of each phase is logged (one INFO line, the
+slowest first): where the frame rate goes in an ordinary stretch of play, not only in the frames that hang.
 """
 
 from __future__ import annotations
@@ -18,12 +21,13 @@ import gc
 import logging
 import time
 from contextlib import contextmanager
-from typing import Iterator, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 from common.game_logging.constants import HITCH_SECONDS, GC_SECONDS
 
 logger = logging.getLogger(__name__)
 
 HANG_LOG_INTERVAL_SECONDS = 1.0  # the least time between two hang warnings
+PROFILE_SECONDS = 30.0  # the watched time that one profile line covers
 
 
 class FrameWatch:
@@ -37,6 +41,9 @@ class FrameWatch:
         self._gc_started: float = 0.0
         self._last_hang_logged: float = float('-inf')
         self._hangs_left_out: int = 0
+        self._profile: Dict[str, float] = {}  # the time of each phase since the last profile line
+        self._profile_frames: int = 0
+        self._profile_seconds: float = 0.0
 
     def begin(self) -> None:
         """A new frame starts (call right after the frame timer ticks)."""
@@ -70,6 +77,7 @@ class FrameWatch:
         now = time.perf_counter()
         total = now - self._frame_start
         self._frame_start = None
+        self._add_to_profile(total)
         if total <= HITCH_SECONDS:
             return
         if now - self._last_hang_logged < HANG_LOG_INTERVAL_SECONDS:
@@ -83,6 +91,23 @@ class FrameWatch:
             + (f' {self._hangs_left_out} more hangs since the last warning.' if self._hangs_left_out else ''))
         self._last_hang_logged = now
         self._hangs_left_out = 0
+
+    def _add_to_profile(self, total: float) -> None:
+        if total > HITCH_SECONDS:
+            return  # the hangs are reported on their own, and would skew the mean
+        for name, seconds in self._phases:
+            self._profile[name] = self._profile.get(name, 0.0) + seconds
+        self._profile_frames += 1
+        self._profile_seconds += total
+        if self._profile_seconds < PROFILE_SECONDS:
+            return
+        frames = self._profile_frames
+        slowest = sorted(self._profile.items(), key=lambda item: item[1], reverse=True)
+        logger.info(f'Frame profile: {frames} frames, mean {1000 * self._profile_seconds / frames:.1f} ms. Phases: '
+                    + ', '.join(f'{name} {1000 * seconds / frames:.1f} ms' for name, seconds in slowest) + '.')
+        self._profile.clear()
+        self._profile_frames = 0
+        self._profile_seconds = 0.0
 
     def watch_garbage_collector(self) -> None:
         """Logs the garbage collections longer than GC_SECONDS."""

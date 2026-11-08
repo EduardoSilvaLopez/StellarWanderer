@@ -4,12 +4,16 @@ import logging
 from datetime import datetime, timedelta
 import math
 import random
-from typing import TYPE_CHECKING, Optional
+from functools import cached_property
+from typing import TYPE_CHECKING, Optional, Sequence
+
+import numpy as np
 
 from common.updating import Updatable, update_queue
 from galaxies import seeds
 
 if TYPE_CHECKING:
+    from galaxies.terrain import Terrain
     from galaxies.km2 import Km2
 
 logger = logging.getLogger(__name__)
@@ -26,6 +30,27 @@ class Rock(Updatable):
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.
     CENTRE_MIN = -0.15  # Share of its size the centre may sink at most, so the top of the rock stays visible.
+
+    @cached_property
+    def ground_height(self) -> float:
+        """The height of the ground the rock rests on, in metres above the datum (the ground does not change). The Km2
+        fills it for all its rocks at once when it is made; asked alone, it is worked out here."""
+        return float(Rock.resting_heights([self], self.parent_km2.parent_world.terrain)[0])
+
+    @staticmethod
+    def resting_heights(rocks: Sequence[Rock], terrain: Terrain) -> np.ndarray:
+        """The ground each rock rests on: the lowest under its centre and the corners of a square of its size, so that
+        on a slope it is buried uphill rather than floating downhill. All in one call of the terrain, whose cost is in
+        its octaves more than in its points."""
+        if not rocks:
+            return np.zeros(0)
+        longitudes = np.array([rock.longitude for rock in rocks], dtype=np.float64)
+        latitudes = np.array([rock.latitude for rock in rocks], dtype=np.float64)
+        half = np.array([rock.size / 2.0 for rock in rocks])
+        corners = ((0, 0), (1, 1), (1, -1), (-1, 1), (-1, -1))
+        heights = terrain.heights(np.concatenate([longitudes + sx * half for sx, _ in corners]),
+                                  np.concatenate([latitudes + sz * half for _, sz in corners]))
+        return heights.reshape(len(corners), len(rocks)).min(axis=0)
 
     # region Generation
     def __init__(self, parent_km2: Km2, longitude: int, latitude: int,

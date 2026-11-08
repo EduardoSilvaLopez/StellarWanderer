@@ -57,7 +57,7 @@ class LocationInfo:
         texts = []
         if ship.is_bound:
             axis_lines = [
-                ('Altitude', ship.position.y, ship.velocity.y),
+                ('Altitude', ship.navigation.altitude(), ship.velocity.y),
                 ('Longitude', ship.position.x, ship.velocity.x),
                 ('Latitude', ship.position.z, ship.velocity.z),
             ]
