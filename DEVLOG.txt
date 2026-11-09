@@ -17,30 +17,31 @@ DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
 
 2026-11-05 (11/11)
 
-2026-11-08 (1/11)
+2026-11-08 (1/12)
 
 OROGRAPHY:
   * Terrain elevation / sinkage.
   * Mountains.
   * Better rocks.
 
-> STARTED: Extra time: 186h45' + 3h + 16:45-
+2026-11-08 (2/12)
 
+> STARTED: Extra time: 187h45'
+
+* PATH OF TREASON II
+  * Path reached.
+  * "And... " / "By the other side..." / "But also, <subject>: " to join subjects in the chat.
+  * "Credits" as tag.
+  * Check the mission rewards of the logs.
 
 > BACKLOG
 
-* OROGRAPHY
-  * Mountain chains.
-  * Craters.
-  * Basins, rivers, canyons.
-  * Extra: Strange rocks can be collected proactively and brought to the outpost.
-  * Extra: Collision damage, also from rocks.
-
 * PATH OF TREASON II
-  * I am trying to reach the path of the traitor. Very hard to reach.
+  * New start mask with randomness, DOB, some attributes (beautiful, discerning)
+  * Give up the mines.
+  * Extra: Retirement.
   * Rat
   * Selling ore
-  * Extra: Retirement.
   * Extra: Improve the sounds for real.
   * Extra: Did theartlav reply?
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
@@ -59,6 +60,13 @@ OROGRAPHY:
   * United Diversity
   * The Shining Throne
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
+
+* OROGRAPHY
+  * Mountain chains.
+  * Craters.
+  * Basins, rivers, canyons.
+  * Extra: Strange rocks can be collected proactively and brought to the outpost.
+  * Extra: Collision damage, also from rocks.
 
 * INCIDENTS
   * Get sealing equipment in the outposts.

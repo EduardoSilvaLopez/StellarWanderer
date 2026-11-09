@@ -128,17 +128,18 @@ class SettlementChat(Conversation):
             'belt': self.talk_belt,
             'bureaucrat': self.talk_bureaucrat,
             'communication officer': self.talk_communication_officer,
-            'custorian thirds': self.talk_custodian_thirds,
             'captain': self.talk_protection,
             'coordinator': self.talk_coordinator,
+            'credits': self.talk_credits,
+            'custorian thirds': self.talk_custodian_thirds,
             'dockmaster': self.talk_dockmaster,
             'engineer': self.talk_engineer,
             'Founders': self.talk_founders,
             'gunner': self.talk_gunner,
             'Happy birthday': self.talk_happy_birthday,
             'Happy founding': self.talk_happy_founding,
-            'Happy new year': self.talk_happy_new_year,
             'Happy star': self.talk_happy_star,
+            'Happy new year': self.talk_happy_new_year,
             'hobby': self.talk_hobby,
             'janitor': self.talk_janitor,
             'job': self.talk_job,
@@ -493,25 +494,6 @@ class SettlementChat(Conversation):
         else:
             return "Talk with the ships and other places. Belong to defence, have to wear uniform."
 
-    def talk_custodian_thirds(self) -> str:
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "You have children?"
-        elif soc < 80:
-            return (
-                "Ah, children. Did you know it's a PosDis thing? From the Charismatic Revolution,"
-                " I think. Before, fathers controlled everything, it was called 'daddiarchy'."
-            )
-        else:
-            return (
-                "Children... do you have some? How was the decision? It's not always easy, you know? Sometimes there"
-                " are horrible quarrels before birth, even if the law is clear enough."
-                " And other places organise them differently. But even in The Shining Throne thirds are chosen on"
-                " time, one way or another. It's human nature."
-            )
-
     def talk_coordinator(self) -> str:
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
         soc: float = self.interlocutor.sociability100
@@ -541,6 +523,28 @@ class SettlementChat(Conversation):
                     "The authority of an outpost. Job for highly respected people. Remove obstacles, coordinate,"
                     " communicate with the portal base and resolve conflicts."
                 )
+
+    def talk_credits(self) -> str:
+        return "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
+
+    def talk_custodian_thirds(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "You have children?"
+        elif soc < 80:
+            return (
+                "Ah, children. Did you know it's a PosDis thing? From the Charismatic Revolution,"
+                " I think. Before, fathers controlled everything, it was called 'daddiarchy'."
+            )
+        else:
+            return (
+                "Children... do you have some? How was the decision? It's not always easy, you know? Sometimes there"
+                " are horrible quarrels before birth, even if the law is clear enough."
+                " And other places organise them differently. But even in The Shining Throne thirds are chosen on"
+                " time, one way or another. It's human nature."
+            )
 
     def talk_dockmaster(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -661,6 +665,26 @@ class SettlementChat(Conversation):
         self.interlocutor.adjust_sympathy(-5)
         return f"<Looks weirdly> This place was founded at {pretty_date(founded)}, {founding_when(founded, now)}."
 
+    def talk_happy_new_year(self) -> str:
+        # Apolitical and about the season: no trait of the person matters, only the date. Every settlement celebrates
+        # it, once a year each: the key holds the year and the settlement's seed.
+        now: datetime = self.date_time
+
+        if (now.month, now.day) == (1, 1):
+            interaction_key: str = f"Happy new year {now.year} {self.place.seed}"
+            already_said: bool = False
+            for member in self.place.generate_staff().staff:
+                if any(interaction_key in lines for lines in member.interactions.values()):
+                    already_said = True
+            if not already_said:
+                self.flags.append(interaction_key)
+                # Every member of the staff hears about it, the interlocutor included.
+                for member in self.place.generate_staff().staff:
+                    member.adjust_sympathy(3)
+            return "<Everybody around cheers, some visibly drunk, high, or both>"
+        self.interlocutor.adjust_sympathy(-5)
+        return "<Looks weirdly> That's January 1st..."
+
     def talk_happy_star(self) -> str:
         # Apolitical and about the system: no trait of the person matters, only the day the Portal came. Every
         # settlement of the system celebrates it, once a year each: the key holds the year and the settlement's seed.
@@ -681,26 +705,6 @@ class SettlementChat(Conversation):
             return "<Everybody around cheers>"
         self.interlocutor.adjust_sympathy(-5)
         return f"<Looks weirdly> The Portal came on {pretty_date(star)}, {founding_when(star, now)}."
-
-    def talk_happy_new_year(self) -> str:
-        # Apolitical and about the season: no trait of the person matters, only the date. Every settlement celebrates
-        # it, once a year each: the key holds the year and the settlement's seed.
-        now: datetime = self.date_time
-
-        if (now.month, now.day) == (1, 1):
-            interaction_key: str = f"Happy new year {now.year} {self.place.seed}"
-            already_said: bool = False
-            for member in self.place.generate_staff().staff:
-                if any(interaction_key in lines for lines in member.interactions.values()):
-                    already_said = True
-            if not already_said:
-                self.flags.append(interaction_key)
-                # Every member of the staff hears about it, the interlocutor included.
-                for member in self.place.generate_staff().staff:
-                    member.adjust_sympathy(3)
-            return "<Everybody around cheers, some visibly drunk, high, or both>"
-        self.interlocutor.adjust_sympathy(-5)
-        return "<Looks weirdly> That's January 1st..."
 
     def talk_janitor(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -1377,16 +1381,16 @@ class SettlementChat(Conversation):
                 " else. Imagine being part of that.",
             )),
             'money': (30 + 0.6 * loy, (
-                "Money, money. Disgusting.", "They love money.", "Get rich, get admired.",
+                "Credits, money. Disgusting.", "They love money.", "Get rich, get admired.",
             ), (
                 (
                     "Everything about money, yes? The rich are admired just for being rich. But you cannot breathe"
-                    " money, can you? You cannot drink it, you cannot eat it.",
-                    "Greedy people, all of them. Money, money, money, that's all they think about.",
+                    " credits, can you? You cannot drink them, you cannot eat them.",
+                    "Greedy people, all of them. Money, money, money. Credits is that's all they think about.",
                     "Their government works for the oligarchs. The rich buy the laws, and the rest just pay.",
                 ),
                 "They love money, yes. The rich are admired and get their luxury. Maybe some earned it, ok. But a"
-                " society that measures people in money? No, thanks.",
+                " society that measures people in credits? No, thanks.",
                 "You make something people want to buy, you get rich, you get admired. No sacks of stamps, no waiting"
                 " for a title. There is a logic there.",
             )),
@@ -1482,16 +1486,16 @@ class SettlementChat(Conversation):
         }
         friend_topics: PoliticalTopics = {
             'poor': (40, (
-                "Cells, ghettos. Ugh.", "Cells. Shh.", "Basic income. Real.",
+                "Cells, ghettos. Ugh.", "Cells. Shh.", "<Whispers> Basic income. Real.",
             ), (
-                "<Whispers> The cells, the ghettos. Nobody in the State cares, friend. They just want to look big.",
-                "<Whispers> Some live well and some live in cells. I can't say that in the square.",
-                "<Whispers> Their basic income is a real thing. Don't tell anyone I said so.",
+                "The cells, the ghettos. Nobody cares. They just want to look big.",
+                "Some live well and some live in cells. I don't get them.",
+                "<Whispers> Their basic income is not bad at all. But don't tell anyone I said so.",
             )),
             'science': (30, (
-                "Experts vote. Ugh.", "Brains. Shh.", "Best science.",
+                "Experts vote. Ugh.", "Brains. Shh.", "<Whispers> Best science.",
             ), (
-                "<Whispers> The science is incredible, and the experts decide who votes. Nobody asked us, friend.",
+                "The science is cool,but the experts decide who votes. Nobody asks the people.",
                 "<Whispers> The science is incredible. I'd like to see their labs once, that's all.",
                 (
                     "<Whispers> Their science is the best there is. I envy them that a little."
@@ -1499,19 +1503,20 @@ class SettlementChat(Conversation):
                  ),
             )),
             'life': (30, (
-                "Parks. Cinemas. Ugh.", "Parks. Shh.", "Concerts. Wish I'd seen.",
+                "Parks. Cinemas. Ugh.", "Parks. Shh.", "<Whispers> Concerts. Wish I'd seen.",
             ), (
-                "<Whispers> The parks and the concerts are nice, but I wouldn't go near the rest.",
+                "The parks and the concerts are nice, but I wouldn't go near the rest.",
                 "<Whispers> It has its charm: the coffee shops, the bars, the concerts. Nobody here would admit it.",
                 "<Whispers> I'd love to visit. Concerts, cinemas, bars. Don't tell anyone I said so.",
             )),
             'money': (30, (
-                "Money above all. Ugh.", "Money, money. Shh.", "Rich and admired. Good.",
+                "Money above all. Ugh.", "All about the credits. Shh.", "<Whispers> Rich and admired.",
             ), (
-                "<Whispers> Money above everything, and the very wealthy in power. Nobody can say that in the square.",
-                "<Whispers> Money is everywhere there, and I'm not sure it's so bad. Don't quote me.",
-                "<Whispers> The rich are admired for what they produce, and that's a logic I can respect. Don't tell"
-                " anyone.",
+                "Money above everything, and the very wealthy in power. Nobody can say that in the square.",
+                "<Whispers> Credits are a strange obsession, but they do make transactions transparent."
+                " Don't quote me.",
+                "<Whispers> The rich are there because of what they have done, and that's a logic I can respect."
+                " But don't tell around I said so, ok?",
             )),
         }
         generic: tuple[PoliticalTexts, PoliticalTexts, PoliticalTexts] = (
@@ -1684,7 +1689,8 @@ class SettlementChat(Conversation):
     ) -> str:
         """The shape of the political talks. Below sympathy 20 a brush-off. Otherwise the topics, drawn at random and
         weighted by their score (no repeats); the friend topics from sympathy 80 on. The number of topics grows with
-        sociability. Under sociability 20, one short line, from a topic or from `generic`."""
+        sociability, and each topic after the first is bound to the one before. Under sociability 20, one short line,
+        from a topic or from `generic`."""
         soc: float = self.interlocutor.sociability100
         sym: float = self.interlocutor.sympathy100
         if sym < 20:
@@ -1705,8 +1711,33 @@ class SettlementChat(Conversation):
             name: str = random.choices(names, weights=[pool_topics[topic][0] for topic in names])[0]
             names.remove(name)
             chosen.append(name)
-        texts: list[PoliticalText] = [pool_topics[name][2][tone + 1] for name in chosen]
-        return "\n\n".join(text if isinstance(text, str) else random.choice(text) for text in texts)
+        paragraphs: list[str] = [
+            text if isinstance(text, str) else random.choice(text)
+            for text in (pool_topics[name][2][tone + 1] for name in chosen)
+        ]
+        bound: list[str] = paragraphs[:1] + [
+            self.bind_to_previous(text, name) for name, text in zip(chosen[1:], paragraphs[1:])
+        ]
+        return "\n\n".join(bound)
+
+    def bind_to_previous(self, text: str, topic: str) -> str:
+        """The text of a later topic, started by a random binder that links it to the topic before ('And', 'Also'...),
+        so the talk can reuse it. A binder may name the topic with `{topic}`. The first word then goes in lower case,
+        except the pronoun I and a word with a capital inside (a name, an acronym)."""
+        binder: str = random.choice([
+            "And",
+            "By the other side,",
+            "But also,",
+            "But also, on {topic},",
+            "Anything on {topic},",
+            "Also,",
+            "Then,",
+            "Then, on {topic},",
+        ]).format(topic=topic)
+        word, space, rest = text.partition(" ")
+        if word != "I" and not word.startswith("I'") and word[1:].islower():
+            word = word[0].lower() + word[1:]
+        return f"{binder} {word}{space}{rest}"
 
     def political_tone(self, own_entity: bool, praise_guarded: bool) -> int:
         """-1, 0 or 1 from how much the person likes the entity. Their own entity: loyalty alone decides, the more

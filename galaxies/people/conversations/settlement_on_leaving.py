@@ -131,7 +131,8 @@ class SettlementOnLeaving(Conversation):
                 )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
 
-        elif old_rep < 500 and not isinstance(self.player.ship, TwsVersatile) \
+            '''and not isinstance(self.player.ship, TwsVersatile)'''
+        elif old_rep < 500 \
                 and 'Hauler Asked' not in self.player.flags:
             self.player.flags.add('Hauler Asked')
             done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
@@ -148,6 +149,16 @@ class SettlementOnLeaving(Conversation):
                 ), self._hauler_answered
             )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+
+        elif old_rep < 1000:
+            return  (
+                "I came to talk with you because you have meanwhile done so much here, that people think you can"
+                " take a break. We trust you. If you want to go back home or whatever, you can use the ship, no"
+                " need to leave it here. Just don't leave the Community with it.\n\n"
+                " So... take a vacation, base yourself where you want... and if we don't see you again, it has been"
+                " a honour to have you working here.\n\n"
+                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+                )
 
         return f"People are starting to call you {self.player.get_title()}..."
 

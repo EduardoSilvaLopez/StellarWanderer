@@ -17,13 +17,14 @@ helpers that build the meshes are told them), and a mesh too coarse to show one 
 """
 
 from __future__ import annotations
+import functools
 import math
 from typing import Tuple
 
 import numpy as np
 
 BASE_CELL = 1.59275e6    # m: the lattice cell of the first octave; each octave halves it
-MASK_CELL = 3747647.0588    # m: the cell of the noise that places the mountains
+MASK_PER_RADIUS = 1.45   # the regional noise, which places the hills and mountains, has this many cells per radius
 GROUND_DETAIL = 1.0      # m: the finest horizontal detail of the height, which sets the number of octaves
 MAX_OCTAVES = 26
 PLAIN_AMPLITUDE = 2000.0  # m: the hills and basins, in the first octave
@@ -31,7 +32,13 @@ PLAIN_GAIN = 0.55         # the amplitude of an octave over the one before
 RIDGE_FIRST = 3           # the first octave of the mountains: its cell is about 200 km
 RIDGE_AMPLITUDE = 3500.0  # m
 RIDGE_GAIN = 0.55
-MOUNTAIN_EDGES = (0.40, 0.65)   # the mask noise between these makes mountains: about 40% of a world, with soft edges
+MOUNTAIN_SHARE = 0.15     # of the surface, whatever the world: the highest part of the regional noise
+HILL_SHARE = 0.35         # of the surface: the band of the regional noise just below the mountains
+CLASS_SOFT = 0.06         # the width of an edge between plains, hills and mountains, in noise units
+HILLS_FIRST = 5           # the octaves of the hills: cells of about 50 km down to 3 km
+HILLS_LAST = 10
+HILL_AMPLITUDE = 450.0    # m: the hills, in their first octave
+HILL_GAIN = 0.55
 COARSE_SAMPLES = 9        # a grid's smooth octaves are sampled on this many points a side and interpolated
 COARSE_RATIO = 16.0       # an octave is smooth over a grid when its cell is this many grid widths wide
 PLATFORM_FLAT = 75.0      # m: the graded disc's radius (holds the pads and the annex of the largest outpost)
@@ -71,28 +78,46 @@ def octave_count(detail: float) -> int:
     return max(1, min(MAX_OCTAVES, int(math.log2(BASE_CELL / (2.0 * detail))) + 1))
 
 
+def _step(x: float) -> float:
+    """The smooth ramp from 0 to 1 over [0, 1]."""
+    t = min(1.0, max(0.0, x))
+    return t * t * (3.0 - 2.0 * t)
+
+
+@functools.lru_cache(maxsize=256)
+def _thresholds(seed: int) -> Tuple[float, float]:
+    """The regional noise above which the mountains start and above which the hills start, for this world. They are
+    the quantiles of its noise over the sphere, so the shares of the surface hold whatever the seed."""
+    values = _noise_array(_SAMPLE * MASK_PER_RADIUS, seed + 7919)
+    hill_edge, mountain_edge = np.quantile(values, [1.0 - MOUNTAIN_SHARE - HILL_SHARE, 1.0 - MOUNTAIN_SHARE])
+    return float(hill_edge), float(mountain_edge)
+
+
 def natural_height(direction: Tuple[float, float, float], seed: int, radius: float,
                    detail: float = GROUND_DETAIL) -> float:
-    """The height in metres of the full relief at a unit direction from the centre of a world of `radius` metres: hills
-    and basins (plain noise from the first octave) and, over about 40% of the world, mountains (ridged noise, each
-    octave weighted by the one before). The octaves go down to `detail` metres."""
+    """The height in metres of the full relief at a unit direction from the centre of a world of `radius` metres: plains
+    (plain noise from the first octave), hills (a band of middle octaves, on the hill share of the surface) and
+    mountains (ridged noise, each octave weighted by the one before, on the mountain share). The octaves go down to
+    `detail` metres."""
     dx, dy, dz = direction
-    scale = radius / MASK_CELL
-    t = min(1.0, max(0.0, (_noise(dx * scale, dy * scale, dz * scale, seed + 7919) - MOUNTAIN_EDGES[0])
-                     / (MOUNTAIN_EDGES[1] - MOUNTAIN_EDGES[0])))
-    mountains = t * t * (3.0 - 2.0 * t)
-    plain = ridged = 0.0
+    regional = _noise(dx * MASK_PER_RADIUS, dy * MASK_PER_RADIUS, dz * MASK_PER_RADIUS, seed + 7919)
+    hill_edge, mountain_edge = _thresholds(seed)
+    mountains = _step((regional - mountain_edge) / CLASS_SOFT + 0.5)
+    hills = _step((regional - hill_edge) / CLASS_SOFT + 0.5) * (1.0 - mountains)
+    plain = hilly = ridged = 0.0
     weight = 1.0
     for octave in range(octave_count(detail)):
         scale = radius * 2.0 ** octave / BASE_CELL
         n = _noise(dx * scale, dy * scale, dz * scale, seed + octave * 40503)
         plain += (n * 2.0 - 1.0) * (PLAIN_AMPLITUDE * PLAIN_GAIN ** octave)
+        if HILLS_FIRST <= octave < HILLS_LAST:
+            hilly += (n * 2.0 - 1.0) * (HILL_AMPLITUDE * HILL_GAIN ** (octave - HILLS_FIRST))
         if octave >= RIDGE_FIRST:
             r = 1.0 - abs(n * 2.0 - 1.0)
             r = r * r * weight
             weight = min(1.0, max(0.0, r * 2.0))
             ridged += r * (RIDGE_AMPLITUDE * RIDGE_GAIN ** (octave - RIDGE_FIRST))
-    return plain + ridged * mountains
+    return plain + hilly * hills + ridged * mountains
 # endregion
 
 
@@ -135,6 +160,7 @@ class _Fractal:
 
     def __init__(self, shape: Tuple[int, ...]) -> None:
         self.plain = np.zeros(shape)
+        self.hilly = np.zeros(shape)
         self.ridged = np.zeros(shape)
         self.weight = np.ones(shape)
 
@@ -142,19 +168,43 @@ class _Fractal:
         for octave in range(first, last):
             n = _noise_array(directions * (radius * 2.0 ** octave / BASE_CELL), seed + octave * 40503)
             self.plain += (n * 2.0 - 1.0) * (PLAIN_AMPLITUDE * PLAIN_GAIN ** octave)
+            if HILLS_FIRST <= octave < HILLS_LAST:
+                self.hilly += (n * 2.0 - 1.0) * (HILL_AMPLITUDE * HILL_GAIN ** (octave - HILLS_FIRST))
             if octave >= RIDGE_FIRST:
                 r = 1.0 - np.abs(n * 2.0 - 1.0)
                 r = r * r * self.weight
                 self.weight = np.clip(r * 2.0, 0.0, 1.0)
                 self.ridged += r * (RIDGE_AMPLITUDE * RIDGE_GAIN ** (octave - RIDGE_FIRST))
 
-    def height(self, mountains: np.ndarray) -> np.ndarray:
-        return self.plain + self.ridged * mountains
+    def height(self, mountains: np.ndarray, hills: np.ndarray) -> np.ndarray:
+        return self.plain + self.hilly * hills + self.ridged * mountains
 
 
-def _mountain_mask(directions: np.ndarray, seed: int, radius: float) -> np.ndarray:
-    n = _noise_array(directions * (radius / MASK_CELL), seed + 7919)
-    t = np.clip((n - MOUNTAIN_EDGES[0]) / (MOUNTAIN_EDGES[1] - MOUNTAIN_EDGES[0]), 0.0, 1.0)
+def _fibonacci_sphere(count: int) -> np.ndarray:
+    """`count` directions spread evenly over the sphere, shape (count, 3)."""
+    i = np.arange(count) + 0.5
+    polar = np.arccos(1.0 - 2.0 * i / count)
+    azimuth = math.pi * (1.0 + math.sqrt(5.0)) * i
+    return np.stack([np.cos(azimuth) * np.sin(polar), np.cos(polar), np.sin(azimuth) * np.sin(polar)], axis=-1)
+
+
+_SAMPLE = _fibonacci_sphere(4096)   # the directions the thresholds are measured on
+
+
+def _regional(directions: np.ndarray, seed: int) -> np.ndarray:
+    """The regional noise (in [0, 1)) at unit directions: what places the hills and the mountains."""
+    return _noise_array(directions * MASK_PER_RADIUS, seed + 7919)
+
+
+def _classes(regional: np.ndarray, seed: int) -> Tuple[np.ndarray, np.ndarray]:
+    """The mountains and the hills, each a share in [0, 1], at points of the regional noise `regional`."""
+    hill_edge, mountain_edge = _thresholds(seed)
+    mountains = _smoothstep(np.clip((regional - mountain_edge) / CLASS_SOFT + 0.5, 0.0, 1.0))
+    hills = _smoothstep(np.clip((regional - hill_edge) / CLASS_SOFT + 0.5, 0.0, 1.0)) * (1.0 - mountains)
+    return mountains, hills
+
+
+def _smoothstep(t: np.ndarray) -> np.ndarray:
     return t * t * (3.0 - 2.0 * t)
 
 
@@ -191,13 +241,13 @@ def _natural_grid(seed: int, radius: float, xs: np.ndarray, zs: np.ndarray, deta
     smooth_width = COARSE_RATIO * extent
     coarse = int(math.log2(BASE_CELL / smooth_width)) + 1 if smooth_width < BASE_CELL else 0
     coarse = max(0, min(coarse, octaves))
-    mask_is_coarse = smooth_width <= MASK_CELL
+    regional_is_coarse = smooth_width <= radius / MASK_PER_RADIUS
     gx, gz = np.meshgrid(xs, zs, indexing="ij")
     directions = _directions(gx, gz, radius)
     fractal = _Fractal(gx.shape)
-    if coarse == 0 and not mask_is_coarse:
+    if coarse == 0 and not regional_is_coarse:
         fractal.add_octaves(directions, seed, radius, 0, octaves)
-        return fractal.height(_mountain_mask(directions, seed, radius))
+        return fractal.height(*_classes(_regional(directions, seed), seed))
     wx, wz = _coarse_weights(len(xs)), _coarse_weights(len(zs))
     cx, cz = np.meshgrid(np.linspace(xs[0], xs[-1], COARSE_SAMPLES), np.linspace(zs[0], zs[-1], COARSE_SAMPLES),
                          indexing="ij")
@@ -205,12 +255,13 @@ def _natural_grid(seed: int, radius: float, xs: np.ndarray, zs: np.ndarray, deta
     coarse_fractal = _Fractal(cx.shape)
     coarse_fractal.add_octaves(coarse_directions, seed, radius, 0, coarse)
     fractal.plain = wx @ coarse_fractal.plain @ wz.T
+    fractal.hilly = wx @ coarse_fractal.hilly @ wz.T
     fractal.ridged = wx @ coarse_fractal.ridged @ wz.T
     fractal.weight = wx @ coarse_fractal.weight @ wz.T
     fractal.add_octaves(directions, seed, radius, coarse, octaves)
-    mask = (wx @ _mountain_mask(coarse_directions, seed, radius) @ wz.T if mask_is_coarse
-            else _mountain_mask(directions, seed, radius))
-    return fractal.height(mask)
+    regional = (wx @ _regional(coarse_directions, seed) @ wz.T if regional_is_coarse
+                else _regional(directions, seed))
+    return fractal.height(*_classes(regional, seed))
 # endregion
 
 
@@ -284,7 +335,7 @@ class Terrain:
                                  self.radius)
         fractal = _Fractal(directions.shape[:-1])
         fractal.add_octaves(directions, self.seed, self.radius, 0, octave_count(GROUND_DETAIL))
-        heights = self.relief * fractal.height(_mountain_mask(directions, self.seed, self.radius))
+        heights = self.relief * fractal.height(*_classes(_regional(directions, self.seed), self.seed))
         if self.platforms:
             heights = _graded(heights, np.asarray(longitudes, dtype=np.float64),
                               np.asarray(latitudes, dtype=np.float64), self.platforms)

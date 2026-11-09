@@ -48,7 +48,9 @@ How-to for Claude. Read it when the user asks for a new (or a reworked) method i
    sympathy 80, `topics` below. A `PoliticalTopics` is `name -> (score, curt line per tone, text per tone)`; a
    `PoliticalTexts` is the three tones in the order -1, 0, 1. Under sociability 20 one line is picked at random from
    the topics' curt lines and `generic`. From 20 on, the number of topics is drawn (1 and 2 most frequent, 3 and 4
-   growing with sociability), chosen at random weighted by score, without repeats, and their texts joined. Each talk
+   growing with sociability), chosen at random weighted by score, without repeats, and their texts joined: each text
+   after the first starts with a random binder (`bind_to_previous(text, topic)`: "And", "Also", or one naming the topic with `{topic}`, "But also, on {topic},"),
+   its first word in lower case. Each talk
    method holds its own topics and calls the helper; the Shining Throne keeps its fixed brush-off line.
 2. `political_tone(own_entity, praise_guarded)`: for the person's own entity, loyalty alone decides (-1 below 20,
    0 below 80, +1 from 80); empathy is not a factor there. For the other entity,
