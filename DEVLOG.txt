@@ -26,19 +26,18 @@ OROGRAPHY:
 
 2026-11-08 (2/12)
 
-> STARTED: Extra time: 187h45'
-
 * PATH OF TREASON II
   * Path reached.
   * "And... " / "By the other side..." / "But also, <subject>: " to join subjects in the chat.
   * "Credits" as tag.
   * Check the mission rewards of the logs.
 
+> STARTED: Extra time: 187h45'
+  * New start mask with randomness, DOB, some attributes (beautiful, discerning)
+
 > BACKLOG
 
 * PATH OF TREASON II
-  * New start mask with randomness, DOB, some attributes (beautiful, discerning)
-  * Give up the mines.
   * Extra: Retirement.
   * Rat
   * Selling ore
@@ -47,6 +46,7 @@ OROGRAPHY:
     https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
+  * Give up the mines.
   * Assigning the history to the new systems.
   * Cities.
   * Extra: A career as law enforcement, if "rat".

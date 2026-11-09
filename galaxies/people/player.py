@@ -1,13 +1,14 @@
 from __future__ import annotations
 import logging
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from common import audio
 from common.dialogs.messages import Message, show_message
 from galaxies.asteroid import Asteroid
 from galaxies.missions import Mission
 from galaxies.people.person import Person
+from galaxies.people.pilot_identity import PilotIdentity
 from galaxies.portals.portal_base import PortalBase
 from galaxies.world import World
 from galaxies.politics import political_entity
@@ -24,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 class Player:
-    """The pilot: who they are (first name, surname, gender), the ship they fly, the time compression they choose, whether
-    they want to see orbits, and their standing with the political entities. The identity is empty until the new-game dialog asks for it
-    (PilotIdentityDialog); a saved game always has it.
+    """The pilot: who they are (names, date of birth, traits, pronoun, see PilotIdentity), the ship they fly, the time
+    compression they choose, whether they want to see orbits, and their standing with the political entities. The
+    identity is empty until the new-game dialog asks for it (PilotIdentityDialog); a saved game always has it.
 
     The game has two states, equally important: the pilot is in the cockpit, or inside a settlement (`inside`, see
     `enter_settlement`). Both are saved, and a load puts the pilot back where they were.
@@ -47,7 +48,14 @@ class Player:
     def __init__(self) -> None:
         self.first_name: str = ''
         self.surname: str = ''
-        self.gender: Person.GenderGroup = Person.GenderGroup.MALE
+        self.date_of_birth: Tuple[int, int, int] = (0, 0, 0)  # year, month, day
+        self.beauty: float = 50.0
+        self.perception: float = 50.0
+        self.education: float = 50.0
+        self.pronoun: Optional[Person.Pronoun] = None
+        self.physiology: float = 50.0
+        self.attracted_to: float = 50.0
+        self.sexuality: float = 50.0
         self.time_scale: int = 1  # Default time scale
         # The time scale before the caps lowered it last, and the one they lowered it to (see limit_time_scale)
         self._limited_from: int = 1
@@ -68,6 +76,20 @@ class Player:
         self.pinned_tags: list[str] = []
         self.flags: set[str] = set()
         self.show_orbits: bool = True  # the pilot's choice (O): the orbit of the targeted body is drawn
+
+    def apply_identity(self, identity: PilotIdentity) -> Player:
+        """Takes the identity the new-game dialog gave."""
+        self.first_name = identity.first_name
+        self.surname = identity.surname
+        self.date_of_birth = identity.date_of_birth
+        self.beauty = identity.beauty
+        self.perception = identity.perception
+        self.education = identity.education
+        self.pronoun = identity.pronoun
+        self.physiology = identity.physiology
+        self.attracted_to = identity.attracted_to
+        self.sexuality = identity.sexuality
+        return self
 
     def spawn_in_environment(self, environment: gem.GameEnvironment) -> Player:
         """Spawn the player in the given environment, just using the first place we find."""
@@ -250,7 +272,14 @@ class Player:
         return {
             'first_name': self.first_name,
             'surname': self.surname,
-            'gender': self.gender.name,
+            'date_of_birth': list(self.date_of_birth),
+            'beauty': self.beauty,
+            'perception': self.perception,
+            'education': self.education,
+            'pronoun': self.pronoun.name if self.pronoun is not None else None,
+            'physiology': self.physiology,
+            'attracted_to': self.attracted_to,
+            'sexuality': self.sexuality,
             'time_scale': self.time_scale,
             'stellar_system': {'x': system.x, 'y': system.y, 'z': system.z},
             'orbit': orbit_number,
@@ -276,7 +305,15 @@ class Player:
         update_queue.remove(result.ship)  # the default ship made above; the saved one replaces it
         result.first_name = loaded_attributes['first_name']
         result.surname = loaded_attributes['surname']
-        result.gender = Person.GenderGroup[loaded_attributes['gender']]
+        year, month, day = loaded_attributes['date_of_birth']
+        result.date_of_birth = (year, month, day)
+        result.beauty = loaded_attributes['beauty']
+        result.perception = loaded_attributes['perception']
+        result.education = loaded_attributes['education']
+        result.pronoun = Person.Pronoun[loaded_attributes['pronoun']] if loaded_attributes['pronoun'] else None
+        result.physiology = loaded_attributes['physiology']
+        result.attracted_to = loaded_attributes['attracted_to']
+        result.sexuality = loaded_attributes['sexuality']
         result.time_scale = loaded_attributes['time_scale']
         result.credits = loaded_attributes['credits']
 

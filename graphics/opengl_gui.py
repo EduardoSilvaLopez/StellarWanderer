@@ -72,6 +72,8 @@ class OpenGLGui:
     CONSOLE_REFRESH_FRAMES = 3  # the console shows nothing that needs to be faster than this
     SKY_TURN_TOLERANCE = 1e-4  # the view's axes may differ this much (about 0.006 degrees) from the sky as drawn
     SKY_SECONDS_TOLERANCE = 2.0  # game seconds the sky may be late
+    SKY_HIGH_ALTITUDE = 1000.0  # m: above this, bound, the sky follows the ship's horizontal moves much more closely
+    SKY_HIGH_SHIFT = 1.0  # m: the horizontal move (bound, above SKY_HIGH_ALTITUDE) that makes the sky to be drawn again
 
     def __init__(self) -> None:
         self.world_surface: Optional[pygame.Surface] = None
@@ -274,7 +276,8 @@ class OpenGLGui:
         """Whether the world layer of the sky has to be drawn again: the view has turned, the time has moved or the ship
         has gone far enough for the sky to show it, compared with what it was last drawn for. While bound the ship's
         position matters little (the worlds are far, the ground is a disc under it), so it counts for a share of the
-        world's radius; unbound, for a metre."""
+        world's radius, except high up, where the ground moves in the sky with every metre and any time passing counts;
+        unbound, for a metre."""
         attitude = ship.attitude
         axes = np.array([attitude.right.x, attitude.right.y, attitude.right.z, attitude.up.x, attitude.up.y,
                          attitude.up.z, attitude.forward.x, attitude.forward.y, attitude.forward.z])
@@ -283,13 +286,16 @@ class OpenGLGui:
         kind = (width, height, ship.is_bound, id(environment.targeted_body), id(environment.fixed_world),
                 player.show_orbits)
         last = self._sky_state
-        if (last is None or last[3] != kind or abs(seconds - last[2]) > self.SKY_SECONDS_TOLERANCE
+        altitude = ship.navigation.altitude() if ship.is_bound else 0.0
+        high = altitude > self.SKY_HIGH_ALTITUDE
+        seconds_tolerance = 0.0 if high else self.SKY_SECONDS_TOLERANCE
+        if (last is None or last[3] != kind or abs(seconds - last[2]) > seconds_tolerance
                 or float(np.abs(axes - last[0]).max()) > self.SKY_TURN_TOLERANCE):
             changed = True
         elif ship.is_bound:
-            altitude = max(ship.navigation.altitude(), 20.0)
-            changed = (math.hypot(position[0] - last[1][0], position[2] - last[1][2])
-                       > 1e-5 * environment.fixed_world.radius or abs(position[1] - last[1][1]) > 0.05 * altitude)
+            shift = self.SKY_HIGH_SHIFT if high else 1e-5 * environment.fixed_world.radius
+            changed = (math.hypot(position[0] - last[1][0], position[2] - last[1][2]) > shift
+                       or abs(position[1] - last[1][1]) > 0.05 * max(altitude, 20.0))
         else:
             changed = float(np.linalg.norm(position - last[1])) > 1.0
         if changed:

@@ -93,6 +93,11 @@ class Person:
         MALE = 1
         FEMALE = 2
 
+    class Pronoun(Enum):  # the pilot's own choice (PilotIdentityDialog); it is not a gender
+        SHE = 1
+        THEY = 2
+        HE = 3
+
     # region Generation
     def __init__(
             self, seed: int,

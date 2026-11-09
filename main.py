@@ -383,7 +383,7 @@ def main() -> None:
             result, screen = run_modal_dialog(PilotIdentityDialog(), screen, gui, fonts, clock)
             if result[0] == 'exit':
                 break
-            player.first_name, player.surname, player.gender = result[1]
+            player.apply_identity(result[1])
             show_welcome(player)
             continue
 
