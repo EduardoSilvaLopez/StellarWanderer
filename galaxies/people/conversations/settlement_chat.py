@@ -1,12 +1,10 @@
 """A conversation of the settlement's chat (the Chat option of the settlement screen): started by a conversation tag,
-with the
-person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
+with the person selected in the list. It writes into the chat's log (chat_log.py), never into a dialog window.
 
 The texts are written with `say` (the person's line, whose expressions that are tags of `reactions` make new tags) and
 the replies with `offer` (the callback gets the index of the reply the player chose). The conversation dies out
-when it offers nothing more: the player then starts the next one from a tag,
-in the same log. `start` says the tag as the pilot's line, then the answer
-(for the presentation tag, the pilot's line is Player.present_yourself).
+when it offers nothing more: the player then starts the next one from a tag, in the same log. `start` says the tag
+as the pilot's line, then the answer (for the presentation tag, the pilot's line is Player.present_yourself).
 Flags can be written to mark important events of the conversation.
 
 Note for Claude: before writing or reworking a `talk_*` method here, read common/design/settlement_chat_method_howto.md
@@ -28,6 +26,7 @@ from galaxies.people.player import Player
 from galaxies.politics import political_entity
 from galaxies.portals.portal_base import PortalBase
 from galaxies.settlement import Settlement
+from common.prices import at_date
 
 # A political text: its three tones, in the order -1, 0, 1.
 PoliticalTexts = tuple[str, str, str]
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
 SOLD_FLAG = "sold mine codes"
 RATTED_FLAG = "ratted ore smugglers"
 RAT_REPUTATION = 500.0  # what the pilot gains for denouncing the smugglers
+OWNER_FLAG = "owner of the ship"  # a flag of the pilot (Player.flags) once the ship is bought from the Ringmaster
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
@@ -140,6 +140,7 @@ class SettlementChat(Conversation):
             'captain': self.talk_protection,
             'coordinator': self.talk_coordinator,
             'credits': self.talk_credits,
+            'credits for the ship': self.traitor_credits_for_the_ship,
             'custorian thirds': self.talk_custodian_thirds,
             'dockmaster': self.talk_dockmaster,
             'engineer': self.talk_engineer,
@@ -541,6 +542,8 @@ class SettlementChat(Conversation):
                 and self.traitor_sold_codes_here() and not self.traitor_ratted_here()):
             text += "\n\nIs there something special you want to tell me?"
             self.offer(["<Explain the whole story>", "No, I was just curious."], self.traitor_rat_offered)
+            if self.interlocutor.role is RINGMASTER:
+                text += "\n\nTODO: the Ringmaster hints that the pilot may ask for [credits for the ship]."
         return text
 
     def talk_custodian_thirds(self) -> str:
@@ -1700,24 +1703,10 @@ class SettlementChat(Conversation):
         text = "<whispering> Done. Let's not talk about this ever again. Good luck."
         return text
 
-    def traitor_sold_codes_here(self) -> bool:
-        """Whether the pilot sold the mine codes of the system of the interlocutor's settlement."""
-        return f"{SOLD_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
-
-    def traitor_ratted_here(self) -> bool:
-        """Whether the pilot has denounced the ore smugglers of the system of the interlocutor's settlement."""
-        return f"{RATTED_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
-
-    def traitor_rat_offered(self, answer: int) -> None:
-        if answer == 0:
-            self.say(self.traitor_rat)
-
-    def traitor_rat(self) -> str:
-        """The pilot rats the smugglers: the mines stop paying credits, the disloyals in the system lose sympathy
-        for the pilot, the contact is arrested and replaced, and the pilot gains reputation."""
+    def traitor_denounce(self) -> None:
+        """What denouncing the smugglers does to the system, whatever the pilot gains from it: the flag, the contact
+        arrested (and replaced, see Settlement.imprison), and the disloyal of the system lose sympathy for the pilot."""
         system = self.interlocutor.residency.stellar_system
-
-        has_done_before: bool = any(flag.startswith(RATTED_FLAG) for flag in self._standing_flags())
         self._standing_flags().add(f"{RATTED_FLAG} {system.seed}")
         self.flags.append("Ratted ore smugglers.")
 
@@ -1737,6 +1726,24 @@ class SettlementChat(Conversation):
             for person in place.staff:
                 if person.loyalty100 < 20:
                     person.adjust_sympathy(-10 * (20 - person.loyalty100))
+
+    def traitor_sold_codes_here(self) -> bool:
+        """Whether the pilot sold the mine codes of the system of the interlocutor's settlement."""
+        return f"{SOLD_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
+
+    def traitor_ratted_here(self) -> bool:
+        """Whether the pilot has denounced the ore smugglers of the system of the interlocutor's settlement."""
+        return f"{RATTED_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
+
+    def traitor_rat_offered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_rat)
+
+    def traitor_rat(self) -> str:
+        """The pilot rats the smugglers: the mines stop paying credits, the disloyals in the system lose sympathy
+        for the pilot, the contact is arrested and replaced, and the pilot gains reputation."""
+        has_done_before: bool = any(flag.startswith(RATTED_FLAG) for flag in self._standing_flags())
+        self.traitor_denounce()
         self.player.adjust_reputation(RAT_REPUTATION + self.player.credits / 100000)
         self.player.credits = 0
         self.interlocutor.adjust_sympathy(10)
@@ -1803,11 +1810,174 @@ class SettlementChat(Conversation):
                         " codes for your mines - we will set a trap, but you don't worry about that, just collect"
                         " your ore normally.\n\n"
                         "And again, thank you. This will be known."
-                        f" I salute you, are a real {self.interlocutor.get_player_title()}."
+                        f" I salute you, you are a real {self.interlocutor.get_player_title()}."
                     )
             text += "\n\n<Hands over new codes for your mines>"
-
         return text
+
+    def traitor_credits_for_the_ship(self) -> str:
+        """The Ringmaster is the only one who sells the ship. Only while the pilot has sold the codes and not ratted."""
+        if (self.interlocutor.role is not RINGMASTER or not self.traitor_sold_codes_here()
+                or self.traitor_ratted_here()):
+            return "You heard about that? Yes, some filthy traitors do this." if self.interlocutor.loyalty100 >= 20 \
+                else "Shhh... dangerous talk. Shut up."
+        self.offer(
+            [
+            "Yes, I am. I want to get out of here. With *my* ship. I've earned that much.",
+            "No, no, that was a misunderstanding."
+            ],
+            self.traitor_sure_answered
+            )
+        return (
+            f"{self.interlocutor.address(self.player, True)}... this is a very serious matter. Are you really"
+            " telling me you want to demand 'property' on that ship... betray our principles, abandon the Community?"
+            " There is no turning back, then. But if you have somehow managed to get your hands on 'credits'... it"
+            " is a problem already."
+            )
+
+    def traitor_sure_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_valuation)
+        else:
+            self.say(self.traitor_ready_to_explain)
+
+    def traitor_ready_to_explain(self) -> str:
+        self.offer(
+            ["Yes, no problem, I will explain everything.", "Suit yourself. I won't rat anybody."],
+            self.traitor_explain_answered
+            )
+        return (
+            "I cannot let that be now, Pilot. Credits are illegal. You will be searched. Are you ready to tell"
+            " us everything about this dirty matter?"
+        )
+
+    def traitor_explain_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_rat)  # the rat: the same reputation and credits as on the credits talk
+        else:
+            self.say(self.traitor_refused_to_explain)
+            self.traitor_imprisoned()
+
+    def traitor_refused_to_explain(self) -> str:
+        return (  # Talked too much, now there is no way back.
+            "Your loyalties are misplaced, Pilot. But if you have stolen from the Community, misusing what"
+            " we entrusted to you, you will have time to think about this in prison."
+        )
+
+    def traitor_valuation(self) -> str:
+        """The Ringmaster names the price of the ship, its cargo and its equipment, and the pilot's credits decide:
+        enough pays for it; more than two thirds of the price offers to betray the contact for it; less ends the game.
+        """
+        price: float = self.traitor_price()
+        credits: float = self.player.credits
+        figures: str = f" (price {price:.0f} credits, the pilot has {credits} credits)"
+        logging.info(f"traitor_valuation:{figures}.")
+        if credits >= price:
+            self.offer(
+                    [
+                        "You sell me the ship, I sell you the info. Nothing personal, just business.",
+                        "I am not a rat, Ringmaster."
+                        ],
+                       lambda answer: self.traitor_informing_answered(answer, price))
+            return (
+                "You leave us with no other option. Such an amount of stolen credits can still help the"
+                " Community in a way throwing you in prison does not. But will you tell us who organised this?"
+                " If you do, you will be able to keep part of your filthy money."
+                )
+        if credits > price * 2 / 3:
+            self.offer(
+                    ["You are... fuck. Ok. I'll tell you all. Just let me free.",
+                        "Suit yourself, then. I am not a rat."
+                        ],
+                    self.traitor_betrayal_answered
+                    )
+            return (
+                "This is a good amount of money. But not enough, traitor. I think we can let it rot, and instead"
+                " make justice with you.\n\n"
+                "Unless, that is, you are ready to tell us everything about your contacts. Then you could still get"
+                " your... 'deal'."
+            )
+        self.offer(["Wait..."], self.traitor_not_enough)
+        return (
+            "... and you think that compensates us for everything? The faith we put on you, the years of education,"
+            " the ore you have stolen, breaking our laws? You should have solicited exile instead. We would have"
+            " respected that. What you have done... is just a crime."
+            )
+
+    def traitor_informing_answered(self, answer: int, price: float) -> None:
+        """With enough credits: informing on the criminals (no reputation gain) pays only the price, and the pilot keeps
+        the rest. Without it, the whole of the credits go."""
+        if answer == 0:
+            self.say(self.traitor_informed)
+            self.traitor_denounce()
+            self.traitor_sell_ship(price)
+        else:
+            self.traitor_sell_ship(self.player.credits)
+
+    def traitor_informed(self) -> str:
+        return "Good. At least this social disease will be contained."
+
+    def traitor_betrayal_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_betrayal_accepted)
+            self.traitor_denounce()
+            self.traitor_sell_ship(self.player.credits)
+        else:
+            self.say(self.traitor_betrayal_refused)
+            self.traitor_imprisoned()
+
+    def traitor_betrayal_accepted(self) -> str:
+        return "A wise decision as your last here, traitor. We will honour our part of this agreement."
+
+    def traitor_betrayal_refused(self) -> str:
+        return (  # Money was not enough, won't rat.
+            "Your loyalties are misplaced, Pilot. But after stealing from the Community, misusing what"
+            " we entrusted to you and betraying everything we stand for, you will have time to think about this"
+            " in prison. You should have simply demanded exile instead, if you hated us so much."
+        )
+
+    def traitor_not_enough(self, answer: int) -> None:
+        self.traitor_imprisoned()
+
+    def traitor_price(self) -> float:
+        """What the ship, its cargo and its equipment are worth now, in credits.
+        Fuel, energy and maintenance do not count."""
+        ship = self.player.ship
+        prices: dict[str, float] = political_entity.UNITED_DIVERSITY.exchange_reputation_changes
+        hold = ship.cargo_hold
+        total: float = ship.PRICE_AT_700
+        total += sum(getattr(hold, key) * prices[key] for key in ('air', 'water', 'food', 'mines', 'ore', 'raw_water'))
+        if ship.has_scoop:
+            total += prices['scoop']
+        if ship.has_solar_panels:
+            total += prices['solar_panels']
+        heat_shield_key: Optional[str] = {
+            ship.HeatShield.HeatShieldOne: 'heat_shield_1', ship.HeatShield.HeatShieldTwo: 'heat_shield_2'
+        }.get(ship.heat_shield)
+        if heat_shield_key is not None:
+            total += prices[heat_shield_key]
+        return at_date(total, self.date_time)
+
+    def traitor_sell_ship(self, cost: float) -> None:
+        """The pilot pays `cost` credits and owns the ship: the end of the game for this version. The rest of the
+        credits stay with the pilot.
+        TODO when international travel is implemented, teleport the pilot outside the borders instead of game over.
+        """
+        self.player.credits = round(self.player.credits - cost)
+        self.player.flags.add(OWNER_FLAG)
+        self.player.game_over(
+            "You are finally free from Those-Who-Share. They escort your ship to the border and leave you here."
+            " In a sense, it is only now that your adventures begin.\n\n"
+            "DEVELOPER NOTE: I have not implemented international travel yet. Keep the last savegame so that you can"
+            " use it when I do. And better tell me: eduardo.silva.lopez@hotmail.com"
+            )
+
+    def traitor_imprisoned(self) -> None:
+        """The pilot is imprisoned for good: the game is over for this version."""
+        self.player.game_over(
+                "They contraint you, they send you in a shuttle to the inner systems, and then you are"
+                " assigned a labor camp, where you will reflect about your decisions."
+            )
 
     # endregion
 

@@ -102,6 +102,7 @@ class Ship(Updatable):
     HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
     DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
     MASS: ClassVar[float]  # kg, of the hull, without its equipment and its hold's contents (see mass)
+    PRICE_AT_700: ClassVar[float]  # credits, the ship alone, as the year 700 prices it (see common/prices.py)
     # J per (kg*m/s): what the engines draw per kg of the ship for each m/s of change of velocity. The drive throws
     # nothing out, so no physics fixes it: it is tuned with ENERGY_MAX to the range a battery should give (ENERGY_MAX
     # * 3600 / (MASS * this) is the change of velocity of a full battery). A configuration may set its own.
