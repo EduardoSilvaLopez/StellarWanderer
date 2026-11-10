@@ -17,7 +17,8 @@ from common.vector3 import Vector3
 import game_environment as gem
 from galaxies import seeds
 from galaxies.settlement_kind import SettlementKind
-from galaxies.people.role import (COM_OFFICER, COORDINATOR, DOCKMASTER, STEVEDORE, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
+from galaxies.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, STEVEDORE, Role
+from galaxies.people.staffing import Staffing
 
 if TYPE_CHECKING:
     from galaxies.body import Body
@@ -26,9 +27,6 @@ if TYPE_CHECKING:
     from spaceships.ship import Ship
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'  # the dates a settlement saves
-SUBSTITUTE_AGE_DROP = 2  # the substitute's age range starts this much lower
-SUBSTITUTE_SOCIAL_FACTOR = 4
-STAFF_SOCIAL_FACTOR = 5
 SHIFT_HOURS = 8  # a shift of the staff, from the start of the day: shift 0 at 00:00, shift 1 at 08:00, shift 2 at 16:00
 FREE_HOURS_AFTER_SHIFT = 6  # after a shift, free for this long, then resting for REST_HOURS (see _is_free)
 REST_HOURS = 8
@@ -60,7 +58,7 @@ class Settlement(Updatable):
 
     # What each kind has: each role with the number of teams that work it at once (each team has its shift members and
     # a substitute). Outposts have one team of each role; the portal base has what is listed for it (its first version).
-    # A kind whose teams depend on its size overrides `teams_now`.
+    # A kind whose teams depend on its size overrides `teams_at_size`.
     roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
@@ -73,7 +71,7 @@ class Settlement(Updatable):
         self.enlargement_dates: List[datetime] = list(enlargement_dates)
         self.is_altered: bool = False
         self.focus: SettlementFocus = SettlementFocus.RESOURCE_EXTRACTION  # default
-        self.staff: List[Person] = []  # every member made so far, in the order they were made
+        self.staffing: Staffing = Staffing(self)  # who works here, hired and retired through the game's history
         self.on_duty: Dict[Role, List[Person]] = {}  # the members on duty of each role, one for each team
         self.last_visited: Optional[datetime] = None
         self.player_reputation_on_entering: Optional[float] = None
@@ -184,23 +182,39 @@ class Settlement(Updatable):
         raise NotImplementedError
 
     # region Staff
-    def teams_now(self) -> Dict[Role, int]:
-        """The teams of each role working here now (see `roles`)."""
+    def teams_at_size(self, size: int) -> Dict[Role, int]:
+        """The teams of each role working here when the settlement has grown to `size` (see `roles`)."""
         return self.roles
 
-    def generate_staff(self) -> Settlement:
-        """Creates the members of the teams that are there now, and keeps those made before. A member's seed comes from
-        its role and index alone, so a team that comes later (see teams_now) brings the same people."""
-        for role, teams in self.teams_now().items():
-            made = sum(1 for person in self.staff if person.role is role)
-            for index in range(made, teams * self._team_size(role)):
-                self.staff.append(self._generate_member(role, index))
+    def teams_now(self) -> Dict[Role, int]:
+        """The teams of each role working here now."""
+        self.generate_staff()
+        return dict(self.staffing.teams)
+
+    def generate_staff(self, now: Optional[datetime] = None) -> Settlement:
+        """Brings the staff up to `now` (the game date by default): hires and retirements since the last time. When the
+        staff changed, the rota is made again."""
+        now = now or gem.current_environment.date_time
+        if self.staffing.advance(now) and self.on_duty:
+            self._pick_all_on_duty(now)
         return self
+
+    @property
+    def staff(self) -> List[Person]:
+        """The people working here now, in the order of the roles."""
+        self.generate_staff()
+        return self.staffing.staff()
+
+    @property
+    def everyone(self) -> List[Person]:
+        """Everyone hired here so far, those who left included, in order of hire."""
+        self.generate_staff()
+        return self.staffing.everyone
 
     def roster(self, role: Role) -> List[Person]:
         """The members of `role` here: team by team, each team's shift members first, its substitute (if any) last."""
         self.generate_staff()
-        return [person for person in self.staff if person.role is role]
+        return self.staffing.arranged(role)
 
     def on_duty_list(self) -> List[Person]:
         """Everyone on duty now, in the order of the roles."""
@@ -228,30 +242,26 @@ class Settlement(Updatable):
         return self.coordinator
 
     def person_with_seed(self, seed: int) -> Optional[Person]:
-        """The staff member of this settlement with that seed, or None if the seed is not one of its staff."""
-        self.generate_staff()
-        return next((person for person in self.staff if person.seed == seed), None)
+        """The person of this settlement with that seed, one who left included, or None if the seed is not one of
+        theirs."""
+        return next((person for person in self.everyone if person.seed == seed), None)
 
-    @staticmethod
-    def _team_size(role: Role) -> int:
-        """The members of one team of `role`: its shift members, and the substitute if there is vacation."""
-        return role.shifts + (1 if role.vacation > 0 else 0)
-
-    def _generate_member(self, role: Role, index: int) -> Person:
-        """Member `index` of `role` (counted over all its teams). In each team, the one after the shifts is the
-        substitute, if the role has any vacation."""
-        substitute = index % self._team_size(role) == role.shifts and role.vacation > 0
-        age_min = STAFF_AGE_MIN + role.age_raise - (SUBSTITUTE_AGE_DROP if substitute else 0)
-        from galaxies.people.person import Person  # local: the people load the world, which loads this module
-        return Person(seeds.derive(self.seed, role.seed_kind, index), self,
-                      SUBSTITUTE_SOCIAL_FACTOR if substitute else STAFF_SOCIAL_FACTOR, role,
-                      age_min, STAFF_AGE_MAX + role.age_raise)
+    def imprison(self, person: Person) -> Settlement:
+        """The pilot had `person` arrested: they leave the staff now, for good, and somebody is hired in their role."""
+        from galaxies.people.person import IMPRISONED
+        now = gem.current_environment.date_time
+        person.status_changes.append((now, IMPRISONED))
+        person.record()
+        self.staffing.depart(person, now)
+        return self.generate_staff(now)
 
     def shift_of(self, person: Person) -> Optional[int]:
-        """The shift of `person` in their team: 0 to shifts - 1 for a shift member, `shifts` for the substitute."""
-        role = person.role
-        index = self.roster(role).index(person)
-        return index % self._team_size(role)
+        """The shift of `person` in their team: 0 to shifts - 1 for a shift member, `shifts` for the substitute. None
+        if they do not work here (anymore)."""
+        members = self.roster(person.role)
+        if person not in members:
+            return None
+        return members.index(person) % person.role.team_size
     # endregion
 
     # region Rota
@@ -274,7 +284,7 @@ class Settlement(Updatable):
         """The members of `role` on duty in the shift that starts at `shift_start`: one for each team, its shift member
         or its substitute when the substitute covers that shift (see _substitute_covers)."""
         members = self.roster(role)
-        size = self._team_size(role)
+        size = role.team_size
         on_duty: List[Person] = []
         for team in range(self.teams_now()[role]):
             team_members = members[team * size:(team + 1) * size]
@@ -315,8 +325,10 @@ class Settlement(Updatable):
         role = person.role
         if role.shifts == 1 and role.vacation == 0:
             return True
-        index = self.roster(role).index(person)
-        team, shift = divmod(index, self._team_size(role))
+        members = self.roster(role)
+        if person not in members:
+            return False
+        team, shift = divmod(members.index(person), role.team_size)
         if shift == role.shifts:
             return self._substitute_available(role, now, team)
         start = self._shift_start(now, shift)
@@ -326,7 +338,6 @@ class Settlement(Updatable):
 
     def available_staff(self, now: datetime) -> List[Person]:
         """The staff listed for a chat at `now`, in the order of `staff`."""
-        self.generate_staff()
         return [person for person in self.staff if self.is_available(person, now)]
     # endregion
 
@@ -453,16 +464,16 @@ class Settlement(Updatable):
 
     # region Updating
     def get_next_update(self) -> datetime:
-        """The next shift change, or the end of handling if it comes before."""
-        if self.handling_due_at is None:
-            return self.next_update_at
-        return min(self.next_update_at, self.handling_due_at)
+        """The next shift change, or the end of handling or the next change of staff if it comes before."""
+        due = [self.next_update_at, self.handling_due_at, self.staffing.next_change_at]
+        return min(when for when in due if when is not None)
 
     def update(self, game_date_time: datetime) -> None:
         """What is due: the end of the handling, and the next employee on duty (the shifts are 8 hours)."""
         if self.handling_due_at is not None and self.handling_due_at <= game_date_time:
             import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
             self._finish_handling(gpp.current_player.ship, game_date_time)
+        self.generate_staff(game_date_time)
         if self.next_update_at <= game_date_time:
             self._pick_all_on_duty(game_date_time)
             self.next_update_at += timedelta(hours=8)

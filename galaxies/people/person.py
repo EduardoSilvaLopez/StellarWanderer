@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from galaxies.settlement import Settlement
 
 from galaxies.politics import political_entity
-from galaxies.people.role import Role
+from galaxies.people.role import (RETIREMENT_AGE_MAX, RETIREMENT_AGE_MIN, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
 import game_environment as gem
 from common.paths import resource_path
 
@@ -24,8 +24,11 @@ PEOPLE_DIR = resource_path('people')
 SECONDS_PER_YEAR = 365.2425 * 24 * 60 * 60
 MAX_ICON_ZOOM = 0.10  # of the portrait, see Person._varied
 MAX_ICON_DARKENING = 0.15
+SOCIAL_FACTOR = 5  # of the staff: scales the reputation
 
 logger = logging.getLogger(__name__)
+
+IMPRISONED = 'imprisoned'  # a kind of status change
 
 
 @cache
@@ -99,17 +102,16 @@ class Person:
         HE = 3
 
     # region Generation
-    def __init__(
-            self, seed: int,
-            residency: Settlement,
-            social_factor: float,
-            role: Role,
-            age_min: int = 15,
-            age_max: int = 70
-            ) -> None:
+    def __init__(self, seed: int, residency: Settlement, role: Role, hired_at: datetime) -> None:
+        """A person as they were when hired for `role` at `hired_at`: the role shapes their age, reputation and traits
+        once, here, and they keep them if they change role. They leave at `departure_at`."""
         my_random = random.Random(seed)
+        social_factor: float = SOCIAL_FACTOR
+        age_min: int = STAFF_AGE_MIN + role.age_raise
+        age_max: int = STAFF_AGE_MAX + role.age_raise
         self.seed: int = seed
         self.role: Role = role
+        self.hired_at: datetime = hired_at
 
         self.entity: political_entity.PoliticalEntity = residency.stellar_system.political_entity
 
@@ -153,7 +155,7 @@ class Person:
         self.sympathy100: float = 50.0
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
-        self.dob: datetime = gem.current_environment.date_time + timedelta(seconds=-seconds_after_birth)
+        self.dob: datetime = hired_at - timedelta(seconds=seconds_after_birth)
         self.planet_of_birth, self.place_of_birth = self._generate_place_of_birth(my_random)
         self.childhood: str = self._generate_childhood(my_random)
         self.hobby: str = self._generate_hobby(my_random)
@@ -164,27 +166,33 @@ class Person:
             )
         for _ in range(1, 7): # Space for further characteristics.
             my_random.random()
+        retirement_age: float = my_random.uniform(RETIREMENT_AGE_MIN, RETIREMENT_AGE_MAX) + max(0, role.age_raise)
+        self.retirement_at: datetime = self.dob + timedelta(seconds=retirement_age * SECONDS_PER_YEAR)
+        self._icon_seed: int = my_random.getrandbits(63)
 
         self.residency: Any = residency
         self.last_communication_at: Optional[datetime] = None
 
-        self.icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
-        self._load_icon(my_random)  # Claude: no need to warn me if changes in code change this for existing people.
+        self._icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
+        self._icon_loaded: bool = False
 
         self.interactions: dict = {}
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
         # (see meet). None until then, also for a person already in `persons` (see record).
         self.first_met_at: Optional[str] = None
         self.comment: str = ''  # what the player wrote about this person (see set_comment)
+        # What happened to the person because of the pilot, with its date: (date, 'imprisoned'). Retirement is not
+        # here: it comes from the seed.
+        self.status_changes: list[tuple[datetime, str]] = []
         if self.seed in gem.current_environment.persons:
             # Apply alterations.
             my_alterations = gem.current_environment.persons[self.seed]
             self.first_met_at = my_alterations['first_met_at']
-            if 'dob' in my_alterations:
-                self.dob = datetime.fromisoformat(my_alterations['dob'])
             self.comment = my_alterations.get('comment', '')
             if my_alterations.get('last_communication_at'):
                 self.last_communication_at = datetime.fromisoformat(my_alterations['last_communication_at'])
+            self.status_changes = [(datetime.fromisoformat(when), kind)
+                                   for when, kind in my_alterations.get('status_changes', [])]
             if 'sympathy' in my_alterations:
                 self.sympathy100 = my_alterations['sympathy']
             if 'interactions' in my_alterations:
@@ -265,8 +273,17 @@ class Person:
             "I like to help organize neighborhood events.",
         ))
 
+    @property
+    def icon(self) -> Optional[pygame.Surface]:
+        """The portrait, loaded the first time it is asked for: the people of the staff history who are never shown
+        cost no picture."""
+        if not self._icon_loaded:
+            self._icon_loaded = True
+            self._load_icon(random.Random(self._icon_seed))
+        return self._icon
+
     def _load_icon(self, my_random: random.Random) -> None:
-        """The portrait, into `icon`: one of the pictures for the person's occupation, race, age and gender, by the
+        """The portrait, into `_icon`: one of the pictures for the person's occupation, race, age and gender, by the
         seed. In a settlement the occupation is the role's `portrait`, or 'uniform' when the role has none for them."""
         age_group: str = 'young' if self.age < 30\
             else 'adult' if self.age < 45\
@@ -300,7 +317,7 @@ class Person:
         except Exception as e:
             print(f"Warning: Could not load person entity icon {filename}: {e}")
             return
-        self.icon = self._varied(picture, my_random)
+        self._icon = self._varied(picture, my_random)
 
     @staticmethod
     def _varied(picture: pygame.Surface, my_random: random.Random) -> pygame.Surface:
@@ -319,6 +336,17 @@ class Person:
         shade: int = round(255 * brightness)
         varied.fill((shade, shade, shade), special_flags=pygame.BLEND_RGB_MULT)
         return varied
+    # endregion
+
+    # region Presence
+    @property
+    def departure_at(self) -> datetime:
+        """When they leave the staff: at retirement, or earlier when the pilot had them arrested."""
+        return min([self.retirement_at] + [when for when, kind in self.status_changes if kind == IMPRISONED])
+
+    def is_present(self, when: datetime) -> bool:
+        """Whether they are working in their settlement at `when`: hired, and not yet retired or arrested."""
+        return self.hired_at <= when < self.departure_at
     # endregion
 
     # region Description
@@ -340,7 +368,9 @@ class Person:
         from galaxies.outpost import SHIFT_HOURS
         if self.role.shifts == 1 and self.role.vacation == 0:
             return "24/7, as usual"
-        shift: int = self.residency.shift_of(self)
+        shift: Optional[int] = self.residency.shift_of(self)
+        if shift is None:
+            return "nowhere anymore"
         if shift == self.role.shifts:
             return "from time to time"
         start: int = shift * SHIFT_HOURS
@@ -462,12 +492,13 @@ class Person:
 
         # The name is written for whoever reads the savefile: loading generates it again from the seed and ignores it.
         result: dict = {'seed': self.seed, 'name': self.get_full_name(), 'first_met_at': self.first_met_at}
-        result['dob'] = str(self.dob)
         if self.comment:
             result['comment'] = self.comment
         if self.last_communication_at:
             result['last_communication_at'] = str(self.last_communication_at)
         result['sympathy'] = self.sympathy100
+        if self.status_changes:
+            result['status_changes'] = [[str(when), kind] for when, kind in self.status_changes]
         if interactions_dict:
             result['interactions'] = interactions_dict
 

@@ -1,21 +1,25 @@
 """The roles of the staff of a settlement (galaxies/settlement.py says which roles it has, and how many teams of each).
 
 A role is data only: what depends on the role and not on the settlement. The teams, the rota, the substitute and the
-people themselves belong to the settlement. A role with shifts takes one member for each 8-hour shift, and the member
-after them is the substitute, on duty when a shift member is on leave (`vacation` is the chance of that). A role with
-one shift and no vacation is on duty all the time.
+people themselves belong to the settlement (see people/staffing.py). A role with shifts takes one member for each 8-hour
+shift, and one more is the substitute, on duty when a shift member is on leave (`vacation` is the chance of that). A
+role with one shift and no vacation is on duty all the time.
+
+A person gets the role's traits once, when hired (see Person): a later change of role does not change them.
 """
 
 from __future__ import annotations
 from dataclasses import dataclass
 
-STAFF_AGE_MIN = 25  # the age range of the staff; a role raises it with `age_raise`
+STAFF_AGE_MIN = 25  # the age range of the staff when hired; a role raises it with `age_raise`
 STAFF_AGE_MAX = 60
+RETIREMENT_AGE_MIN = 65  # the age range of the retirement; a positive `age_raise` raises it too, so a leader hired at
+RETIREMENT_AGE_MAX = 70  # the top of the hiring range never retires at once
 
 
 @dataclass(frozen=True)
 class Role:
-    seed_kind: str  # the kind in the seed of each member (seeds.derive): it stays the same, whatever the title
+    seed_kind: str  # the kind in the seeds of the role's vacation draws (seeds.derive), whatever the title
     name: str  # the title, as shown to the player
     shifts: int  # 8-hour shifts; 1 means on duty all the time
     vacation: float  # the chance that the substitute is on duty instead of a shift member
@@ -25,8 +29,12 @@ class Role:
     reputation_bonus: float = 0.0  # added to the reputation of each person if positive, multiplied if negative
     portrait: str = 'uniform'  # the part of the portrait file names (common/resources/portraits) that the role uses
 
+    @property
+    def team_size(self) -> int:
+        """The members of one team: its shift members, and the substitute if the role has any vacation."""
+        return self.shifts + (1 if self.vacation > 0 else 0)
 
-# The seed kind is still 'person', as before the roles: the communication officers are the same people as in the saves.
+
 COM_OFFICER = Role(
     'person',
     'Communication Officer',

@@ -1,42 +1,23 @@
-"""The inside of a settlement (an outpost or a portal base), as a screen that fills the whole window (SPACE with the
-settlement targeted;
-the Leave button leaves it).
+"""The inside of a settlement (an outpost or a portal base): a screen that fills the whole window, opened with SPACE
+on the targeted settlement.
 
-It is not a modal dialog: the host (main) draws it alone, without the cockpit behind it, and keeps the game running
-while it is open (the pilot is `inside` the settlement, the other state of the game: see Player), so the time
-instrument,
-drawn over it by the host, shows time passing. Esc is not for the screen: it opens the starting dialog, which is drawn
-over it, as it is over the cockpit. The window is split in two, above the notification bar along the bottom: the
-cockpit's own bar, drawn by the host over the screen (see main.draw_settlement_view).
-On the left, the ship time display (graphics/instruments/clock.py) at the top, then the name of the settlement, and
-under
-it, smaller, the world, star and political entity it is in, then the knowledge buttons in one row (the cockpit's, in
-the same order: systems, people, ship, missions; a click opens the same dialog, see main.open_knowledge), then a radio
-group of five buttons (Dockmaster, Cargo, Missions, Chat, Leave; Missions only from the reputation the board needs, or
-while a taken mission is open here): one is always selected, and Dockmaster is the one selected when the screen opens,
-unless the ship is ready (Settlement.is_ready): then it is Cargo. The selected one is filled with the accent colour.
-What
-it does is what the right side shows: Dockmaster starts the OutpostReport conversation, Cargo shows the cargo,
-Missions the settlement's
-missions (OutpostMissions,
-drawn over the picture), and Chat the settlement's chat (chat_view.py): the conversation tags on the left, the chat in
-the
-middle, and the people who can be chatted with now (StaffList) on the right. On the right, the picture of the area on
-show: each area has its own picture, chosen from the settlement's seed among the files of common/resources/backgrounds
-named <kind>.<area>.* (area_pictures.AREA_PICTURE_PREFIXES, one set for each kind of settlement), so the same
-settlement always shows the same pictures; faded dark. The
-Leave, while it is being decided, has its own picture on the right side. At the top left of the right side, the
-dockmaster on duty: the portrait, the full name with its title beside it, and under the name the age and the role.
+It is not a modal dialog: the host (main) draws it in place of the cockpit and keeps the game running while it is
+open (the pilot is `inside` the settlement, see Player), so the time instrument shows time passing. Esc opens the
+starting dialog over it, as over the cockpit. The cockpit's notification bar is drawn by the host (see
+main.draw_settlement_view).
 
-The conversation of the selected option shows its messages here, not in a dialog over the cockpit: the screen is the
-`show` of the conversation (see Conversation). The title and the text of the message are drawn in a dark panel under
-the dockmaster. Its answers are translucent rectangles, the last at the bottom of the right side, tinted while the mouse
-is over one; they are answered with the mouse, the number keys or Enter. A message asked while another is shown waits
-its turn. While a message with more than one answer waits for its answer, the options and the knowledge buttons are not
-selectable (Esc still opens the starting dialog), so the conversation is answered and its effects happen. A message with
-one answer only informs: the options stay selectable, and a click away closes it without its answer (what its
-conversation does in the answer then does not happen: the dockmaster's Ok starts the handling of the ship, and a pilot
-who walks away from it has none started). Selecting another option, or leaving the screen, closes the conversation.
+Left block: clock, settlement name and details, the knowledge buttons (the cockpit's, see main.open_knowledge) and a
+radio group of options, one always selected: Dockmaster (selected on opening, or Cargo if the ship is ready, see
+Settlement.is_ready), Cargo, Missions (only from the reputation the board needs, or while a taken mission is open
+here), Chat, and the actions Leave and Retire. Right block: the picture of the area on show (one per area, chosen from
+the settlement's seed, see area_pictures), faded dark, and what the option shows: the dockmaster's conversation, the
+cargo, the missions (OutpostMissions) or the chat (chat_view.py).
+
+A conversation shows its messages in a dark panel here, not in a dialog, and its answers as translucent rectangles
+(mouse, number keys or Enter). While a message with more than one answer waits, the options and the knowledge buttons
+are not selectable, so the conversation is answered and its effects happen. A message with one answer only informs: a
+click away closes it without its answer (the dockmaster's Ok then does not start the handling of the ship). Selecting
+another option, or leaving, closes the conversation.
 """
 
 from __future__ import annotations
@@ -70,7 +51,8 @@ if TYPE_CHECKING:
     from spaceships.cargo_hold import Supply
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
-BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave')
+BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave', 'Retire')
+ACTION_LABELS = ('Retire', 'Leave')  # the buttons that do something instead of staying selected
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
@@ -174,59 +156,33 @@ def _draw_wrapped(surface: pygame.Surface, x: int, width: int, top: int, text: s
 
 
 class SettlementScreenDialog(Dialog):
-    """The screen of `settlement` (galaxies/settlement.py): its name, then the world, star and political entity it is
-    in,
-    then the radio group. Its picture is chosen from its seed, so the same settlement always shows the same picture.
-    The Leave button leaves it: the result is ('close', None). The decision is the coordinator's SettlementOnLeaving
-    conversation (the coordinator's portrait replaces the dockmaster's while it runs): if the settlement is still
-    handling
-    the ship it asks first, in the panel, and Yes leaves with what is done so far; No goes back to the option. The
-    conversation reports its decision to `_on_leave_decided`. While the pilot is inside,
-    the ship is docked (Ship.dock), so nothing of it is consumed.
+    """The screen of `settlement`. Its pictures are chosen from the settlement's seed, so it always looks the same.
 
-    Keyboard: Tab (Shift+Tab back) moves the focus over the radio group, Leave, the answers of the shown message and,
-    while Cargo is selected, the −, + and ++ of its rows; Enter or Space press the focused button: select an option,
-    leave, answer, give or take one unit, or fill a supply. The focus is drawn only while the keyboard is in use. Up and
-    Down select the options directly, and the number keys answer.
+    Leave closes the screen (result ('close', None)), decided by the coordinator's SettlementOnLeaving conversation: if
+    the settlement is still handling the ship it asks first, and Yes leaves with what is done so far (the coordinator's
+    portrait replaces the dockmaster's meanwhile). Retire asks for a confirmation and ends the game (Player.game_over).
+    While the pilot is inside, the ship is docked (Ship.dock): nothing of it is consumed.
 
-    Cargo (selected, without a conversation): on the left, the ship's picture, the levels of Maintenance and Energy, and
-    the equipment rows (EQUIPMENT, _equipment): Mines (−, + and ++, as a supply of the hold, see
-    spaceships/cargo_hold.py
-    MINES), Scoop, Heat Shield and Solar Panels. On the right, the room left in the hold, and a row for each cargo
-    supply (CARGO): Air, Water and Food with −, + to give and take one unit and ++ to fill it to its maximum; Ore and
-    Raw water, which are only given, with −− to give all and − to give one. The settlement has what it takes: its stock
-    is not limited. A + or ++ that asks for more than the room left turns the room line red, until a − is pressed or
-    Cargo is left. A take that is refused shows a notification: the Community's when a mine goes over the reputation
-    limit, else the ship's.
-    Heat Shield (a combo box: None, Heat Shield I costing 10 reputation, Heat Shield II costing 50), Scoop and Solar
-    Panels (toggles, Yes or No). The Heat Shield and the Solar Panels are offered only on a TWS miner or Versatile, so
-    their rows are not there on the other ships (_equipment). An attachment that costs more than the reputation the pilot has now
-    over the title's floor (the floor of the title held on entering) is refused with the Community's message. The cost
-    is charged to the reputation at once, and refunded when it is given back. They are the ship's fields
-    (heat_shield, has_scoop, has_solar_panels), saved with the ship.
-    Game time passes with the work: a mine taken or given takes MINE_SECONDS each, shared with the stevedores on duty,
-    an ore or raw water given takes its time as Settlement.unloading_seconds gives it, and each equipment change takes
-    its own constant in EQUIPMENT_SECONDS, not shared (a swap is one change). Air, water and food cost none. The screen
-    is not modal, so the clock runs on while it is open (see _spend).
+    Keyboard: Tab (Shift+Tab back) moves the focus over the options, the answers and, in Cargo, the rows' controls;
+    Enter or Space press the focused one, Up and Down select the options, the number keys answer. The focus is drawn
+    only while the keyboard is in use.
 
-    Missions (selected, and shown from the reputation the board needs or while a taken mission is open here, see
-    _shows_option): the settlement's
-    OutpostMissions, the "Available" offers and the "Taken" missions, each the latest
-    deadline first. A click opens a detail, where an offer is accepted or a taken mission delivered. Backspace or a
-    right-click goes back from a detail; Page Up and Page Down and the wheel scroll the list. The arrow keys still
-    select options.
+    Cargo: the ship's picture, the levels and the equipment rows (EQUIPMENT: Mines, as a supply of the hold, then Scoop,
+    Heat Shield and Solar Panels, the last two only on a TWS miner or Versatile); on the right, the room left and a row
+    for each supply (CARGO). The settlement's stock is not limited. A refused take shows a notification (the Community's
+    when a mine goes over the reputation limit, else the ship's); a + that asks for more than the room turns the room
+    line red until a - or leaving Cargo. An attachment costs reputation, charged at once and refunded when given back;
+    one that costs more than the pilot has over the floor of the title held on entering is refused. Game time passes
+    with the work (see _spend and the *_SECONDS constants) and the clock runs on, as the screen is not modal; air,
+    water and food cost none.
 
-    Chat (selected): the people listed now (Settlement.available_staff, see StaffList), in a dark panel on the right of
-    the block, under a search box that filters them as the People dialog's does (typing goes there while it is focused,
-    and Enter and the space do not press the options then). A click selects a card; Tab goes over the cards and Enter
-    or Space selects the focused one. The
-    conversation tags are on the left, under a search box that filters them (typing goes there while it is focused, as
-    the people's does), and the chat log is in the middle (ChatView): a click on a tag starts a SettlementChat
-    with the selected person, in the same log, and a click on an open reply chooses it. Each tag has a Pin button, and
-    the pinned tags come first (see _toggle_pin); a right-click on a tag asks to delete it (see _delete_tag). Tags and
-    replies are also
-    reached with Tab, and Enter presses them. A chat log belongs to one person: selecting another ends its conversation
-    and starts an empty log. Leaving the option ends the conversation."""
+    Missions: the settlement's OutpostMissions. Backspace or a right-click goes back from a detail; the arrow keys
+    still select options.
+
+    Chat: the people listed now (Settlement.available_staff, see StaffList) on the right, the conversation tags on the
+    left, the log (ChatView) in the middle. A click on a tag starts a SettlementChat with the selected person in the
+    same log; a log belongs to one person, so selecting another starts an empty one. Tags can be pinned (_toggle_pin)
+    and deleted by right-click (_delete_tag). Typing goes to a search box while it is focused."""
 
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
@@ -650,7 +606,10 @@ class SettlementScreenDialog(Dialog):
         """The most of the supply `key` the pilot may have in the hold: the hold's maximum, and the reputation's limit
         (_reputation_limit). Only for a supply the settlement gives."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
-        return min(SUPPLIES[key].maximum(self.ship.cargo_hold), self._reputation_limit(key))
+        maximum = SUPPLIES[key].maximum
+        if maximum is None:
+            raise Exception(f"The supply {key} has no maximum.")
+        return min(maximum(self.ship.cargo_hold), self._reputation_limit(key))
 
     def _reputation_limit(self, key: str) -> float:
         """The most of the supply `key` the Community lets the pilot have, whatever the hold: for mines, the number that
@@ -1133,6 +1092,71 @@ class SettlementScreenDialog(Dialog):
                                                        self.settlement, self._on_leave_decided, self._show)
         self._leave_conversation.start()
 
+    @staticmethod
+    def _retire() -> None:
+        """The Retire button: after a confirmation, the pilot hands the ship back and the game is over, as for a
+        death (Player.game_over)."""
+        from galaxies.people.player import current_player  # local: the player needs the dialogs
+        from galaxies.people.conversations.settlement_chat import RATTED_FLAG
+
+        has_ratted: bool = any(flag.startswith(RATTED_FLAG) for flag in current_player.flags)
+
+        rep: float = current_player.reputation
+        rep_text: str = ""
+        if rep <= 100:
+            rep_text = (
+                "Life as a miner was obviously too hard for you, and so your training is wasted. The Community"
+                " will hardly allow you to train for anything again for years, nor give you any position of"
+                " responsibility"
+                ", save in the Ministry of Security" if has_ratted else ""
+                ". But you will be safe."
+                )
+        elif rep <= 500:
+            rep_text = (
+                "You have done your job, with the limited resources you had. The Community is satisfied with you"
+                " and understands your wish for a safer life. People will give you time to rest, then expect you"
+                " to take a less risky job"
+                ", maybe as detective" if has_ratted else ""
+                ". Everything is fine."
+                )
+        elif rep <= 2000:
+            rep_text = (
+                "You retire as a successful miner who has helped the Community. You have new friends and contacts,"
+                " and people back home will respect you highly for that. After a well-deserved pause, doors will open"
+                " to positions of responsibility."
+                " The Ministry of Security will be waiting for you." if has_ratted else ""
+                " You can also enter politics with the assurance that people will"
+                " at least hear you out."
+                )
+        elif rep <= 10000:
+            rep_text = (
+                "You retire a hero, your name whispered together with Paladin Xi's. People will hardly give you a rest,"
+                " politicians calling at your door to get your support and offering you positions of high"
+                " responsibility"
+                ", and the Ministry of Security would be proud to offer you a position" if has_ratted else ""
+                ". But you can also reject them and gather a large group for your own projects."
+                )
+        else:
+            rep_text = (
+                f"You retire as a legend of Those-Who-Share, {current_player.first_name} The Miner,"
+                " a title used ironically as proof of what a supposed miner can actually end up being."
+                " The whole Community looks at you, waiting to see what you want to do now, and your fame extends over"
+                " it, mentioned in the Halls of Illuminaria and the billionaire parties on the Moon."
+                " You have to protect your privacy from journalists from all mankind, and the Premier seeks your"
+                " advice and approval."
+                )
+        text: str = (
+            "With a sigh of relief, you give the ship back and retire.\n\n"
+            f"{rep_text}\n\n"
+            "You can use the shuttles to go back home."
+            )
+        confirm(
+            title='Retire',
+            text='Are you sure you want to retire and return your ship?',
+            confirm_label='Retire',
+            on_confirm=lambda: current_player.game_over(text)
+            )
+
     def _on_leave_decided(self, leaves: bool) -> None:
         """What SettlementOnLeaving tells the screen. True: the screen ends, and the settlement stops the handling
         with what it has done (Settlement.leave, called by main when the screen closes). False: the option starts
@@ -1276,18 +1300,21 @@ class SettlementScreenDialog(Dialog):
             self._start_tag(token[1])
         elif token[0] == 'reply':
             self._choose_reply(token[1])
-        elif BUTTON_LABELS[token[1]] == 'Leave' or token[1] != self.selected:
+        elif BUTTON_LABELS[token[1]] in ACTION_LABELS or token[1] != self.selected:
             self._select(token[1])
         elif self._shown is not None:
             self._answer(self._answer_hover or 0)
 
     def _select(self, index: int) -> None:
-        """Selects another option: the conversation of the old one is closed, and the new one starts. Leave is not an
-        option that stays selected: it leaves (see _try_leave), and the selection is the same as before."""
+        """Selects another option: the conversation of the old one is closed, and the new one starts. Leave and Retire
+        are not options that stay selected: Leave leaves (see _try_leave) and Retire asks to retire (see _retire), and
+        the selection is the same as before."""
         self._focus = ('option', index)
         self._open_combo = None
         if BUTTON_LABELS[index] == 'Leave':
             self._try_leave()
+        elif BUTTON_LABELS[index] == 'Retire':
+            self._retire()
         elif index != self.selected:
             self._close_option()
             self.selected = index
@@ -1311,9 +1338,9 @@ class SettlementScreenDialog(Dialog):
         elif event.type == pygame.KEYDOWN and event.key in (pygame.K_UP, pygame.K_DOWN) and not self._blocks_options():
             self._focus_visible = True
             index = self.selected
-            while True:  # Up and Down select the options: passing over Leave must not leave
+            while True:  # Up and Down select the options: passing over Leave or Retire must not act
                 index = (index + (-1 if event.key == pygame.K_UP else 1)) % len(BUTTON_LABELS)
-                if BUTTON_LABELS[index] != 'Leave' and self._shows_option(index):
+                if BUTTON_LABELS[index] not in ACTION_LABELS and self._shows_option(index):
                     break
             self._select(index)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

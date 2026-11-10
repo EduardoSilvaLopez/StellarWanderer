@@ -68,7 +68,7 @@ class Player:
             political_entity.THOSE_WHO_SHARE: PersonalStatus(political_entity.THOSE_WHO_SHARE)
         }
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
-        self.is_dead: bool = False  # set by game_over; main then opens the starting dialog
+        self.is_gone: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
         # The conversation tags of the chat (see settlement_chat.py): one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
@@ -230,10 +230,10 @@ class Player:
         standing.adjust_reputation_by_supply(key, quantity)
 
     def game_over(self, reason: str) -> None:
-        """The pilot dies: shows `reason` once. The game then ends when the message is closed (see main)."""
-        if self.is_dead:
+        """Game over: shows `reason` once. The game then ends when the message is closed (see main)."""
+        if self.is_gone:
             return
-        self.is_dead = True
+        self.is_gone = True
 
         statistics: str = (
             f"STATISTICS:\n\n"

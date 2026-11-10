@@ -14,6 +14,7 @@ Note for Claude: before writing or reworking a `talk_*` method here, read common
 """
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
 import random
 from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional
@@ -22,7 +23,7 @@ import logging
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
-from galaxies.people.role import KOMISAR
+from galaxies.people.role import COORDINATOR, KOMISAR, RINGMASTER
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
 from galaxies.portals.portal_base import PortalBase
@@ -36,6 +37,14 @@ PoliticalText = str | tuple[str, ...]
 PoliticalTopics = dict[str, tuple[float, PoliticalTexts, tuple[PoliticalText, PoliticalText, PoliticalText]]]
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from galaxies.settlement import Settlement
+
+# Flags of the Those-Who-Share standing, each followed by the seed of the system (see ore_mine._sells_for_credits).
+SOLD_FLAG = "sold mine codes"
+RATTED_FLAG = "ratted ore smugglers"
+RAT_REPUTATION = 500.0  # what the pilot gains for denouncing the smugglers
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
@@ -119,7 +128,7 @@ class SettlementChat(Conversation):
         conversation has nothing more to say."""
         self.log.offer(labels, then)
 
-    # region Presentation
+# region Presentation
     def reactions_index(self) -> dict[str, Callable[[], str]]:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
@@ -525,7 +534,14 @@ class SettlementChat(Conversation):
                 )
 
     def talk_credits(self) -> str:
-        return "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
+        # Traits do not matter here: the role and what the pilot did in this system decide. Only an authority hears
+        # the pilot who sold the mine codes of the system (see rat_offered), and only until the pilot has ratted.
+        text: str = "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
+        if (self.interlocutor.role in (KOMISAR, COORDINATOR, RINGMASTER)
+                and self.traitor_sold_codes_here() and not self.traitor_ratted_here()):
+            text += "\n\nIs there something special you want to tell me?"
+            self.offer(["<Explain the whole story>", "No, I was just curious."], self.traitor_rat_offered)
+        return text
 
     def talk_custodian_thirds(self) -> str:
         # Only sociability matters here: it sets the verbosity.
@@ -750,7 +766,7 @@ class SettlementChat(Conversation):
         res = self.interlocutor.residency
         if isinstance(res, Settlement):
             seed = res.stellar_system.seed
-            already_sold = f"sold mine codes {seed}" in flags
+            already_sold = f"{SOLD_FLAG} {seed}" in flags
         already_talked_openly: bool = any(
             "Dared talk openly." in lines for lines in self.interlocutor.interactions.values()
             )
@@ -1646,16 +1662,71 @@ class SettlementChat(Conversation):
         if isinstance(res, Settlement):
             seed = res.stellar_system.seed
             self.player.political_status[political_entity.THOSE_WHO_SHARE].flags\
-                .add(f"sold mine codes {seed}")
+                .add(f"{SOLD_FLAG} {seed}")
         self.say(self.traitor_codes_given)
 
     def traitor_codes_given(self) -> str:
         text = "<whispering> Done. Let's not talk about this ever again. Good luck."
         return text
 
+    def traitor_sold_codes_here(self) -> bool:
+        """Whether the pilot sold the mine codes of the system of the interlocutor's settlement."""
+        return f"{SOLD_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
+
+    def traitor_ratted_here(self) -> bool:
+        """Whether the pilot has denounced the ore smugglers of the system of the interlocutor's settlement."""
+        return f"{RATTED_FLAG} {self.interlocutor.residency.stellar_system.seed}" in self._standing_flags()
+
+    def traitor_rat_offered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.traitor_rat)
+
+    def traitor_rat(self) -> str:
+        """The pilot rats the smugglers: the mines stop paying credits, the disloyals in the system lose sympathy
+        for the pilot, the contact is arrested and replaced, and the pilot gains reputation."""
+        system = self.interlocutor.residency.stellar_system
+
+        has_done_before: bool = any(flag.startswith(RATTED_FLAG) for flag in self._standing_flags())
+        self._standing_flags().add(f"{RATTED_FLAG} {system.seed}")
+        self.flags.append("Ratted ore smugglers.")
+
+        contact: Optional[Person] = next((
+                person for place in system.settlements() for person in place.staff
+                    if any("Got mine codes." in lines for lines in person.interactions.values())
+                ),
+                None
+            )
+
+        if contact is None:
+            logger.warning(f"The pilot ratted in the system {system.seed} but the contact is not among the staff.")
+        else:
+            contact.residency.imprison(contact)
+
+        for place in system.settlements():
+            for person in place.staff:
+                if person.loyalty100 < 20:
+                    person.adjust_sympathy(-10 * (20 - person.loyalty100))
+        self.player.adjust_reputation(RAT_REPUTATION + self.player.credits / 100000)
+        self.player.credits = 0
+
+        text: str = (
+            "Shocking. Another one.\n\n"
+            "Well... first of all, thank you again. And, well... carry on, detective! You should retire from this"
+            " and enter the Ministry of Security... ha!"
+        ) if has_done_before else (
+            "Shocking.\n\n"
+            "Well... first of all, thank you. We will use this credits to purchase useful things for the Community."
+            " We will also arrest the criminal and set a trap for the smuggler. You can simply carry on with"
+            " your duties... here are the new mine codes."
+        )
+        return text
+
     # endregion
 
     # region Auxiliar methods
+
+    def _standing_flags(self) -> set[str]:
+        return self.player.political_status[political_entity.THOSE_WHO_SHARE].flags
 
     def unfriendly_rejections(self, soc: float) -> list[str]:
         """The unfriendly rejections the person may say at random, by sociability: curt ones, then ones that remind the

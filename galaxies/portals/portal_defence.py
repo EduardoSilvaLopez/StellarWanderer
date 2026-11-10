@@ -57,7 +57,7 @@ class PortalDefence:
         step = 0.0 if portal.checked_at is None else max(0.0, (now - portal.checked_at).total_seconds())
         portal.checked_at = now
         ship = player.ship
-        if ship.is_bound or player.inside is not None or player.is_dead:
+        if ship.is_bound or player.inside is not None or player.is_gone:
             return 0.0
 
         position = ship.navigation.stellar_position(now)

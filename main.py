@@ -388,7 +388,7 @@ def main() -> None:
             continue
 
         # A death: once its message is closed, the game is over and the starting dialog takes over.
-        if player.is_dead:
+        if player.is_gone:
             running, screen = open_start_menu(screen, gui, fonts, clock, game_running=False)
             continue
 

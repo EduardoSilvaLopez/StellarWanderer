@@ -242,14 +242,14 @@ class Outpost(Settlement):
         """What a ship cannot fly through, which grows with the annex."""
         return self._structure_solid if self.has_annex else self._building_solid
 
-    def teams_now(self) -> Dict[Role, int]:
+    def teams_at_size(self, size: int) -> Dict[Role, int]:
         teams = dict(self.roles)
-        for size, added in self.SIZE_GENERIC_TEAMS.items():
-            if self.size >= size:
+        for from_size, added in self.SIZE_GENERIC_TEAMS.items():
+            if size >= from_size:
                 for role, count in added.items():
                     teams[role] = teams.get(role, 0) + count
-        for size, by_focus in self.SIZE_FOCUS_TEAMS.items():
-            if self.size >= size:
+        for from_size, by_focus in self.SIZE_FOCUS_TEAMS.items():
+            if size >= from_size:
                 for role, count in by_focus.get(self.focus, {}).items():
                     teams[role] = teams.get(role, 0) + count
         return teams

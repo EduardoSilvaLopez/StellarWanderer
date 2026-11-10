@@ -6,7 +6,7 @@ its parent's, so a given galaxy seed always gives the same universe whatever the
 where `keys` place the child in its parent. The chain, from the galaxy seed given by the user:
 
     galaxy -> quadrant -> district -> sector -> star -> stellar system -> orbit -> planet -> moon
-                                                                  \\-> (planet) -> outpost -> staff member (by role)
+                                                                  \\-> (planet) -> outpost -> staff member (by hire order)
     planet or moon -> Km2 -> rock, ore field
     planet or moon -> terrain (the height of its ground, see terrain.py)
     asteroid belt (an orbit) -> sector of a tier and epoch -> its asteroids (drawn together); a relevant asteroid ->

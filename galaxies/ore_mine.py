@@ -27,8 +27,8 @@ class OreMine(Updatable):
     MINE_RADIUS: float = 4.0  # metres
     MINE_HEIGHT: float = 8.0  # metres
     MINE_MIN_DISTANCE = 10 * MINE_RADIUS  # between mines.
-    # Once the mine codes of the system are sold (see _sells_for_credits), this share of each extraction becomes
-    # credits instead of ore, at CREDITS_PER_ORE per kg. Tunable.
+    # While the mine codes of the system are sold and not denounced (see _sells_for_credits), this share of each
+    # extraction becomes credits instead of ore, at CREDITS_PER_ORE per kg. Tunable.
     CREDITS_SHARE: float = 0.75
     CREDITS_PER_ORE: int = 100
 
@@ -151,12 +151,13 @@ class OreMine(Updatable):
 
     def _sells_for_credits(self) -> bool:
         """Whether this mine sells its extraction for credits: the pilot has sold the mine codes of this mine's system
-        (the flag `sold mine codes <system seed>` of the Those-Who-Share standing, see settlement_chat.traitor_ready)."""
+        and has not denounced the smugglers since (the flags `sold mine codes <system seed>` and `ratted ore smugglers
+        <system seed>` of the Those-Who-Share standing, see settlement_chat)."""
         import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
         from galaxies.politics import political_entity
         system = self.parent_field.parent_km2.parent_world.stellar_system
         flags = gpp.current_player.political_status[political_entity.THOSE_WHO_SHARE].flags
-        return f"sold mine codes {system.seed}" in flags
+        return f"sold mine codes {system.seed}" in flags and f"ratted ore smugglers {system.seed}" not in flags
 
     def stop_updating(self) -> None:
         import game_environment as gem
