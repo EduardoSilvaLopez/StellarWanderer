@@ -244,7 +244,7 @@ class Player:
         show_message(Message(
             title='GAME OVER',
             text=f"\n{reason}\n\n{statistics}",
-            buttons=["Damn!"],
+            buttons=["OK"],
             open_sound='game_over'
         ))
 

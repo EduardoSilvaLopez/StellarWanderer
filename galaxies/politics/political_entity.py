@@ -21,7 +21,7 @@ class PoliticalEntity:
             titles: dict,
             settlement_names_1: List[str],
             settlement_names_2: List[str],
-            exchange_reputation_changes: dict,
+            exchange_value: dict,
             biggest_cities: List[tuple],
             planets: List[(str)],
             portal_base_names: List[(str)],
@@ -36,7 +36,7 @@ class PoliticalEntity:
         self.titles = titles
         self.settlement_names_1: List[str] = settlement_names_1
         self.settlement_names_2: List[str] = settlement_names_2
-        self.exchange_reputation_changes: dict = exchange_reputation_changes
+        self.exchange_reputation_changes: dict = exchange_value
         self.settlements = biggest_cities
         self.planets = planets
         self.portal_base_names = portal_base_names
@@ -86,16 +86,20 @@ UNITED_DIVERSITY: PoliticalEntity = PoliticalEntity(
         settlement_names_2=[
             "",
         ],
-        exchange_reputation_changes={
-            "maintenance": 0.0,
-            "energy": 0.0,
-            "credits": 0.0,
-            "air": 0.001,
-            "water": 0.001,
-            "food": 0.001,
-            "mines": 0.0,
-            "ore": 0.0,
-            "raw_water": 0.01,
+        exchange_value={
+            "maintenance": 240000,
+            "energy": 5e-9,
+            "credits": 1,
+            "air": 6,
+            "water": 3,
+            "food": 6,
+            "mines": 50000,
+            "ore": 80,
+            "raw_water": 10,
+            "scoop": 100000,
+            "solar_panels": 100000,
+            "heat_shield_1": 100000,
+            "heat_shield_2": 500000,
         },
         biggest_cities=[
             ('Carela ', Ethnicity.WHITE),
@@ -201,7 +205,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "Vocation",
             "Work"
         ],
-        exchange_reputation_changes={
+        exchange_value={
             "maintenance": 24.0,
             "energy": 5e-13,
             "credits": 100.0,
@@ -211,6 +215,10 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "mines": 5.0,
             "ore": 0.008,
             "raw_water": 0.001,
+            "scoop": 10.0,
+            "solar_panels": 10.0,
+            "heat_shield_1": 10.0,
+            "heat_shield_2": 50.0,
         },
         biggest_cities=[
             ('Jiùjīnshān, Ài', Ethnicity.BLACK),
@@ -358,16 +366,20 @@ THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
         settlement_names_2=[
             "Cottage",
         ],
-        exchange_reputation_changes={
-            "maintenance": 0.0,
+        exchange_value={
+            "maintenance": 24.0,
             "energy": 5e-13,
-            "credits": 1.0,
-            "air": 0.006,
-            "water": 0.003,
-            "food": 0.006,
-            "mines": 0.0,
-            "ore": 0.016,
-            "raw_water": 0.01,
+            "credits": 100.0,
+            "air": 0.0006,
+            "water": 0.0003,
+            "food": 0.0006,
+            "mines": 5.0,
+            "ore": 0.008,
+            "raw_water": 0.001,
+            "scoop": 10.0,
+            "solar_panels": 10.0,
+            "heat_shield_1": 10.0,
+            "heat_shield_2": 50.0,
         },
         biggest_cities=[
             ('Glorious Seat, New Earth', Ethnicity.BLACK),

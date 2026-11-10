@@ -8,6 +8,7 @@ class TwsMiner(Ship):
     """The standard miner of Those-Who-Share. Its hull is a box of 4 m high, 4 m wide and 8 m deep."""
 
     NAME = 'TWS miner'
+    PRICE_AT_700 = 800000
     COCKPIT_TEXTURE = 'cockpit_ths_miner.png'
     ENERGY_MAX = 2e9  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
     ENGINE_ENERGY_PER_MOMENTUM = 150.0  # J per (kg*m/s): with ENERGY_MAX, 4e6 m/s of change of velocity per battery

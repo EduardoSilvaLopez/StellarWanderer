@@ -8,6 +8,7 @@ class TwsVersatile(Ship):
     """A versatile, still mining-oriented ship. Less cargo than a standard miner, though."""
 
     NAME = 'TWS Versatile'
+    PRICE_AT_700 = 160000
     COCKPIT_TEXTURE = 'cockpit_ths_versatile.png'
     ENERGY_MAX = 4e9  # Wh
     PRECARIOUSNESS = 0.15  # The maximum is 1. Better ships will decrease this.

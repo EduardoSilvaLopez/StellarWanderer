@@ -110,7 +110,7 @@ class Mission(Updatable):
         if terms is None or terms.base_frequency == 0:
             return None
         chance = random.Random(of_text(f"{settlement.full_keys()} {cls.KIND} offer {day.date().isoformat()}"))
-        if chance.random() >= terms.base_frequency + 0.1 * settlement.size:
+        if chance.random() >= terms.base_frequency * (1+ 0.1 * settlement.size):
             return None
         return cls.offer(day, settlement, chance)
 

@@ -8,6 +8,7 @@ class TwsHauler(Ship):
     """A massive hauler for large amounts of ore."""
 
     NAME = 'TWS Hauler'
+    PRICE_AT_700 = 2200000
     COCKPIT_TEXTURE = 'cockpit_ths_miner.png'
     ENERGY_MAX = 2.5e9  # Wh
     ENGINE_ENERGY_PER_MOMENTUM = 40.0  # J per (kg*m/s): with ENERGY_MAX, 4e6 m/s of change of velocity per battery

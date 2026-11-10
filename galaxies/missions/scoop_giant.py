@@ -31,7 +31,7 @@ class ScoopGiant(ScoopBody):
     TERMS = {
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            base_frequency=0.04,
+            base_frequency=0.05,
             taken_by_others=0.01,
             deadline_days_min=15,
             deadline_days_max=30,

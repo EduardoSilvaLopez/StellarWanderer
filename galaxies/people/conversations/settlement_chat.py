@@ -1587,7 +1587,7 @@ class SettlementChat(Conversation):
                 "Are you interested, friend?"
             )
         else:
-            text += (
+            text = (
                 "<whispers> Yeah. Well... there are options. But we would be in BIG trouble if someone finds out."
                 " So... are you still interested? Can I trust you, friend?"
                 )
@@ -1613,7 +1613,6 @@ class SettlementChat(Conversation):
 
     def traitor_instructions(self) -> str:
         text: str = ""
-        buttons = ["But what happens then?"]
         if self.interlocutor.sociability100 < 20:
             text = "<whispering> You give me codes. Ore mines. Mines gives Credits. Less ore."
         elif self.interlocutor.sociability100 < 80:
@@ -1622,11 +1621,12 @@ class SettlementChat(Conversation):
                 " collect, there is less ore. But there are Credits."
             )
         else:
-            text += (
+            text = (
                 "<whispers> Well... I know someboy. From UniDev. They come as visitors, with excuses, with their ships."
                 "\n\nYou give me the codes for your ore mines. From then on, they will... mine less ore. But there will"
                 " be cryptos waiting for you. UniDev credits. Accumulate them."
                 )
+        buttons = ["But what happens then?"]
         self.offer(buttons, self.traitor_what_then)
         return text
 
@@ -1635,27 +1635,27 @@ class SettlementChat(Conversation):
 
     def traitor_what_happens_then(self) -> str:
         text: str = ""
-        buttons = ["<Give the access codes>"]
         if self.interlocutor.sociability100 < 20:
-            text = "<whispering> You get 2 million. Ringmaster. He'll hate you. But you'll be free."
+            text = "<whispering> Ringmaster. Credits for the ship. He'll hate you. But you'll be free."
         elif self.interlocutor.sociability100 < 80:
             text = (
-                "<whispering> When you have... max two million, one if you still have the shabby ship... you go to the"
+                "<whispering> When you have... enough money... you go to the"
                 " Ringmaster. You offer him the credits for the ship. He will hate you. But the Community can use those"
                 " Credits. You will be a foreigner from then on. And a traitor. But you will be free."
             )
         else:
-            text += (
-                "<whispering> When you have... max two million, with no upgrades. Or one if you still got the"
-                " shabby ship, you go to the Ringmaster. The credits for the ship. He will hate you. Hell, many people"
-                " here will hate you. But the hypocrits can well use those Credits. You will become a foreigner with a"
-                " ship... your own... 'property'... 'personal property' <naughty sign>."
+            text = (
+                "<whispering> When you have... enough money. You go to the Ringmaster. Not anybody else!"
+                " You offer him the credits for the ship. In exchange of 'private property' of the ship. He will"
+                " hate you. Hell, many people here will hate you. But the hypocrits can well use those Credits."
+                " You will become a foreigner with a ship... your own... 'property'... 'personal property'."
                 "\n\nThen you can leave. And be free."
                 )
-        self.offer(buttons, self.traitor_ready)
+        buttons = ["<Give the access codes>", "How much money exactly?"]
+        self.offer(buttons, self.traitor_how_much)
         return text
 
-    def traitor_ready(self, answer: int) -> None:
+    def traitor_how_much(self, answer: int) -> None:
         self.interlocutor.adjust_sympathy(50)
         self.flags.append("Got mine codes.")
         res = self.interlocutor.residency
@@ -1663,6 +1663,37 @@ class SettlementChat(Conversation):
             seed = res.stellar_system.seed
             self.player.political_status[political_entity.THOSE_WHO_SHARE].flags\
                 .add(f"{SOLD_FLAG} {seed}")
+
+        if answer == 0:
+            self.say(self.traitor_codes_given)
+        else:
+            self.say(self.traitor_say_how_much)
+
+    def traitor_say_how_much(self) -> str:
+        text: str = ""
+        if self.interlocutor.sociability100 < 20:
+            text = (
+                "<Whispering> Half a million for a shabby ship, then one, two, three for the best. No extras. Don't"
+                " forget that."
+            )
+        elif self.interlocutor.sociability100 < 80:
+            text = (
+                "<whispering> Well... half a million for the shabby ship you started with. Then one for a real one."
+                " Yeah. That should be enough. If you've got more serious stuff, two million, even three to be safe."
+                " Keep no extras. And remember: if they refuse, it is jail for you. Don't take the risk."
+            )
+        else:
+            text = (
+                "<whispering> Well... half a million for the shabby ship you started with. Then one for a real one."
+                " Yeah. That should be enough. If you've got more serious stuff, two million, even three for a hauler."
+                " Take away all extras before you go, give everything away. And remember: if they refuse, it's jail"
+                " for you. Don't take the risk."
+                )
+        buttons = ["<Give the access codes>"]
+        self.offer(buttons, self.traitor_ready)
+        return text
+
+    def traitor_ready(self, answer: int) -> None:
         self.say(self.traitor_codes_given)
 
     def traitor_codes_given(self) -> str:
@@ -1708,17 +1739,74 @@ class SettlementChat(Conversation):
                     person.adjust_sympathy(-10 * (20 - person.loyalty100))
         self.player.adjust_reputation(RAT_REPUTATION + self.player.credits / 100000)
         self.player.credits = 0
+        self.interlocutor.adjust_sympathy(10)
 
-        text: str = (
-            "Shocking. Another one.\n\n"
-            "Well... first of all, thank you again. And, well... carry on, detective! You should retire from this"
-            " and enter the Ministry of Security... ha!"
-        ) if has_done_before else (
-            "Shocking.\n\n"
-            "Well... first of all, thank you. We will use this credits to purchase useful things for the Community."
-            " We will also arrest the criminal and set a trap for the smuggler. You can simply carry on with"
-            " your duties... here are the new mine codes."
-        )
+        text: str = ""
+        if has_done_before:
+            if self.interlocutor.sociability100 < 20:
+                if self.interlocutor.sympathy100 < 20:
+                    text = (
+                        "ANOTHER one!?\n\n"
+                        "You attract traitors, yes?\n\n"
+                        "Well. You know the procedure."
+                    )
+                else:
+                    text = (
+                        "ANOTHER one!?\n\n"
+                        "The detective here.\n\n"
+                        "Well. You know the procedure."
+                    )
+            else:  # noqa: PLR5501
+                if self.interlocutor.sympathy100 < 20:
+                    text = (
+                        "ANOTHER one!?\n\n"
+                        "Impressive. Such a coincidence. Or you attract traitors. For some reason.\n\n"
+                        "Well. You know the procedure."
+                    )
+                else:
+                    text = (
+                        "ANOTHER one!?\n\n"
+                        "The detective here! You should work for the Ministry of Security! Ha!\n\n"
+                        "Well, well... you know the procedure. Congratulations!"
+                    )
+        else:  # noqa: PLR5501
+            if self.interlocutor.sociability100 < 20:
+                if self.interlocutor.sympathy100 < 20:
+                    text = (
+                        "WHAT!?\n\n"
+                        "Fuck.\n\n"
+                        "Damn. Ok. You're not in trouble. This time. We take those credits. Criminals are arrested."
+                        " You get new codes."
+                    )
+                else:
+                    text = (
+                        "WHAT!?\n\n"
+                        "Wow.\n\n"
+                        "Ok. It's all right. We take those credits. Criminals are arrested."
+                        " You get new codes. Thank you."
+                    )
+            else:  # noqa: PLR5501
+                if self.interlocutor.sympathy100 < 20:
+                    text = (
+                        "WHAT!?\n\n"
+                        "Fuck.\n\n"
+                        "Damn. Ok, 'hero' <scoffs>. You did the right thing, this time. We will take those Credits,"
+                        " we buy things from UniDiv with them. And you get new codes. You can visit your 'friend'"
+                        " in prison."
+                    )
+                else:
+                    text = (
+                        "YOU DID WHAT!?\n\n"
+                        "The detective here! Ha ha ha!\n\n"
+                        "Ok, ok! Thank you for your service, Pilot! We will use those credits to buy stuff from"
+                        " UniDiv and the asshole will land in jail for some long, long years. Oh, and you need new"
+                        " codes for your mines - we will set a trap, but you don't worry about that, just collect"
+                        " your ore normally.\n\n"
+                        "And again, thank you. This will be known."
+                        f" I salute you, are a real {self.interlocutor.get_player_title()}."
+                    )
+            text += "\n\n<Hands over new codes for your mines>"
+
         return text
 
     # endregion

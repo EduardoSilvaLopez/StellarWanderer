@@ -9,9 +9,9 @@ main.draw_settlement_view).
 Left block: clock, settlement name and details, the knowledge buttons (the cockpit's, see main.open_knowledge) and a
 radio group of options, one always selected: Dockmaster (selected on opening, or Cargo if the ship is ready, see
 Settlement.is_ready), Cargo, Missions (only from the reputation the board needs, or while a taken mission is open
-here), Chat, and the actions Leave and Retire. Right block: the picture of the area on show (one per area, chosen from
-the settlement's seed, see area_pictures), faded dark, and what the option shows: the dockmaster's conversation, the
-cargo, the missions (OutpostMissions) or the chat (chat_view.py).
+here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block. Right block: the
+picture of the area on show (one per area, chosen from the settlement's seed, see area_pictures), faded dark, and what
+the option shows: the dockmaster's conversation, the cargo, the missions (OutpostMissions) or the chat (chat_view.py).
 
 A conversation shows its messages in a dark panel here, not in a dialog, and its answers as translucent rectangles
 (mouse, number keys or Enter). While a message with more than one answer waits, the options and the knowledge buttons
@@ -56,9 +56,9 @@ ACTION_LABELS = ('Retire', 'Leave')  # the buttons that do something instead of 
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
 ATTACHMENT_FIELDS = {'Scoop': 'has_scoop', 'Solar Panels': 'has_solar_panels'}  # the toggles' fields of the ship
-HEAT_SHIELD_COSTS = {'None': 0, 'Heat Shield I': 10, 'Heat Shield II': 50}  # reputation
-SCOOP_COST = 10  # reputation
-SOLAR_PANELS_COST = 10  # reputation
+# The keys of the attachments in the exchange value of Those-Who-Share, which holds their reputation costs.
+ATTACHMENT_KEYS = {'Scoop': 'scoop', 'Solar Panels': 'solar_panels'}
+HEAT_SHIELD_KEYS = {'Heat Shield I': 'heat_shield_1', 'Heat Shield II': 'heat_shield_2'}
 SELECTED_TEXT_COLOR = (9, 17, 21)  # dark text on the accent fill of the selected button.
 FULL_HOLD_COLOUR = (240, 96, 96)  # the room left in the hold, while a load has found none.
 MINE_SECONDS = 10 * 60.0  # Game time one person takes to take or give one mine.
@@ -733,13 +733,14 @@ class SettlementScreenDialog(Dialog):
             return float('inf')
         return self.ship.owner.reputation - floor
 
-    @staticmethod
-    def _attachment_cost(name: str, value: Any) -> float:
-        """What an attachment costs in reputation at `value`: the Heat Shield's option, or a toggle's yes."""
-        if name == "Heat Shield":
-            return HEAT_SHIELD_COSTS[value]
-        cost = SCOOP_COST if name == "Scoop" else SOLAR_PANELS_COST
-        return cost if value else 0
+    def _attachment_cost(self, name: str, value: Any) -> float:
+        """What an attachment costs in reputation at `value`: the Heat Shield's option, or a toggle's yes. The prices
+        are those of Those-Who-Share's exchange value (see political_entity)."""
+        key = HEAT_SHIELD_KEYS.get(value) if name == "Heat Shield" else ATTACHMENT_KEYS[name] if value else None
+        if key is None:
+            return 0
+        standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
+        return standing.entity.exchange_reputation_changes[key]
 
     def _set_attachment(self, name: str, value: Any) -> None:
         """Sets an attachment to `value`, charging the difference in reputation (a cheaper value is refunded). A
@@ -958,7 +959,8 @@ class SettlementScreenDialog(Dialog):
         for index, label in enumerate(BUTTON_LABELS):
             if not self._shows_option(index):
                 continue
-            rect = pygame.Rect(left.left + margin, top, left.width - 2 * margin, button_height)
+            row_top = left.bottom - margin - button_height if label == 'Retire' else top  # apart, at the bottom
+            rect = pygame.Rect(left.left + margin, row_top, left.width - 2 * margin, button_height)
             self._button_rects.append((index, rect))
             focused = self._focus_visible and self._focus == ('option', index)
             if index == self.selected:
@@ -971,7 +973,8 @@ class SettlementScreenDialog(Dialog):
                 pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
                 caption = font.render(label, True, ACCENT if focused else TEXT_COLOR)
             surface.blit(caption, caption.get_rect(center=rect.center))
-            top += button_height + gap
+            if label != 'Retire':
+                top += button_height + gap
 
     # region Conversations
     def _open_option(self, first_time: bool) -> None:
@@ -1108,7 +1111,7 @@ class SettlementScreenDialog(Dialog):
                 "Life as a miner was obviously too hard for you, and so your training is wasted. The Community"
                 " will hardly allow you to train for anything again for years, nor give you any position of"
                 " responsibility"
-                ", save in the Ministry of Security" if has_ratted else ""
+                f"{", save in the Ministry of Security" if has_ratted else ""}"
                 ". But you will be safe."
                 )
         elif rep <= 500:
@@ -1116,7 +1119,7 @@ class SettlementScreenDialog(Dialog):
                 "You have done your job, with the limited resources you had. The Community is satisfied with you"
                 " and understands your wish for a safer life. People will give you time to rest, then expect you"
                 " to take a less risky job"
-                ", maybe as detective" if has_ratted else ""
+                f"{", maybe as detective" if has_ratted else ""}"
                 ". Everything is fine."
                 )
         elif rep <= 2000:
@@ -1124,7 +1127,7 @@ class SettlementScreenDialog(Dialog):
                 "You retire as a successful miner who has helped the Community. You have new friends and contacts,"
                 " and people back home will respect you highly for that. After a well-deserved pause, doors will open"
                 " to positions of responsibility."
-                " The Ministry of Security will be waiting for you." if has_ratted else ""
+                f"{"The Ministry of Security will be waiting for you." if has_ratted else ""}"
                 " You can also enter politics with the assurance that people will"
                 " at least hear you out."
                 )
@@ -1133,7 +1136,7 @@ class SettlementScreenDialog(Dialog):
                 "You retire a hero, your name whispered together with Paladin Xi's. People will hardly give you a rest,"
                 " politicians calling at your door to get your support and offering you positions of high"
                 " responsibility"
-                ", and the Ministry of Security would be proud to offer you a position" if has_ratted else ""
+                f"{", and the Ministry of Security would be proud to offer you a position" if has_ratted else ""}"
                 ". But you can also reject them and gather a large group for your own projects."
                 )
         else:

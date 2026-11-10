@@ -50,7 +50,7 @@ class Settlement(Updatable):
 
     TIME_TO_ENTER = 30 * 60  # seconds of game time that going in takes (half an hour)
     TIME_TO_LEAVE = 30 * 60  # seconds of game time that leaving takes (half an hour)
-    CHARGE_PER_SECOND = 1e7 # Wh.
+    CHARGE_PER_SECOND = 1e6 # Wh.
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
     UNLOAD_RAW_WATER_PER_SECOND = 0.5  # Kg a second, a separate rate for caution: the same number for now
