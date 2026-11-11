@@ -1,52 +1,12 @@
-DEVELOPER'S DIARY since last release 2026-11-03 (9/11)
-
-* HISTORY
-  * Ore distribution: a bit more in non-ore-rich.
-
-2026-11-04 (10/11)
-
-  * History of stellar systems. From foundation to the future, how settlements grow, how portal stations grow with them.
-  * Extra: "Realistic speed" in "ideas". Huge difference in energy costs, shorts are cheaper, long are more expensive. Needs full recalibration of the energy economies.
-  * More realistic world surface colors.
-  * Start again, check the balance of everything: Energy consumption and its economy. Settlements.
-  * Cargo revamp: The left side is for upgrades, the right side for cargo including mines, ore, raw water.
-  * Outpost size 2.
-  * Hauler
-
-* AI PERSONALITY: Aborted.
-
-2026-11-05 (11/11)
-
-2026-11-08 (1/12)
-
-OROGRAPHY:
-  * Terrain elevation / sinkage.
-  * Mountains.
-  * Better rocks.
-
-2026-11-08 (2/12)
-
-* PATH OF TREASON II
-  * Path reached.
-  * "And... " / "By the other side..." / "But also, <subject>: " to join subjects in the chat.
-  * "Credits" as tag.
-  * Check the mission rewards of the logs.
-  * New start mask with randomness, DOB, some attributes (beautiful, discerning)
-
-2026-11-09 (3/12)
-
-  * Extra: The conversation with theartlav is closed.
-    https://www.reddit.com/chat/room/!hFXXM0NoMgrxebM51AeMb7blKnOkfzHIOeruoHIMSdY%3Areddit.com
-  * Completely new way to generate the NPCs.
-  * Rat
-  * Extra: Retirement.
-  * Complete the treason.
-
-2026-11-09 (4/12)
+DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 > STARTED: Extra time: 189h00' + 5:45-
 
-  * Extra: Improve the sounds for real.
+* INCIDENTS
+  * Get sealing equipment in the outposts.
+  * Randome events, particularly in the asteroid belts, damage the hull (maintenance).
+  * Seal to repair.
+  * Extra: Children.
 
 > BACKLOG
 
@@ -54,7 +14,6 @@ OROGRAPHY:
   * Give up the mines.
   * Assigning the history to the new systems.
   * Cities.
-  * Extra: A career as law enforcement, if "rat".
   * Extra: Binding slowly.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
@@ -72,11 +31,6 @@ OROGRAPHY:
   * Basins, rivers, canyons.
   * Extra: Strange rocks can be collected proactively and brought to the outpost.
   * Extra: Collision damage, also from rocks.
-
-* INCIDENTS
-  * Get sealing equipment in the outposts.
-  * Randome events, particularly in the asteroid belts, damage the hull (maintenance).
-  * Seal to repair.
 
 * INTERSTELLAR DIRECT TRAVEL
   * Base
