@@ -1,6 +1,8 @@
 """The mission board of an outpost, for a pilot whose reputation is MIN_REPUTATION or more. It is the Missions option of
 the settlement's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it
 opens.
+The reputation that counts is the one the pilot had on entering the outpost (`Settlement.player_reputation_on_entering`),
+so a fall inside does not hide the offers.
 A pilot below MIN_REPUTATION sees no offers, but still the missions they took from here (the Taken column), so that the
 option is there while one is open here (see SettlementScreenDialog._shows_option).
 
@@ -59,8 +61,15 @@ class MissionBoard:
         self.updated_at: Optional[datetime] = None  # not saved: only so that the days already asked are not asked again
 
     @staticmethod
-    def is_available(player: Player) -> bool:
-        return player.reputation >= MIN_REPUTATION
+    def is_trusted(reputation: float) -> bool:
+        return reputation >= MIN_REPUTATION
+
+    def is_open_to_pilot(self) -> bool:
+        """Whether the offers show: the reputation the pilot had on entering this outpost (see the module docstring)."""
+        entered = self.outpost.player_reputation_on_entering
+        if entered is None:
+            raise Exception("No reputation recorded on entering.")
+        return MissionBoard.is_trusted(entered)
 
     @property
     def player(self) -> Player:

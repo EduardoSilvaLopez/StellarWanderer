@@ -988,7 +988,15 @@ class SettlementChat(Conversation):
             else:
                 text = f"This place was founded in {when}. Our happy founding is {pretty_date(founded)}."
             return text
-        return "A place where you can get resupplied. Vital, for long trips."
+        else:  # noqa: PLR5501
+            if self.interlocutor.sociability100 < 20:
+                return "Keeps you alive."
+            elif self.interlocutor.sociability100 < 80:
+                return "Better than nothing, yes? Well you are low of air, particularly."
+            elif self.interlocutor.empathy100 < 20:
+                return "A place where your next breath does not depend on your own skills. Be grateful <grim smile>."
+            else:
+                return "A place to provide you with supplies, to relax and take a rest."
 
     def talk_portal(self) -> str:
         # Empathy below 20: no talk with the pilot at all. Sympathy below 20: a brush-off. Otherwise sociability sets
@@ -1086,6 +1094,24 @@ class SettlementChat(Conversation):
             "Did you find many out there? I think Iridium is the most important right now, but the whole"
             " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
         )
+
+    def talk_protection(self) -> str:
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Handle conflicts. Protect."
+        elif soc < 80:
+            return (
+                "Security officers, captains and more are part of the Ministry of Protection."
+                " You have to wear uniform."
+            )
+        else:
+            return (
+                "Security officers handle the conflicts. Trained to de-escalate, but ready to do what it takes."
+                " Then come the officers: lieutenants, captains and so on, all  depend on the Ministry of Protection."
+            )
+
     def talk_researcher(self) -> str:
         return (
             "From pure scientific theory to engineering research. But more of the latter."
@@ -1133,34 +1159,67 @@ class SettlementChat(Conversation):
                     " It is to carry a very heavy burden for the Community."
                 )
 
-    def talk_protection(self) -> str:
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "Handle conflicts. Protect."
-        elif soc < 80:
-            return (
-                "Security officers, captains and more are part of the Ministry of Protection."
-                " You have to wear uniform."
-            )
-        else:
-            return (
-                "Security officers handle the conflicts. Trained to de-escalate, but ready to do what it takes."
-                " Then come the officers: lieutenants, captains and so on, all  depend on the Ministry of Protection."
-            )
-
     def talk_smith(self) -> str:
         return (
             "To take the ore miners bring, as well as other materials, and transform it into usable, standardised"
             " materials. Requires tough people, unlike other engineers."
         )
+
     def talk_space(self) -> str:
-        return (
-            "Unforgiving, yes? And fucking huge. In your head, make three layers of it: remaining around a"
-            " planet with an outpost. Easy peasy and safe. Interplanetary. Hard and dangerous. Interstellar."
-            " Just don't. Go to the bases, use the portals, remain in the network"
+        # Sympathy below 20: a brush-off, as in the talk of the portal. Empathy decides how the dangers are told: low,
+        # the person enjoys them or says why they keep away; high with low sociability, the person is shy and does not
+        # dwell on them. Otherwise the dangers are told with care, and sociability sets how many.
+        soc: float = self.interlocutor.sociability100
+        emp: float = self.interlocutor.empathy100
+        sym: float = self.interlocutor.sympathy100
+
+        if sym < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+
+        if emp < 20:
+            if soc < 20:
+                return random.choice([
+                    "Out there? Kills the weak. Good riddance.",
+                    "Hate it. Nothing to breathe, nothing to stand on.",
+                ])
+            if soc < 80:
+                return random.choice([
+                    "Radiation, pebbles shot faster than bullets and no air. Good luck, Pilot. Better you than me.",
+                    "I stay where the air is. But hey, it's your burial.",
+                ])
+            return (
+                "Oh, I love the idea! Cosmic rays cooking you, a grain of sand hitting like a bullet, the air going"
+                " out in fifteen seconds. Lovely. And when the rations run out, you starve in a suit."
+                "\n\nMe? No, thanks, I stay where others make sure I can breath. Good luck, pilot."
+            )
+        if emp >= 80 and soc < 20:
+            return random.choice([
+                "<Looks at the window> It's quiet out there. I like quiet.",
+                "Pretty. The stars don't blink. Makes me think.",
+                "Swallows people. Silently. Just... come back, ok?",
+            ])
+
+        dangers: list[str] = [
+            "Radiation. No air and no magnetic field out there, so the cosmic rays and the solar storms go"
+            " straight through you.",
+            "Meteoroids. A grain of sand at tens of kilometres a second hits worse than bullet. Bigger, and"
+            " the ship is gone.",
+            "Air loss. One breach and the air is gone. About fifteen seconds to think, then nothing.",
+            "Starvation. Your food and water are what you carry. When they run out, you starve slowly, in a suit.",
+            "No rescue. A beacon signal does not reach far, and once you drift between the worlds, nobody comes.",
+        ]
+        closing: str = (
+            "Please be careful out there. Come back in one piece, ok?" if emp >= 80 else "Be careful out there."
         )
+        if soc >= 80:
+            intro: str = (
+                "Unforgiving, yes? And fucking huge. Around a planet, with a settlement, it's ok. Inner planets..."
+                " hard. Jovians? Harder. Interstellar... just don't. Stay near the portal. Use the network."
+            )
+            body: str = "\n\n".join([intro] + random.sample(dangers, 3))
+        else:
+            body = random.choice(dangers)
+        return f"{body} {closing}"
 
     def talk_stevedore(self) -> str:
         # Only sociability matters here: it sets the verbosity.

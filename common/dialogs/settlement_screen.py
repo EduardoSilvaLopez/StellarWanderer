@@ -8,8 +8,8 @@ main.draw_settlement_view).
 
 Left block: clock, settlement name and details, the knowledge buttons (the cockpit's, see main.open_knowledge) and a
 radio group of options, one always selected: Dockmaster (selected on opening, or Cargo if the ship is ready, see
-Settlement.is_ready), Cargo, Missions (only from the reputation the board needs, or while a taken mission is open
-here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block. Right block: the
+Settlement.is_ready), Cargo, Missions (only from the reputation the board needs on entering, or while a taken mission is
+open here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block. Right block: the
 picture of the area on show (one per area, chosen from the settlement's seed, see area_pictures), faded dark, and what
 the option shows: the dockmaster's conversation, the cargo, the missions (OutpostMissions) or the chat (chat_view.py).
 
@@ -245,13 +245,13 @@ class SettlementScreenDialog(Dialog):
         # local: the player needs the missions, which need the settlements, which need the dialogs
         from galaxies.people.player import current_player
         self.ship = current_player.ship  # docked by the player's enter_settlement, which comes before this screen
+        if self.settlement.player_reputation_on_entering is None:  # a fresh entry, not a screen remade after a load
+            self.settlement.player_reputation_on_entering = current_player.reputation
+            self.settlement.set_altered()  # a save made inside must keep it: the leaving conversation needs it
         if self.settlement.is_ready(self.ship):  # no offer from the Dockmaster: the screen goes to the cargo
             self.selected = BUTTON_LABELS.index('Cargo')
             self._focus = ('option', self.selected)
         self._open_option(True)
-        if self.settlement.player_reputation_on_entering is None:  # a fresh entry, not a screen remade after a load
-            self.settlement.player_reputation_on_entering = current_player.reputation
-            self.settlement.set_altered()  # a save made inside must keep it: the leaving conversation needs it
 
     def _panel_layout(self, window_size: Tuple[int, int]) -> Tuple[pygame.Rect, float]:
         """The whole window, at its own scale: nothing is centred or scaled down."""
@@ -1166,13 +1166,12 @@ class SettlementScreenDialog(Dialog):
         return BUTTON_LABELS[self.selected] == 'Cargo' and self._shown is None
 
     def _shows_option(self, index: int) -> bool:
-        """Every option is there, except Missions below the reputation the board needs (MissionBoard.is_available),
-        unless
-        a mission the pilot has taken is open here to deliver: then the Taken missions are there, without any offer."""
-        from galaxies.missions.mission_board import MissionBoard  # local: as in AvailableColumn
+        """Every option is there, except Missions below the reputation the board needs on entering
+        (MissionBoard.is_open_to_pilot), unless a mission the pilot has taken is open here to deliver: then the Taken
+        missions are there, without any offer."""
         if BUTTON_LABELS[index] != 'Missions':
             return True
-        return MissionBoard.is_available(self.ship.owner) or bool(self.settlement.mission_board.mine())
+        return self.settlement.mission_board.is_open_to_pilot() or bool(self.settlement.mission_board.mine())
 
     def _leave_hidden_option(self) -> None:
         """If the reputation fell below what Missions needs while it was selected, Dockmaster is selected instead."""

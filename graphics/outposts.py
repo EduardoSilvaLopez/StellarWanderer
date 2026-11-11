@@ -367,8 +367,8 @@ class Outposts:
         flag_bottom = flag_top - FLAG_HEIGHT
         # Both faces of the cloth, a hair apart so they do not fight; the back is seen mirrored, as on a real flag.
         for offset, normal, uvs in (
-                (0.015, door_normal, [(0, 1), (1, 1), (1, 0), (0, 0)]),
-                (-0.015, (-sin_a, 0.0, -cos_a), [(1, 1), (0, 1), (0, 0), (1, 0)])):
+                (0.015, door_normal, [(1, 1), (0, 1), (0, 0), (1, 0)]),
+                (-0.015, (-sin_a, 0.0, -cos_a), [(0, 1), (1, 1), (1, 0), (0, 0)])):
             quad(FLAG, normal,
                  [corner(flag_x0, flag_bottom, pole_z + offset), corner(flag_x1, flag_bottom, pole_z + offset),
                   corner(flag_x1, flag_top, pole_z + offset), corner(flag_x0, flag_top, pole_z + offset)],

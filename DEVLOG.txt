@@ -1,6 +1,6 @@
 DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
-> STARTED: Extra time: 189h00' + 5:45-
+> STARTED: Extra time: 189h00' + 5:45-9:00 + 11:00 - 12:45 + 17:00 - 20:30
 
 * INCIDENTS - Dora Exploradora
   * Get sealing equipment in the outposts.

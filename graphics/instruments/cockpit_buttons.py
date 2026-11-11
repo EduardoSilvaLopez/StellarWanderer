@@ -29,7 +29,7 @@ def shows_missions(player: Player) -> bool:
     see."""
     from galaxies.missions import OPEN  # local: the missions import the player, which imports this package
     from galaxies.missions.mission_board import MissionBoard
-    return MissionBoard.is_available(player) or any(m.status == OPEN for m in player.missions)
+    return MissionBoard.is_trusted(player.reputation) or any(m.status == OPEN for m in player.missions)
 
 
 class CockpitButtons:
