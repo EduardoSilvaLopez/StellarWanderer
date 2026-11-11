@@ -317,6 +317,17 @@ def save_from_menu(
     return show_pending_messages(screen, gui, fonts, clock)
 
 
+def show_loading(gui: OpenGLGui, fonts: FontCache) -> None:
+    """A black frame saying the galaxy is loading, drawn before start_game, which blocks while it builds."""
+    width, height = pygame.display.get_window_size()
+    layer = pygame.Surface((width, height), pygame.SRCALPHA)
+    layer.fill((0, 0, 0, 255))
+    text = fonts.render_to_fit("Loading the galaxy...", (200, 200, 200), int(width * 0.6), max(12, int(height * 0.04)))
+    layer.blit(text, text.get_rect(center=(width // 2, height // 2)))
+    gui.draw_full_screen(layer)
+    pygame.display.flip()
+
+
 def open_start_menu(
         screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock,
         game_running: bool
@@ -331,6 +342,7 @@ def open_start_menu(
         keep_running, screen = save_from_menu(result[1], screen, gui, fonts, clock)
         return keep_running, screen
     if result[0] in ('new', 'load'):
+        show_loading(gui, fonts)
         start_game(*result)
     return True, screen
 
@@ -362,8 +374,9 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     fonts = FontCache()
-    start_game(*choice)
     gui = OpenGLGui()
+    show_loading(gui, fonts)
+    start_game(*choice)
     gui.preload_textures()
 
     running = True
@@ -605,7 +618,7 @@ def main() -> None:
                 ship.scanner.activate(delta_game_seconds)
         else:
             ship.scanner.release()  # SPACE is up: a scanned rock is announced again on the next press
-            audio.set_loop('scoop', False)
+            audio.set_loop('scoop_ice', False)
             if ship.laser.firing:
                 ship.scanner.deactivate()
 

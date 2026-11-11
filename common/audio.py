@@ -1,8 +1,9 @@
 """Sound effects (not music). Game code names an event with `play(name)`; this module does the rest.
 
 The game is in vacuum: only what the pilot hears inside the ship exists here (the cockpit and its dialogs, the ship's
-systems, the radio and the alarms), never a sound from space itself. A sound is a WAV in `common/resources/sounds`, made
-by `tools/generate_sounds.py` (a file of the same name can replace any of them). SOUNDS gives each one's volume, and
+systems, the radio and the alarms), never a sound from space itself. A sound is a WAV or an MP3 in
+`common/resources/sounds`; the WAVs are made by `tools/generate_sounds.py` (a file of the same name can replace any of
+them). SOUNDS gives each one's volume, and
 whether it keeps silent while time is compressed above x1: the interface and the alerts do not, the one-shots of the
 game will.
 
@@ -34,29 +35,29 @@ SOUNDS: Dict[str, SoundSpec] = {
     'ui_click': SoundSpec('ui_click.wav', 0.5, False),  # a button or a row is pressed
     'mission_taken': SoundSpec('mission_taken.wav', 0.6, False),
     'mission_delivered': SoundSpec('mission_delivered.wav', 0.6, False),
-    'mission_failed': SoundSpec('mission_failed.wav', 0.7, False),  # also when time is compressed: it is an alert
-    'notify': SoundSpec('notify.wav', 0.4, False),  # a notification or a warning
-    'alert': SoundSpec('alert.wav', 0.7, False),  # a CRITICAL notification
-    'radio_open': SoundSpec('radio_open.wav', 0.5, False),  # a message of a conversation over the radio
-    'ore_collected': SoundSpec('ore_collected.wav', 0.5, True),
-    'mine_placed': SoundSpec('mine_placed.wav', 0.8, True),
-    'mine_refused': SoundSpec('mine_refused.wav', 0.5, False),  # instead of the notification's own sound
-    'bind': SoundSpec('bind.wav', 0.5, False),  # arriving to a world, instead of the notification's own sound
-    'unbind': SoundSpec('unbind.wav', 0.5, False),  # leaving a world, instead of the notification's own sound
+    'failed': SoundSpec('failed.wav', 0.7, False),  # a mission fails, or a mine or the scoop is refused: an alert
+    'notify': SoundSpec('notify.mp3', 0.4, False),  # a notification or a warning
+    'alert': SoundSpec('alert.mp3', 0.7, False),  # a CRITICAL notification
+    'radio_open': SoundSpec('radio_open.mp3', 0.5, False),  # a message of a conversation over the radio
+    'ore_collected': SoundSpec('ore_collected.mp3', 0.5, True),
+    'mine_placed': SoundSpec('mine_placed.mp3', 0.8, True),
+    'bind': SoundSpec('bind.mp3', 0.5, False),  # arriving to a world, instead of the notification's own sound
+    'unbind': SoundSpec('unbind.mp3', 0.5, False),  # leaving a world, instead of the notification's own sound
     'time_up': SoundSpec('time_up.wav', 0.4, False),
     'time_down': SoundSpec('time_down.wav', 0.4, False),
     'game_over': SoundSpec('game_over.wav', 0.7, False),  # the death message opens with it
-    'laser': SoundSpec('laser.wav', 0.3, True),  # loop: the beam's hum, with a whine over it
-    'laser_on': SoundSpec('laser_on.wav', 0.4, True),  # a zap when the beam is switched on
+    'laser': SoundSpec('laser.mp3', 0.3, True),  # loop: the beam's hum, with a whine over it
+    'laser_on': SoundSpec('laser_on.mp3', 0.4, True),  # a zap when the beam is switched on
     'laser_hit': SoundSpec('laser_hit.wav', 0.3, True),  # loop: the sizzle of the beam on a rock
     'thrust': SoundSpec('thrust.wav', 0.25, True),  # loop
     'attitude': SoundSpec('thrust.wav', 0.1, True),  # loop: the thrust's sound, softer, for yaw, pitch and roll
-    'scan': SoundSpec('scan.wav', 0.3, True),  # loop: the low, soft buzz of the beam scanning an asteroid
-    'scoop': SoundSpec('scoop.wav', 0.3, True),  # loop: air and water pulled into the scoop
+    'scan': SoundSpec('scan.mp3', 0.3, True),  # loop: the low, soft buzz of the beam scanning an asteroid
+    'scoop_ice': SoundSpec('scoop_ice.mp3', 0.3, True),  # loop: water taken from ice or an asteroid
+    'scoop_gas': SoundSpec('scoop_gas.mp3', 0.3, True),  # loop: the corona or the gas of a giant taken by a probe
 }
 
 MIN_GAP_MS = 80  # the least time between two plays of the same sound
-LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan', 'scoop')  # the sounds started with set_loop
+LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan', 'scoop_ice', 'scoop_gas')  # started with set_loop
 
 _loaded: Dict[str, Optional[pygame.mixer.Sound]] = {}  # None for a sound that could not be loaded
 _last_played_at: Dict[str, int] = {}

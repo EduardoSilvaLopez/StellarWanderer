@@ -40,14 +40,15 @@ OROGRAPHY:
   * Completely new way to generate the NPCs.
   * Rat
   * Extra: Retirement.
+  * Complete the treason.
 
-> STARTED: Extra time: 185h45' + 7:30 - 8:30 + 10:45 - 11:30 + 14:00 - 
+2026-11-09 (4/12)
+
+> STARTED: Extra time: 189h00' + 5:45-
+
+  * Extra: Improve the sounds for real.
 
 > BACKLOG
-
-* PATH OF TREASON II
-  * Complete the treason.
-  * Extra: Improve the sounds for real.
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
   * Give up the mines.

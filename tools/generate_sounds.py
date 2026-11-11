@@ -149,17 +149,6 @@ def sizzle(loudness: float) -> np.ndarray:
     return loudness * wave_ / np.abs(wave_).max()
 
 
-def intake(loudness: float) -> np.ndarray:
-    """One second of air and water drawn into a scoop: a low rushing noise, its flutter a whole number of Hz. Made to
-    loop without a click: the noise is smoothed around the loop (np.roll), so the sound ends where it began."""
-    t = np.arange(RATE) / RATE
-    noise = np.random.default_rng(31).uniform(-1.0, 1.0, len(t))
-    rush = sum(np.roll(noise, k) for k in range(8)) / 8.0
-    flutter = 0.7 + 0.3 * np.sin(2 * np.pi * 2 * t)
-    wave_ = rush * flutter
-    return loudness * wave_ / np.abs(wave_).max() + hum([(60, 1.0), (90, 0.5)], tremolo=4, loudness=0.25)
-
-
 def silence(seconds: float) -> np.ndarray:
     return np.zeros(int(RATE * seconds))
 
@@ -183,13 +172,12 @@ def main() -> None:
     save('mission_taken', [tone(523.25, 0.09, 0.55), tone(659.25, 0.16, 0.55)])
     save('mission_delivered', [tone(523.25, 0.08, 0.55), tone(659.25, 0.08, 0.55), tone(783.99, 0.08, 0.55),
                                tone(1046.5, 0.3, 0.55)])
-    save('mission_failed', [sweep(330, 200, 0.32, 0.55), silence(0.05), tone(180, 0.2, 0.6, decay=4.0)])
+    save('failed', [sweep(330, 200, 0.32, 0.55), silence(0.05), tone(180, 0.2, 0.6, decay=4.0)])
     save('notify', [tone(1000, 0.14, 0.45, decay=6.0)])
     save('alert', [tone(880, 0.1, 0.6), tone(660, 0.1, 0.6), tone(880, 0.1, 0.6), tone(660, 0.14, 0.6)])
     save('radio_open', [crackle(0.06), tone(1100, 0.07, 0.4), silence(0.02), tone(1400, 0.09, 0.4)])
     save('ore_collected', metal_doors())
     save('mine_placed', [hiss(0.35, 0.4), impact(0.45, 0.9), silence(0.05), impact(0.3, 0.6)])
-    save('mine_refused', [tone(190, 0.1, 0.6), silence(0.04), tone(190, 0.16, 0.6)])
     save('bind', [atmosphere(1.6, 0.3, 0.8, 21)])  # the hull hits the thin air: a quick roar that settles
     save('unbind', [atmosphere(1.2, 0.65, 0.7, 22)])  # the air thins out: a roar that builds and falls away
     save('time_up', [sweep(500, 800, 0.08, 0.45)])
@@ -201,7 +189,6 @@ def main() -> None:
     save('laser_hit', [sizzle(0.3)])
     save('thrust', [hum([(55, 1.0), (82, 0.6), (110, 0.4), (165, 0.15)], tremolo=3, loudness=0.5)])
     save('scan', [hum([(38, 1.0), (57, 0.5), (76, 0.3)], tremolo=5, loudness=0.35)])  # low, soft: a passive beam
-    save('scoop', [intake(0.35)])  # loop: air and water pulled into the scoop
 
 
 if __name__ == '__main__':

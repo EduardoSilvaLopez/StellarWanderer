@@ -170,7 +170,7 @@ class Mission(Updatable):
         self.status = FAILED
         self.finished_at = self.deadline  # it failed at the deadline, whenever the queue got to it
         player.ship.notification.set(f"WARNING: Mission failed: {self.title()}.")
-        audio.play('mission_failed')
+        audio.play('failed')
         self.fail(player)
     # endregion
 

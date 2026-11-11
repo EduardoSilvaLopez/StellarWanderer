@@ -80,9 +80,10 @@ class Ship(Updatable):
     # J/K: the heat the ship holds, which with the time constant sets its conductance. The heat is not the ship's mass
     # (see Ship.mass): it is an estimate, about 20 t of hull at 500 J/(kg K).
     HULL_CAPACITY = 1.0e7
-    # Friction in a gas: q = k * sqrt(density / nose radius) * speed**3 (W/m^2), on the frontal area. k is the Sutton-Graves
-    # constant for a hydrogen-helium atmosphere (Jupiter, mass fraction of helium 0.238): 0.0447 in the report's units,
-    # times 1 / (2 sqrt(101325)) for SI. Sutton and Graves 1971, NASA TR R-376, eq. (42) and table I, in kg^0.5/m.
+    # Friction in a gas: q = k * sqrt(density / nose radius) * speed**3 (W/m^2), on the frontal area. k is the
+    # Sutton-Graves constant for a hydrogen-helium atmosphere (Jupiter, mass fraction of helium 0.238): 0.0447 in the
+    # report's units, times 1 / (2 sqrt(101325)) for SI. Sutton and Graves 1971, NASA TR R-376, eq. (42) and table I,
+    # in kg^0.5/m.
     FRICTION_CONSTANT = 7.0e-5  # SI, kg^0.5/m
     NOSE_RADIUS = 1.0  # m: the rounded front of the hull, where the heating is taken
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
@@ -93,7 +94,8 @@ class Ship(Updatable):
     PRESSURE_MAX: ClassVar[float]  # Pa, the outside pressure the hull is built for: the limit of the pressure bar, and
     # the pressure at which the ship is crushed (see _live_through)
     FORWARD_BACKWARD_ACC: ClassVar[float]  # meters per second squared
-    UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included (Navigation._apply_gravity)
+    UP_DOWN_ACC: ClassVar[float]  # m/s^2, the engines' whole vertical power, gravity included
+    # (Navigation._apply_gravity)
     RIGHT_LEFT_ACC: ClassVar[float]  # meters per second squared
     BRAKE_ACC: ClassVar[float]  # m/s^2, max deceleration of each of the three axes while braking (Navigation._brake)
     CARGO_HOLD: ClassVar[type[CargoHold]]
@@ -207,7 +209,7 @@ class Ship(Updatable):
             self.scoop_open = False
             self.notification.set(Ship.SCOOP_CLOSED)
         elif not self.can_stay_open():
-            audio.play('mine_refused')
+            audio.play('failed')
         else:
             self.scoop_open = True
             self.notification.set(Ship.SCOOP_OPENED)
@@ -226,31 +228,31 @@ class Ship(Updatable):
         environment = gem.current_environment
         asteroid: Optional[Asteroid] = None
         if not self.scoop_open:
-            audio.set_loop('scoop', False)
+            audio.set_loop('scoop_ice', False)
             return False
         if self.is_bound:
             world = environment.fixed_world
             if not (self.navigation.altitude() <= Ship.SCOOP_RANGE and isinstance(world, RockyWorld)
                     and world.surface_type is SurfaceType.ICE):
-                audio.set_loop('scoop', False)
+                audio.set_loop('scoop_ice', False)
                 return False
         else:
             targeted = environment.targeted_body
             if not (isinstance(targeted, asteroid_module.Asteroid) and self._in_scoop_view(targeted)):
-                audio.set_loop('scoop', False)
+                audio.set_loop('scoop_ice', False)
                 return False
             asteroid = targeted
         self.laser.cease_fire()
         hold = self.cargo_hold
         if hold.free_capacity() < hold.RAW_WATER_WEIGHT:
             self.scoop_open = False
-            audio.set_loop('scoop', False)
+            audio.set_loop('scoop_ice', False)
             self.notification.set(Ship.SCOOP_WATER_FULL)
             return True
         if self.scoop_speed() != 0.0:
-            audio.set_loop('scoop', False)
+            audio.set_loop('scoop_ice', False)
             return True
-        audio.set_loop('scoop', True)
+        audio.set_loop('scoop_ice', True)
         if asteroid is not None and self._fits_whole(asteroid):
             asteroid.scoop_progress += Ship.SCOOP_WATER_KG_PER_SECOND * game_seconds / asteroid.mass
             if asteroid.scoop_progress >= 1.0:
@@ -307,10 +309,10 @@ class Ship(Updatable):
 
     def collect_probe(self, game_seconds: float) -> None:
         """Every frame: with the scoop open (it is closed when it may not stay open: see `check_scoop`) where a probe
-        fills, the probe of each such open mission fills."""
-        if not self.scoop_open:
-            return
-        for mission in self.probe_missions():
+        fills, the probe of each such open mission fills. The gas sound plays while one fills."""
+        missions = self.probe_missions() if self.scoop_open else []
+        audio.set_loop('scoop_gas', bool(missions))
+        for mission in missions:
             mission.collect(game_seconds)
     # endregion
 
@@ -405,8 +407,8 @@ class Ship(Updatable):
         return flux * self.WIDTH * self.HEIGHT
 
     def _exchange_with_gas(self, pressure: float, kelvin: float, delta_time: float) -> None:
-        """The temperature moves towards the gas's, over the hull's time constant, and friction heats it on top. The heat
-        shield divides the difference at equilibrium, by 5 per level, and the friction too: the ship settles at
+        """The temperature moves towards the gas's, over the hull's time constant, and friction heats it on top.
+        The heat shield divides the difference at equilibrium, by 5 per level, and the friction too: the ship settles at
         TEMP_DEFAULT + (gas - TEMP_DEFAULT) / shield, plus the friction through the hull. Where that is below the floor,
         the systems hold the floor, and that costs energy: the heat leaking through the shield, the hull's conductance
         over the shield times the gap."""
@@ -419,7 +421,8 @@ class Ship(Updatable):
         passive = self.temperature + (target - self.temperature) * (1.0 - math.exp(-delta_time / time_constant))
         if passive < Ship.TEMP_DEFAULT:
             conductance = Ship.HULL_CAPACITY / time_constant  # W/K
-            power = conductance * (Ship.TEMP_DEFAULT - target)  # W: the pull of the passive equilibrium through the hull
+            # W: the pull of the passive equilibrium through the hull
+            power = conductance * (Ship.TEMP_DEFAULT - target)
             self.energy -= power * delta_time / 3600.0  # Wh
             self.temperature = Ship.TEMP_DEFAULT
         else:
@@ -533,21 +536,21 @@ class Ship(Updatable):
         '''React to the "place mine" button: a mine on the ore field MINE_FRONT_DISTANCE metres ahead, unless something
         forbids it (the pilot is told what).'''
         if self.cargo_hold.mines <= 0:
-            self.notification.set("No mines available.", 'mine_refused', bad=True)
+            self.notification.set("No mines available.", 'failed', bad=True)
             return
         if not self.is_bound:
-            self.notification.set("Mines can only be placed on a world.", 'mine_refused', bad=True)
+            self.notification.set("Mines can only be placed on a world.", 'failed', bad=True)
             return
         if self._mine_too_near():
-            self.notification.set("Mines cannot be placed so near each other.", 'mine_refused', bad=True)
+            self.notification.set("Mines cannot be placed so near each other.", 'failed', bad=True)
             return
         if self._rock_in_front():
-            self.notification.set("There are rocks there, we cannot place a mine.", 'mine_refused', bad=True)
+            self.notification.set("There are rocks there, we cannot place a mine.", 'failed', bad=True)
             return
         front_lon, front_lat = self._mine_spot()
         targeted_field = self._ore_field_at(front_lon, front_lat)
         if targeted_field is None:
-            self.notification.set("No ore field here.", 'mine_refused', bad=True)
+            self.notification.set("No ore field here.", 'failed', bad=True)
             return
 
         new_mine = OreMine(targeted_field, front_lon, front_lat, self.attitude.yaw)

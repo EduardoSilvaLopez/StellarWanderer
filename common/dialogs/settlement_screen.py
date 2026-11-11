@@ -653,7 +653,7 @@ class SettlementScreenDialog(Dialog):
         limit (_supply_limit); the reputation follows what actually moved, and the game time it takes is spent (see
         _seconds_of). A take that asked for more than the room left turns the room red (_hold_full), until a give or
         leaving Cargo. A take that gets less than it asked for is refused, with a notification and the sound of the
-        refusal (mine_refused for a mine, the click for the others): the Community's message when a mine goes over the
+        refusal (failed for a mine, the click for the others): the Community's message when a mine goes over the
         reputation limit (_reputation_limit), else the ship's. A take that goes through plays the click."""
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         supply = SUPPLIES[key]
@@ -670,7 +670,7 @@ class SettlementScreenDialog(Dialog):
         if not refused:
             audio.play('ui_click')
         else:
-            sound = 'mine_refused' if key == "mines" else 'ui_click'
+            sound = 'failed' if key == "mines" else 'ui_click'
             if key == "mines" and before + asked > self._reputation_limit(key):
                 self._community_refuses(sound)
             else:
@@ -750,7 +750,7 @@ class SettlementScreenDialog(Dialog):
             return
         change = self._attachment_cost(name, value) - self._attachment_cost(name, self._attachment(name))
         if change > 0 and change > self._reputation_remaining():
-            self._community_refuses('mine_refused')
+            self._community_refuses('failed')
             return
         self.ship.owner.adjust_reputation(-change)
         self._store_attachment(name, value)
