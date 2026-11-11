@@ -991,10 +991,91 @@ class SettlementChat(Conversation):
         return "A place where you can get resupplied. Vital, for long trips."
 
     def talk_portal(self) -> str:
-        return (
-            "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
-            " you are simply travelling through. But one side is light years from the other side. Damn."
-        )
+        # Empathy below 20: no talk with the pilot at all. Sympathy below 20: a brush-off. Otherwise sociability sets
+        # how many topics are told, as in the political talks. The base has more people, the gardens and a coffee shop.
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        if sym < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+
+        now: datetime = self.date_time
+        star: datetime = portal_arrival(self.place)
+        when: str = founding_when(star, now)
+        at_base: bool = isinstance(self.place, PortalBase)
+
+        if (star.month, star.day) == (now.month, now.day):
+            star_text: str = "Today is the Happy star, the day the Portal came. Happy star!"
+            star_curt: str = "Happy star!"
+        else:
+            star_text = (f"Happy star is on {pretty_date(star)}, {when}. We party!")
+            star_curt = f"Our Happy star is {pretty_date(star)}."
+
+        others: list[Person] = [member for member in self.place.staff if member is not self.interlocutor]
+        if at_base and others:
+            colleague: Person = random.choice(others)
+            people_text: str = (
+                "The base has more people than a small outpost, and you should meet them. Go and see"
+                f" {colleague.name} {colleague.surname}, the {colleague.role.name}. Tell them I sent you."
+            )
+        else:
+            people_text = "A normal outpost has a handful of people. The base has more, go and meet them."
+
+        topics: dict[str, tuple[float, str, str]] = {
+            'the crossing': (40, "Overwhelming. Then disappointing.", (
+                "Crossing that thing was at the same time overwhelming and disappointing. I mean... it's just like"
+                " you are simply travelling through. But one side is another star away. Damn."
+            )),
+            'the size': (30, "Nobody knows why it is that size.", (
+                "Every Portal is exactly the same size, in every system. Nobody knows why the aliens chose that"
+                " size. Nobody can change it either, so it counts as a law. Some say it only works like that."
+            )),
+            'the origin': (25, "The Mother started one. We learned from it.", (
+                "The Exterminating Mother started building one, back in 500. We only learned how from the one"
+                " she never finished, and we still cannot change its design."
+            )),
+            'the defence': (30, "Don't try to cross it. They shoot.", (
+                "Ships that try to cross without permission get warned first. Then the base stops them, remotely if"
+                " it can, and destroys them if it cannot. Crossing unauthorised is a severe crime everywhere."
+                " So don't be the test case."
+            )),
+            'the people': (40, "Meet the others.", people_text),
+            'the happy star': (30, star_curt, star_text),
+        }
+        if at_base:
+            topics['the gardens'] = (40, "Gardens, or a coffee. Both possible.", (
+                "If you have time, walk in the hydroponic gardens. Or drink something in the coffee shop, that's"
+                " possible too."
+            ))
+        if self.interlocutor.hobby in political_entity.PORTAL_BASE_HOBBIES:
+            topics['the hobby'] = (30, "I can practise that in the base too.",
+                                   f"{self.interlocutor.hobby} I can practise that in the base too.")
+        if sym >= 80:  # the confidences
+            topics['the first crossing'] = (40, "I was sick the first time. Don't tell.", (
+                "<Whispers> The first time I crossed the Portal, I was sick in the ship. Don't tell anyone."
+            ))
+            topics['the stopped ships'] = (40, "Don't ask about the stopped ones.", (
+                "<Whispers> I have seen a ship stopped from the base. It just drifts after that. Nobody talks about"
+                " it."
+            ))
+
+        if soc < 20:  # Short replies first: one line from any topic.
+            return random.choice([curt for _, curt, _ in topics.values()])
+
+        # From 20 on, the count of topics grows with sociability: 1 and 2 stay the most frequent.
+        x: float = (soc - 20) / 80
+        count: int = random.choices([1, 2, 3, 4], weights=[3 - 2 * x, 2, 1.5 * x, 0.5 * x ** 3])[0]
+        names: list[str] = list(topics)
+        chosen: list[str] = []
+        for _ in range(count):
+            name: str = random.choices(names, weights=[topics[topic][0] for topic in names])[0]
+            names.remove(name)
+            chosen.append(name)
+        paragraphs: list[str] = [topics[name][2] for name in chosen]
+        bound: list[str] = paragraphs[:1] + [
+            self.bind_to_previous(text, name) for name, text in zip(chosen[1:], paragraphs[1:])
+        ]
+        return "\n\n".join(bound)
+
     def talk_paladin_xi(self) -> str:
         return (
             "He trained you, yes? Of course 'Paladin' is not a real thing. I think he is considered a"
@@ -1773,7 +1854,7 @@ class SettlementChat(Conversation):
                 else:
                     text = (
                         "ANOTHER one!?\n\n"
-                        "The detective here! You should work for the Ministry of Security! Ha!\n\n"
+                        "The detective here! You should work for the Ministry of Protection! Ha!\n\n"
                         "Well, well... you know the procedure. Congratulations!"
                     )
         else:  # noqa: PLR5501

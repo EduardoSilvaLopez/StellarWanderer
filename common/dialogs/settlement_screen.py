@@ -609,22 +609,7 @@ class SettlementScreenDialog(Dialog):
         maximum = SUPPLIES[key].maximum
         if maximum is None:
             raise Exception(f"The supply {key} has no maximum.")
-        return min(maximum(self.ship.cargo_hold), self._reputation_limit(key))
-
-    def _reputation_limit(self, key: str) -> float:
-        """The most of the supply `key` the Community lets the pilot have, whatever the hold: for mines, the number that
-        can be taken without losing the title held on entering (each one costs its reputation change). No limit
-        otherwise, or when the lowest title is kept whatever is taken."""
-        if key != "mines":  # They don't trust him more. Mines are *expensive*
-            return float('inf')
-        entity = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE].entity
-        entered = self.settlement.player_reputation_on_entering
-        if entered is None:
-            raise Exception("No reputation recorded on entering.")
-        floor = entity.title_floor(entered)
-        if floor == float('-inf'):  # the lowest title is kept whatever is taken
-            return float('inf')
-        return (entered - floor) // entity.exchange_reputation_changes["mines"]
+        return maximum(self.ship.cargo_hold)
 
     def _press_cargo(self, key: str, delta: int) -> None:
         """One unit of the supply `key` given (delta < 0) or taken (delta > 0), within the limits (see _move_cargo)."""
@@ -671,7 +656,7 @@ class SettlementScreenDialog(Dialog):
             audio.play('ui_click')
         else:
             sound = 'failed' if key == "mines" else 'ui_click'
-            if key == "mines" and before + asked > self._reputation_limit(key):
+            if key == "mines" and before + asked > self._reputation_remaining():
                 self._community_refuses(sound)
             else:
                 self.ship.notification.set("This kind of ship has no more space for this.", sound, bad=True)
@@ -1111,7 +1096,7 @@ class SettlementScreenDialog(Dialog):
                 "Life as a miner was obviously too hard for you, and so your training is wasted. The Community"
                 " will hardly allow you to train for anything again for years, nor give you any position of"
                 " responsibility"
-                f"{", save in the Ministry of Security" if has_ratted else ""}"
+                f"{", save in the Ministry of Protection" if has_ratted else ""}"
                 ". But you will be safe."
                 )
         elif rep <= 500:
@@ -1127,7 +1112,7 @@ class SettlementScreenDialog(Dialog):
                 "You retire as a successful miner who has helped the Community. You have new friends and contacts,"
                 " and people back home will respect you highly for that. After a well-deserved pause, doors will open"
                 " to positions of responsibility."
-                f"{"The Ministry of Security will be waiting for you." if has_ratted else ""}"
+                f"{"The Ministry of Protection will be waiting for you." if has_ratted else ""}"
                 " You can also enter politics with the assurance that people will"
                 " at least hear you out."
                 )
@@ -1136,7 +1121,7 @@ class SettlementScreenDialog(Dialog):
                 "You retire a hero, your name whispered together with Paladin Xi's. People will hardly give you a rest,"
                 " politicians calling at your door to get your support and offering you positions of high"
                 " responsibility"
-                f"{", and the Ministry of Security would be proud to offer you a position" if has_ratted else ""}"
+                f"{", and the Ministry of Protection would be proud to offer you a position" if has_ratted else ""}"
                 ". But you can also reject them and gather a large group for your own projects."
                 )
         else:

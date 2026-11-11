@@ -398,6 +398,38 @@ THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
         ]
     )
 
+# The hobbies of the lists above that can be practised in a portal base: the ones that need no city, dome, planet or
+# outdoor place. Their people can say so in the base's talks (see settlement_chat.talk_portal).
+PORTAL_BASE_HOBBIES: frozenset[str] = frozenset({
+    # Those-Who-Share, sociable
+    "I like to walk in the hydroponic gardens.",
+    "I enjoy reading old novels in the public lounges.",
+    "I like to collect vintage posters.",
+    "I enjoy playing board games with friends.",
+    "I like to take long walks along the dome's perimeter paths when it's local night.",
+    "I am fascinated by the Chen-Ning rebellion of 290. Those were brave people, and not Surnemals at all.",
+    "I enjoy watching PreDis movies. The animals! They had so many!",
+    "I like to fly micro-drones in the recreation halls.",
+    "I have my domouse. Caring about it is my hobbie.",
+    "I enjoy tinkering with old household electronics, I have one from the post-war!",
+    "I like to explore PreDis virtual landscapes.",
+    "I enjoy restoring antique maps, from the first Martians for example.",
+    "I like to join the weekly storytelling circles.",
+    "I like to guide school groups through the hydroponic gardens. The children always ask about the water.",
+    "I like to repair broken things for my neighbors. Useful things last.",
+    "I enjoy the Sunday cooking nights at the canteen, where everyone brings a dish.",
+    "I enjoy the Assembly meetings at my workplace. Everyone's voice counts there.",
+    "I like to tend the shared beds in the hydroponic gardens with my shift mates.",
+    "I like to restore old machines for the workshops. Pride in what is useful.",
+    # Those-Who-Share, asocial
+    "I like to be alone with my plants in the quiet corners of the gardens.",
+    "I read at night, alone in my room.",
+    "I walk the perimeter paths alone, when nobody is there.",
+    "I tinker with old devices. I don't need help for that.",
+    "I sketch in a notebook. It's nobody's business.",
+    "I fix my own clothes in the evening. Quietly.",
+})
+
 # The entities by name: a save names its citizenship, and a name that is not here loads as None.
 ENTITIES: dict[str, PoliticalEntity] = {
     UNITED_DIVERSITY.name: UNITED_DIVERSITY,

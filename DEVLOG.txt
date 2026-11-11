@@ -2,9 +2,9 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 > STARTED: Extra time: 189h00' + 5:45-
 
-* INCIDENTS
+* INCIDENTS - Dora Exploradora
   * Get sealing equipment in the outposts.
-  * Randome events, particularly in the asteroid belts, damage the hull (maintenance).
+  * Random events, particularly in the asteroid belts, damage the hull (maintenance).
   * Seal to repair.
   * Extra: Children.
 
@@ -15,6 +15,7 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Assigning the history to the new systems.
   * Cities.
   * Extra: Binding slowly.
+  * Extra: Environment (on character creation or interstellar travel if skipped)
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
 

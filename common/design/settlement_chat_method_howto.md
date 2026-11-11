@@ -23,7 +23,8 @@ How-to for Claude. Read it when the user asks for a new (or a reworked) method i
 - **Length guideline** (not a hard limit): low sociability (under 20) gets one short remark; from 20 on, the more
   sociable tell more topics (see the count in `talk_united_diversity`), so the reply grows with sociability.
   Keep each topic brief.
-- Marks: `[word]` makes a conversation tag for the pilot. Use only tags that exist (keys of
+- Marks: no brackets. A tag is any occurrence of its words, matched automatically (`parse_marks`), so write the
+  words plainly and use only the ones meant as tags. Tags that exist (keys of
   `reactions_index`: asteroids, belt, founders, happy birthday, life, noobie, paladin xi, pgms, space, the
   base, the network, the portal, the shining throne, those-who-share, united diversity). A new mark needs a
   new method: only add one if the user asks. Write `[The Shining Throne]` with the capitals as in the texts.
