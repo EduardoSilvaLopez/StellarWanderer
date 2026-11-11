@@ -1915,6 +1915,7 @@ class SettlementChat(Conversation):
             self.traitor_sell_ship(self.player.credits)
 
     def traitor_informed(self) -> str:
+          # A player usually does not see this, the game over dialog hides it.
         return "Good. At least this social disease will be contained."
 
     def traitor_betrayal_answered(self, answer: int) -> None:
@@ -1963,6 +1964,7 @@ class SettlementChat(Conversation):
         credits stay with the pilot.
         TODO when international travel is implemented, teleport the pilot outside the borders instead of game over.
         """
+        self.player.adjust_reputation(- self.player.reputation - 100)
         self.player.credits = round(self.player.credits - cost)
         self.player.flags.add(OWNER_FLAG)
         self.player.game_over(

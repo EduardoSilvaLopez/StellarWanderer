@@ -125,7 +125,7 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
         icon_filename="PoliticalEntity.ThoseWhoShare.png",
         expansion_profile=ep.TechConservative,
         titles={
-         float('-inf'): 'Prisoner',
+         float('-inf'): 'Criminal',
             -30: 'Dependent',
             -10: 'Student',
             0: 'Pioneer',

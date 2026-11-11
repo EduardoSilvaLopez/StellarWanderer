@@ -237,9 +237,9 @@ class Player:
 
         statistics: str = (
             f"STATISTICS:\n\n"
-            f" * Denomination: {self.get_title()}\n\n"
-            f" * Federal Credits: {self.credits} Ȼ\n\n"
-            f" * Imperial Rank: Foreigner"
+            f" * Known in the Community as: {self.get_title()}\n\n"
+            f" * Federal Credits: {self.credits:,} Ȼ\n\n"
+            f" * Imperial Station: Foreigner"
         )
         show_message(Message(
             title='GAME OVER',

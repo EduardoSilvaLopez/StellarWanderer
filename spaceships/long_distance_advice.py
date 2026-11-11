@@ -62,7 +62,8 @@ from the state of the ship, so it follows the target as it moves and corrects wh
 
 Far from the target the plan ends `PLAN_END_DISTANCE` (about 1 Gm, a million km) from its surface, however fast the
 ship moves. Where that plan ends, a near one takes over (a trip between the moons of a giant is all near): it ends
-`NEAR_END_RADII` target radii from the target's centre, inside its fixed zone if it is a world: the moons, which move
+`NEAR_END_RADII` target radii from the target's centre, inside its fixed zone if it is a world, and well outside the
+portal base's (`NEAR_END_RADII_PORTAL_BASE`): the moons, which move
 fast on short orbits, are led as the planets are, and the ship ends up fixed to the target, whose orbit it then follows
 (left outside, at rest with respect to a moon, it would be pulled away by the moon's centripetal acceleration within
 minutes). The advice ends on entering the zone: the last leg is the pilot's, or the autopilot's brake.
@@ -195,9 +196,11 @@ class LongDistanceAdvisor:
     END_TOLERANCE = 2.0e7  # m: the plan has reached its end when the ship is this near it...
     END_SPEED = 100.0  # m/s: ...and moves slower than this with respect to the target
     # Target radii from its centre: where the near plan ends, inside the zone of a world (the ship is then fixed to it,
-    # and follows its orbit, which a ship left outside would not), outside it for what is not a world...
+    # and follows its orbit, which a ship left outside would not), outside it for what is not a world, and much further
+    # out for the portal base...
     NEAR_END_RADII = 7.0
     NEAR_END_RADII_OUTSIDE = 12.0
+    NEAR_END_RADII_PORTAL_BASE = 60.0
     NEAR_END_TOLERANCE_RADII = 1.0  # target radii: ...and how near that end has to be reached
     DRIFT_TOLERANCE = 0.05  # of the closing speed: the drift beyond which a stay turns into thrust (about 3 degrees)
     DRIFT_FLOOR = 100.0  # m/s: the drift that is never worth advice
@@ -264,7 +267,13 @@ class LongDistanceAdvisor:
                 <= advisor.PLAN_END_DISTANCE + advisor.END_TOLERANCE)
         if near and navigation.orbit is not None:
             return None
-        near_end_radii = advisor.NEAR_END_RADII if isinstance(body, World) else advisor.NEAR_END_RADII_OUTSIDE
+        from galaxies.portals.portal_base import PortalBase  # local: the portals import this module's neighbours
+        if isinstance(body, World):
+            near_end_radii = advisor.NEAR_END_RADII
+        elif isinstance(body, PortalBase):
+            near_end_radii = advisor.NEAR_END_RADII_PORTAL_BASE
+        else:
+            near_end_radii = advisor.NEAR_END_RADII_OUTSIDE
         end_distance = (near_end_radii - 1.0) * body.radius if near else advisor.PLAN_END_DISTANCE
         end_tolerance = advisor.NEAR_END_TOLERANCE_RADII * body.radius if near else advisor.END_TOLERANCE
 

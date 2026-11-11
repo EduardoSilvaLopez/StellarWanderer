@@ -43,7 +43,7 @@ class ProximityMeter:
     (`Navigation.approach_speed`: the velocity relative to the body along the line to its centre; positive approaching,
     negative moving away, sideways motion does not count), formatted with `format_compact_speed` (`+500 m/s`,
     `-3 Km/s`). "Drift" is the speed across that line (`Navigation.drift_speed`), unsigned. In the fixed zone the
-    "Distance" and "Approaching:" labels and the Approaching readout turn red when `Navigation.collision_warning` holds:
+    "Distance" and "Approaching:" labels and their readouts turn red when `Navigation.collision_warning` holds:
     keeping its direction relative to the body, the ship reaches the surface even braking with only
     `Navigation.COLLISION_BRAKE_FRACTION` of `Ship.BRAKE_ACC` (a straight-line check, sideways dodging not considered).
 
@@ -126,10 +126,11 @@ class ProximityMeter:
 
         collision_warning = ship.navigation.in_fixed_zone(body) and ship.navigation.collision_warning(body)
         label_colour = SPEED_WARNING_RED if collision_warning else ACCENT_LABEL  # the labels of distance and approach
-        approach_colour = SPEED_WARNING_RED if collision_warning else ACCENT
+        value_colour = SPEED_WARNING_RED if collision_warning else ACCENT  # the readouts of distance and approach
+        approach_colour = value_colour
 
         centre_dist = format_compact_distance(ship.navigation.distance_to_body_centre(body))
-        _draw_pair(surface, label_font, left, top, 'Distance:', label_colour, centre_dist, ACCENT)
+        _draw_pair(surface, label_font, left, top, 'Distance:', label_colour, centre_dist, value_colour)
         _draw_pair(surface, label_font, left, top + row_height, 'Approaching:', label_colour,
                    format_compact_speed(ship.navigation.approach_speed(body)), approach_colour)
         _draw_pair(surface, label_font, left, top + 2 * row_height, 'Drift:', ACCENT_LABEL,
