@@ -34,18 +34,21 @@ from the state of the ship, so it follows the target as it moves and corrects wh
      trip short of this (most of them) is flown flat out, like a short hop by road: no cruise. Only a trip long
      enough that going flat out would eat into the energy reserve (below) is slower than this and coasts, to spare
      the energy, the way a long-haul trip eases off its top speed to spare fuel.
-   - Keep the energy at the end of the plan, after the last leg, at `RESERVE_WITHOUT_OUTPOST` (60 %) of its maximum,
-     `RESERVE_WITH_SERVICES` (20 %) if the target has a settlement (`Body.has_settlements`). A change of speed costs
-     the change of velocity, whatever the speed: `energy_per_delta_v(mass)` per m/s of it, so the budget is in m/s.
-     Changing the velocity from `u` to `v` along the line (the drift cancelled on the way) and then stopping costs
-     `energy_cost`, which for no drift is `(v - u_r) + v`. The plan cannot cost more than the energy above the
-     reserve divided by `energy_per_delta_v`.
-   - Keep the supplies (air, water and food, a day of each per day) at the end at the same shares of their maxima:
-     the time left of the plan, `eta`, and of the last leg, cannot exceed the days that the supply with the least above
-     its reserve has.
+   - Keep the energy, the maintenance and each supply (air, water and food) at `RESERVE` (20 %) of its maximum at the
+     end of the trip. A target without a settlement is flown to and back, so the whole consumption of the trip counts
+     `RETURN_TRIP` times; a target with one counts once (`trip_factor`). A change of speed costs the change of
+     velocity, whatever the speed: `energy_per_delta_v(mass)` per m/s of it, so the budget is in m/s. Changing the
+     velocity from `u` to `v` along the line (the drift cancelled on the way) and then stopping costs `energy_cost`,
+     which for no drift is `(v - u_r) + v`. The plan cannot cost more than the energy above the reserve, divided by
+     the factor and by `energy_per_delta_v`. The energy the ship uses a day, flying or not, is checked on top of it
+     (`_one_way`).
+   - The time left of the plan, `eta`, and of the last leg, times the factor, cannot exceed the days that each supply
+     and the maintenance have above their reserve (`_spare_days`).
    - "Too far" if no plan keeps them: the energy above the reserve does not even stop the ship (`hypot(u_r,
-     u_perp)`, with `ENERGY_SLACK`: a plan that spends its whole budget leaves just that at its peak), or the
-     supplies do not last the time left.
+     u_perp)`, with `ENERGY_SLACK`: a plan that spends its whole budget leaves just that at its peak), or the energy
+     or the time left does not fit the reserve. `Advisory.shortage` names what is lacking.
+   - After a trip to a target without a settlement, if one way leaves the ship below `REFUEL_LEVEL` (60 %) in any of
+     them, the advice says so (`Advisory.refuel`): the pilot has to return to a settlement later to refuel.
 
 3. The advice, from the peak speed `v_plan` of the plan and the speed `u_r` of the ship:
    - DECELERATE when `d` is no more than the distance to stop, `u_r^2 / (2 * b)`, with `BRAKE_MARGIN` to spare.
@@ -141,6 +144,7 @@ class Advisory:
     phase_time: float | None = None
     shortage: str | None = None
     tight: bool = False
+    refuel: bool = False  # the trip leaves the ship below REFUEL_LEVEL: it has to return to a settlement to refuel
 
 
 @dataclass(frozen=True)
@@ -190,8 +194,9 @@ class LongDistanceAdvisor:
 
     FAR_DISTANCE = 1.0e9  # m, a million km: a trip shorter than this is always within reach (see shortage)
     PLAN_END_DISTANCE = 1.05e9  # m: the plan ends here, at rest with respect to the target, with room left for braking
-    RESERVE_WITHOUT_OUTPOST = 0.60
-    RESERVE_WITH_SERVICES = 0.20
+    RESERVE = 0.20  # of the maximum, left in the energy, the maintenance and each supply at the end of the trip
+    RETURN_TRIP = 2.0  # a target without a settlement is flown back from: the trip's consumption counts this often
+    REFUEL_LEVEL = 0.60  # of the maximum: left below it after the way out, the ship has to refuel later (refuel)
     BRAKE_MARGIN = 1.0  # of the stopping distance: braking late costs nothing, the end of the plan is soft
     END_TOLERANCE = 2.0e7  # m: the plan has reached its end when the ship is this near it...
     END_SPEED = 100.0  # m/s: ...and moves slower than this with respect to the target
@@ -280,14 +285,12 @@ class LongDistanceAdvisor:
         position = np.array(tuple(navigation.stellar_position(date)))
         velocity = np.array(tuple(ship.velocity.as_vector()))
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
-        reserve = advisor.RESERVE_WITH_SERVICES if body.has_settlements() else advisor.RESERVE_WITHOUT_OUTPOST
+        factor = advisor.trip_factor(body.has_settlements())
         energy_per_delta_v = ship.energy_per_delta_v(ship.mass)
         leg_energy, leg_time = advisor._final_leg(accelerations, end_distance)
-        budget = (ship.energy - reserve * ship.energy_max) / energy_per_delta_v - leg_energy
-        margin = advisor.ENERGY_MARGIN * ship.energy_max / energy_per_delta_v
-        hold = ship.cargo_hold
-        spare_days = min(hold.air - reserve * hold.air_max, hold.water - reserve * hold.water_max,
-                         hold.food - reserve * hold.food_max)
+        budget = (ship.energy - advisor.RESERVE * ship.energy_max) / (factor * energy_per_delta_v) - leg_energy
+        margin = advisor.ENERGY_MARGIN * ship.energy_max / (factor * energy_per_delta_v)
+        spares = advisor._spare_days(ship, full=False)
 
         trip_time = 0.0 if arrival is None or braked else max(0.0, (arrival - date).total_seconds())
         trip = advisor._trip(position, velocity, body, date, accelerations, budget - margin, trip_time, end_distance,
@@ -300,12 +303,14 @@ class LongDistanceAdvisor:
         lead = target - position
         if distance <= end_tolerance and float(np.linalg.norm(relative)) <= advisor.END_SPEED:
             return None  # the plan is done
+        if plan is None:
+            return Advisory(None, None, lead, shortage='energy')
 
-        too_far = plan is None or (plan.eta is not None and (plan.eta + leg_time) / SECONDS_PER_DAY > spare_days)
-        if too_far:
-            stores = {'air': hold.air - reserve * hold.air_max, 'water': hold.water - reserve * hold.water_max,
-                      'food': hold.food - reserve * hold.food_max}
-            lacking = 'energy' if plan is None or plan.eta is None else min(stores, key=stores.get)
+        energy, days = advisor._one_way(ship, plan, radial, drift, leg_energy, leg_time, energy_per_delta_v)
+        energy_short = ship.energy - factor * energy < advisor.RESERVE * ship.energy_max
+        time_short = plan.eta is not None and factor * days > min(spares.values())
+        if energy_short or time_short:
+            lacking = 'energy' if energy_short else min(spares, key=spares.get)
             return Advisory(None, None, lead, shortage=lacking)
         advice = advisor._choose(plan, radial, drift, distance, accelerations[1], previous)
         change = {Advice.ACCELERATE: plan.peak_speed * direction - relative, Advice.DECELERATE: -relative}.get(advice)
@@ -315,7 +320,9 @@ class LongDistanceAdvisor:
             phase_time = max(0.0, (distance - radial * radial / (2.0 * accelerations[1])) / max(radial, 1.0))
         else:
             phase_time = size / (accelerations[0] if advice is Advice.ACCELERATE else accelerations[1])
-        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time, tight=tight)
+        refuel = factor > 1.0 and advisor._refuel_due(ship, energy, days)
+        return Advisory(advice, plan.eta, lead, change / size if size > 1e-9 else None, when, phase_time, tight=tight,
+                        refuel=refuel)
 
     @staticmethod
     def _final_leg(accelerations: tuple[float, float], end_distance: float) -> tuple[float, float]:
@@ -324,6 +331,48 @@ class LongDistanceAdvisor:
         its time, in s."""
         leg = make_plan(end_distance, 0.0, 0.0, *accelerations, 1.0e12)
         return 2.0 * leg.peak_speed, leg.eta
+
+    @staticmethod
+    def trip_factor(has_settlements: bool) -> float:
+        """How many times the consumption of a trip counts: once to a settlement, where the ship refuels, and
+        `RETURN_TRIP` times otherwise, as the ship has to fly back from there."""
+        return 1.0 if has_settlements else LongDistanceAdvisor.RETURN_TRIP
+
+    @staticmethod
+    def _spare_days(ship: Ship, full: bool) -> dict[str, float]:
+        """The days each supply and the maintenance can still give a trip above their reserve, as the ship is (or, with
+        `full`, with its stores and maintenance full). The supplies use a day each a day, air more with leaks."""
+        hold = ship.cargo_hold
+        air, water, food, maintenance = ((hold.air_max, hold.water_max, hold.food_max, 1.0) if full
+                                         else (hold.air, hold.water, hold.food, ship.maintenance))
+        floor = LongDistanceAdvisor.RESERVE
+        return {'air': (air - floor * hold.air_max) / ship.air_rate(),
+                'water': water - floor * hold.water_max,
+                'food': food - floor * hold.food_max,
+                'maintenance': (maintenance - floor) / ship.maintenance_rate()}
+
+    @staticmethod
+    def _one_way(ship: Ship, plan: Plan, radial: float, drift: float, leg_energy: float, leg_time: float,
+                 energy_per_delta_v: float) -> tuple[float, float]:
+        """What the plan costs one way, with its last leg: the energy in Wh, and the time in days. The ship's energy
+        per day is part of it."""
+        days = ((plan.eta or 0.0) + leg_time) / SECONDS_PER_DAY
+        energy = energy_per_delta_v * (energy_cost(plan.peak_speed, radial, drift) + leg_energy)
+        return energy + ship.ENERGY_PER_DAY * days, days
+
+    @staticmethod
+    def _refuel_due(ship: Ship, energy: float, days: float) -> bool:
+        """Whether the ship, after one way of `energy` Wh and `days` (see `_one_way`), is below REFUEL_LEVEL in its
+        energy, its maintenance or a supply."""
+        hold = ship.cargo_hold
+        remaining = (
+            (ship.energy - energy) / ship.energy_max,
+            ship.maintenance - ship.maintenance_rate() * days,
+            (hold.air - ship.air_rate() * days) / hold.air_max,
+            (hold.water - days) / hold.water_max,
+            (hold.food - days) / hold.food_max,
+        )
+        return min(remaining) < LongDistanceAdvisor.REFUEL_LEVEL
 
     @staticmethod
     def _trip(position: np.ndarray, velocity: np.ndarray, body: Body, date: datetime,
@@ -358,28 +407,32 @@ class LongDistanceAdvisor:
     @staticmethod
     def shortage(ship: Ship, body: Body, date: datetime, position: np.ndarray, velocity: np.ndarray) -> str | None:
         """What a ship of this kind, with its tanks and stores full, would lack for a trip to the body from rest at
-        `position` and `velocity` (stellar frame): "energy", "air", "water" or "food", whichever the advice would
-        turn into "Too far" for. None if it has all it needs, or if the body is near (within FAR_DISTANCE of its
-        surface): a trip that short is always within reach. Used by the missions, to warn the player before they take
-        one."""
+        `position` and `velocity` (stellar frame): "energy", "maintenance", "air", "water" or "food", whichever the
+        advice would turn into "Too far" for. None if it has all it needs, or if the body is near (within FAR_DISTANCE
+        of its surface): a trip that short is always within reach. Used by the missions, to warn the player before they
+        take one."""
         advisor = LongDistanceAdvisor
         centre = np.array(tuple(body.calculate_stellar_position(date)))
         if float(np.linalg.norm(centre - position)) - body.radius <= advisor.FAR_DISTANCE:
             return None
-        reserve = advisor.RESERVE_WITH_SERVICES if body.has_settlements() else advisor.RESERVE_WITHOUT_OUTPOST
+        factor = advisor.trip_factor(body.has_settlements())
         accelerations = (ship.FORWARD_BACKWARD_ACC, ship.BRAKE_ACC)
         leg_energy, leg_time = advisor._final_leg(accelerations, advisor.PLAN_END_DISTANCE)
         # the ship and its equipment, without its cargo: the warning must not change with the cargo
         mass = ship.MASS + ship.equipment_mass()
-        budget = ((1.0 - reserve - advisor.ENERGY_MARGIN) * ship.energy_max / ship.energy_per_delta_v(mass)
+        energy_per_delta_v = ship.energy_per_delta_v(mass)
+        budget = ((1.0 - advisor.RESERVE - advisor.ENERGY_MARGIN) * ship.energy_max / (factor * energy_per_delta_v)
                   - leg_energy)
-        plan = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0, advisor.PLAN_END_DISTANCE)[0]
+        plan, _, _, _, _, radial, drift = advisor._trip(position, velocity, body, date, accelerations, budget, 0.0,
+                                                        advisor.PLAN_END_DISTANCE)
         if plan is None:
             return 'energy'
-        hold = ship.cargo_hold
-        days = (plan.eta or 0.0) / SECONDS_PER_DAY + leg_time / SECONDS_PER_DAY
-        stores = {'air': hold.air_max, 'water': hold.water_max, 'food': hold.food_max}
-        return next((name for name, most in stores.items() if days > (1.0 - reserve) * most), None)
+        energy, days = advisor._one_way(ship, plan, radial, drift, leg_energy, leg_time, energy_per_delta_v)
+        if factor * energy > (1.0 - advisor.RESERVE) * ship.energy_max:
+            return 'energy'
+        spares = advisor._spare_days(ship, full=True)
+        short = [name for name, spare in spares.items() if factor * days > spare]
+        return min(short, key=spares.get) if short else None
 
     @staticmethod
     def _choose(plan: Plan, radial: float, drift: float, distance: float, brake: float,

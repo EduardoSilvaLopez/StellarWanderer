@@ -51,9 +51,10 @@ class ProximityMeter:
     colour,
     then ACCELERATE, STAY or DECELERATE, each in its own colour, with the time left of that phase
     (`Advisory.phase_time`),
-    and under it the ETA, the date and time of arrival as the clock shows them. "Too far" when no plan keeps the
-    reserves, with what is lacking (energy, air, water or food) beside it; the phase time turns amber when the advice
-    is tight: the plan has had to use the energy margin (see `Advisory.tight`).
+    and under it the ETA, the date and time of arrival as the clock shows them, and under that, in amber, "Return later
+    to settlement" when the trip leaves the ship low for a body without one (see `Advisory.refuel`). "Too far" when no
+    plan keeps the reserves, with what is lacking (energy, maintenance, air, water or food) beside it; the phase time
+    turns amber when the advice is tight: the plan has had to use the energy margin (see `Advisory.tight`).
     """
 
     @staticmethod
@@ -159,3 +160,5 @@ class ProximityMeter:
             stamp = (f'{arrival.year}-{arrival.month:02d}-{arrival.day:02d} '
                      f'{arrival.hour:02d}:{arrival.minute:02d}')
             _draw_pair(surface, label_font, left, top + 2 * row_height, 'ETA:', ACCENT_LABEL, stamp, ACCENT)
+        if advisory.refuel:
+            _draw_pair(surface, label_font, left, top + 3 * row_height, 'Return later to settlement', AMBER, '', ACCENT)

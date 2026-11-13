@@ -12,21 +12,27 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Sealing pack and repair kit become green when they can be used.
   * Clicking the sealing pack uses it.
   * Clicking on greyed instruments use a repair kit.
+  * Scraps of a depleted mine.
 
-> STARTED: Extra time: 197h15' + 3h + 14:45-
+> STARTED: Extra time: 197h15' + 3h + 14:45-17:00
 
   * Testing.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
-  * Give up the mines.
+  * Give up the mine codes.
   * Assigning the history to the new systems.
   * Cities.
   * Extra: Binding slowly.
   * Extra: Environment (on character creation or interstellar travel if skipped)
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
+  * Extra: Move more than one but less than max, by keeping the button pressed.
+  * Extra: Missions:
+    * Scraps from resources to industrial.
+    * Pellets or air from resources to industrial.
+    * Machines from industrial to all the rest.
 
 * ABANDONING THOSE-WHO-SHARE
   * Filling up the other entities.

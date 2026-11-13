@@ -946,7 +946,7 @@ class SettlementChat(Conversation):
                     f" I am {self.interlocutor.age} years old. I know, I know."
                     f" I work here as a {self.interlocutor.role.name}, that's my job."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}. My hobby"
+                    f"\n\nOh... and {self.interlocutor.hobby} My hobby."
                 )
                 if days_to_birthday == -2:
                     text += "\n\nBTW, I had my birthday two days ago."

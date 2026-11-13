@@ -168,10 +168,12 @@ def trip_distance(route: Route, origin: Settlement, date) -> float | None:
 
 # region Flight
 def fly(model: ShipModel, distance: float, radius: float, is_world: bool, services: bool, energy: float,
-        ends_at_radius: bool = False) -> Leg | None:
+        ends_at_radius: bool = False, counts_return: bool = True) -> Leg | None:
     """One leg flown by the Travel autopilot and the pilot's last leg, as the advisor plans them (see its docstring):
     from rest to rest over `distance`, starting with `energy` Wh. None when no plan keeps the reserve ("Too far").
-    `ends_at_radius`: the leg ends at a given distance from the centre, not at the target's surface: no last leg."""
+    `ends_at_radius`: the leg ends at a given distance from the centre, not at the target's surface: no last leg.
+    `counts_return`: the energy is that of the way back too, as the advisor counts it for a target without services
+    (not when the mission flies the way back itself)."""
     advisor = LongDistanceAdvisor
     if distance <= 0.0:
         return Leg(0.0, 0.0)
@@ -183,15 +185,16 @@ def fly(model: ShipModel, distance: float, radius: float, is_world: bool, servic
     else:
         end_distance = advisor.PLAN_END_DISTANCE
     leg_energy, leg_time = advisor._final_leg(accelerations, end_distance) if end_distance > 0.0 else (0.0, 0.0)
-    reserve = advisor.RESERVE_WITH_SERVICES if services else advisor.RESERVE_WITHOUT_OUTPOST
-    budget = (energy - reserve * model.energy_max) / model.energy_per_delta_v - leg_energy
-    margin = advisor.ENERGY_MARGIN * model.energy_max / model.energy_per_delta_v
+    factor = advisor.trip_factor(services) if counts_return else 1.0
+    budget = (energy - advisor.RESERVE * model.energy_max) / (factor * model.energy_per_delta_v) - leg_energy
+    margin = advisor.ENERGY_MARGIN * model.energy_max / (factor * model.energy_per_delta_v)
     plan_distance = max(distance - end_distance, 1.0)
     plan = (make_plan(plan_distance, 0.0, 0.0, *accelerations, budget - margin)
             or make_plan(plan_distance, 0.0, 0.0, *accelerations, budget))
     if plan is None or plan.eta is None:
         return None
-    return Leg(plan.eta + leg_time, (energy_cost(plan.peak_speed, 0.0, 0.0) + leg_energy) * model.energy_per_delta_v)
+    energy_used = factor * (energy_cost(plan.peak_speed, 0.0, 0.0) + leg_energy) * model.energy_per_delta_v
+    return Leg(plan.eta + leg_time, energy_used)
 
 
 @dataclass(frozen=True)
@@ -204,7 +207,8 @@ class Trip:
 def trip_days(model: ShipModel, offer: Sample, distance: float, services: bool) -> Trip:
     """The whole trip of an offer over `distance`, from full energy at the issuer: out, the time at the target, and
     back if the mission asks."""
-    out = fly(model, distance, offer.radius, offer.is_world, services, model.energy_max, offer.ends_at_radius)
+    out = fly(model, distance, offer.radius, offer.is_world, services, model.energy_max, offer.ends_at_radius,
+              counts_return=not offer.back)
     if out is None:
         return Trip(math.inf, False, "too far for the energy")
     seconds = out.seconds + offer.hold_seconds
@@ -214,7 +218,7 @@ def trip_days(model: ShipModel, offer: Sample, distance: float, services: bool) 
             return Trip(math.inf, False, "cannot get back")
         seconds += home.seconds
     days = seconds / SECONDS_PER_DAY
-    return Trip(days, True, "" if days <= model.store_days * (1.0 - LongDistanceAdvisor.RESERVE_WITH_SERVICES)
+    return Trip(days, True, "" if days <= model.store_days * (1.0 - LongDistanceAdvisor.RESERVE)
                 else "supplies run out")
 # endregion
 

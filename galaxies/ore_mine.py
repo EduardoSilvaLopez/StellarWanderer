@@ -64,7 +64,9 @@ class OreMine(Updatable):
                 datetime.strptime(saved_attributes['next_update_at'], '%Y-%m-%d %H:%M:%S.%f') \
                 if 'next_update_at' in saved_attributes else None
 
-        self.parent_field.parent_km2.parent_world.registered_mines.append((self.longitude, self.latitude))
+        registered = self.parent_field.parent_km2.parent_world.registered_mines
+        if (self.longitude, self.latitude) not in registered:  # a loaded world lists its mines already
+            registered.append((self.longitude, self.latitude))
         update_queue.add(self)
 
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
@@ -172,7 +174,8 @@ class OreMine(Updatable):
         """The mine is taken down: it stops working, and leaves its field and its world."""
         self.stop_updating()
         self.parent_field.mines.remove(self)
-        self.parent_field.parent_km2.parent_world.registered_mines.remove((self.longitude, self.latitude))
+        registered = self.parent_field.parent_km2.parent_world.registered_mines
+        registered[:] = [position for position in registered if position != (self.longitude, self.latitude)]
 
 
 class ExternalMine(OreMine):

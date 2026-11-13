@@ -89,6 +89,7 @@ class Ship(Updatable):
     FRICTION_CONSTANT = 7.0e-5  # SI, kg^0.5/m
     NOSE_RADIUS = 1.0  # m: the rounded front of the hull, where the heating is taken
     MAINTENANCE_WARNING = 0.1  # the fraction left at which the maintenance warning comes (and its bar line is drawn)
+    ENERGY_PER_DAY = 1e5  # Wh a day, flying or not: the life support and the systems (see _live_through)
 
     # Set by each configuration, never here.
     ENERGY_MAX: ClassVar[float]  # Wh, where 1e9 is 1 GWh . Daily european consumption is ~ 42GWh (0.042 TWh)
@@ -150,6 +151,14 @@ class Ship(Updatable):
     @property
     def precariousness(self) -> float:
         return self.PRECARIOUSNESS
+
+    def maintenance_rate(self) -> float:
+        """The maintenance lost a day, as a fraction of the whole, flying or not."""
+        return 0.1 * self.precariousness
+
+    def air_rate(self) -> float:
+        """The days of air used a day: one, more with the open leaks (see incident.AIR_FACTOR)."""
+        return sum(AIR_FACTOR[leak.size] for leak in self.leaks) if self.leaks else 1.0
     # endregion
 
     # region Life
@@ -500,10 +509,9 @@ class Ship(Updatable):
         old_water: float = self.cargo_hold.water
         old_food: float = self.cargo_hold.food
         if not self.is_docked:  # nothing is consumed inside an outpost
-            self.maintenance -= 0.1 * self.precariousness * days
-            self.energy -= 1e5 * days
-            air_rate = sum(AIR_FACTOR[leak.size] for leak in self.leaks) if self.leaks else 1.0
-            self.cargo_hold.air -= days * air_rate
+            self.maintenance -= self.maintenance_rate() * days
+            self.energy -= self.ENERGY_PER_DAY * days
+            self.cargo_hold.air -= days * self.air_rate()
             self.cargo_hold.water -= days
             self.cargo_hold.food -= days
 
