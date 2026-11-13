@@ -23,6 +23,7 @@ class CargoHold(ABC):
     FOOD_WEIGHT = 1.0
     SEALING_PACK_WEIGHT = 0.5
     REPAIR_KIT_WEIGHT = 1
+    SCRAPS_WEIGHT = 1.0
     ORE_WEIGHT = 1.0
     RAW_WATER_WEIGHT = 1.0  # per Kg: the room a Kg of raw water takes, as ore does
     MINE_WEIGHT = 200.0
@@ -54,6 +55,7 @@ class CargoHold(ABC):
         self.sealing_pack: int = self.sealing_pack_max
         self.repair_kit: int = self.repair_kit_max
         self.mines: int = self.INITIAL_MINES
+        self.scraps: int = 0  # Kg, always whole: taken from the outposts and given back, with no maximum
         self.ore: int = 0  # Kg, always whole: a mine keeps the fraction (see OreMine.content)
         self.raw_water: float = 0.0  # Kg, scooped from an icy world (see DeliverWater); not a supply of the outposts
 
@@ -92,6 +94,7 @@ class CargoHold(ABC):
                              else old.sealing_pack)
         self.repair_kit = self.repair_kit_max if self.repair_kit_max <= old.repair_kit_max else old.repair_kit
         self.raw_water = old.raw_water if self.free_capacity() > old.raw_water else self.free_capacity()
+        self.scraps = old.scraps if self.free_capacity() > old.scraps else math.floor(self.free_capacity())
         self.ore = old.ore if self.free_capacity() > old.ore else math.floor(self.free_capacity())
         return self
     # endregion
@@ -105,6 +108,7 @@ class CargoHold(ABC):
         result.sealing_pack = src['sealing_pack']
         result.repair_kit = src['repair_kit']
         result.mines = src['mines']
+        result.scraps = src['scraps']
         result.ore = src['ore']
         result.raw_water = src['raw_water']
         return result
@@ -118,15 +122,17 @@ class CargoHold(ABC):
             'sealing_pack': self.sealing_pack,
             'repair_kit': self.repair_kit,
             'mines': self.mines,
+            'scraps': self.scraps,
             'ore': self.ore,
             'raw_water': self.raw_water,
         }
 
     def used_capacity(self) -> float:
-        cargo = [self.air, self.water, self.food, self.sealing_pack, self.repair_kit, self.mines, self.ore,
+        cargo = [self.air, self.water, self.food, self.sealing_pack, self.repair_kit, self.mines, self.scraps, self.ore,
                  self.raw_water]
         weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.SEALING_PACK_WEIGHT,
-                   CargoHold.REPAIR_KIT_WEIGHT, CargoHold.MINE_WEIGHT, CargoHold.ORE_WEIGHT, CargoHold.RAW_WATER_WEIGHT]
+                   CargoHold.REPAIR_KIT_WEIGHT, CargoHold.MINE_WEIGHT, CargoHold.SCRAPS_WEIGHT,
+                   CargoHold.ORE_WEIGHT, CargoHold.RAW_WATER_WEIGHT]
         return sum(x*y for x, y in zip(cargo, weights))
 
     def free_capacity(self) -> float:
@@ -136,7 +142,8 @@ class CargoHold(ABC):
         """Takes up to `units` of `supply` from the outpost into the hold: up to the supply's maximum and the room left.
         Whole units only for a supply that comes in whole units. Returns the units taken."""
         stock = getattr(self, supply.key)
-        room = min(supply.maximum(self) - stock, self.free_capacity() / supply.weight)
+        ceiling = math.inf if supply.maximum is None else supply.maximum(self)
+        room = min(ceiling - stock, self.free_capacity() / supply.weight)
         taken = min(units, room)
         if taken <= 0:
             return 0
@@ -170,6 +177,7 @@ class Supply:
     maximum: Optional[Callable[[CargoHold], float]] = None
     whole: bool = False
     takeable: bool = True
+    all_buttons: bool = False  # the outpost also gives all of it at once (--), as well as one (-)
 
 
 # The cargo list of the outpost's cargo view: air, water, food, sealing packs and repair kits both ways; ore, raw water
@@ -182,6 +190,7 @@ CARGO: tuple[Supply, ...] = (
            lambda hold: hold.sealing_pack_max, whole=True),
     Supply('repair_kit', 'Repair kit', 'kits', CargoHold.REPAIR_KIT_WEIGHT,
            lambda hold: hold.repair_kit_max, whole=True),
+    Supply('scraps', 'Scraps', 'kg', CargoHold.SCRAPS_WEIGHT, whole=True, all_buttons=True),  # no maximum: the room
     Supply('ore', 'Ore', 'kg', CargoHold.ORE_WEIGHT, whole=True, takeable=False),
     Supply('raw_water', 'Raw water', 'kg', CargoHold.RAW_WATER_WEIGHT, takeable=False),
 )

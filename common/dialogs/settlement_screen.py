@@ -23,6 +23,7 @@ another option, or leaving, closes the conversation.
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+import math
 import pygame
 
 from galaxies.politics import political_entity
@@ -221,7 +222,8 @@ class SettlementScreenDialog(Dialog):
         self._answer_hover: Optional[int] = None  # the answer under the mouse at the last draw, if any
         # # The button the keyboard is on (Tab), as a token: ('option', index), ('cargo', key, -1 or 1) for a supply's −
         # or
-        # +, ('fill', key) for its ++ (its −− when the settlement only gives it), ('attach', name) for an attachment's
+        # +, ('fill', key) for its ++ (its −− when the settlement only gives it), ('give_all', key) for the −− of a
+        # supply that has one, ('attach', name) for an attachment's
         # control, or ('answer', index). See
         # _focus_targets. It is drawn only while the keyboard is the one in use.
         self._focus: Tuple[Any, ...] = ('option', 0)
@@ -413,6 +415,9 @@ class SettlementScreenDialog(Dialog):
             minus = pygame.Rect(plus.left - gap - button_width, row.top, button_width, row.height)
             buttons = ((minus, ('cargo', supply.key, -1), '-'), (plus, ('cargo', supply.key, 1), '+'),
                        (fill, ('fill', supply.key), '++'))
+            if supply.all_buttons:
+                give_all = pygame.Rect(minus.left - gap - button_width, row.top, button_width, row.height)
+                buttons = ((give_all, ('give_all', supply.key), '--'),) + buttons
         else:
             give_one = pygame.Rect(row.right - button_width, row.top, button_width, row.height)
             give_all = pygame.Rect(give_one.left - gap - button_width, row.top, button_width, row.height)
@@ -426,7 +431,7 @@ class SettlementScreenDialog(Dialog):
             self._cargo_controls.append((rect, token))
         stock = getattr(hold, supply.key)
         amount = f"{stock:.0f}" if supply.whole else f"{stock:.1f}"
-        if supply.takeable:
+        if supply.takeable and supply.maximum is not None:
             value = f"{supply.label}   {amount} / {self._supply_limit(supply.key):g} {supply.unit}"
         else:
             value = f"{supply.label}   {amount} {supply.unit}"
@@ -609,7 +614,7 @@ class SettlementScreenDialog(Dialog):
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         maximum = SUPPLIES[key].maximum
         if maximum is None:
-            raise Exception(f"The supply {key} has no maximum.")
+            return math.inf  # no maximum: the room of the hold is the only limit
         return maximum(self.ship.cargo_hold)
 
     def _press_cargo(self, key: str, delta: int) -> None:
@@ -617,11 +622,17 @@ class SettlementScreenDialog(Dialog):
         self._move_cargo(key, delta, 1)
 
     def _press_supply(self, token: Tuple[Any, ...]) -> None:
-        """A press of a supply's control, by its token: ('cargo', key, delta) or ('fill', key)."""
+        """A press of a supply's control, by its token: ('cargo', key, delta), ('fill', key) or ('give_all', key)."""
         if token[0] == 'fill':
             self._fill_cargo(token[1])
+        elif token[0] == 'give_all':
+            self._give_all(token[1])
         else:
             self._press_cargo(token[1], token[2])
+
+    def _give_all(self, key: str) -> None:
+        """Gives all of the supply `key` the hold has to the settlement, in one press."""
+        self._move_cargo(key, -1, getattr(self.ship.cargo_hold, key))
 
     def _fill_cargo(self, key: str) -> None:
         """The supply `key` moved in one press: a supply the settlement gives is taken up to its limit (what the hold
@@ -630,7 +641,11 @@ class SettlementScreenDialog(Dialog):
         from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         hold = self.ship.cargo_hold
         if SUPPLIES[key].takeable:
-            self._move_cargo(key, 1, self._supply_limit(key) - getattr(hold, key))
+            wanted = self._supply_limit(key) - getattr(hold, key)
+            if math.isinf(wanted):  # no maximum: as much as the room of the hold takes
+                wanted = hold.free_capacity() / SUPPLIES[key].weight
+                wanted = math.floor(wanted) if SUPPLIES[key].whole else wanted
+            self._move_cargo(key, 1, wanted)
         else:
             self._move_cargo(key, -1, getattr(hold, key))
 
@@ -667,7 +682,7 @@ class SettlementScreenDialog(Dialog):
         (Settlement.unloading_seconds), and none for air, water, food, sealing packs and repair kits."""
         if key == "mines":
             return self.settlement.shared_seconds(MINE_SECONDS * quantity)
-        if key in ("ore", "raw_water"):
+        if key in ("ore", "raw_water", "scraps"):
             return self.settlement.unloading_seconds(key, quantity)
         return 0.0
 
@@ -1244,6 +1259,8 @@ class SettlementScreenDialog(Dialog):
                     targets.append(('attach', name))
             for supply in CARGO:
                 if supply.takeable:
+                    if supply.all_buttons:
+                        targets.append(('give_all', supply.key))
                     targets += [('cargo', supply.key, -1), ('cargo', supply.key, 1), ('fill', supply.key)]
                 else:
                     targets += [('fill', supply.key), ('cargo', supply.key, -1)]
@@ -1278,7 +1295,7 @@ class SettlementScreenDialog(Dialog):
         token: Any = self._focus if self._focus in targets else ('option', self.selected)
         if token[0] == 'answer':
             self._answer(token[1])
-        elif token[0] in ('cargo', 'fill'):
+        elif token[0] in ('cargo', 'fill', 'give_all'):
             self._press_supply(token)
         elif token[0] == 'attach':
             self._press_attachment(token[1])

@@ -53,6 +53,7 @@ class Settlement(Updatable):
     CHARGE_PER_SECOND = 5e5 # Wh.
     MAINTENANCE_PER_SECOND = 0.00001 # maintenance per second doable here.
     UNLOAD_ORE_PER_SECOND = 0.5 # 20Kg box unloaded in 40 seconds.
+    UNLOAD_SCRAPS_PER_SECOND = 0.5  # Same as ore.
     UNLOAD_RAW_WATER_PER_SECOND = 0.5  # Kg a second, a separate rate for caution: the same number for now
     READY_MARGIN = 0.01 # a ship this close to full needs no handling here (see is_ready)
 
@@ -380,9 +381,10 @@ class Settlement(Updatable):
         return seconds / (self.stevedores_on_duty() + 1)
 
     def unloading_seconds(self, key: str, kilograms: float) -> float:
-        """Game seconds for the pilot to give `kilograms` of ore or raw water (`key`) to the outpost, at the rate of
-        UNLOAD_*_PER_SECOND, shared with the stevedores on duty (see shared_seconds)."""
-        per_second = {'ore': self.UNLOAD_ORE_PER_SECOND, 'raw_water': self.UNLOAD_RAW_WATER_PER_SECOND}[key]
+        """Game seconds for the pilot to hand `kilograms` of ore, raw water or scraps (`key`) to or from the outpost, at
+        the rate of UNLOAD_*_PER_SECOND, shared with the stevedores on duty (see shared_seconds)."""
+        per_second = {'ore': self.UNLOAD_ORE_PER_SECOND, 'raw_water': self.UNLOAD_RAW_WATER_PER_SECOND,
+                      'scraps': self.UNLOAD_SCRAPS_PER_SECOND}[key]
         return self.shared_seconds(kilograms / per_second)
 
     def is_ready(self, ship: Ship) -> bool:

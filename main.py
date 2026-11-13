@@ -447,7 +447,7 @@ def main() -> None:
                             player.leave_settlement()
                             audio.play(SettlementScreenDialog.CLOSE_SOUND)
                             gem.current_environment.clock.advance(leaving_seconds)
-                            break  # the screen is gone: the rest of this batch is not for it (its reputation is cleared)
+                            break  # the screen is gone: the rest of the batch is not for it (its reputation is cleared)
             elif event.type == pygame.KEYDOWN:
                 # the inside of the settlement in the scanner: the other state of the game (see Player.inside)
                 if event.key == pygame.K_SPACE:
@@ -637,6 +637,9 @@ def main() -> None:
                 ship.scanner.deactivate()
 
         frame_watch.mark('ship')
+        velocity = ship.velocity
+        if max(abs(velocity.x), abs(velocity.y), abs(velocity.z)) < 1e-3:  # m/s: the ship is at rest
+            frame_watch.count('ship: frames at rest')
         update_queue.update(gem.current_environment.date_time)
         LongDistanceAdvisor.update(player, gem.current_environment)
         gem.current_environment.clock.advance(PortalDefence.update(player, gem.current_environment))  # a forced return

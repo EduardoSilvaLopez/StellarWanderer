@@ -902,7 +902,7 @@ class SettlementChat(Conversation):
                     f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
                     f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}."
                     f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby}, that's my hobby"
+                    f"\n\nOh... and {self.interlocutor.hobby} That's my hobby"
                 )
                 if days_to_birthday == -2:
                     text += "\n\nMy birthday was two days ago."
@@ -2086,7 +2086,8 @@ class SettlementChat(Conversation):
         hold = ship.cargo_hold
         total: float = ship.PRICE_AT_700
         total += sum(getattr(hold, key) * prices[key]
-                     for key in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'ore', 'raw_water'))
+                     for key in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'scraps', 'ore',
+                                  'raw_water'))
         if ship.has_scoop:
             total += prices['scoop']
         if ship.has_solar_panels:

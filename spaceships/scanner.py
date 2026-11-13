@@ -212,6 +212,17 @@ class Scanner:
     # endregion
 
     # region Actions
+    def _scrap_mine(self, mine: OreMine) -> None:
+        """An empty mine on a depleted field is taken down, and the ship takes OreMine.SCRAPS_FROM_MINE scraps for it. If
+        the hold has no room for them, nothing happens and the pilot is told."""
+        hold = self.ship.cargo_hold
+        if hold.free_capacity() < mine.SCRAPS_FROM_MINE * hold.SCRAPS_WEIGHT:
+            self.ship.notification.set('Not enough space for the scraps of the mine', 'failed', bad=True)
+            return
+        mine.scrap()
+        hold.scraps += mine.SCRAPS_FROM_MINE
+        audio.play('ore_collected')
+
     def activate(self, time_passed: float) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship and its credits to the pilot (the beam
         stays off). On a targeted outpost,
@@ -227,6 +238,11 @@ class Scanner:
 
         if self.targeted_mine is not None:
             mine: OreMine = self.targeted_mine
+            empty = mine.content <= 0 and mine.credits <= 0 and mine.parent_field.remaining_ore <= 0
+            if empty and not mine.is_external:
+                self.ship.laser.cease_fire()
+                self._scrap_mine(mine)
+                return self
             if mine.content > 0 or mine.credits > 0:
                 self.ship.laser.cease_fire()
                 ore_transfer = int(min(self.ship.cargo_hold.free_capacity(), mine.content))
@@ -268,7 +284,7 @@ class Scanner:
                 show_message(Message(
                     title='ROCK SCANNED',
                     text=f"This {rock.adjective} rock has been scanned, and the results stored in the ship computer, "
-                         "forbidding it from being damaged.",
+                         "preventing it from being damaged.",
                 ))
                 for mission in self.ship.owner.missions:
                     mission.on_rock_scanned(rock)

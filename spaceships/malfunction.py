@@ -39,5 +39,6 @@ class Instrument(Enum):
     CARGO_SEALING_PACK = 'Sealing packs'
     CARGO_REPAIR_KIT = 'Repair kits'
     CARGO_MINES = 'Mines'
+    CARGO_SCRAPS = 'Scraps'
     CARGO_ORE = 'Ore'
     CARGO_RAW_WATER = 'Raw water'

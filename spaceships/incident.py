@@ -143,7 +143,7 @@ class ImpactIncident(Updatable):
     """A micrometeoroid hits the ship at `moment`, if the pilot is then in space: it opens an air leak of a size drawn
     from `profile`, costs maintenance at once, and warns the pilot. Only the base size has its text written so far."""
 
-    # The notification of each size of impact (TODO: the texts of the medium and big ones), and of a malfunction.
+    # The notification of each size of impact, and of a malfunction.
     IMPACT_MESSAGES: dict[Size, str] = {
         Size.BASE: 'WARNING: Micrometeoroid impact detected, air leak. Repair using sealing packs.',
         Size.MEDIUM: 'CRITICAL: Small meteoroid impact detected, air leak. Repair using sealing packs.',

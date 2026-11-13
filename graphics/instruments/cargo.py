@@ -22,7 +22,8 @@ def format_quantity(value: float) -> str:
 CARGO_INSTRUMENTS = {
     'air': Instrument.CARGO_AIR, 'water': Instrument.CARGO_WATER, 'food': Instrument.CARGO_FOOD,
     'sealing_pack': Instrument.CARGO_SEALING_PACK, 'repair_kit': Instrument.CARGO_REPAIR_KIT,
-    'mines': Instrument.CARGO_MINES, 'ore': Instrument.CARGO_ORE, 'raw_water': Instrument.CARGO_RAW_WATER,
+    'mines': Instrument.CARGO_MINES, 'scraps': Instrument.CARGO_SCRAPS, 'ore': Instrument.CARGO_ORE,
+    'raw_water': Instrument.CARGO_RAW_WATER,
 }
 
 class Cargo:
@@ -73,7 +74,7 @@ class Cargo:
             line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
         # the capacity is shown above, the rest is not cargo
-        for element in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'ore', 'raw_water'):
+        for element in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'scraps', 'ore', 'raw_water'):
             quantity = getattr(ship.cargo_hold, element)
             shown = format_quantity(quantity)
             # Nothing of mines, ore or raw water: no line. Air, water and food keep theirs, as the warning matters at 0.

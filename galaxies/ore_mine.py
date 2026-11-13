@@ -31,6 +31,8 @@ class OreMine(Updatable):
     # extraction becomes credits instead of ore, at CREDITS_PER_ORE per kg. Tunable.
     CREDITS_SHARE: float = 0.75
     CREDITS_PER_ORE: int = 100
+    # The scraps the ship takes from a mine that is empty and whose field is depleted, when it is scrapped.
+    SCRAPS_FROM_MINE: int = 100
 
     def __init__(
             self,
@@ -165,6 +167,12 @@ class OreMine(Updatable):
         if self.last_updated_at is not None:
             self._extract_completed_periods(gem.current_environment.date_time)  # the periods finished before stopping
         self.next_update_at = None
+
+    def scrap(self) -> None:
+        """The mine is taken down: it stops working, and leaves its field and its world."""
+        self.stop_updating()
+        self.parent_field.mines.remove(self)
+        self.parent_field.parent_km2.parent_world.registered_mines.remove((self.longitude, self.latitude))
 
 
 class ExternalMine(OreMine):

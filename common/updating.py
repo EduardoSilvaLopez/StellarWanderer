@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List
 
+from common.frame_watch import frame_watch
+
 
 class Updatable(ABC):
     """An object that UpdateQueue updates once get_next_update() has passed."""
@@ -46,6 +48,8 @@ class UpdateQueue:
         """Updates every object whose next update is at or before `current_date_time`, taking each out of the queue
         first."""
         to_update = [obj for obj in self._queue if obj.get_next_update() <= current_date_time]
+        if to_update:
+            frame_watch.count('update queue: objects updated', len(to_update))
         for obj in to_update:
             self.remove(obj)
             obj.update(current_date_time)  # May re-insert.

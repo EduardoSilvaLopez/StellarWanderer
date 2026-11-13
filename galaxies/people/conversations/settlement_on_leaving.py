@@ -132,7 +132,7 @@ class SettlementOnLeaving(Conversation):
                     buttons=['Yes, please', 'No, thanks.'],
                     ), self._versatile_answered
                 )
-            return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
+                return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
         elif old_rep < 500 \
                 and not isinstance(self.player.ship, TwsVersatile) \
                 and 'Hauler Asked' not in self.player.flags:

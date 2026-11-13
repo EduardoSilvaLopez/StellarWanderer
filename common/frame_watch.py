@@ -5,15 +5,18 @@ it. At most one such warning is written per second; the hangs left out in betwee
 
 The game loop marks the end of each phase (mark) between `begin`, right after the frame timer ticks, and `end`, right
 before it ticks again; the drawing marks its own parts in between. Rare or first-use operations (a Km2 generated, a
-rock batch built, a texture built, a belt sector, a save) are timed at their top calling method with `timed`; never nest them, so the
-figures do not count twice. A modal dialog, which blocks for as long as the pilot takes, calls `discard` so its frame
-is not reported. The last phase is the GPU one: pygame.display.flip is where a slow draw shows up, because OpenGL
+rock batch built, a texture built, a belt sector, a save) are timed at their top calling method with `timed`; never nest
+them, so the figures do not count twice. A modal dialog, which blocks for as long as the pilot takes, calls `discard`
+so its frame is not reported. The last phase is the GPU one: pygame.display.flip is where a slow draw shows up, because
+OpenGL
 calls return before the work is done.
 
 Garbage collections that take longer than GC_SECONDS are logged too, since they hang a frame at random.
 
-Besides the hangs, every PROFILE_SECONDS of watched frames the mean time of each phase is logged (one INFO line, the
-slowest first): where the frame rate goes in an ordinary stretch of play, not only in the frames that hang.
+Besides the hangs, every PROFILE_SECONDS of watched frames the mean time of each phase is logged (one DEBUG line, the
+slowest first): where the frame rate goes in an ordinary stretch of play, not only in the frames that hang. The
+counts (`count`) of the work done, such as chunks uploaded or the queue's updates, are logged with them, and with each
+hang, so that work done while the pilot is idle shows up even when it takes no time.
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ from common.game_logging.constants import HITCH_SECONDS, GC_SECONDS
 logger = logging.getLogger(__name__)
 
 HANG_LOG_INTERVAL_SECONDS = 1.0  # the least time between two hang warnings
-PROFILE_SECONDS = 30.0  # the watched time that one profile line covers
+PROFILE_SECONDS = 300.0  # the watched time that one profile line covers
 
 
 class FrameWatch:
@@ -38,10 +41,12 @@ class FrameWatch:
         self._last_mark: float = 0.0
         self._phases: List[Tuple[str, float]] = []
         self._operations: List[Tuple[str, float]] = []
+        self._counts: Dict[str, int] = {}  # the work counted in this frame
         self._gc_started: float = 0.0
         self._last_hang_logged: float = float('-inf')
         self._hangs_left_out: int = 0
         self._profile: Dict[str, float] = {}  # the time of each phase since the last profile line
+        self._profile_counts: Dict[str, int] = {}  # the work counted since the last profile line
         self._profile_frames: int = 0
         self._profile_seconds: float = 0.0
 
@@ -50,6 +55,12 @@ class FrameWatch:
         self._frame_start = self._last_mark = time.perf_counter()
         self._phases.clear()
         self._operations.clear()
+        self._counts.clear()
+
+    def count(self, name: str, amount: int = 1) -> None:
+        """Adds `amount` to the work named `name` of this frame, and of the profile line being built."""
+        self._counts[name] = self._counts.get(name, 0) + amount
+        self._profile_counts[name] = self._profile_counts.get(name, 0) + amount
 
     def mark(self, phase: str) -> None:
         """The phase `phase` ends here: it started at the previous mark (or at `begin`)."""
@@ -85,9 +96,11 @@ class FrameWatch:
             return
         phases = ', '.join(f'{name} {seconds:.3f} s' for name, seconds in self._phases)
         operations = ', '.join(f'{name} {seconds:.3f} s' for name, seconds in self._operations)
+        counts = ', '.join(f'{name} {amount}' for name, amount in self._counts.items())
         logger.warning(
             f'Frame hang: {total:.3f} s. Phases: {phases}.'
             + (f' Operations: {operations}.' if operations else '')
+            + (f' Counts: {counts}.' if counts else '')
             + (f' {self._hangs_left_out} more hangs since the last warning.' if self._hangs_left_out else ''))
         self._last_hang_logged = now
         self._hangs_left_out = 0
@@ -103,9 +116,12 @@ class FrameWatch:
             return
         frames = self._profile_frames
         slowest = sorted(self._profile.items(), key=lambda item: item[1], reverse=True)
-        logger.info(f'Frame profile: {frames} frames, mean {1000 * self._profile_seconds / frames:.1f} ms. Phases: '
-                    + ', '.join(f'{name} {1000 * seconds / frames:.1f} ms' for name, seconds in slowest) + '.')
+        counts = ', '.join(f'{name} {amount}' for name, amount in sorted(self._profile_counts.items()))
+        logger.debug(f'Frame profile: {frames} frames, mean {1000 * self._profile_seconds / frames:.1f} ms. Phases: '
+                    + ', '.join(f'{name} {1000 * seconds / frames:.1f} ms' for name, seconds in slowest) + '.'
+                    + (f' Counts: {counts}.' if counts else ''))
         self._profile.clear()
+        self._profile_counts.clear()
         self._profile_frames = 0
         self._profile_seconds = 0.0
 

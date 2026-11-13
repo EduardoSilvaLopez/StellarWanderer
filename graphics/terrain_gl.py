@@ -498,6 +498,7 @@ class _Renderer:
             gap = math.hypot(max(x0 - cam_x, 0.0, cam_x - x0 - mesh.ROOT_SIZE),
                              max(z0 - cam_z, 0.0, cam_z - z0 - mesh.ROOT_SIZE))
             if gap < NEAR_ROOTS_NOW:
+                frame_watch.count('terrain: near roots built here')
                 self._upload(key, mesh.build_chunk(key, self.terrain.seed, self.terrain.radius, self.terrain.relief,
                                                     self.terrain.platforms))
     # endregion
@@ -534,13 +535,22 @@ class _Renderer:
         ground = ship.navigation.ground_height_at(ship.position.x, ship.position.z)
         self.horizon = (ground, math.sqrt(2.0 * terrain.radius * max(ship.position.y - ground, 0.0)), terrain.radius)
         right, up, back = modelview[0, :3], modelview[1, :3], modelview[2, :3]
-        if self._collect():
+        arrived = self._collect()
+        if arrived:
             self.selection = None   # something new can be shown
         frame_watch.mark('ground: uploads')
         rotation = modelview[:3, :3]
         chosen = self.selection
         moved = chosen is None or np.linalg.norm(np.subtract(self.camera, chosen[2])) > REUSE_MOVE
         if moved or np.abs(rotation - chosen[3]).max() > REUSE_TURN:
+            if arrived:
+                frame_watch.count('terrain: choice rebuilt, new chunks')
+            elif chosen is None:
+                frame_watch.count('terrain: choice rebuilt, first')
+            elif moved:
+                frame_watch.count('terrain: choice rebuilt, camera moved')
+            else:
+                frame_watch.count('terrain: choice rebuilt, camera turned')
             tan_h, tan_v = VIEW_PADDING / projection[0, 0], VIEW_PADDING / projection[1, 1]
             forward = -back
             self.planes = []
@@ -589,6 +599,7 @@ class _Renderer:
         for key, vertices in self.builder.collect(MAX_UPLOADS_PER_FRAME):
             if key not in self.cache:
                 self._upload(key, vertices)
+                frame_watch.count('terrain: chunks uploaded')
                 uploaded = True
         return uploaded
 
@@ -598,6 +609,7 @@ class _Renderer:
             if self.builder.pending >= MAX_REQUESTS_IN_FLIGHT:
                 break
             if key not in self.cache:
+                frame_watch.count('terrain: chunks requested')
                 self.builder.request(key, self.terrain.seed, self.terrain.radius, self.terrain.relief,
                                      self.terrain.platforms)
 
