@@ -14,6 +14,7 @@ from galaxies.world import World
 from galaxies.politics import political_entity
 from galaxies.politics.personal_status import PersonalStatus
 from common.updating import update_queue
+from spaceships.incident import IncidentCheck
 from spaceships.ship import Ship
 from spaceships.ship_configurations import ShabbyTwsMiner
 import game_environment as gem
@@ -76,6 +77,7 @@ class Player:
         self.pinned_tags: list[str] = []
         self.flags: set[str] = set()
         self.show_orbits: bool = True  # the pilot's choice (O): the orbit of the targeted body is drawn
+        self.incident_check: IncidentCheck = IncidentCheck(self)  # the hardships of the ship, rolled every minute
 
     def apply_identity(self, identity: PilotIdentity) -> Player:
         """Takes the identity the new-game dialog gave."""

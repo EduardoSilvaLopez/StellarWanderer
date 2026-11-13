@@ -28,5 +28,7 @@ class TwsHauler(Ship):
         AIR_MAX = 180.0
         WATER_MAX = 170.0
         FOOD_MAX = 160.0
+        SEALING_PACK_MAX = 6
+        REPAIR_KIT_MAX = 6
 
     CARGO_HOLD = StandardHold

@@ -37,6 +37,7 @@ from .giant_gl import GiantGl
 from .laser import Laser
 from .surface_light import SurfaceLight
 from .scoop_view import ScoopView
+from .incident_view import IncidentView
 from .instruments.scanner import Scanner
 
 if TYPE_CHECKING:
@@ -63,6 +64,7 @@ class OpenGLGui:
 
     With the scoop open (Ship.scoop_open) the cockpit leaves the scanner's square empty and the scoop's view is drawn
     over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes.
+    While the hull leaks, a red light waves over the whole window after the cockpit (graphics/incident_view.py).
 
     What does not change from one frame to the next is not drawn nor uploaded again: the console is redrawn
     CONSOLE_REFRESH_FRAMES apart (at once when the mouse moves over it), and the sky's layer only when the view, the
@@ -221,6 +223,7 @@ class OpenGLGui:
         GL.glDisable(GL.GL_DEPTH_TEST)
         self._draw_texture(self.overlay_surface, self.overlay_texture,
                            [(0, height if console_redrawn else console_top)])
+        IncidentView.draw_alarm(width, height, ship)  # the red light of a leak, over the cockpit
         if Scanner.scoop_rect is not None:  # the cockpit has just left the scanner's square empty for it
             ScoopView.draw(Scanner.scoop_rect, (width, height), ship, environment, km2s, outposts, light, sightings)
             frame_watch.mark('scoop')
@@ -254,11 +257,12 @@ class OpenGLGui:
 
     def _tint_and_vignette(self, overlay: pygame.Surface, environment: GameEnvironment, ship: Ship, width: int,
                            height: int) -> None:
-        """What the light and the heat do to the cockpit, within the surface's clip (the part being drawn)."""
+        """What the light, the heat and a leak do to the cockpit, within the surface's clip (the part being drawn)."""
         Starlight.tint_cockpit(overlay, environment, ship)
         AtmosphereLight.tint_cockpit(overlay, environment, ship)
         PortalGl.tint_cockpit(overlay, environment, ship)
         HeatVignette.draw(overlay, width, height, ship)
+        IncidentView.draw_cracks(overlay, ship, width, height)
 
     def _console_due(self, ship: Ship, lower: pygame.Rect) -> bool:
         """Whether the console is redrawn in this frame: every CONSOLE_REFRESH_FRAMES, at once when the mouse moves

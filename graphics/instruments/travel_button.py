@@ -8,6 +8,8 @@ from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 
 from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, READOUT_BG
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -23,7 +25,7 @@ class TravelButton:
     def hit(position: Tuple[int, int], ship: Ship) -> bool:
         """Whether a click at `position` is on the button while it does something: lit, or flying (to give it up)."""
         from spaceships.travel_assist import TravelAssist
-        if ship.owner.inside is not None:
+        if ship.owner.inside is not None or Broken.is_broken(Instrument.TRAVEL):
             return False
         return TravelButton.rect.collidepoint(position) and (ship.navigation.travel is not None
                                                              or TravelAssist.enabled(ship))
@@ -37,6 +39,7 @@ class TravelButton:
         label_font = fonts.get(max(9, int(h * 0.017)))
         height = label_font.get_height() + 6
         TravelButton.rect = pygame.Rect(left, top, width, height)
+        Broken.register(Instrument.TRAVEL, TravelButton.rect)
         running = ship.navigation.travel is not None
         colour = ACCENT if running else (BINDING_NEAR_GREEN if TravelAssist.enabled(ship) else ACCENT_DIM)
         if running:

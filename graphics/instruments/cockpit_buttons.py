@@ -10,6 +10,8 @@ import pygame
 from common.paths import resource_path
 from ..constants import ACCENT, ACCENT_DIM, READOUT_BG
 from .political_info import PoliticalInfo
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
     from galaxies.people.player import Player
@@ -31,6 +33,9 @@ def shows_missions(player: Player) -> bool:
     from galaxies.missions.mission_board import MissionBoard
     return MissionBoard.is_trusted(player.reputation) or any(m.status == OPEN for m in player.missions)
 
+
+BUTTON_INSTRUMENTS = {SYSTEMS: Instrument.SYSTEMS, PEOPLE: Instrument.PEOPLE, SHIP: Instrument.SHIP,
+                      MISSIONS: Instrument.MISSIONS}
 
 class CockpitButtons:
     """Square buttons under the political icon: a miniature stellar system and a head side by side, the ship under the
@@ -108,10 +113,12 @@ class CockpitButtons:
             places.append((MISSIONS, pygame.Rect(right, second_row, size, size)))
         for name, rect in places:
             CockpitButtons.rects[name] = rect
+            Broken.register(BUTTON_INSTRUMENTS[name], rect)
             hovered = mouse is not None and rect.collidepoint(mouse)
             CockpitButtons.draw_button(surface, rect, name, hovered)
 
     @staticmethod
     def hit(position: Tuple[int, int]) -> Optional[str]:
         """The button (SYSTEMS, PEOPLE, SHIP or MISSIONS) at a window position, or None."""
-        return next((name for name, rect in CockpitButtons.rects.items() if rect.collidepoint(position)), None)
+        return next((name for name, rect in CockpitButtons.rects.items()
+                     if rect.collidepoint(position) and not Broken.is_broken(BUTTON_INSTRUMENTS[name])), None)

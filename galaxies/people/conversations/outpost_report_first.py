@@ -35,16 +35,23 @@ class OutpostReportFirst(Conversation):
         time_str: str = self._time_as_string(int(time_to_handle))
         handle_info: str = f"We will start reparing and recharging up your ship. It should be ready {time_str}."
 
+        # A pilot who docked with a leak: the dock has closed it, and the welcome waits for its text (see Ship.dock).
+        text: str = (
+            "For Catherine and all Three Pillars, how did you manage to arrive here in this condition!?\n\n"
+            "We will immediately close those leaks and then we talk the rest... people! everybody here!"
+        ) if self.player.ship.leaked_on_arrival else oit + it + handle_info
         self.show(Message(
                 title=self.title,
-                text=oit + it + handle_info,
-                buttons=['Ok'],
+                text=text,
+                buttons=['Ok... thanks, I wait.'],
                 open_sound='radio_open'
                 ), self._ok
             )
 
     def _generate_outpost_introduction_text(self) -> str:
          return (
+             f"{"It's a wonder you are still alive... ok, ok... *hrm*\n\n" \
+                if self.player.ship.leaked_on_arrival else ""}"
              f"Welcome to {self.outpost.name}, {self.interlocutor.get_player_title()} {self.player.surname}."
             " We are new but we can take care about you.\n\n" if self.interlocutor.sociability100 > 20 else '\n\n'
             "We take care of your ship, you handle the cargo. Maintenance and recharge need some time, though.\n\n"

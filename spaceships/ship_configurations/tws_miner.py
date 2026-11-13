@@ -28,5 +28,7 @@ class TwsMiner(Ship):
         AIR_MAX = 60.0
         WATER_MAX = 56.0
         FOOD_MAX = 50.0
+        SEALING_PACK_MAX = 4
+        REPAIR_KIT_MAX = 4
 
     CARGO_HOLD = StandardHold

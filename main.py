@@ -61,6 +61,8 @@ from graphics.instruments.clock import Clock
 from graphics.instruments.notification import notification_bar
 from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
 from graphics.instruments.orbit_button import OrbitButton
+from graphics.instruments.cargo import Cargo
+from graphics.instruments.broken import Repair
 from graphics.instruments.travel_button import TravelButton
 from spaceships.orbit_assist import OrbitAssist
 from spaceships.travel_assist import TravelAssist
@@ -445,6 +447,7 @@ def main() -> None:
                             player.leave_settlement()
                             audio.play(SettlementScreenDialog.CLOSE_SOUND)
                             gem.current_environment.clock.advance(leaving_seconds)
+                            break  # the screen is gone: the rest of this batch is not for it (its reputation is cleared)
             elif event.type == pygame.KEYDOWN:
                 # the inside of the settlement in the scanner: the other state of the game (see Player.inside)
                 if event.key == pygame.K_SPACE:
@@ -487,9 +490,17 @@ def main() -> None:
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_m:
                     player.ship.place_mine()
+            elif event.type == pygame.MOUSEBUTTONDOWN and Repair.active:
+                Repair.click(event.pos, event.button, player.ship)  # a repair kit in hand: the click mends or cancels
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and Cargo.hit_repair_kit(event.pos, player.ship)):
+                Repair.start()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and (pressed := CockpitButtons.hit(event.pos)) is not None):
                 running, screen = open_knowledge(pressed, screen, gui, fonts, clock)
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and Cargo.hit_sealing(event.pos, player.ship)):
+                player.ship.seal_leak()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                   and OrbitButton.hit(event.pos, player.ship)):
                 OrbitAssist.press(player.ship)
@@ -507,6 +518,8 @@ def main() -> None:
         left_pressed = focused and pygame.mouse.get_pressed()[0] and player.ship.is_bound
         WorldMap.set_mouse(pygame.mouse.get_pos(), focused, left_pressed)
 
+        if player.inside is not None and Repair.active:
+            Repair.cancel()  # the repair ends when the pilot goes inside
         frame_watch.mark('events')
         frame_watch.end()
         dt = clock.tick(FPS) / 1000.0
@@ -608,6 +621,7 @@ def main() -> None:
         # the same hum, softer: yaw, pitch (numpad 2/8 thrust while bound) or roll key held, or S stopping them in
         # orbit or on a trip
         audio.set_loop('attitude', rotating)
+        audio.set_loop('critical_alarm', bool(ship.leaks))  # the ship's alarm while the hull leaks
         ship.check_scoop()
         ship.collect_probe(delta_game_seconds)
         frame_watch.mark('scoop and probe')

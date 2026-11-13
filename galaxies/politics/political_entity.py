@@ -100,6 +100,8 @@ UNITED_DIVERSITY: PoliticalEntity = PoliticalEntity(
             "solar_panels": 100000,
             "heat_shield_1": 100000,
             "heat_shield_2": 500000,
+            "sealing_pack": 600,
+            "repair_kit": 3000,
         },
         biggest_cities=[
             ('Carela ', Ethnicity.WHITE),
@@ -219,6 +221,8 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "solar_panels": 10.0,
             "heat_shield_1": 10.0,
             "heat_shield_2": 50.0,
+            "sealing_pack": 0.6,
+            "repair_kit": 3,
         },
         biggest_cities=[
             ('Jiùjīnshān, Ài', Ethnicity.BLACK),
@@ -380,6 +384,8 @@ THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
             "solar_panels": 10.0,
             "heat_shield_1": 10.0,
             "heat_shield_2": 50.0,
+            "sealing_pack": 0.0,
+            "repair_kit": 0.0,
         },
         biggest_cities=[
             ('Glorious Seat, New Earth', Ethnicity.BLACK),

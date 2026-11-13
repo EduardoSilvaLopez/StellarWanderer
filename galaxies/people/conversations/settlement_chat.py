@@ -535,15 +535,13 @@ class SettlementChat(Conversation):
                 )
 
     def talk_credits(self) -> str:
-        # Traits do not matter here: the role and what the pilot did in this system decide. Only an authority hears
-        # the pilot who sold the mine codes of the system (see rat_offered), and only until the pilot has ratted.
         text: str = "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
-        if (self.interlocutor.role in (KOMISAR, COORDINATOR, RINGMASTER)
-                and self.traitor_sold_codes_here() and not self.traitor_ratted_here()):
+        if self.interlocutor.role is RINGMASTER \
+                and self.traitor_sold_codes_here() and not self.traitor_ratted_here():
+            # Traits do not matter here: the role and what the pilot did in this system decide. Only an authority hears
+            # the pilot who sold the mine codes of the system (see rat_offered), and only until the pilot has ratted.
             text += "\n\nIs there something special you want to tell me?"
             self.offer(["<Explain the whole story>", "No, I was just curious."], self.traitor_rat_offered)
-            if self.interlocutor.role is RINGMASTER:
-                text += "\n\nTODO: the Ringmaster hints that the pilot may ask for [credits for the ship]."
         return text
 
     def talk_custodian_thirds(self) -> str:
@@ -1200,8 +1198,8 @@ class SettlementChat(Conversation):
             ])
 
         dangers: list[str] = [
-            "Radiation. No air and no magnetic field out there, so the cosmic rays and the solar storms go"
-            " straight through you.",
+            "Radiation. No air and no magnetic field out there, so the cosmic rays and the solar storms damage"
+            " the instruments and go straight through you.",
             "Meteoroids. A grain of sand at tens of kilometres a second hits worse than bullet. Bigger, and"
             " the ship is gone.",
             "Air loss. One breach and the air is gone. About fifteen seconds to think, then nothing.",
@@ -2087,7 +2085,8 @@ class SettlementChat(Conversation):
         prices: dict[str, float] = political_entity.UNITED_DIVERSITY.exchange_reputation_changes
         hold = ship.cargo_hold
         total: float = ship.PRICE_AT_700
-        total += sum(getattr(hold, key) * prices[key] for key in ('air', 'water', 'food', 'mines', 'ore', 'raw_water'))
+        total += sum(getattr(hold, key) * prices[key]
+                     for key in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'ore', 'raw_water'))
         if ship.has_scoop:
             total += prices['scoop']
         if ship.has_solar_panels:
@@ -2102,7 +2101,7 @@ class SettlementChat(Conversation):
     def traitor_sell_ship(self, cost: float) -> None:
         """The pilot pays `cost` credits and owns the ship: the end of the game for this version. The rest of the
         credits stay with the pilot.
-        TODO when international travel is implemented, teleport the pilot outside the borders instead of game over.
+        OPEN when international travel is implemented, teleport the pilot outside the borders instead of game over.
         """
         self.player.adjust_reputation(- self.player.reputation - 100)
         self.player.credits = round(self.player.credits - cost)

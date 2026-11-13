@@ -14,6 +14,8 @@ from .world_map import WorldMap
 from .scanner import Scanner
 from .cargo import Cargo
 from .resource_bars import ResourceBars
+from .broken import Broken
+from spaceships.malfunction import Instrument
 from .notification import notification_bar
 from .altitude_meter import AltitudeMeter
 from .proximity_meter import ProximityMeter
@@ -39,6 +41,7 @@ class Console:
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, w: int, h: int, ship: Ship, date_time: datetime) -> None:
         """Draw the main console with all instruments."""
+        Broken.begin('console')
         top = int(h * CONSOLE_TOP)
         height = h - top
 
@@ -84,12 +87,14 @@ class Console:
         # proximity bar, with the target's distance, approach and drift and the ship's readouts beside it, and in the
         # column left of it the target's name, the ORBIT and TRAVEL buttons, then the long distance advice.
         if ship.is_bound:
+            Broken.register(Instrument.ALTITUDE, pygame.Rect(cluster_left, cluster_top, bar_w, cluster_height))
             AltitudeMeter.draw(surface, fonts, w, h, ship, cluster_left, cluster_top, cluster_height)
             LocationInfo.draw_readouts(surface, fonts, h, ship, cluster_left + bar_w + int(w * 0.03), cluster_top - 10,
                                        line_spacing)
         else:
             indicators_w = int(w * 0.115)
             bar_rect = pygame.Rect(cluster_left + indicators_w + int(w * 0.01), screen.top, bar_w, screen.height)
+            Broken.register(Instrument.PROXIMITY, bar_rect)
             ProximityMeter.draw_bar(surface, h, ship, bar_rect)
             readouts_left = bar_rect.right + int(w * 0.015)
             ProximityMeter.draw_approach(surface, fonts, h, ship, readouts_left, screen.top + 4, line_spacing)
@@ -103,6 +108,7 @@ class Console:
             ProximityMeter.draw_advice(surface, fonts, h, cluster_left, TravelButton.rect.bottom + line_spacing,
                                        line_spacing)
 
+        Broken.register(Instrument.WORLD_MAP if ship.is_bound else Instrument.RADAR, screen)
         if ship.is_bound:
             Compass.draw(surface, fonts, layout_w, h, ship, cluster_top, cluster_height, compass_left_bound)
             WorldMap.draw(surface, fonts, screen, h, ship, date_time)
@@ -134,6 +140,7 @@ class Console:
         notification_height = int(height * 0.12)
         notification_y = h - light * 2 - notification_height
         notification_bar.draw(surface, fonts, w, notification_y, notification_height, ship)
+        Broken.paint('console', surface, fonts, h)
 
         # Indicator lights
         for i in range(10):

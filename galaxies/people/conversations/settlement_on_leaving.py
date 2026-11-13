@@ -35,7 +35,7 @@ class SettlementOnLeaving(Conversation):
         if standing is None:
             raise Exception("No standing available.")
         if self.settlement.player_reputation_on_entering is None:
-            raise Exception("No reputation recorded on entering.")
+            raise Exception("init: No reputation recorded on entering.")
         entity: PoliticalEntity = standing.entity
         self.old_rep: float = self.settlement.player_reputation_on_entering
         self.new_rep: float = self.player.reputation
@@ -77,15 +77,16 @@ class SettlementOnLeaving(Conversation):
 
     def _higher_title_effects(self, old_rep: float) -> str:
         new_title: str = self.player.get_title()
-        if old_rep < 10:
+        if old_rep < 10 \
+                and isinstance(self.player.ship, ShabbyTwsMiner) \
+                and isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ShabbyHold):
             self.player.ship.change_cargo_hold(ShabbyTwsMiner.StandardHold)
             return (
                 f"You have proven you can do the job without wasting mines.\n\n"
                 f"We decided to repair your cargo hold... {self.interlocutor.get_player_title()}.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 20 or isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ShabbyHold):
-            # The effect is the availability of missions.
+        elif old_rep < 20:
             return (
                 "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
                 "Anytime you want, check the mission board of any outpost. But be careful you really can"
@@ -93,7 +94,9 @@ class SettlementOnLeaving(Conversation):
                 f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
                    if self.interlocutor.loyalty100 > 5 else ''
                 )
-        elif old_rep < 50 or isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.StandardHold):
+        elif old_rep < 50 \
+                and isinstance(self.player.ship, ShabbyTwsMiner) \
+                and not isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ExtendedHold):
             self.player.ship.change_cargo_hold(ShabbyTwsMiner.ExtendedHold)
             return (
                 f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
@@ -101,7 +104,7 @@ class SettlementOnLeaving(Conversation):
                 f"Keep doing the good job.\n\n"
                 f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
                 )
-        elif old_rep < 100 or isinstance(self.player.ship, ShabbyTwsMiner):
+        elif old_rep < 100 and isinstance(self.player.ship, ShabbyTwsMiner):
             self.player.ship.upgrade_to(TwsMiner)
             return  (
                 "People were asking why you still have to go around with that piece of..."
@@ -115,7 +118,7 @@ class SettlementOnLeaving(Conversation):
         elif old_rep < 200 and 'Versatile Asked' not in self.player.flags:
             self.player.flags.add('Versatile Asked')
             done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
-            ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if done else 1.0
+            ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if len(done) > 0 else 1.0
             if ore_factor <= 0.5:
                 self.show(Message(
                     title=self.title,
@@ -130,9 +133,8 @@ class SettlementOnLeaving(Conversation):
                     ), self._versatile_answered
                 )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-
-            '''and not isinstance(self.player.ship, TwsVersatile)'''
         elif old_rep < 500 \
+                and not isinstance(self.player.ship, TwsVersatile) \
                 and 'Hauler Asked' not in self.player.flags:
             self.player.flags.add('Hauler Asked')
             done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
@@ -149,7 +151,6 @@ class SettlementOnLeaving(Conversation):
                 ), self._hauler_answered
             )
             return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-
         elif old_rep < 1000:
             return  (
                 "I came to talk with you because you have meanwhile done so much here, that people think you can"

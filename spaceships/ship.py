@@ -10,6 +10,8 @@ from galaxies.ore_mine import OreMine
 import game_environment as gem
 from .laser import Laser
 from .cargo_hold import CargoHold
+from .incident import AIR_FACTOR, MAINTENANCE_LOSS, Leak
+from .malfunction import Instrument
 from .scanner import Scanner
 from .notification import Notification
 from .kinematics import Position, Velocity
@@ -170,6 +172,12 @@ class Ship(Updatable):
         self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
         self.is_docked: bool = False  # the pilot is inside an outpost: nothing is consumed (see dock). Not saved
+        # The open air leaks, one per impact (see spaceships/incident.py). Saved.
+        self.leaks: list[Leak] = []
+        # Docked with a leak, which the dock closed: the Dockmaster's report says so (see dock). Not saved
+        self.leaked_on_arrival: bool = False
+        # The instruments a malfunction broke (see spaceships/malfunction.py). Saved.
+        self.broken: set[Instrument] = set()
         self.last_update_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
         self.update(gem.current_environment.date_time)
@@ -339,9 +347,13 @@ class Ship(Updatable):
 
     def dock(self) -> Ship:
         """The pilot goes into an outpost: the time that has passed until now is lived through, and from now on nothing
-        is consumed (maintenance, energy, air, water, food) until `undock`."""
+        is consumed (maintenance, energy, air, water, food) until `undock`. A settlement, the portal base included,
+        closes any leak at once, and the Dockmaster's report is told of it (`leaked_on_arrival`)."""
         self._settle()
         self.is_docked = True
+        if self.leaks:
+            self.leaked_on_arrival = True
+            self.leaks = []
         return self
 
     def undock(self) -> Ship:
@@ -349,16 +361,59 @@ class Ship(Updatable):
         everything is consumed again from now on."""
         self._settle()
         self.is_docked = False
+        self.leaked_on_arrival = False
         return self
 
-    def _settle(self) -> Ship:
-        """Lives through the time since the last update, so that a change of state starts at this very moment."""
-        now = gem.current_environment.date_time
+    def _settle(self, at: Optional[datetime] = None) -> Ship:
+        """Lives through the time since the last update, up to `at` (the date now, by default), so that a change of
+        state starts at that moment. A moment before the last update counts from the last update."""
+        now = gem.current_environment.date_time if at is None else max(at, self.last_update_at or at)
         if self.last_update_at is None:
             raise Exception("Last update is none.")
         self._live_through((now - self.last_update_at).total_seconds() / (24 * 60 * 60))
         self.last_update_at = now
         return self
+
+    def open_leak(self, leak: Leak, at: datetime) -> Ship:
+        """An impact opens the air leak `leak` at `at`: the time up to it is lived through at the normal rate first. The
+        impact takes its maintenance at once, and the death by lack of maintenance is checked then."""
+        self._settle(at)
+        self.leaks.append(leak)
+        self.maintenance -= MAINTENANCE_LOSS[leak.size] * self.precariousness
+        self._live_through(0.0)
+        return self
+
+    def seal_leak(self) -> bool:
+        """A click on the sealing pack line of the cargo (see Cargo.hit_sealing): one sealing pack goes to the first
+        open leak, and when that leak has all its packs it closes, and the air is then used at the rate of the leaks
+        that remain. Without a pack the leak stays, and nothing else happens. Returns whether a pack was used."""
+        if not self.leaks:
+            self.notification.set("No leak to seal.", 'failed', bad=True)
+            return False
+        if self.cargo_hold.sealing_pack <= 0:
+            return False
+        self._settle()
+        self.cargo_hold.sealing_pack -= 1
+        leak = self.leaks[0]
+        leak.packs_left -= 1
+        if leak.packs_left == 0:
+            self.leaks.pop(0)
+        audio.play('using_sealing')
+        return True
+
+    def break_instrument(self, instrument: Instrument) -> None:
+        """A malfunction breaks `instrument`: it is greyed and does not update until it is repaired."""
+        self.broken.add(instrument)
+
+    def repair_instrument(self, instrument: Instrument) -> bool:
+        """A repair kit mends the broken `instrument`: one kit goes, and the instrument works again. Returns whether it
+        was repaired."""
+        if instrument not in self.broken or self.cargo_hold.repair_kit <= 0:
+            return False
+        self.broken.discard(instrument)
+        self.cargo_hold.repair_kit -= 1
+        audio.play('repair')
+        return True
 
     def death_radius(self, star: Star) -> float:
         """The distance from the star at which the ship reaches TEMP_MAX, with its heat shield: a level L lets through
@@ -435,8 +490,9 @@ class Ship(Updatable):
         return ambient is not None and ambient[0] >= self.PRESSURE_MAX
 
     def _live_through(self, days: float) -> Ship:
-        """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked), the
-        temperature moves, the pilot is warned when a level is crossed, and dies when one runs out."""
+        """`days` pass: maintenance, energy, air, water and food are consumed (unless the ship is docked; the air of
+        each open leak goes at its size's rate, see incident.AIR_FACTOR), the temperature moves, the pilot is warned
+        when a level is crossed, and dies when one runs out."""
         old_maintenance: float = self.maintenance
         old_energy: float = self.energy
         old_temperature: float = self.temperature
@@ -446,7 +502,8 @@ class Ship(Updatable):
         if not self.is_docked:  # nothing is consumed inside an outpost
             self.maintenance -= 0.1 * self.precariousness * days
             self.energy -= 1e5 * days
-            self.cargo_hold.air -= days
+            air_rate = sum(AIR_FACTOR[leak.size] for leak in self.leaks) if self.leaks else 1.0
+            self.cargo_hold.air -= days * air_rate
             self.cargo_hold.water -= days
             self.cargo_hold.food -= days
 
@@ -512,6 +569,9 @@ class Ship(Updatable):
         upgraded.heat_shield = self.heat_shield
         upgraded.has_scoop = self.has_scoop
         upgraded.has_solar_panels = self.has_solar_panels
+        upgraded.leaks = self.leaks
+        upgraded.leaked_on_arrival = self.leaked_on_arrival
+        upgraded.broken = self.broken
         upgraded.notification = self.notification
         upgraded.last_update_at = self.last_update_at
         upgraded.next_update_at = self.next_update_at
@@ -635,6 +695,8 @@ class Ship(Updatable):
             'heat_shield': self.heat_shield.value,
             'has_scoop': self.has_scoop,
             'has_solar_panels': self.has_solar_panels,
+            'leaks': [leak.serialize() for leak in self.leaks],
+            'broken_instruments': sorted(instrument.name for instrument in self.broken),
             'cargo_hold': self.cargo_hold.serialize()
         }
 
@@ -657,6 +719,8 @@ class Ship(Updatable):
         result.heat_shield = Ship.HeatShield(src['heat_shield'])
         result.has_scoop = src['has_scoop']
         result.has_solar_panels = src['has_solar_panels']
+        result.leaks = [Leak.deserialize(leak) for leak in src['leaks']]
+        result.broken = {Instrument[name] for name in src['broken_instruments']}
         result.cargo_hold = CargoHold.deserialize(result, src['cargo_hold'])
         return result
     # endregion

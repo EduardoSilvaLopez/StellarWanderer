@@ -11,6 +11,8 @@ from .instruments.clock import Clock
 from .instruments.location_info import LocationInfo
 from .instruments.crosshair import Crosshair
 from .instruments.cockpit_buttons import CockpitButtons
+from .instruments.broken import Broken
+from spaceships.malfunction import Instrument
 from .instruments.political_info import PoliticalInfo
 from .object_labels import ObjectLabels
 from .target_marker import TargetMarker
@@ -44,6 +46,7 @@ class Cockpit:
             date_time: Player's ship time
         """
         import game_environment as gem
+        Broken.begin('upper')
         Canopy.draw(surface, w, h, player.ship.COCKPIT_TEXTURE)
         frame_watch.mark('canopy')
         Crosshair.draw(surface, w, h)
@@ -54,6 +57,8 @@ class Cockpit:
         CockpitButtons.draw(surface, w, h, PoliticalInfo.draw(surface, fonts, w, h), player)
         frame_watch.mark('buttons and political info')
         name = LocationInfo.draw_name(surface, fonts, w, h)
+        Broken.register(Instrument.LOCATION, name)
         Clock.draw(surface, fonts, date_time, player.time_scale, w, h,
                    right_middle=(name.left - max(12, int(w * 0.012)), name.centery),
                    dangerous=player.is_time_scale_dangerous())
+        Broken.paint('upper', surface, fonts, h)

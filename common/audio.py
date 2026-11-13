@@ -54,10 +54,14 @@ SOUNDS: Dict[str, SoundSpec] = {
     'scan': SoundSpec('scan.mp3', 0.3, True),  # loop: the low, soft buzz of the beam scanning an asteroid
     'scoop_ice': SoundSpec('scoop_ice.mp3', 0.3, True),  # loop: water taken from ice or an asteroid
     'scoop_gas': SoundSpec('scoop_gas.mp3', 0.3, True),  # loop: the corona or the gas of a giant taken by a probe
+    'impact_micrometeoroid': SoundSpec('impact_micrometeoroid.mp3', 0.8, False),  # a micrometeoroid hits the hull
+    'critical_alarm': SoundSpec('critical_alarm.mp3', 0.5, False),  # loop: the ship's alarm while a leak is open
+    'using_sealing': SoundSpec('using_sealing.mp3', 0.6, False),  # a sealing pack closes a leak
+    'repair': SoundSpec('repair.mp3', 0.6, False),  # a repair kit mends an instrument
 }
 
 MIN_GAP_MS = 80  # the least time between two plays of the same sound
-LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan', 'scoop_ice', 'scoop_gas')  # started with set_loop
+LOOPS = ('laser', 'laser_hit', 'thrust', 'attitude', 'scan', 'scoop_ice', 'scoop_gas', 'critical_alarm')  # set_loop
 
 _loaded: Dict[str, Optional[pygame.mixer.Sound]] = {}  # None for a sound that could not be loaded
 _last_played_at: Dict[str, int] = {}

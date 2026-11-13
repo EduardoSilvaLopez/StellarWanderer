@@ -1,12 +1,20 @@
 DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
-> STARTED: Extra time: 189h00' + 5:45-9:00 + 11:00 - 12:45 + 17:00 - 20:30
+### 2026-11-12 (5/12)
 
 * INCIDENTS - Dora Exploradora
   * Get sealing equipment in the outposts.
-  * Random events, particularly in the asteroid belts, damage the hull (maintenance).
   * Seal to repair.
+  * Random events, particularly in the asteroid belts, damage the hull (maintenance).
   * Extra: Children.
+
+> STARTED: Extra time: 197h15' + 9:15-
+
+  * Impact incidents of different sizes.
+  * Repair kits.
+  * Sealing pack and repair kit become green when they can be used.
+  * Clicking the sealing pack uses it.
+  * Clicking on greyed instruments use a repair kit.
 
 > BACKLOG
 

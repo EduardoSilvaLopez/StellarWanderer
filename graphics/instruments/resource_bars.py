@@ -9,6 +9,8 @@ label sits on the top of the group's rect, where the scanner and cargo titles ar
 from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import pygame
+from .broken import Broken
+from spaceships.malfunction import Instrument
 from ..constants import (ACCENT, ACCENT_DIM, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN, GRAVITY_AMBER,
                          GRAVITY_GREEN, GRAVITY_RED)
 
@@ -24,6 +26,9 @@ TEMPERATURE_MIN_WIDTH = 3  # pixels: the bar's width when the temperature is the
 TEMPERATURE_IDEAL = 25  # degrees: the scale's least and the green line. The colour moves away from it as it heats up.
 CREDIT_SYMBOL = 'Ȼ'
 ROW_LABELS = ('Credits', 'Maintenance', 'Energy', 'Temperature', 'Gravity', 'Pressure', 'Outside')
+ROW_INSTRUMENTS = {'Credits': Instrument.CREDITS, 'Maintenance': Instrument.MAINTENANCE, 'Energy': Instrument.ENERGY,
+                   'Temperature': Instrument.TEMPERATURE, 'Gravity': Instrument.GRAVITY,
+                   'Pressure': Instrument.PRESSURE, 'Outside': Instrument.OUTSIDE}
 ATMOSPHERE_ROWS = ('Pressure', 'Outside')  # the gas around the ship (a bar, and a value in K), shown only while in one
 ATMOSPHERE = 1.0e5  # Pa: one atmosphere as the ship configurations count it (PRESSURE_MAX): the air inside the hull
 
@@ -117,7 +122,6 @@ def _draw_temperature(surface: pygame.Surface, track: pygame.Rect, ship: Ship) -
 class ResourceBars:
     """The rows of resources, top to bottom: see ROW_LABELS. Credits is a value; the others are bars or a scale."""
 
-
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect) -> None:
         """The rows stack down from the top of `rect`, each with its label on the left. The first label's top is the
@@ -142,6 +146,8 @@ class ResourceBars:
             surface.blit(label, label.get_rect(midleft=(rect.left + pad, centre_y)))
 
             track = pygame.Rect(bar_left, centre_y - bar_height // 2, bar_right - bar_left, bar_height)
+            Broken.register(ROW_INSTRUMENTS[name],
+                            pygame.Rect(rect.left, centre_y - row_pitch // 2, rect.width, row_pitch))
             if name == 'Credits':
                 value = label_font.render(format_credits(ship.owner.credits), True, ACCENT)
                 surface.blit(value, value.get_rect(midleft=(bar_left, centre_y)))

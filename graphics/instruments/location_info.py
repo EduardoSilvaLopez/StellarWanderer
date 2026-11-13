@@ -5,12 +5,16 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import pygame
 from ..constants import CANOPY_TOP, ACCENT
+from .broken import Broken
+from spaceships.malfunction import Instrument
 from common.units import format_compact_distance
 
 if TYPE_CHECKING:
     from galaxies.body import Body
     from spaceships.ship import Ship
 
+
+ATTITUDE_INSTRUMENTS = {'Yaw': Instrument.YAW, 'Pitch': Instrument.PITCH, 'Roll': Instrument.ROLL}
 
 class LocationInfo:
     """The name of the reference body, and the readouts of the ship.
@@ -87,4 +91,7 @@ class LocationInfo:
             f'Speed: {format_compact_distance(speed)}/s',
         ]
         for index, text in enumerate(texts):
+            instrument = ATTITUDE_INSTRUMENTS.get(text.split(':')[0])
+            if instrument is not None:
+                Broken.register(instrument, pygame.Rect(left, top + index * line_spacing, *label_font.size(text)))
             surface.blit(label_font.render(text, True, ACCENT), (left, top + index * line_spacing))

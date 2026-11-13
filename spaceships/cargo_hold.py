@@ -10,9 +10,10 @@ if TYPE_CHECKING:
 
 
 class CargoHold(ABC):
-    """What the ship carries: air, water, food, mines and ore, and the room they take. A configuration (a subclass,
-    see spaceships/ship_configurations) gives the capacity and the maxima; the stock is saved, and the configuration is
-    found again by its qualified name (the class name, prefixed by the ship's name for a hold of a ship)."""
+    """What the ship carries: air, water, food, sealing packs, repair kits, mines and ore, and the room they take.
+    A configuration (a subclass, see spaceships/ship_configurations) gives the capacity and the maxima; the stock is
+    saved, and the configuration is found again by its qualified name (the class name, prefixed by the ship's name
+    for a hold of a ship)."""
 
     # Days left at which air, water and food show their warning: red in the cargo list, and the ship's notice.
     WARNING_DAYS = {'air': 5.0, 'water': 2.0, 'food': 2.0}
@@ -20,6 +21,8 @@ class CargoHold(ABC):
     AIR_WEIGHT = 0.1
     WATER_WEIGHT = 2.0
     FOOD_WEIGHT = 1.0
+    SEALING_PACK_WEIGHT = 0.5
+    REPAIR_KIT_WEIGHT = 1
     ORE_WEIGHT = 1.0
     RAW_WATER_WEIGHT = 1.0  # per Kg: the room a Kg of raw water takes, as ore does
     MINE_WEIGHT = 200.0
@@ -32,6 +35,8 @@ class CargoHold(ABC):
     AIR_MAX: ClassVar[float]
     WATER_MAX: ClassVar[float]
     FOOD_MAX: ClassVar[float]
+    SEALING_PACK_MAX: ClassVar[int]
+    REPAIR_KIT_MAX: ClassVar[int]
 
     # Every configuration, by qualified name (ShabbyTwsMiner.StandardHold, not StandardHold: two holds share that name).
     by_name: ClassVar[dict[str, type[CargoHold]]] = {}
@@ -46,6 +51,8 @@ class CargoHold(ABC):
         self.air: float = self.air_max
         self.water: float = self.water_max
         self.food: float = self.food_max
+        self.sealing_pack: int = self.sealing_pack_max
+        self.repair_kit: int = self.repair_kit_max
         self.mines: int = self.INITIAL_MINES
         self.ore: int = 0  # Kg, always whole: a mine keeps the fraction (see OreMine.content)
         self.raw_water: float = 0.0  # Kg, scooped from an icy world (see DeliverWater); not a supply of the outposts
@@ -67,13 +74,23 @@ class CargoHold(ABC):
     def food_max(self) -> float:
         return self.FOOD_MAX
 
+    @property
+    def sealing_pack_max(self) -> int:
+        return self.SEALING_PACK_MAX
+
+    @property
+    def repair_kit_max(self) -> int:
+        return self.REPAIR_KIT_MAX
+
     def take_stock_from(self, old: CargoHold) -> CargoHold:
-        """Takes the stock of `old`: mines, ore, air, water and food. An air, water or food maximum that changed refills
-        its stock instead. The capacity is not stock, so nothing refills it."""
+        """Takes the stock of `old`: mines, ore, air, water, food, sealing packs and repair kits."""
         self.mines = old.mines
-        self.air = self.air_max if self.air_max != old.air_max else old.air
-        self.water = self.water_max if self.water_max != old.water_max else old.water
-        self.food = self.food_max if self.food_max != old.food_max else old.food
+        self.air = self.air_max if self.air_max <= old.air_max else old.air
+        self.water = self.water_max if self.water_max <= old.water_max else old.water
+        self.food = self.food_max if self.food_max <= old.food_max else old.food
+        self.sealing_pack = (self.sealing_pack_max if self.sealing_pack_max <= old.sealing_pack_max
+                             else old.sealing_pack)
+        self.repair_kit = self.repair_kit_max if self.repair_kit_max <= old.repair_kit_max else old.repair_kit
         self.raw_water = old.raw_water if self.free_capacity() > old.raw_water else self.free_capacity()
         self.ore = old.ore if self.free_capacity() > old.ore else math.floor(self.free_capacity())
         return self
@@ -85,6 +102,8 @@ class CargoHold(ABC):
         result.air = src['air']
         result.water = src['water']
         result.food = src['food']
+        result.sealing_pack = src['sealing_pack']
+        result.repair_kit = src['repair_kit']
         result.mines = src['mines']
         result.ore = src['ore']
         result.raw_water = src['raw_water']
@@ -96,15 +115,18 @@ class CargoHold(ABC):
             'air': self.air,
             'water': self.water,
             'food': self.food,
+            'sealing_pack': self.sealing_pack,
+            'repair_kit': self.repair_kit,
             'mines': self.mines,
             'ore': self.ore,
             'raw_water': self.raw_water,
         }
 
     def used_capacity(self) -> float:
-        cargo = [self.air, self.water, self.food, self.mines, self.ore, self.raw_water]
-        weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.MINE_WEIGHT,
-                   CargoHold.ORE_WEIGHT, CargoHold.RAW_WATER_WEIGHT]
+        cargo = [self.air, self.water, self.food, self.sealing_pack, self.repair_kit, self.mines, self.ore,
+                 self.raw_water]
+        weights = [CargoHold.AIR_WEIGHT, CargoHold.WATER_WEIGHT, CargoHold.FOOD_WEIGHT, CargoHold.SEALING_PACK_WEIGHT,
+                   CargoHold.REPAIR_KIT_WEIGHT, CargoHold.MINE_WEIGHT, CargoHold.ORE_WEIGHT, CargoHold.RAW_WATER_WEIGHT]
         return sum(x*y for x, y in zip(cargo, weights))
 
     def free_capacity(self) -> float:
@@ -150,11 +172,16 @@ class Supply:
     takeable: bool = True
 
 
-# The cargo list of the outpost's cargo view: air, water and food both ways, ore and raw water only given.
+# The cargo list of the outpost's cargo view: air, water, food, sealing packs and repair kits both ways; ore, raw water
+# only given.
 CARGO: tuple[Supply, ...] = (
     Supply('air', 'Air', 'days', CargoHold.AIR_WEIGHT, lambda hold: hold.air_max),
     Supply('water', 'Water', 'days', CargoHold.WATER_WEIGHT, lambda hold: hold.water_max),
     Supply('food', 'Food', 'days', CargoHold.FOOD_WEIGHT, lambda hold: hold.food_max),
+    Supply('sealing_pack', 'Sealing pack', 'packs', CargoHold.SEALING_PACK_WEIGHT,
+           lambda hold: hold.sealing_pack_max, whole=True),
+    Supply('repair_kit', 'Repair kit', 'kits', CargoHold.REPAIR_KIT_WEIGHT,
+           lambda hold: hold.repair_kit_max, whole=True),
     Supply('ore', 'Ore', 'kg', CargoHold.ORE_WEIGHT, whole=True, takeable=False),
     Supply('raw_water', 'Raw water', 'kg', CargoHold.RAW_WATER_WEIGHT, takeable=False),
 )

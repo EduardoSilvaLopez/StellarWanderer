@@ -280,6 +280,12 @@ class AsteroidBelt(Orbit):
     # endregion
 
     # region Query
+    def contains(self, stellar_position: Vector3) -> bool:
+        """Whether a point of the stellar frame is inside the belt: between its inner and outer edges, and within its
+        half-thickness of the reference plane."""
+        radius = math.hypot(stellar_position.x, stellar_position.y)
+        return self.inner <= radius <= self.outer and abs(stellar_position.z) <= self.half_thickness
+
     def time_in_epoch(self, current_datetime: datetime) -> tuple[int, float]:
         """The epoch number of a date, and the seconds from the middle of that epoch."""
         # Local: as World does, the game environment needs the galaxy to load.

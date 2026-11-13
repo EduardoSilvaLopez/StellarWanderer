@@ -5,6 +5,8 @@ from typing import Any, TYPE_CHECKING
 import math
 import pygame
 from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -26,6 +28,7 @@ class Compass:
         margin = int(w * 0.04)
         radius = max(10, int(cluster_height * 0.5))
         center = (left_bound + margin + radius + int(radius * 0.2), cluster_top + cluster_height // 2)
+        Broken.register(Instrument.COMPASS, pygame.Rect(center[0] - radius, center[1] - radius, 2 * radius, 2 * radius))
 
         pygame.draw.circle(surface, READOUT_BG, center, radius)
         pygame.draw.circle(surface, CONSOLE_EDGE_COLOR, center, radius, 2)

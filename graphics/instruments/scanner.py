@@ -12,6 +12,8 @@ from ..rock_shape import FINE_DETAIL, rock_meshes, rotate
 from ..special_rocks import special_mesh
 from ..portal_base_hero import PortalBaseHero
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -71,6 +73,7 @@ class Scanner:
         rect = pygame.Rect(0, 0, size, size)
         rect.top = box_top
         rect.right = w - margin
+        Broken.register(Instrument.SCANNER, rect)
 
         bevel_depth = bezel_depth(h)
         draw_beveled_panel(surface, rect, depth=bevel_depth)

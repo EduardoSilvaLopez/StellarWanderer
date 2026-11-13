@@ -1,11 +1,13 @@
 """Cargo hold contents display."""
 
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, AMBER, BINDING_MARK_RED
+from ..constants import ACCENT, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN
 from .common import draw_beveled_panel, bezel_depth, draw_panel_title
 from .resource_bars import credits_shown, format_credits
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
     from spaceships.ship import Ship
@@ -17,12 +19,36 @@ def format_quantity(value: float) -> str:
     return f'{round(value, 2) + 0.0:.2f}'.rstrip('0').rstrip('.')
 
 
+CARGO_INSTRUMENTS = {
+    'air': Instrument.CARGO_AIR, 'water': Instrument.CARGO_WATER, 'food': Instrument.CARGO_FOOD,
+    'sealing_pack': Instrument.CARGO_SEALING_PACK, 'repair_kit': Instrument.CARGO_REPAIR_KIT,
+    'mines': Instrument.CARGO_MINES, 'ore': Instrument.CARGO_ORE, 'raw_water': Instrument.CARGO_RAW_WATER,
+}
+
 class Cargo:
     """Draw the CARGO list: one line per hold element, name and quantity. Mines, ore and raw water are left out when
     there is none; air, water and food always show, as their warning matters at 0. In Those-Who-Share space, where
     credits are illegal, the pilot's credits are the first line, in red, as contraband (elsewhere they are in the
     resource bars).
-    The title turns amber when less than 1 Kg of the hold's capacity is free."""
+    The title turns amber when less than 1 Kg of the hold's capacity is free. A click on the sealing pack line puts one
+    pack into the first open leak (see hit_sealing), and that line is green while a leak waits. The repair kit line is
+    green while an instrument waits for a repair. Like the repair kits, a pack line is not shown at none.
+    """
+
+    sealing_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # the sealing pack line as it was last drawn
+    repair_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)  # the repair kit line as it was last drawn
+
+    @staticmethod
+    def hit_sealing(position: Tuple[int, int], ship: Ship) -> bool:
+        """Whether a click at `position` is on the sealing pack line, in the cockpit."""
+        return (ship.owner.inside is None and Cargo.sealing_rect.collidepoint(position)
+                and not Broken.is_broken(Instrument.CARGO_SEALING_PACK))
+
+    @staticmethod
+    def hit_repair_kit(position: Tuple[int, int], ship: Ship) -> bool:
+        """Whether a click at `position` is on the repair kit line, in the cockpit: it starts the repair mode."""
+        return (ship.owner.inside is None and Cargo.repair_rect.collidepoint(position)
+                and not Broken.is_broken(Instrument.CARGO_REPAIR_KIT))
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
@@ -32,19 +58,22 @@ class Cargo:
         # Amber when less than 1 Kg of room is left: the hold is full.
         full = ship.cargo_hold.free_capacity() < 1.0
         draw_panel_title(surface, label_font, cargo_summary, rect.centerx, title_top, AMBER if full else ACCENT)
+        Broken.register(Instrument.CARGO, pygame.Rect(rect.left, title_top, rect.width, label_font.get_height()))
 
         draw_beveled_panel(surface, rect, depth=bezel_depth(h))
 
         pad = max(6, rect.width // 16)
         line_spacing = label_font.get_height() + max(2, int(h * 0.006))
         line_y = rect.top + pad
+        Cargo.sealing_rect = pygame.Rect(0, 0, 0, 0)
+        Cargo.repair_rect = pygame.Rect(0, 0, 0, 0)
         if not credits_shown() and ship.owner.credits > 0:  # no credits, nothing to show as contraband
             line = label_font.render(f'CREDITS: {format_credits(ship.owner.credits)}', True, BINDING_MARK_RED)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing
         warning_days = ship.cargo_hold.WARNING_DAYS
         # the capacity is shown above, the rest is not cargo
-        for element in ('air', 'water', 'food', 'mines', 'ore', 'raw_water'):
+        for element in ('air', 'water', 'food', 'sealing_pack', 'repair_kit', 'mines', 'ore', 'raw_water'):
             quantity = getattr(ship.cargo_hold, element)
             shown = format_quantity(quantity)
             # Nothing of mines, ore or raw water: no line. Air, water and food keep theirs, as the warning matters at 0.
@@ -53,6 +82,15 @@ class Cargo:
             # Red at or below the warning level, as the ship's notice says.
             warning = element in warning_days and quantity <= warning_days[element]
             colour = BINDING_MARK_RED if warning else ACCENT
+            if element == 'sealing_pack':
+                if ship.leaks:  # green while a leak waits for a pack
+                    colour = BINDING_NEAR_GREEN
+                Cargo.sealing_rect = pygame.Rect(rect.left, line_y, rect.width, line_spacing)
+            Broken.register(CARGO_INSTRUMENTS[element], pygame.Rect(rect.left, line_y, rect.width, line_spacing))
+            if element == 'repair_kit':
+                if ship.broken:  # green while an instrument waits for a repair
+                    colour = BINDING_NEAR_GREEN
+                Cargo.repair_rect = pygame.Rect(rect.left, line_y, rect.width, line_spacing)
             line = label_font.render(f'{element.replace("_", " ").upper()}: {shown}', True, colour)
             surface.blit(line, (rect.left + pad, line_y))
             line_y += line_spacing

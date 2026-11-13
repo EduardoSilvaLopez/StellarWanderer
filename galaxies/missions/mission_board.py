@@ -68,7 +68,7 @@ class MissionBoard:
         """Whether the offers show: the reputation the pilot had on entering this outpost (see the module docstring)."""
         entered = self.outpost.player_reputation_on_entering
         if entered is None:
-            raise Exception("No reputation recorded on entering.")
+            raise Exception("is_open_to_pilot: No reputation recorded on entering.")
         return MissionBoard.is_trusted(entered)
 
     @property

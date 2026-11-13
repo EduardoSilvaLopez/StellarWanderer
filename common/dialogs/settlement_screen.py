@@ -8,10 +8,11 @@ main.draw_settlement_view).
 
 Left block: clock, settlement name and details, the knowledge buttons (the cockpit's, see main.open_knowledge) and a
 radio group of options, one always selected: Dockmaster (selected on opening, or Cargo if the ship is ready, see
-Settlement.is_ready), Cargo, Missions (only from the reputation the board needs on entering, or while a taken mission is
-open here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block. Right block: the
-picture of the area on show (one per area, chosen from the settlement's seed, see area_pictures), faded dark, and what
-the option shows: the dockmaster's conversation, the cargo, the missions (OutpostMissions) or the chat (chat_view.py).
+Settlement.is_ready), Cargo, Missions (only from the reputation the board needs on entering, or while a taken
+mission is open here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block.
+Right block: the picture of the area on show (one per area, chosen from the settlement's seed, see area_pictures),
+faded dark, and what the option shows: the dockmaster's conversation, the cargo, the missions (OutpostMissions) or
+the chat (chat_view.py).
 
 A conversation shows its messages in a dark panel here, not in a dialog, and its answers as translucent rectangles
 (mouse, number keys or Enter). While a message with more than one answer waits, the options and the knowledge buttons
@@ -174,7 +175,7 @@ class SettlementScreenDialog(Dialog):
     line red until a - or leaving Cargo. An attachment costs reputation, charged at once and refunded when given back;
     one that costs more than the pilot has over the floor of the title held on entering is refused. Game time passes
     with the work (see _spend and the *_SECONDS constants) and the clock runs on, as the screen is not modal; air,
-    water and food cost none.
+    water, food, sealing packs and repair kits cost none.
 
     Missions: the settlement's OutpostMissions. Backspace or a right-click goes back from a detail; the arrow keys
     still select options.
@@ -663,7 +664,7 @@ class SettlementScreenDialog(Dialog):
 
     def _seconds_of(self, key: str, quantity: float) -> float:
         """The game time `quantity` of the supply `key` takes: MINE_SECONDS a mine, the unloading of ore or raw water
-        (Settlement.unloading_seconds), and none for air, water and food."""
+        (Settlement.unloading_seconds), and none for air, water, food, sealing packs and repair kits."""
         if key == "mines":
             return self.settlement.shared_seconds(MINE_SECONDS * quantity)
         if key in ("ore", "raw_water"):
@@ -684,7 +685,7 @@ class SettlementScreenDialog(Dialog):
         entering is named, as the limit is set by it."""
         entered = self.settlement.player_reputation_on_entering
         if entered is None:
-            raise Exception("No reputation recorded on entering.")
+            raise Exception("_community_refuses: No reputation recorded on entering.")
         standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
         title = standing.entity.title_for(entered)
         self.ship.notification.set(
@@ -711,7 +712,7 @@ class SettlementScreenDialog(Dialog):
         when that title is the lowest."""
         entered = self.settlement.player_reputation_on_entering
         if entered is None:
-            raise Exception("No reputation recorded on entering.")
+            raise Exception("_reputation_remaining: No reputation recorded on entering.")
         standing = self.ship.owner.political_status[political_entity.THOSE_WHO_SHARE]
         floor = standing.entity.title_floor(entered)
         if floor == float('-inf'):
@@ -1168,9 +1169,11 @@ class SettlementScreenDialog(Dialog):
     def _shows_option(self, index: int) -> bool:
         """Every option is there, except Missions below the reputation the board needs on entering
         (MissionBoard.is_open_to_pilot), unless a mission the pilot has taken is open here to deliver: then the Taken
-        missions are there, without any offer."""
+        missions are there, without any offer. A screen that is closing has no option: the entry is cleared by then."""
         if BUTTON_LABELS[index] != 'Missions':
             return True
+        if self._leaving:
+            return False
         return self.settlement.mission_board.is_open_to_pilot() or bool(self.settlement.mission_board.mine())
 
     def _leave_hidden_option(self) -> None:

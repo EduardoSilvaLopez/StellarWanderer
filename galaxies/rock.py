@@ -106,8 +106,8 @@ class Rock(Updatable):
     def _generate_initial_color(self, my_random: random.Random) -> tuple:
         # Ore-rich are yellow-ish
         if self.is_ore_rich():
-            base_r = 128 + int(114 * self.get_purity()) + my_random.randint(0, 12)
-            base_g = 128 + int(114 * self.get_purity()) + my_random.randint(0, 12)
+            base_r = 96 + int(136 * self.get_purity()) + my_random.randint(0, 12)
+            base_g = 96 + int(136 * self.get_purity()) + my_random.randint(0, 12)
             base_b = 32 + my_random.randint(0, 8)
         else:
             base_r = 96 + my_random.randint(0, 32)

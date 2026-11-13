@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 import logging
 from galaxies import seeds
 from galaxies.rocky_world import RockyWorld
+from common.vector3 import Vector3
 from galaxies.world import World
 from galaxies.world_surface import Colour, equilibrium_temperature, vary_colour
 
@@ -189,6 +190,9 @@ class JovianWorld(World):
     # outer edges lie in radii of the giant (outer ones are cut by the Roche limit of the ring's particles), the density
     # of the particles (kg/m3), the optical depth range, its colour, and its name for the almanack.
     RING_CHANCE = 0.5
+    # m: half the vertical thickness of a ring. Not drawn from the seed: the order of Jupiter's main ring, a few tens of
+    # kilometres thick (its faint outer rings are thicker, and not modelled).
+    RING_HALF_THICKNESS = 15.0e3
     RING_SAMPLES = 64  # the radial samples of a ring's optical depth
     RING_KINDS = {
         'broad': (0.25, (1.2, 1.5), (1.9, 2.4), 920.0, (0.3, 0.9), (0.9, 0.87, 0.78), 'bright and broad'),
@@ -339,6 +343,16 @@ class JovianWorld(World):
                     value *= 1.0 - share
             opacity.append(value)
         self.ring = Ring(inner, outer, tuple(opacity), colour, kind)
+
+    def in_ring(self, stellar_position: Vector3, current_datetime: datetime) -> bool:
+        """Whether a point of the stellar frame is inside this giant's ring: between its edges, and within
+        RING_HALF_THICKNESS of the equatorial plane (through the giant, normal to the stellar z axis)."""
+        if self.ring is None:
+            return False
+        centre = self.calculate_stellar_position(current_datetime)
+        radius = math.hypot(stellar_position.x - centre.x, stellar_position.y - centre.y)
+        return (self.ring.inner <= radius <= self.ring.outer
+                and abs(stellar_position.z - centre.z) <= JovianWorld.RING_HALF_THICKNESS)
 
     @staticmethod
     def _radius_of_mass(mass: float) -> float:

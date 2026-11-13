@@ -27,17 +27,23 @@ class ShabbyTwsMiner(Ship):
         AIR_MAX = 15.0
         WATER_MAX = 15.0
         FOOD_MAX = 15.0
+        SEALING_PACK_MAX = 1
+        REPAIR_KIT_MAX = 1
 
     class StandardHold(CargoHold):
         CAPACITY = 3000
         AIR_MAX = 20.0
         WATER_MAX = 20.0
         FOOD_MAX = 20.0
+        SEALING_PACK_MAX = 2
+        REPAIR_KIT_MAX = 2
 
     class ExtendedHold(CargoHold):
         CAPACITY = 5000
         AIR_MAX = 24.0
         WATER_MAX = 22.0
         FOOD_MAX = 20.0
+        SEALING_PACK_MAX = 3
+        REPAIR_KIT_MAX = 2
 
     CARGO_HOLD = ShabbyHold

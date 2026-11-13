@@ -6,6 +6,8 @@ from datetime import datetime
 import pygame
 from galaxies.people.player import Player
 from ..constants import ACCENT, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
+from .broken import Broken
+from spaceships.malfunction import Instrument
 
 DANGER_BG = (190, 30, 34)  # the box when the time compression is clearly dangerous
 DANGER_INK = (255, 240, 240)
@@ -43,6 +45,7 @@ class Clock:
             panel.topleft = (int(w * 0.015), int(h * 0.025))
         else:
             panel.midright = right_middle
+        Broken.register(Instrument.CLOCK, panel)
         Clock._place(surface, picture, panel)
 
     @staticmethod
@@ -52,6 +55,7 @@ class Clock:
         picture, panel = Clock._panel('rows', key,
                                       lambda: Clock._two_rows_picture(fonts, date_time, time_scale, w, h, dangerous))
         panel.topleft = topleft
+        Broken.register(Instrument.CLOCK, panel)
         Clock._place(surface, picture, panel)
 
     @staticmethod

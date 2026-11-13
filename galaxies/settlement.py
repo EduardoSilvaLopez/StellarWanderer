@@ -345,7 +345,7 @@ class Settlement(Updatable):
     def prepare(self) -> Settlement:
         ''' Prepare for visit.'''
         if self.size >= 5:  # no effect of sizes from 5 on exists yet: this marks where one is to be made
-            logger.error(f"TODO: Size {self.size} for {self.kind.value}")
+            logger.error(f"Size {self.size} for {self.kind.value}")
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
         self._pick_all_on_duty(gem.current_environment.date_time)

@@ -7,6 +7,8 @@ import math
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 
+from .broken import Broken
+from spaceships.malfunction import Instrument
 from ..constants import ACCENT, ACCENT_DIM, ACCENT_LABEL, BINDING_NEAR_GREEN, GRAVITY_GREEN, GRAVITY_RED, READOUT_BG
 
 if TYPE_CHECKING:
@@ -35,7 +37,7 @@ class OrbitButton:
     @staticmethod
     def hit(position: Tuple[int, int], ship: Ship) -> bool:
         """Whether a click at `position` is on the button while it does something: lit, or in orbit (to leave it)."""
-        if ship.owner.inside is not None:
+        if ship.owner.inside is not None or Broken.is_broken(Instrument.ORBIT):
             return False
         return OrbitButton.rect.collidepoint(position) and (ship.navigation.orbit is not None
                                                             or OrbitButton.enabled(ship))
@@ -51,6 +53,7 @@ class OrbitButton:
         if lit:
             OrbitButton._draw_bar(surface, label_font, ship, left, top, width)
         OrbitButton.rect = pygame.Rect(left, top + height + OrbitButton.GAP, width, height)
+        Broken.register(Instrument.ORBIT, OrbitButton.rect)
         running = ship.navigation.orbit is not None
         colour = ACCENT if running else (BINDING_NEAR_GREEN if lit else ACCENT_DIM)
         if running:
