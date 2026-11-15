@@ -19,13 +19,6 @@ def format_quantity(value: float) -> str:
     return f'{round(value, 2) + 0.0:.2f}'.rstrip('0').rstrip('.')
 
 
-CARGO_INSTRUMENTS = {
-    'air': Instrument.CARGO_AIR, 'water': Instrument.CARGO_WATER, 'food': Instrument.CARGO_FOOD,
-    'sealing_pack': Instrument.CARGO_SEALING_PACK, 'repair_kit': Instrument.CARGO_REPAIR_KIT,
-    'mines': Instrument.CARGO_MINES, 'scraps': Instrument.CARGO_SCRAPS, 'ore': Instrument.CARGO_ORE,
-    'raw_water': Instrument.CARGO_RAW_WATER,
-}
-
 class Cargo:
     """Draw the CARGO list: one line per hold element, name and quantity. Mines, ore and raw water are left out when
     there is none; air, water and food always show, as their warning matters at 0. In Those-Who-Share space, where
@@ -42,14 +35,12 @@ class Cargo:
     @staticmethod
     def hit_sealing(position: Tuple[int, int], ship: Ship) -> bool:
         """Whether a click at `position` is on the sealing pack line, in the cockpit."""
-        return (ship.owner.inside is None and Cargo.sealing_rect.collidepoint(position)
-                and not Broken.is_broken(Instrument.CARGO_SEALING_PACK))
+        return ship.owner.inside is None and Cargo.sealing_rect.collidepoint(position)
 
     @staticmethod
     def hit_repair_kit(position: Tuple[int, int], ship: Ship) -> bool:
         """Whether a click at `position` is on the repair kit line, in the cockpit: it starts the repair mode."""
-        return (ship.owner.inside is None and Cargo.repair_rect.collidepoint(position)
-                and not Broken.is_broken(Instrument.CARGO_REPAIR_KIT))
+        return ship.owner.inside is None and Cargo.repair_rect.collidepoint(position)
 
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, rect: pygame.Rect, title_top: int) -> None:
@@ -87,7 +78,6 @@ class Cargo:
                 if ship.leaks:  # green while a leak waits for a pack
                     colour = BINDING_NEAR_GREEN
                 Cargo.sealing_rect = pygame.Rect(rect.left, line_y, rect.width, line_spacing)
-            Broken.register(CARGO_INSTRUMENTS[element], pygame.Rect(rect.left, line_y, rect.width, line_spacing))
             if element == 'repair_kit':
                 if ship.broken:  # green while an instrument waits for a repair
                     colour = BINDING_NEAR_GREEN

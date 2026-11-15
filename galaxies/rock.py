@@ -25,7 +25,7 @@ class Rock(Updatable):
     COOLING_FACTOR = 0.999  # Share of the temperature kept per base cooling period, for a 1 m3 rock.
     TEMP_MAX_MU = 7.57  # Log-median of the melting temperature in kelvin: about 1 940 K.
     TEMP_MAX_SIGMA = 0.2
-    ORE_RICH_THRESHOLD = 0.999
+    ORE_RICH_THRESHOLD = 0.9992
     # the adjectives a rock can have (see _generate_adjective)
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.

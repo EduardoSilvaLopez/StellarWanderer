@@ -58,6 +58,7 @@ SOUNDS: Dict[str, SoundSpec] = {
     'critical_alarm': SoundSpec('critical_alarm.mp3', 0.5, False),  # loop: the ship's alarm while a leak is open
     'using_sealing': SoundSpec('using_sealing.mp3', 0.6, False),  # a sealing pack closes a leak
     'repair': SoundSpec('repair.mp3', 0.6, False),  # a repair kit mends an instrument
+    'malfunction': SoundSpec('malfunction.mp3', 0.6, False),  # an instrument breaks, in place of the notification's sound
 }
 
 MIN_GAP_MS = 80  # the least time between two plays of the same sound

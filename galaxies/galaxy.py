@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, List, Optional
 from galaxies import fixed_stars
 from galaxies.constants import EPOCH, INITIAL_STAR_POSITION
 from galaxies.politics.expansion_history import ExpansionHistory, SystemHistory
+from galaxies.politics.tidings import Tidings
 from galaxies.star import Star, cell_of
 from galaxies.stellar_system import StellarSystem
 
@@ -24,6 +25,7 @@ class Galaxy:
         self.history.log_results()
         # The history of the initial star, which gives the system its entity and its settlements (the other stars have none).
         self.initial_history: SystemHistory = self.history.initial_system(EPOCH)
+        self.tidings: Tidings = Tidings(self.history)
         # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
         self.fixed_stars: dict[tuple[int, int, int], Star] = {
             cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)

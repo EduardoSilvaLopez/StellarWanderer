@@ -331,6 +331,19 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "I enjoy the bench conversations in the square about the Community's future.",
             "I like to restore old machines for the workshops. Pride in what is useful.",
             "I enjoy the lectures at the civic school on Sunday mornings.",
+            "I like to walk in the parks.",
+            "I often visit the dome's botanical galleries.",
+            "I like to try new foods in the market arcades.",
+            "I like to practice meditation under the dome lights.",
+            "I enjoy attending small theater plays.",
+            "I enjoy cooking with imported ingredients, you know, from the Throne. I know.",
+            "I like to volunteer in community gardens.",
+            "I enjoy watching the weather cycles. Those guys have some creativity in my place.",
+            "I enjoy visiting the art exhibits.",
+            "I like to practice indoor climbing.",
+            "I enjoy watching PreDis movies.",
+            "I enjoy restoring antique star maps.",
+            "I like to attend debate nights in the civic forum.",
         ]
         , hobbies_asocial= [
             "I like to be alone with my plants in the quiet corners of the gardens.",
@@ -344,6 +357,10 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "I don't really have hobbies. Work and rest are enough.",
             "I like the silence of the reservoirs at dawn.",
             "I cook for myself. Simple meals, no company.",
+            "I like to collect vintage printed magazines.",
+            "I like to take long walks along the dome's perimeter paths.",
+            "I like to sketch the architecture.",
+            "I enjoy tinkering with old household electronics.",
         ]
     )
 

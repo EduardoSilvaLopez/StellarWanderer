@@ -113,7 +113,9 @@ class Person:
         self.role: Role = role
         self.hired_at: datetime = hired_at
 
-        self.entity: political_entity.PoliticalEntity = residency.stellar_system.political_entity
+        entity: political_entity.PoliticalEntity | None = residency.stellar_system.political_entity
+        assert entity is not None, "Settlements, and so their staff, exist only in systems with a political entity"
+        self.entity: political_entity.PoliticalEntity = entity
 
         self.race: Ethnicity = Ethnicity.ASIAN
         rnd: float = my_random.random()
@@ -234,44 +236,10 @@ class Person:
         ))
 
     def _generate_hobby(self, my_random: random.Random) -> str:
-        """A hobby from the entity's lists: the asocial ones below 20 sociability, else the sociable ones, if any."""
-        if self.sociability100 < 20 and len(self.entity.hobbies_asocial):
+        """A hobby from the entity's lists: the asocial ones below 20 sociability, else the sociable ones."""
+        if self.sociability100 < 20:
             return my_random.choice(self.entity.hobbies_asocial)
-        if len(self.entity.hobbies_sociable):
-            return my_random.choice(self.entity.hobbies_sociable)
-
-        return my_random.choice((
-            "I like to walk in the parks.",
-            "I enjoy people-watching in the transit hubs. Don't tell anyone.",
-            "I often visit the dome's botanical galleries.",
-            "I like to try new foods in the market arcades.",
-            "I spend time listening to street musicians.",
-            "I enjoy reading old novels in the public lounges.",
-            "I like to practice meditation under the dome lights.",
-            "I enjoy attending small theater plays.",
-            "I like to collect vintage printed magazines.",
-            "I enjoy cooking with imported ingredients, you know, from the Throne. I know.",
-            "I like to volunteer in community gardens.",
-            "I enjoy playing board games with friends.",
-            "I like to take long walks along the dome's perimeter paths.",
-            "I enjoy watching the weather cycles. Those guys have some creativity in my place.",
-            "I like to sketch the architecture.",
-            "I enjoy visiting the art exhibits.",
-            "I like to practice indoor climbing.",
-            "I enjoy swimming in the municipal reservoirs.",
-            "I enjoy watching PreDis movies.",
-            "I like to fly micro-drones in the recreation halls.",
-            "I enjoy tinkering with old household electronics.",
-            "I like to explore PreDis virtual landscapes.",
-            "I enjoy watching shuttle departures from the observation decks.",
-            "I like to practice gravity aerobics when the gym offers it.",
-            "I enjoy restoring antique star maps.",
-            "I like to attend debate nights in the civic forum.",
-            "I enjoy participating in collaborative mural projects.",
-            "I like to join the weekly storytelling circles.",
-            "I enjoy dancing during the dome's festival nights.",
-            "I like to help organize neighborhood events.",
-        ))
+        return my_random.choice(self.entity.hobbies_sociable)
 
     @property
     def icon(self) -> Optional[pygame.Surface]:

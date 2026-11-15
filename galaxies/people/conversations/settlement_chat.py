@@ -21,7 +21,10 @@ import logging
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
-from galaxies.people.role import COORDINATOR, KOMISAR, RINGMASTER
+from galaxies.people.role import (
+    BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, GUNNER, JANITOR, KOMISAR, RESEARCHER,
+    RINGMASTER, SECURITY, SMITH, STEVEDORE,
+)
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
 from galaxies.portals.portal_base import PortalBase
@@ -85,7 +88,9 @@ class SettlementChat(Conversation):
         self.place: Settlement = place
         self.log: ChatLog = log  # the chat of the settlement screen: the texts go there
         self.tag: str = tag  # the conversation tag that started this conversation
-        self.reactions: dict[str, Callable[[], str]] = self.reactions_index()
+        self.reactions: dict[str, Callable[[], str]] = {}  # by main tag
+        self.spellings: dict[str, str] = {}  # every spelling of a tag, main or alternative, to its main tag
+        self.index_reactions()
         self.flags = interlocutor.interactions.setdefault(self.date_time.replace(microsecond=0), [])
         self.remember()
 
@@ -118,7 +123,7 @@ class SettlementChat(Conversation):
         gem.current_environment.clock.advance(60)
 
         text: str = generator()
-        words, tags = parse_marks(text, self.reactions.keys())
+        words, tags = parse_marks(text, self.spellings)
         self.player.conversation_tags.update(tags)
         self.log.add(NPC, words)
         self.remember()
@@ -129,25 +134,36 @@ class SettlementChat(Conversation):
         self.log.offer(labels, then)
 
 # region Presentation
+    def index_reactions(self) -> None:
+        """Each key of reactions_index is a main tag, followed by its alternative spellings, comma-separated: the first
+        is the tag the pilot gets and the reaction is keyed by, the others also give it."""
+        for key, talk in self.reactions_index().items():
+            main, *alternatives = [spelled.strip() for spelled in key.split(',')]
+            for spelled in [main, *alternatives]:
+                if spelled in self.spellings:
+                    raise ValueError(f"The tag spelling '{spelled}' belongs to two reactions.")
+                self.spellings[spelled] = main
+            self.reactions[main] = talk
+
     def reactions_index(self) -> dict[str, Callable[[], str]]:
         return {
             Player.PRESENTATION_TAG: self.talk_present_yourself,
-            'asteroids': self.talk_asteroid,
+            'asteroid, asteroids': self.talk_asteroid,
             'base': self.talk_base,
             'belt': self.talk_belt,
-            'bureaucrat': self.talk_bureaucrat,
-            'communication officer': self.talk_communication_officer,
+            'bureaucrat, bureaucrats': self.talk_bureaucrat,
+            'communication officer, communication officers': self.talk_communication_officer,
             'captain': self.talk_protection,
             'coordinator': self.talk_coordinator,
             'credits': self.talk_credits,
             'credits for the ship': self.traitor_credits_for_the_ship,
-            'custorian thirds': self.talk_custodian_thirds,
+            'custodian thirds': self.talk_custodian_thirds,
             'dockmaster': self.talk_dockmaster,
             'engineer': self.talk_engineer,
-            'Founders': self.talk_founders,
+            'Founders, Founder': self.talk_founders,
             'gunner': self.talk_gunner,
-            'Happy birthday': self.talk_happy_birthday,
-            'Happy founding': self.talk_happy_founding,
+            'Happy birthday, birthday': self.talk_happy_birthday,
+            'Happy founding, founded': self.talk_happy_founding,
             'Happy star': self.talk_happy_star,
             'Happy new year': self.talk_happy_new_year,
             'hobby': self.talk_hobby,
@@ -159,7 +175,7 @@ class SettlementChat(Conversation):
             'outpost': self.talk_outpost,
             'Paladin Xi': self.talk_paladin_xi,
             'PGMs': self.talk_pgms,
-            'portal': self.talk_portal,
+            'portal, portals': self.talk_portal,
             'researcher': self.talk_researcher,
             'ringmaster': self.talk_ringmaster,
             'security': self.talk_protection,
@@ -168,9 +184,9 @@ class SettlementChat(Conversation):
             'stevedore': self.talk_stevedore,
             'Surnemals': self.talk_surnemals,
             'the network': self.talk_the_network,
-            'The Shining Throne': self.talk_the_shining_throne,
-            'Those-Who-Share': self.talk_those_who_share,
-            'United Diversity': self.talk_united_diversity,
+            'The Shining Throne, Shining Throne, TST': self.talk_the_shining_throne,
+            'Those-Who-Share, TWS': self.talk_those_who_share,
+            'United Diversity, UniDiv': self.talk_united_diversity,
         }
 
     def talk_present_yourself(self) -> str:
@@ -339,7 +355,7 @@ class SettlementChat(Conversation):
                         f"Nice to meet you, {you}! How are you doing?"
                         "\n\nI have heard about you. Good things! Do you want a coffee? Or maybe something... stronger?"
                         "\n\nHow is space treating you? Have you seen the portal?"
-                        "Making our Paladin Xi proud? Tell me!"
+                        " Making our Paladin Xi proud? Tell me!"
                     )
 
     def talk_present_yourself_further_times(self) -> str:
@@ -361,7 +377,7 @@ class SettlementChat(Conversation):
                 if sym < 20:
                     return "You. What do you want?"
                 elif sym < 80:
-                    return f"{you}. Hi. What's the matter?"
+                    return f"{you}. Hi. What's the matter? Any news?"
                 else:
                     return f"{you}! Hey! Still alive, apparently. Respect."
             else:  # noqa: PLR5501
@@ -386,7 +402,7 @@ class SettlementChat(Conversation):
                 if sym < 20:
                     return f"{self.player.first_name} {self.player.surname}. Now my day is screwed."
                 elif sym < 80:
-                    return f"Hello {you}, how are you?"
+                    return f"Hello {you}, how are you? Any news?"
                 else:
                     return (
                         f"{you}! Welcome! How are you doing? You want some coffee?"
@@ -488,26 +504,136 @@ class SettlementChat(Conversation):
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
             " and a ton of sealant, at least."
         )
+
     def talk_bureaucrat(self) -> str:
+        if self.interlocutor.role is BUREAUCRAT:
+            return self.talk_of_own_role(
+                (
+                    "Forms. Always forms.",
+                    "Requests. Complaints. Stamp it.",
+                    "Paperwork. Don't ask.",
+                    "Keep society humming.",
+                    "Things must be checked.",
+                    "Hear people out. Resolve problems.",
+                    ),
+                (
+                    "Requests, inspections, complaints. That keeps the machine of the Community going.",
+                    "Inspections and complaints. Somebody has to check that everything is in order.",
+                    "I handle the complaints, the requests and the inspections.",
+                    "Information must go up and down and to the Ministry of Happiness.",
+                    "People must complain through the right channels. But when they do, they must be really heard.",
+                ),
+                (
+                    "Administration, inspection, requests, complaints... to keep the machine of the Community going."
+                    " Everybody thinks it's boring. It is. But a complaint sent through the right channel does get"
+                    " answered, and that's what the Community is for.",
+                    "I check the forms, the inspections and the complaints, all shift long. Dissent has its official"
+                    " channels, protected and anonymous, and people do use them. Somebody has to read what they"
+                    " write.\n\nDon't ask me to bend the rules for you, ok? I just follow the process.",
+                    "Everybody has a file, and every file has a stamp. I know who waited longest and who got through"
+                    " first. We don't say it aloud, but we notice it.",
+                    "To care that things are done propertly. Even more important in the frontier than elsewhere."
+                    " It saves lifes. And also a constructive concern or complaint must be heard and handled."
+                    " Good ideas can come from anywhere.",
+                ),
+            )
         return (
-            "Administration, inspection, requests, complains... to keep the machine of the Commuity going."
+            "Administration, inspection, requests, complaints... to keep the machine of the Community going."
         )
 
     def talk_communication_officer(self) -> str:
+        if self.interlocutor.role is COM_OFFICER:
+            return self.talk_of_own_role(
+                (
+                    "Sit and listen. Radio.",
+                    "Talk to the ships, to places. Be ready.",
+                    "Tidings. Alarms. Beacons.",
+                    "Signals. Pings. Sit. React."
+                ),
+                (
+                    "We take care of the communications with the ships. Relay, check, keep the channel open.",
+                    "I talk with the ships all shift. Route the messages, check the signals, repeat when lost.",
+                    "Communications with the ships and the other places. Uniform on, and the radio never shuts up.",
+                    "Communicate with the base, with other settlements, with people like you. Give warnings.",
+                    "We keep also digital communication tested, and autopilot, signatures.",
+                    "Sometimes we detect a smuggler with a false transponder or obsolete keys.",
+                    "We must remain alert at all times. Some pilots are reckless *ahem*.",
+                    "We spread tidings and news. Official busybodies. But we do some important stuff too.",
+                ),
+                (
+                    "Talk with the ships and the other places, all shift long. Good news, bad news, requests for"
+                    " permission. When a ship has a fault and the pilot is panicking, you stay calm. Same when the"
+                    " other side says nothing for an hour.",
+                    "We belong to Protection, so we wear uniform. It's not for show. Every message we send could matter"
+                    " to somebody out there, so we check them twice. And digital signatures are also critical.",
+                    "The ships are our eyes out there. A quiet channel for an hour is fine, got shadowed. A quiet"
+                    " channel for a day means something went wrong, and then I am the one who has to say so.",
+                    "We coordinate with other settlements, including the portal base. Protocol updates, security, news."
+                    " This is Ministry of Protection so... uniform.",
+                    "Sometimes we detect a smuggler... false transponder signal, obsolete keys, even hack attempts."
+                    " It is not just wait and chat with pilots.",
+                    "We are the ones in the nodes of the net. We know what is going on. Where every ship is, what is"
+                    " going on in every settlement. And when a pilot approaches at 100 m/s or you get a beacon, you"
+                    " must react FAST.",
+                ),
+            )
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
         if soc < 20:
             return "Sit and talk."
         elif soc < 80:
-            return "Take care of communications with the ship."
+            return "Take care of communications with the ship. Spread news."
         else:
-            return "Talk with the ships and other places. Belong to defence, have to wear uniform."
+            return (
+                "Talk with the ships and other places. Belongs to defence, Ministry of Protection, they have to"
+                " wear uniform."
+            )
 
     def talk_coordinator(self) -> str:
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
         soc: float = self.interlocutor.sociability100
         loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is COORDINATOR:
+            very_short, short, long = (
+                (  # Low loy
+                    ("Little boss. Deal with it.", "Bossing people around. Somebody has to."),
+                    ("Bossing around the outposts. Making the calls nobody else wants.",
+                     "I make things happen here, whether they like it or not."),
+                    ("The outpost is mine to manage. I make the hard calls and remove the obstacles. When they cry"
+                     " to the portal base, I just smile. They would fall apart without someone pushing.",
+                     "Little boss of the outposts, and loving it. Nobody else would bother coordinating these people,"
+                     " so... it's mine.",
+                     "Nobody here follows me because they like me. They follow because the outposts run better when I"
+                     " push."),
+                ),
+                (  # Middle loy
+                    ("Coordinating. Fine.", "Outposts. Keeping them going."),
+                    ("Coordinate things in the outposts. Settle the disputes, pass the requests on.",
+                     "I keep the outposts running. Solve the problems before they reach the portal base."),
+                    ("The outposts need someone who removes the obstacles and resolves the conflicts before they grow."
+                     " I also coordinate with the portal base when something is needed from there.",
+                     "I coordinate the outposts. Mostly I listen, settle who gets what, and pass on what the portal"
+                     " base asks. Not glamorous, but somebody has to do it.",
+                     "I take the complaints, pass them up, and bring back what the portal base decides. People are"
+                     " happier when they know who to talk to."),
+                ),
+                (  # High loy
+                    ("Outposts. I manage them. Hard calls.", "Authority over an outpost. Respected people only."),
+                    ("Authority over an outpost. Not everybody can get elected.",
+                     "I make the hard calls for the outposts, and I answer for them."),
+                    (
+                        "The authority over the outposts. Not everybody gets elected. I remove the obstacles,"
+                        " coordinate, talk with the portal base and settle the conflicts. Nobody gets left alone"
+                        " here.",
+                        "Responsible for the outposts, and proud of it. The Community trusts me to decide, so I"
+                        " decide. Hard calls, every time, and I explain them to anyone who asks.",
+                        "Every one of the outposts has to work for the people in it. That's the point of the post,"
+                        " and I hold myself to it."
+                     ),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
 
         if soc < 20:
             if loy < 20:
@@ -536,7 +662,9 @@ class SettlementChat(Conversation):
 
     def talk_credits(self) -> str:
         text: str = "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
-        if self.interlocutor.role is RINGMASTER \
+        if self.interlocutor.role in (KOMISAR, COORDINATOR):
+            text += "\n\nIt is contraband. Report to the Ringmaster if someone offers you any."
+        elif self.interlocutor.role is RINGMASTER \
                 and self.traitor_sold_codes_here() and not self.traitor_ratted_here():
             # Traits do not matter here: the role and what the pilot did in this system decide. Only an authority hears
             # the pilot who sold the mine codes of the system (see rat_offered), and only until the pilot has ratted.
@@ -564,6 +692,31 @@ class SettlementChat(Conversation):
             )
 
     def talk_dockmaster(self) -> str:
+        if self.interlocutor.role is DOCKMASTER:
+            return self.talk_of_own_role(
+                (
+                    "Load. Unload. Repair.",
+                    "Ships in, ships out.",
+                    "Cargo. Pads. Repairs."
+                ),
+                (
+                    "Take care of the ships landing there. Pads, cargo, the usual.",
+                    "I see every ship that lands. Who comes in, who goes out, and what they carry.",
+                    "Load and unload, check the pads, and fix the ships that need fixing before they fly again.",
+                    "Charging the ships, checking their status, small repairs.",
+                    "Not only load and unload. It's about checking gear, small repairs. Sometimes even sealing leaks.",
+                ),
+                (
+                    "Responsible for ship maintenance and the cargo. Every ship that docks, I see it in, check the"
+                    " pads, handle the load, and see it out again. A bad landing costs more than a bad day.",
+                    "Ships come and go, and I keep them flying. Maintenance on the pads, the cargo on the racks, all"
+                    " of it. I like knowing the thing I fixed is out there working.",
+                    "We keep the pads clear, the cargo tied down and the ships fit to fly. The Community depends on"
+                    " those ships. I take that seriously, even at night.",
+                    "It is not only about loading, charging, unloading. It is check, maintenance, controlling. And"
+                    " making reparations myself. Sometimes a ship comes with a leak. Or the seal was done poorly.",
+                ),
+            )
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
@@ -575,15 +728,75 @@ class SettlementChat(Conversation):
             return "Responsible for ship maintanance and the cargo."
 
     def talk_engineer(self) -> str:
+        if self.interlocutor.role is ENGINEER:
+            return self.talk_of_own_role(
+                (
+                    "Machines. Heavy stuff.",
+                    "Not only industrial machines",
+                    "Fix it. Build it.",
+                    "Designs. Machines. Noise."
+                    "Build, enhance, share.",
+                ),
+                (
+                    "We design, build, maintain. Everything. What do you want to know?",
+                    "Here is mostly construction, printers, melters. But you know us: everything goes. And nothing"
+                    " works without us.",
+                    "Practical, cheap, and it has to last. Keep the printers working, baby...",
+                    "I love more the theoretical work, just give me a CAD assistant an I'm happy.",
+                ),
+                (
+                    "Design and handle all kinds of machinery, starting from the heavy industry that keeps us alive."
+                    " We have the biggest industry of mankind, we share even outside the Community, but I like"
+                    " more to concentrate on frontier work, it's also much needed - a new system a year, yes?",
+                    "You know our philosophy... practical designs, cheap and robust. But it is not only so, you can"
+                    " think about ergonomy and even some decoration here and there. As long as the costs don't"
+                    " explode, it is ok. We are no longer in the First Phase, are you?",
+                    "Things here must last. Micrometeoroids, dust, radiation, extreme temperatures, you name it."
+                    " But I like the challenge. And we are the best. That's why The Shining Throne has to beg to us"
+                    " for expansion equipment",
+                    "Our industry is the biggest of mankind, and somebody has to keep it honest. Designs, machines,"
+                    " the plants. People often don't realise how important that is, or how good some of us are,"
+                    " but that's ok, we remain between ourselves.",
+                    "We take the thing seriously. Some machinery is simply not allowed to fail. That's the moment"
+                    " when you need redundancies, security buffers, breaking tests. And I do my part. Sometimes"
+                    " myself, also when the instruments say it's ok. I like to touch it. People may think it's"
+                    " old-fashioned. I think it's respect.",
+                ),
+            )
         return (
             "Design and handle all kinds of machinery, above all heavy industry."
         )
+
     def talk_founders(self) -> str:
         return (
-            "Well, the ones who founded Those-Who-Share, you know?"
+            "Well, the ones who founded Those-Who-Share, the whole history, you know?"
         )
 
     def talk_gunner(self) -> str:
+        if self.interlocutor.role is GUNNER:
+            return self.talk_of_own_role(
+                (
+                    "Do nothing. Good.", "Wait. Drill. Wait.", "Shoot when needed. Nothing else."
+                ),
+                (
+                    "Sit, drill, simulate, wait. Until the shit hits the fan.",
+                    "The shift is to drill, read and wait for something you hope will never happen.",
+                    "This job needs a special kind of person.",
+                    "Watch the screens, drill the routines, and wait. And hope nobody needs me.",
+                ),
+                (
+                    "Well, when things go really bad, we are the ones who pull the trigger. A hard decision taken in"
+                    " seconds, and I have to be ready to take it at any hour.\n\nMost of the time it's waiting and"
+                    " drilling. I'd rather it stayed like that.",
+                    "Drill, check, and wait. Three shifts. The guns are for the day something"
+                    " goes wrong, and when it does, I decide in a second. I'm ready. I hope I never need to be.",
+                    "Nobody wants this but somebody has to do it. And I'd rather be the one watching than the one"
+                    " caught off guard.\n\nYou have a lot of time to think."
+                    "Drill it again, the same routine, until it's in the hands. Get the specs, learn to calculate"
+                    " in a fraction of a second, check incoming paths. And be the kind of person who can kill another"
+                    " human being if it's necessary.",
+                ),
+            )
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
@@ -724,6 +937,24 @@ class SettlementChat(Conversation):
         return f"<Looks weirdly> The Portal came on {pretty_date(star)}, {founding_when(star, now)}."
 
     def talk_janitor(self) -> str:
+        if self.interlocutor.role is JANITOR:
+            return self.talk_of_own_role(
+                ("Maintenance. Not cleaners.", "Repairs. Air. Power. Checks.", "Fix things. Don't ask for more."),
+                (
+                    "Running around, checking the devices and the air. Repairs. Not here to clean your room.",
+                    "The maintenance of the settlement. Repairs, devices, checks, the air and the power. Not cleaning.",
+                    "I keep the devices working and the air where it should be. Nobody thanks us until it breaks.",
+                ),
+                (
+                    "Caring about the maintenance. Running around, checking the air and the power, the devices and the"
+                    " repairs, all shift long. Not your servant, not here to cook for you. But if a pipe bursts at"
+                    " night, I'm the one who runs to it.",
+                    "It's not glamorous. We check the air, the power, the devices, every repair that nobody asks about."
+                    " I like keeping things running, and I'm proud when everything works the way it should.",
+                    "Most people only notice us when something is wrong. I'd like them to notice when everything is"
+                    " fine, but that's not how it works, is it?",
+                ),
+            )
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
@@ -745,7 +976,7 @@ class SettlementChat(Conversation):
                 if self.interlocutor.main_problem_with_role().endswith("loy"):
                     text = "I wish I worked in something more relevant."
                 elif self.interlocutor.main_problem_with_role().endswith("emp"):
-                    text = "I wish I worked in something more helpful for people."
+                    text = "I wish I worked helping people more directly."
                 else:
                     text = "I wish I worked more with people."
             else:  # noqa: PLR5501
@@ -771,7 +1002,9 @@ class SettlementChat(Conversation):
         already_talked_openly: bool = any(
             "Dared talk openly." in lines for lines in self.interlocutor.interactions.values()
             )
-        if not already_sold and not already_talked_openly \
+        # The contact of the traitor's path is never an authority: they are the ones the path goes to.
+        is_authority: bool = self.interlocutor.role in (COORDINATOR, KOMISAR, RINGMASTER)
+        if not already_sold and not already_talked_openly and not is_authority \
                 and self.interlocutor.loyalty100 < 20 and self.interlocutor.sympathy100 >= 80 \
                 and how_happy_with_role == 0:
             buttons = ["I like mine.", "I guess it's ok.", "I don't have an option, do I? This or retire."]
@@ -792,6 +1025,48 @@ class SettlementChat(Conversation):
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
         soc: float = self.interlocutor.sociability100
         loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is KOMISAR:
+            very_short, short, long = (
+                (
+                    ("<Looks away>", "<Shrugs>. Talk, talk."),
+                    ("Soft-talking. Keep people in line. Or else.",
+                     "Talk, nod, write it down. They call it helping. I call it watching."),
+                    ("Making sure everybody 'understands the will of the Community'. Soft-talking, mostly. Else..."
+                     " well,"
+                     " the polischools are there.",
+                     "They say I'm here to help. I'm here to make sure people behave, and I do it with a smile. Try"
+                     " me.",
+                     "The Community has a way of making people quiet. I'm just the one who makes sure they learn it."),
+                ),
+                (
+                    ("Talk to them. Listen.", "Helping. Mostly."),
+                    ("Social engineers and psychologists. We make sure people understand the will of the Community.",
+                     "I listen, I advise, and I explain what the Community wants. And I write the reports, of course."),
+                    ("Social engineers, sociologists, publicists, historians... that's us, in the Ministry of"
+                     " Happiness."
+                     " The work is to make sure people understand the will of the Community. We also give personal"
+                     " advice, and I'd rather convince than punish.",
+                     "Indicate the right channels for a protest, talk with people if they feel bad, and make sure they"
+                     " understand what we are doing and why. Protest is allowed, through the right channels."
+                     " That's the deal.",
+                     "Some people come to me angry, some ashamed. Most leave calmer than they arrived. That's not"
+                     " magic,"
+                     " it's listening, and it's the Ministry's method."),
+                ),
+                (
+                    ("Helping people. Every day.", "Friend and helper."),
+                    ("Friendly advice about the will of the Community and our role in it. Help with personal problems.",
+                     "I help people with their problems and explain what the Community is for. Friend first."),
+                    ("The work is to be a friend and a good psychologist. People come to me with personal problems, and"
+                     " I help them see their own place in the Community. We use what we know about the mind to convince"
+                     " and befriend, never to force anybody.",
+                     "We work for the Ministry of Happiness, with the sociologists and the historians. If someone feels"
+                     " bad, they come to me first. I'd rather they came to me than to the Ministry of Protection.",
+                     "People often come to me about their children, their loneliness, the neighbours who don't help. I"
+                     " listen, I explain the Community's view, and I help them find the next step."),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
 
         if soc < 20:
             if loy < 20:
@@ -1053,8 +1328,8 @@ class SettlementChat(Conversation):
                 " possible too."
             ))
         if self.interlocutor.hobby in political_entity.PORTAL_BASE_HOBBIES:
-            topics['the hobby'] = (30, "I can practise that in the base too.",
-                                   f"{self.interlocutor.hobby} I can practise that in the base too.")
+            topics['the hobby'] = (30, "I can do that in the base too.",
+                                   f"{self.interlocutor.hobby} I can do that in the base too.")
         if sym >= 80:  # the confidences
             topics['the first crossing'] = (40, "I was sick the first time. Don't tell.", (
                 "<Whispers> The first time I crossed the Portal, I was sick in the ship. Don't tell anyone."
@@ -1096,6 +1371,44 @@ class SettlementChat(Conversation):
     def talk_protection(self) -> str:
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
+        if self.interlocutor.role is SECURITY:
+            return self.talk_of_own_role(
+                ("Keep the peace. Nothing else.", "Watch. Wait. Step in if needed.", "Handle conflicts. Protect."),
+                (
+                    "We break up fights before they become problems. Talking first, always.",
+                    "The officers are there so nobody has to get hurt. We talk first. Then, if we must, we step in.",
+                    "The officers handle the conflicts. Trained to de-escalate, but ready to do what it takes.",
+                ),
+                (
+                    "The officers handle the conflicts. Trained to de-escalate, but ready to do what it takes. Force is"
+                    " the last resort. Psychology and social pressure enforce the law first.",
+                    "I walk the square and see the fights before they start, and I talk people down. Most of the time"
+                    " it works. The rest of the time I'm ready to do what it takes, and I won't pretend otherwise."
+                    "\n\nWe go in when talking has failed. It's never a good day when we do.",
+                    "When there's a fight, the first thing I do is listen to both sides. Sometimes that's all it takes."
+                    " Sometimes it isn't, and then I do what has to be done.",
+                ),
+            )
+        if self.interlocutor.role is CAPTAIN:
+            return self.talk_of_own_role(
+                ("Command. Orders. Uniform.", "Protect. Obey. Command.", "Lead them. Keep them safe."),
+                (
+                    "Officers: lieutenants, captains and more, all under the Ministry of Protection. Uniform, always.",
+                    "I command the armed posts and the defence platforms. Orders come down, and we carry them out.",
+                    "The armed posts and the Mobile Defence Platforms need someone who answers for them. That's me.",
+                ),
+                (
+                    "The officers, lieutenants, captains and so on, all depend on the Ministry of Protection. I command"
+                    " the armed posts here and the Mobile Defence Platforms of the system. People think we are only"
+                    " muscle. We decide when force is needed, and we answer for it afterwards.",
+                    "Protecting the Community is a hard duty, and the officers carry its weight. We wear the uniform so"
+                    " people know who we are. A decision can save a settlement, or cost one. I try to make sure it's"
+                    " the first.",
+                    "Command is not a matter of shouting. Officers listen, decide, and then the whole post moves. I"
+                    " take"
+                    " that weight every shift, and I don't put it down at night.",
+                ),
+            )
 
         if soc < 20:
             return "Handle conflicts. Protect."
@@ -1111,6 +1424,25 @@ class SettlementChat(Conversation):
             )
 
     def talk_researcher(self) -> str:
+        if self.interlocutor.role is RESEARCHER:
+            return self.talk_of_own_role(
+                ("Science. Mostly boring.", "Rocks. Samples. Numbers.", "Measure it. Write it down."),
+                (
+                    "I test what the miners bring. Samples, measures, numbers. Useful is what counts here.",
+                    "Rocks, samples and measures for the machines. Theory is nice, but we build what works.",
+                    "From pure scientific theory to engineering research. But more of the latter.",
+                ),
+                (
+                    "From pure scientific theory to engineering research, but more of the latter, because the Community"
+                    " wants results that serve people. Did you find many rocks out there? I think iridium is the most"
+                    " important right now. Without the platinum-group metals there is no energy and no shields. Just"
+                    " cold rock.",
+                    "We test the rocks the ships bring, and the ones the miners dig. Some hide things nobody expected."
+                    " I like those days best. Tell me what you found, I want to see the readings.",
+                    "Thousands of readings for one useful result. Most of it goes in a drawer. The few that matter go"
+                    " straight to the engineers. That's a good week.",
+                ),
+            )
         return (
             "From pure scientific theory to engineering research. But more of the latter."
         )
@@ -1119,6 +1451,50 @@ class SettlementChat(Conversation):
         # Sociability sets the verbosity; loyalty, the tone towards the entity.
         soc: float = self.interlocutor.sociability100
         loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is RINGMASTER:
+            very_short, short, long = (
+                (
+                    ("Bigwhigs. Careful.", "Watch your mouth around them."),
+                    ("They are the bigwhigs, the supreme bosses of the system. Fiercely loyal.",
+                     "They take the decisions here. Kinglets in their turf."),
+                    ("They are the ones taking the decisions here. Kinglets in their turf. Fiercely loyal, and to"
+                     " nothing else.",
+                     "The bigwhigs run this system and answer only to the Ministry of Expansion, and they like it that"
+                     " way. Be careful what you say near them, pilot.",
+                     "They say the system belongs to the Ministry. In practice it belongs to the few of us who decide,"
+                     " and we don't explain ourselves to anybody here."),
+                ),
+                (
+                    ("Main coordinator. Answer to the Ministry.", "The expansion of this system. Hard."),
+                    ("The main coordinator of the expansion here. Depend directly on the Ministry.",
+                     "I coordinate this system for the Ministry of Expansion. A Commander takes over later."),
+                    ("Coordinate this system until cities are established, and then a Commander takes over. We depend"
+                     " directly on the Ministry of Expansion. Chosen very, very carefully. That's all I'll say.",
+                     "The main coordinator of the expansion effort in this system. Heavy, sometimes. But the Ministry"
+                     " trusts me, and I try to deserve it.",
+                     "Expansion means ships, settlers and a lot of paperwork. I push the schedule, and the Ministry"
+                     " checks"
+                     " I haven't pushed too far."),
+                ),
+                (
+                    ("Responsible of all this. Heavy burden.", "This system is mine to develop."),
+                    ("An important post. Main responsible of the system in development.",
+                     "Responsible for the whole system in development. Chosen very carefully, and I know it."),
+                    ("A very important post. Main responsible of the whole stellar system in development. A Commander"
+                     " takes over later and turns it all to protection, but during the settlement phase I am the"
+                     " highest"
+                     " authority here, and I answer only to the Ministry of Expansion. It is a very heavy burden for"
+                     " the"
+                     " Community.",
+                     "I carry the expansion of this system on my shoulders. Every settlement, every new town, every"
+                     " ship"
+                     " that arrives comes through me. Heavy, yes. But somebody has to carry it, and we are proud to do"
+                     " it.",
+                     "Every stone of this system will be set by people who decide carefully. I may be the one who"
+                     " decides, but I never decide alone. The Community is watching, and so am I."),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
 
         if soc < 20:
             if loy < 20:
@@ -1158,6 +1534,26 @@ class SettlementChat(Conversation):
                 )
 
     def talk_smith(self) -> str:
+        if self.interlocutor.role is SMITH:
+            return self.talk_of_own_role(
+                ("Ore in. Metal out.", "Hot metal. Heavy work.", "Tough work. Tough people."),
+                (
+                    "Take the ore the miners bring and turn it into standard materials. Tough work.",
+                    "I melt and shape what the miners bring. Standard parts, nothing fancy.",
+                    "Ore comes in, usable material goes out. Standard sizes, so everything fits everywhere.",
+                ),
+                (
+                    "To take the ore the miners bring, and the other materials, and make them usable and standardised."
+                    " It needs tough people, unlike the desk types.\n\nWe make things for the whole Community, not"
+                    " for a"
+                    " boss. Standard sizes, so nobody gets a worse part because they are less important. That's fair,"
+                    " yes?",
+                    "Heat, metal and the hammer. It's hard. Hands get burnt, backs get broken, and nobody sees it. But"
+                    " the Community needs what we make, so we keep going. I'm proud of that.",
+                    "Every bar I make goes into something else: a ship, a pump, a frame. It's a long chain. I like"
+                    " being at the start of it.",
+                ),
+            )
         return (
             "To take the ore miners bring, as well as other materials, and transform it into usable, standardised"
             " materials. Requires tough people, unlike other engineers."
@@ -1220,6 +1616,25 @@ class SettlementChat(Conversation):
         return f"{body} {closing}"
 
     def talk_stevedore(self) -> str:
+        if self.interlocutor.role is STEVEDORE:
+            return self.talk_of_own_role(
+                ("Haul stuff. Simple.", "Carry it. Load it. Next.", "Heavy things. Go."),
+                (
+                    "Move cargo from and to the ships. Mostly alone, except for my colleague.",
+                    "Cargo in, cargo out. We take it off the ships and move the mines. Hard work with a partner.",
+                    "I move the mines and the cargo off the ships. A two-person task, and the other one keeps me"
+                    " honest.",
+                ),
+                (
+                    "Take cargo from the ship, move the mines. A lonely post, if it weren't for my colleague. We never"
+                    " work alone. Too dangerous, with the inertia. A load that slips in a bad burn can take a leg off,"
+                    " so we check each other.",
+                    "Two of us, always. The inertia is brutal when a load shifts, and nobody wants to be the one who"
+                    " lets go. My colleague and I know each other's moves better than our own.",
+                    "The mines are heavy and the pads are slippery. We learn to read a load before it moves. My"
+                    " colleague taught me that, and I'll teach the next one.",
+                ),
+            )
         # Only sociability matters here: it sets the verbosity.
         soc: float = self.interlocutor.sociability100
 
@@ -1488,8 +1903,8 @@ class SettlementChat(Conversation):
                     "<Whispers> Reputation hangs over every friendship here."
                      " I'd rather be somewhere nobody calculates how to call me."
                 ),
-                "<Whispers> It's not perfect, but I'd rather be here than anywhere else.",
-                "<Whispers> I've got friends in every square, and that's worth more than any stamp.",
+                "It's not perfect, but I'd rather be here than anywhere else.",
+                "I've got friends in every square, and that's worth more than any stamp.",
             )),
             'founders': (30, (
                 "The Founders. Hm.", "The Founders, sure.", "The Founders, yes.",
@@ -2153,6 +2568,19 @@ class SettlementChat(Conversation):
                 "Oh, no, don't approach me, ok? I don't want troubles and you have done enough. Just leave me alone.",
                 "Bugger off, will you? I know what you did. Nobody wants to talk with you.",
         ]
+
+    def talk_of_own_role(self, very_short: tuple[str, ...], short: tuple[str, ...], long: tuple[str, ...]) -> str:
+        """What a person says of their own role, one option of a pool at random. Sympathy decides whether they answer
+        at all; sociability decides how much: the pools go from very short to long."""
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        if sym < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return random.choice(very_short)
+        if soc >= 80 and sym >= 80:
+            return random.choice(long)
+        return random.choice(short)
 
     def talk_political(
         self, topics: PoliticalTopics, friend_topics: PoliticalTopics, generic: tuple[PoliticalTexts, ...],

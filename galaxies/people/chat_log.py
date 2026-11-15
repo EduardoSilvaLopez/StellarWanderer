@@ -3,8 +3,8 @@ replies the player is offered). common/dialogs/chat_view.py draws it; settlement
 
 An expression of a text written for the chat is a conversation tag if, and only if, it is one of the known tags, present
 case-insensitively as whole words: "I came with my family" has the tag "family" if that is known. The tag words are shown
-in the accent colour, and the tag (as the reactions spell it) is one of the pilot's tags from then on (`parse_marks`). A log belongs to
-one person: selecting another person starts a new log.
+in the accent colour, and the tag (its main spelling, as the reactions key it) is one of the pilot's tags from then on
+(`parse_marks`). A log belongs to one person: selecting another person starts a new log.
 
 Replies are offered with a callback: `offer(labels, then)` shows the labels, and `choose(index)` keeps the chosen one as
 a line of the pilot's, drops the other replies, and calls `then(index)`. Only one set of replies is open at a time."""
@@ -12,7 +12,7 @@ a line of the pilot's, drops the other replies, and calls `then(index)`. Only on
 from __future__ import annotations
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Mapping, Optional, Tuple
 
 if TYPE_CHECKING:
     from galaxies.people.person import Person
@@ -21,24 +21,25 @@ PLAYER = 'player'
 NPC = 'npc'
 TOKEN = re.compile(r'\S+')
 
-Word = Tuple[str, Optional[str]]  # a word, and the conversation tag it is (as spelled by the reactions), None if it is not one
+Word = Tuple[str, Optional[str]]  # a word, and the conversation tag it is (its main spelling), None if it is not one
 
 
-def parse_marks(text: str, tags: Iterable[str]) -> Tuple[List[List[Word]], List[str]]:
+def parse_marks(text: str, tags: Mapping[str, str]) -> Tuple[List[List[Word]], List[str]]:
     """The paragraphs of `text` (split at blank lines), each as its words, each with the tag it is if it is part of one of
-    `tags` (case-insensitively, as whole words, the longest first); and the tags it says: spelled as in `tags`, one for
-    each occurrence, in the order written."""
-    spelling: dict[str, str] = {tag.lower(): tag for tag in tags}
+    the spellings in `tags` (case-insensitively, as whole words, the longest first); and the tags it says, one for each
+    occurrence, in the order written. `tags` maps each spelling of a tag, its main one and its alternatives, to the main
+    one, which is what the words and the result carry."""
+    spelling: dict[str, str] = {spelled.lower(): tag for spelled, tag in tags.items()}
     expressions: List[str] = sorted(spelling, key=len, reverse=True)
     paragraphs: List[List[Word]] = []
     found: List[str] = []
     for paragraph in text.split('\n\n'):
         spans: List[Tuple[int, int, str]] = []  # start, end and tag of each occurrence in `paragraph`
-        for tag in expressions:
-            pattern = r'(?<![\w-])' + r'\s+'.join(re.escape(part) for part in tag.split()) + r'(?![\w-])'
+        for expression in expressions:
+            pattern = r'(?<![\w-])' + r'\s+'.join(re.escape(part) for part in expression.split()) + r'(?![\w-])'
             for match in re.finditer(pattern, paragraph, re.IGNORECASE):
                 if not any(match.start() < end and start < match.end() for start, end, _ in spans):
-                    spans.append((match.start(), match.end(), spelling[tag]))
+                    spans.append((match.start(), match.end(), spelling[expression]))
         spans.sort()
         found += [tag for _, _, tag in spans]
 

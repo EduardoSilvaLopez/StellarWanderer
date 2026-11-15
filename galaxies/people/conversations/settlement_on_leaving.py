@@ -119,7 +119,7 @@ class SettlementOnLeaving(Conversation):
             self.player.flags.add('Versatile Asked')
             done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
             ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if len(done) > 0 else 1.0
-            if ore_factor <= 0.5:
+            if ore_factor <= 0.65:
                 self.show(Message(
                     title=self.title,
                     text=(

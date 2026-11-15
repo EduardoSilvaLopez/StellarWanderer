@@ -13,10 +13,24 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Clicking the sealing pack uses it.
   * Clicking on greyed instruments use a repair kit.
   * Scraps of a depleted mine.
+  * news
 
-> STARTED: Extra time: 197h15' + 3h + 14:45-17:00
+### 2026-11-15 (6/12)
+
+> STARTED: Extra time: 207h00' + 9:30 -
 
   * Testing.
+  * More complex answers to profession tags when own profession.
+    * JANITOR
+    * KOMISAR
+    * protection (CAPTAIN, SECURITY)
+    * RESEARCHER
+    * RINGMASTER
+    * SMITH
+    * STEVEDORE
+  * More complex answers to 1-reply tags.
+  * Extra news: pilot found dead, water crisis in settlement.
+
 
 > BACKLOG
 

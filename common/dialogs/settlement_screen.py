@@ -170,7 +170,7 @@ class SettlementScreenDialog(Dialog):
     only while the keyboard is in use.
 
     Cargo: the ship's picture, the levels and the equipment rows (EQUIPMENT: Mines, as a supply of the hold, then Scoop,
-    Heat Shield and Solar Panels, the last two only on a TWS miner or Versatile); on the right, the room left and a row
+    Heat Shield and Solar Panels, the last two not on the Shabby TWS miner); on the right, the room left and a row
     for each supply (CARGO). The settlement's stock is not limited. A refused take shows a notification (the Community's
     when a mine goes over the reputation limit, else the ship's); a + that asks for more than the room turns the room
     line red until a - or leaving Cargo. An attachment costs reputation, charged at once and refunded when given back;
@@ -340,12 +340,12 @@ class SettlementScreenDialog(Dialog):
         return self._ship_image
 
     def _equipment(self) -> Tuple[str, ...]:
-        """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels only on a TWS miner
-        or a TWS Versatile, the others on every ship."""
-        from spaceships.ship_configurations import TwsMiner, TwsVersatile  # local: the configurations are the game's
-        if isinstance(self.ship, (TwsMiner, TwsVersatile)):
-            return EQUIPMENT
-        return tuple(name for name in EQUIPMENT if name not in ('Heat Shield', 'Solar Panels'))
+        """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels on every ship but
+        the Shabby TWS miner."""
+        from spaceships.ship_configurations import ShabbyTwsMiner  # local: the configurations are the game's
+        if isinstance(self.ship, ShabbyTwsMiner):
+            return tuple(name for name in EQUIPMENT if name not in ('Heat Shield', 'Solar Panels'))
+        return EQUIPMENT
 
     def _draw_cargo(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """The cargo view (see the class): the ship's picture, the levels and the equipment on the left, the room left

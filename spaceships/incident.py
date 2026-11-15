@@ -39,9 +39,9 @@ class ImpactProfile:
     big: float
 
 
-BASE_PROFILE = ImpactProfile(base=1e-5, medium=0.09, big=0.01)  # in normal space
-BELT_PROFILE = ImpactProfile(base=1e-3, medium=0.2, big=0.05)  # inside an asteroid belt
-RING_PROFILE = ImpactProfile(base=1e-3, medium=0.1, big=0.02)  # inside a giant's ring
+BASE_PROFILE = ImpactProfile(base=2e-6, medium=0.09, big=0.01)  # in normal space
+BELT_PROFILE = ImpactProfile(base=5e-4, medium=0.2, big=0.05)  # inside an asteroid belt
+RING_PROFILE = ImpactProfile(base=5e-4, medium=0.1, big=0.02)  # inside a giant's ring
 MALFUNCTION_BASE_CHANCE = 1e-5  # the chance per game minute of a malfunction, times the ship's precariousness
 FAILURE_CONTINUE_CHANCE = 0.8  # The base for the number of instruments a malfunction breaks (see failures)
 
@@ -135,7 +135,7 @@ class IncidentCheck(Updatable):
             for _ in range(random.binomialvariate(minutes, MALFUNCTION_BASE_CHANCE * ship.precariousness)):
                 for _ in range(failures()):
                     ship.break_instrument(random.choice(list(Instrument)))  # any instrument, broken already or not
-                ship.notification.set(ImpactIncident.MALFUNCTION_MESSAGE)
+                ship.notification.set(ImpactIncident.MALFUNCTION_MESSAGE, sound='malfunction')
         update_queue.add(self)
 
 

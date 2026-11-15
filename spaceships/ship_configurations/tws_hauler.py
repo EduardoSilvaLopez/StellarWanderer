@@ -15,9 +15,9 @@ class TwsHauler(Ship):
     PRECARIOUSNESS = 0.1  # The maximum is 1. Better ships will decrease this.
     PRESSURE_MAX = 5e5 # Pa . 1e5 is one atmosphere.
     FORWARD_BACKWARD_ACC = 16.0  # meters per second squared
-    UP_DOWN_ACC = 16.0  # m/s^2
-    RIGHT_LEFT_ACC = 5  # m/s^2
-    BRAKE_ACC = 20.0  # m/s^2, never less than the acceleration
+    UP_DOWN_ACC = 25.0  # m/s^2
+    RIGHT_LEFT_ACC = 10  # m/s^2
+    BRAKE_ACC = 30.0  # m/s^2, never less than the acceleration
     HEIGHT = 6
     WIDTH = 6
     DEPTH = 12
@@ -28,7 +28,7 @@ class TwsHauler(Ship):
         AIR_MAX = 180.0
         WATER_MAX = 170.0
         FOOD_MAX = 160.0
-        SEALING_PACK_MAX = 6
-        REPAIR_KIT_MAX = 6
+        SEALING_PACK_MAX = 20
+        REPAIR_KIT_MAX = 20
 
     CARGO_HOLD = StandardHold

@@ -55,7 +55,7 @@ It defends republican ideals, also out of fear of what a unique leader can do wi
 It stands in the middle between Surnemalism and Elitism in some aspects: Surnames are ok, but only one. Recover some aspects of the past, but not nationalism.
 
 ## Surnemalism ("Modern")
-This ideology emerges between 200 and 250 and is directly descending from Surnemalism, but it has also some some differences.
+This ideology emerges between 200 and 250 and is directly descending from "Ancient" Surnemalism, but it has also some some differences.
 
 It defends the importance of some big families and the culture they defend and represent, often associated with old Earth nations, but also with the different "Concesions" and new settlements. This love for diversity connects it with future Federalism.
 

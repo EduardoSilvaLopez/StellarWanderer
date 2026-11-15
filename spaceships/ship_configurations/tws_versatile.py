@@ -27,7 +27,7 @@ class TwsVersatile(Ship):
         AIR_MAX = 120.0
         WATER_MAX = 110.0
         FOOD_MAX = 100.0
-        SEALING_PACK_MAX = 8
-        REPAIR_KIT_MAX = 8
+        SEALING_PACK_MAX = 16
+        REPAIR_KIT_MAX = 16
 
     CARGO_HOLD = StandardHold
