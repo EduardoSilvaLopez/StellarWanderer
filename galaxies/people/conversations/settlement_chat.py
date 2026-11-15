@@ -466,9 +466,21 @@ class SettlementChat(Conversation):
 # region Normal Talk
 
     def talk_asteroid(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "Some are simply fucking far away. Others are in the belt. And those are worse."
+        if soc < 80:
+            return (
+                "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
+                " simply fucking far away. Others are... in the belt. And those are worse."
+            )
         return (
             "Have you visited one? Sometimes the labs ask for somebody. I mean, I get it. But... damn. Some are"
-            " simply fucking far away. Others are... in the belt. And those are worse."
+            " simply fucking far away, above all the isolated ones. The others are in the belts. And those are worse."
+            " I mean it, don't underestimate the belts."
         )
 
     def talk_base(self) -> str:
@@ -500,9 +512,20 @@ class SettlementChat(Conversation):
         return text
 
     def talk_belt(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "Dangerous places."
+        if soc < 80:
+            return (
+                "Don't go there if you don't want to get killed. Not without a well-protected ship"
+                " and a ton of sealant, at least."
+            )
         return (
             "Don't go there if you don't want to get killed. Not without a well-prodected ship"
-            " and a ton of sealant, at least."
+            " and a ton of sealant, at least. I mean it. We lose enough people as it is."
         )
 
     def talk_bureaucrat(self) -> str:
@@ -768,8 +791,19 @@ class SettlementChat(Conversation):
         )
 
     def talk_founders(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "The founders of Those-Who-Share. That's history."
+        if soc < 80:
+            return (
+                "Well, the ones who founded Those-Who-Share, the whole history, you know?"
+            )
         return (
-            "Well, the ones who founded Those-Who-Share, the whole history, you know?"
+            "Well, the ones who founded Those-Who-Share, Catherine Fan and the whole lot. I think about them sometimes."
+            " It must have been scary, Ài was just settled and UniDiv was not really in a sharing mood."
         )
 
     def talk_gunner(self) -> str:
@@ -1237,6 +1271,14 @@ class SettlementChat(Conversation):
                 return text
 
     def talk_noobie(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "You are new."
+        if soc < 80:
+            return "Paladin Xi finished your training recently, yes? So... that's it."
         return (
             "Well, that's... no offense intended. Paladin Xi finished your training recently, yes? So..."
             " that's it."
@@ -1358,14 +1400,38 @@ class SettlementChat(Conversation):
         return "\n\n".join(bound)
 
     def talk_paladin_xi(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "You tell me. He trained you."
+        if soc < 80:
+            return (
+                "He trained you, yes? Of course 'Paladin' is not a real thing. I think he is a"
+                " Steward or Herald or something."
+            )
         return (
             "He trained you, yes? Of course 'Paladin' is not a real thing. I think he is considered a"
-            " Steward or Herald or something."
+            " Steward or Herald or something. But everybody calls him so."
         )
+
     def talk_pgms(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "No PGMs - no energy, shields, no ooompf."
+        if soc < 80:
+            return (
+                "Did you find many out there? The whole"
+                " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
+            )
         return (
             "Did you find many out there? I think Iridium is the most important right now, but the whole"
-            " Platinum-group is crucial. No PGMs - no energy, shields, no ooompf. Just cold space."
+            " Platinum-group is crucial. No PGMs - no energy, shields, no thrust. It is the first thing we search for"
+            " in new systems."
         )
 
     def talk_protection(self) -> str:
@@ -1649,15 +1715,42 @@ class SettlementChat(Conversation):
             )
 
     def talk_surnemals(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return (
+                "Ancient stuff. Now it's TST."
+            )
+        if soc < 80:
+            return (
+                "Ancient stuff. In the beginning it was about being born naturally. But later it was about ancestors."
+                " Big families, around the third century. 'Concesions'. They say in UniDiv there are still some, but"
+                " most must have integrated in The Shining Throne."
+            )
         return (
-            "Ancient stuff. People born naturally when many came from the tube. Lineages. Ruled, lost, rose again"
-            " around the third century. They say in UniDiv there are still some, but most must have gone to The"
-            " Shining Throne."
+            "Ancient stuff, I know, but I find it interesting. People born naturally when many came from the tube."
+            " Lineages. Ruled, lost, rose again around the third century. They say in UniDiv there are still some,"
+            " but most must have gone to The Shining Throne."
         )
+
     def talk_the_network(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return "Growing and growing."
+        if soc < 80:
+            return (
+                "Every year a bit larger. There must be hundreds of systems by now, if you count the frontier."
+                " TST grows like crazy but they don't have the numbers. UniDiv... the other way around."
+            )
         return (
-            "Every year a bit larger. I don't know, we must have like two dozen systems by now. I mean"
-            " Those-Who-Share. Sure, 'United Diversity', UniDiv, has more. The Shining Throne, no idea."
+            "Every year a bit larger, and I follow the news. There are about two hundred systems now, maybe more."
+            " Most are UniDiv, many rural ones from The Shining Throne, then us, even if we have much larger population"
+            " than His Flamboyant Majesty <giggle>."
         )
 
     def talk_the_shining_throne(self) -> str:
