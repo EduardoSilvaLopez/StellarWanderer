@@ -27,7 +27,7 @@ import pygame
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 TEXTURES = os.path.join(ROOT, 'common', 'resources', 'textures')
 FONT = os.path.join(ROOT, 'common', 'resources', 'fonts', 'Orbitron.ttf')
-EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.1.png')
+EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.ThoseWhoShare.png')
 
 HULL_SIZE = 1024
 INTERIOR_SIZE = 512

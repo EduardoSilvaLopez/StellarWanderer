@@ -101,7 +101,7 @@ class StellarSystem:
                 world = initial_planet
             else:
                 world = random.Random(seeds.derive(self.seed, 'settlement', number)).choice(eligible)
-            outpost = Outpost(world, (world.saved_alterations or {}).get('outposts'), dates)
+            outpost = Outpost(world, number, (world.saved_alterations or {}).get('outposts'), dates)
             world.outposts[outpost.get_alterations_key()] = outpost  # May overwrite: the key is the place.
 
     def consume_free_asteroid(self, offer_seed: int) -> None:

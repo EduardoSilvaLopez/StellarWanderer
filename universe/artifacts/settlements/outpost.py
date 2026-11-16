@@ -97,11 +97,11 @@ class Outpost(Settlement):
         },
     }
 
-    def __init__(self, planet: RockyWorld, saved_alterations: Optional[dict],
+    def __init__(self, planet: RockyWorld, number: int, saved_alterations: Optional[dict],
                  enlargement_dates: list[datetime]) -> None:
         self.planet = planet
-        self.index = len(planet.outposts)
-        seed = seeds.derive(planet.seed, 'outpost', self.index)
+        self.number = number  # the settlement's number in its system's history: its identity, not a count
+        seed = seeds.derive(planet.seed, 'outpost', self.number)
         super().__init__(seed, enlargement_dates)
         self.my_random: random.Random = random.Random(self.seed)
         self.focus = random.Random(seeds.derive(self.seed, 'focus')).choice(list(SettlementFocus))
@@ -109,8 +109,9 @@ class Outpost(Settlement):
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
         assert entity is not None, "Outposts exist only in systems with a political entity"
         self.name: str = entity.generate_outpost_name(self.my_random)
+        # The first settlement on a planet defines its meridian zero.
         self.longitude: int = \
-            0 if self.index == 0 else \
+            0 if not planet.outposts else \
             self.my_random.randint(int(-self.planet.radius*math.pi), int(self.planet.radius*math.pi))
         self.latitude: int = self.my_random.randint(int(-self.planet.radius*math.pi/2),
                                                     int(self.planet.radius*math.pi/2))
@@ -133,7 +134,7 @@ class Outpost(Settlement):
 
     def _log_generation(self) -> Outpost:
         logger.info("OUTPOST created")
-        logger.info(f"- Index {self.index}, Lon: {self.longitude}, Lat: {self.latitude}")
+        logger.info(f"- Number {self.number}, Lon: {self.longitude}, Lat: {self.latitude}")
         logger.info(f"- Seed {self.seed}")
         return self
 

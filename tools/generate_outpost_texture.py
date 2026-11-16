@@ -29,7 +29,7 @@ import pygame
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 OUTPUT = os.path.join(ROOT, 'common', 'resources', 'textures', 'outpost.png')
-EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.1.png')
+EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.ThoseWhoShare.png')
 STENCIL_FONT = os.path.join(ROOT, 'common', 'resources', 'fonts', 'Orbitron.ttf')
 
 ATLAS_W, ATLAS_H = 2048, 1024

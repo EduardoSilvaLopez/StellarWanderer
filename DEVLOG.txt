@@ -138,4 +138,4 @@ Lazy generation of the past life, when asked about life or family.
 Lazy generation of friends, when asked about friends. Requires basic generation.
 - Friendships, which can be ex- or different ones.
 
-La
+... I am unsure about this.
