@@ -39,6 +39,7 @@ class SettlementFocus(Enum):
     DEFENCE = 2
     RESEARCH = 4
     ADMINISTRATION = 5
+    LIFE_SUPPORT = 6
 
     @property
     def label(self) -> str:

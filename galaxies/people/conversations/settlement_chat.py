@@ -21,9 +21,10 @@ import logging
 from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
 from galaxies.people.conversation import Conversation
 from galaxies.people.person import Person
+from galaxies import seeds
 from galaxies.people.role import (
-    BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, GUNNER, JANITOR, KOMISAR, RESEARCHER,
-    RINGMASTER, SECURITY, SMITH, STEVEDORE,
+    BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, FARMER,
+    GUNNER, JANITOR, KOMISAR, RESEARCHER, RINGMASTER, SECURITY, SMITH, STEVEDORE,
 )
 from galaxies.people.player import Player
 from galaxies.politics import political_entity
@@ -160,6 +161,7 @@ class SettlementChat(Conversation):
             'custodian thirds': self.talk_custodian_thirds,
             'dockmaster': self.talk_dockmaster,
             'engineer': self.talk_engineer,
+            'farmer, farmers': self.talk_farmer,
             'Founders, Founder': self.talk_founders,
             'gunner': self.talk_gunner,
             'Happy birthday, birthday': self.talk_happy_birthday,
@@ -788,6 +790,59 @@ class SettlementChat(Conversation):
             )
         return (
             "Design and handle all kinds of machinery, above all heavy industry."
+        )
+
+    def talk_farmer(self) -> str:
+        if self.interlocutor.role is FARMER:
+            return self.talk_of_own_role(
+                (
+                    "Food. Luminaria. Domouses.",
+                    "Food. Medicines. Domouses.",
+                    "Food. Medicines. Luminaria.",
+                    "Algae are my thing. They don't chatter.",
+                    "Crops and orchards. Calm.",
+                    "Noninses. Tasty."
+                    "It's insects for me.",
+                    "Booze. Nice.",
+                    "Pot. In pots. Hence the name.",
+                ),
+                (
+                    "We care about the food. All food. And non edible plants too, think luminaria.",
+                    "Well, if you had a domouse you know this, but we care about the fertile ones.",
+                    "The hydroponic gardens are not everything, we have also for example the tanks, and many kinds"
+                    " of algae. Your spiced rosaspira? That one too, spira is one of the originals we got.",
+                    "I grow noninse animals, sorry if you are vegan. Centipedes, mice, demodex, all of them.",
+                    "You are looking at the Ringmaster of Ants, Pilot <laugh>. If it's a kind of ant and it's on your"
+                    " plate in this place... me and my team grew it.",
+                    "We don't grow only food. The luminaria on the walls, it's ours too. Mycena chlorophos is the old"
+                    " name. Long name. There were many kinds of living beings back then.",
+                    "Well, we make the funky stuff. Vodka, gin, vaser, birra. Lots of birra. Cheers!",
+                    "Well... sometimes people just need to relax... we grow that, too...",
+                ),
+                (
+                    "Most of us work in hydroponic gardens, but this is not all we do. Some of us care about orchards,"
+                    " plantations, gardens, forests, luminaria, herbolariums... you name it. When there is a plant,"
+                    " we plant ourselves <smile>.",
+                    "Caring about plants is only part of the job. We have funghi too, like champignons. And the"
+                    " animals, of course, the insects and the three non-insects. And yes, domouses are also mice,"
+                    " just very very different from the ones in your chili.",
+                    "Guilty. I mean, if you are vegan, I am evil <laugh>. Of all possible things we do, I do"
+                    " care about out three non-insects and yes, mice included. I don't know why people don't care"
+                    " so much about the demodex and the centipedes, but... <shrugs>.",
+                    "I care about the algae: spira, chlora and glena, with all its types. I am vegan, and it is a"
+                    " beautiful job.",
+                    "Luminaria is my stuff. The full name is mycena chlorophos, by the way. That's why walking with"
+                    " me is a bit strange. You are looking at me, I am looking at the walls. Save the dark ones."
+                    " Dark walls are boring.",
+                    "I make your burger <smiles>. I mean, I care about insects. Did you know that in old Earth they"
+                    " were all much smaller? The big ones, we have grown them ourselves. Which is not so easy, their"
+                    " full... body... is not designed for that, so to say.",
+                    "You think food, but the herbolarium is not only about spices. We grow medical supplies there,"
+                    " too. Biology is very complex, the most complex thing there is.",
+                ),
+            )
+        return (
+            "Grow all kinds of plants and care about the animals too. Even domouses, the fertile ones."
         )
 
     def talk_founders(self) -> str:
@@ -2663,17 +2718,19 @@ class SettlementChat(Conversation):
         ]
 
     def talk_of_own_role(self, very_short: tuple[str, ...], short: tuple[str, ...], long: tuple[str, ...]) -> str:
-        """What a person says of their own role, one option of a pool at random. Sympathy decides whether they answer
-        at all; sociability decides how much: the pools go from very short to long."""
+        """What a person says of their own role, one option of a pool. Sympathy decides whether they answer at all;
+        sociability decides how much: the pools go from very short to long. The pick is drawn from the person's seed,
+        so they always give the same answer."""
+        my_random: random.Random = random.Random(seeds.derive(self.interlocutor.seed, 'own_role_talk'))
         soc: float = self.interlocutor.sociability100
         sym: float = self.interlocutor.sympathy100
         if sym < 20:
-            return random.choice(self.unfriendly_rejections(soc))
+            return my_random.choice(self.unfriendly_rejections(soc))
         if soc < 20:
-            return random.choice(very_short)
+            return my_random.choice(very_short)
         if soc >= 80 and sym >= 80:
-            return random.choice(long)
-        return random.choice(short)
+            return my_random.choice(long)
+        return my_random.choice(short)
 
     def talk_political(
         self, topics: PoliticalTopics, friend_topics: PoliticalTopics, generic: tuple[PoliticalTexts, ...],

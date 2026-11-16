@@ -73,6 +73,16 @@ ENGINEER = Role(
     vacation=0.33,
     portrait="hydroponic",
     )
+FARMER = Role(
+    'farmer',
+    'Farmer',
+    reputation_bonus=0,
+    personality_bonus=(0, 0, 0),  #loy, emp, soc
+    ideal_for=(50, 50, 50),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
+    )
 GUNNER = Role(
     'gunner',
     'Gunner',

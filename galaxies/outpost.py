@@ -10,7 +10,9 @@ from common.vector3 import Vector3
 
 from galaxies import seeds
 from galaxies.outpost_solid import OutpostSolid, Part
-from galaxies.people.role import BUREAUCRAT, CAPTAIN, ENGINEER, KOMISAR, RESEARCHER, SECURITY, SMITH, STEVEDORE, Role
+from galaxies.people.role import \
+    BUREAUCRAT, CAPTAIN, ENGINEER, FARMER, KOMISAR, \
+    RESEARCHER, SECURITY, SMITH, STEVEDORE, Role
 from galaxies.rocky_world import RockyWorld
 from galaxies.settlement_kind import SettlementKind
 from galaxies.world_surface import SurfaceType
@@ -86,6 +88,7 @@ class Outpost(Settlement):
         4: {
             SettlementFocus.ADMINISTRATION: {BUREAUCRAT: 1},
             SettlementFocus.DEFENCE: {SECURITY: 1, CAPTAIN: 1},
+            SettlementFocus.LIFE_SUPPORT: {FARMER: 2},
             SettlementFocus.INDUSTRY: {ENGINEER: 1},
             SettlementFocus.RESEARCH: {RESEARCHER: 1},
             SettlementFocus.RESOURCE_EXTRACTION: {SMITH: 1},
@@ -102,6 +105,7 @@ class Outpost(Settlement):
         self.focus = random.Random(seeds.derive(self.seed, 'focus')).choice(list(SettlementFocus))
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
+        assert entity is not None, "Outposts exist only in systems with a political entity"
         self.name: str = entity.generate_outpost_name(self.my_random)
         self.longitude: int = \
             0 if self.index == 0 else \
@@ -117,10 +121,10 @@ class Outpost(Settlement):
 
         self.saved_alterations: Optional[dict] = None
         if saved_alterations:
-            my_alterations = saved_alterations.get(self.get_alterations_key())
+            my_alterations: Optional[dict] = saved_alterations.get(self.get_alterations_key())
             if my_alterations:
                 self.saved_alterations = copy.deepcopy(my_alterations)
-                self._read_alterations(self.saved_alterations)
+                self._read_alterations(my_alterations)
                 self.set_altered()
         planet.terrain.add_platform(self.longitude, self.latitude)   # the ground is graded under the site
         self._log_generation()
@@ -138,7 +142,7 @@ class Outpost(Settlement):
     def get_alterations_key(self) -> str:
         return str(self.longitude) + " " + str(self.latitude)
 
-    def get_alterations(self) -> dict:
+    def get_alterations(self) -> Optional[dict]:
         alterations: dict = {}
         self._alterations_of_visits(alterations)
         if self.last_visited is not None:
@@ -184,6 +188,7 @@ class Outpost(Settlement):
 
     def place_details(self) -> list[str]:
         system = self.planet.parent_orbit.parent_stellar_system
+        assert system.political_entity is not None, "Outposts exist only in systems with a political entity"
         return [self.planet.name, system.star.name, system.political_entity.name]
     # endregion
 
@@ -261,8 +266,8 @@ class Outpost(Settlement):
         return self.planet.surface_point_stellar(self.longitude, self.latitude, current_datetime)
 
     def full_keys(self) -> str:
-        """The keys that find this outpost from the galaxy: system, orbit, planet, then its moon if it is on one, and its
-        own, joined by '|'."""
+        """The keys that find this outpost from the galaxy: system, orbit, planet, then its moon if it is on one,
+        and its own, joined by '|'."""
         orbit = self.planet.parent_orbit
         keys = [orbit.parent_stellar_system.get_alterations_key(), orbit.get_alterations_key()]
         if self.planet.parent_planet:

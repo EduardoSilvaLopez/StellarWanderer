@@ -408,7 +408,10 @@ def main() -> None:
             continue
 
         settlement_screen = sync_settlement_screen(player, settlement_screen, gui, fonts)
-        for event in pygame.event.get():
+        frame_watch.mark('settlement sync')
+        pending_events = pygame.event.get()
+        frame_watch.mark('event queue')
+        for event in pending_events:
             if event.type == pygame.QUIT:
                 running = False
             # the time scale, the save and the load work in the settlement screen too

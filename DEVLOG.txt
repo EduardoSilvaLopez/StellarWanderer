@@ -2,26 +2,34 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 ### 2026-11-12 (5/12)
 
+* DEVELOPMENT: How the world changes from 700-01-01 on.
+  * Stellar system's timeline of checks decided on creation.
+  * Checks take in accoung neighbouring systems, then generate first outpost.
+  * Randomize over all settlements + 1. If +1, another one is created. If not, it is upgraded.
+  * The portal base depends on the existing settlements. Has a construction rendering, and a finished one.
+  * Branch into types of settlements: laboratories, defence, industry.
+  * Unify again into cities but keeping the focus.
+
 * INCIDENTS - Dora Exploradora
   * Get sealing equipment in the outposts.
   * Seal to repair.
   * Random events, particularly in the asteroid belts, damage the hull (maintenance).
   * Extra: Children.
   * Impact incidents of different sizes.
-  * Repair kits.
+  * Malfunctions and repair kits.
   * Sealing pack and repair kit become green when they can be used.
-  * Clicking the sealing pack uses it.
-  * Clicking on greyed instruments use a repair kit.
   * Scraps of a depleted mine.
   * news
   * More complex answers to 1-reply tags.
 
 ### 2026-11-15 (6/12)
 
-> STARTED: Extra time: 207h00' + 9:30 -
+> STARTED: Extra time: 207h00' + 9:30 - 10:45 + 18:00 - 19:15
 
+  * Extra: New focus: Life support (farmer)
   * Testing.
   * More complex answers to profession tags when own profession.
+    * FARMER
     * JANITOR
     * KOMISAR
     * protection (CAPTAIN, SECURITY)
@@ -29,33 +37,38 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
     * RINGMASTER
     * SMITH
     * STEVEDORE
-  * Extra news: pilot found dead, water crisis in settlement.
-
+  * Extra: More News: pilot found dead, water crisis in settlement.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
   * Give up the mine codes.
   * Assigning the history to the new systems.
+  * Focus: Depends on characteristics of the world.
+  * Past and environment of the NPCs
+  * Environment of the PC (on character creation or interstellar travel if skipped)
   * Cities.
+  * Routine of the NPCs
   * Extra: Binding slowly.
-  * Extra: Environment (on character creation or interstellar travel if skipped)
-  * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Arabs.
   * Extra: Move more than one but less than max, by keeping the button pressed.
   * Extra: Missions:
     * Scraps from resources to industrial.
     * Pellets or air from resources to industrial.
     * Machines from industrial to all the rest.
+  * Names of settlement change in a related way:
+    * "Difficult Task" => "Accomplished Task" => "Task Defence Base"
+    * And then, cut (this is a tiding, BTW): "WU's KINdness" => "Wukin"
 
 * ABANDONING THOSE-WHO-SHARE
+  * Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Filling up the other entities.
   * Conversion mechanics.
   * United Diversity
   * The Shining Throne
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
-* OROGRAPHY
+* OROGRAPHY II
   * Mountain chains.
   * Craters.
   * Basins, rivers, canyons.
@@ -67,15 +80,6 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Directly? Try the current ship configurations.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
-
-* DEVELOPMENT: How the world changes from 700-01-01 on.
-  * Stellar system's timeline of checks decided on creation.
-  * Checks take in accoung neighbouring systems, then generate first outpost.
-  * Randomize over all settlements + 1. If +1, another one is created. If not, it is upgraded.
-  * The portal base depends on the existing settlements. Has a construction rendering, and a finished one.
-  * Names are related: "Difficult Task" => "Accomplished Task" => "Task Defence Base"
-  * Branch into types of settlements: laboratories, defence, industry.
-  * Unify again into cities but keeping the focus.
 
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Details on childhood (orphan?). Romanticism towards player. Relationships between them. Current familiar relations. Events on their past.
 * KUIPER: Drawf planets, land on big asteoids.
