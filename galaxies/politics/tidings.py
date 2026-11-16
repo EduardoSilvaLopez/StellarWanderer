@@ -118,7 +118,7 @@ def _tiding_of(event: Event, system: StellarSystem) -> Optional[Tiding]:
         case Happening.WATER_EMERGENCY:
             text = f"{event.subject} had a water emergency."
         case Happening.STORM_BORN:
-            width = int(2.0 * event.facts['radius'] / 1000)
+            width = int(float(f"{2.0 * event.facts['radius'] / 1000:.1g}"))  # one digit: 4000 Km, not 4005 Km
             text = f"A storm {width} Km wide broke out on {event.subject}."
         case Happening.SHIP_LOST:
             text = "A ship failed. We could not save the pilot."
