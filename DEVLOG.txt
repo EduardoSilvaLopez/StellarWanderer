@@ -31,7 +31,11 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 > STARTED: Extra time: 204h30' + 12:15
 
+> BACKLOG
+
+* INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
   * Testing.
+  * Past and environment of the NPCs. Tidings associated.
   * More complex answers to profession tags when own profession.
     * JANITOR
     * KOMISAR
@@ -40,14 +44,9 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
     * RINGMASTER
     * SMITH
     * STEVEDORE
-
-> BACKLOG
-
-* INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
   * Give up the mine codes.
   * Assigning the history to the new systems.
   * Focus: Depends on characteristics of the world.
-  * Past and environment of the NPCs
   * Environment of the PC (on character creation or interstellar travel if skipped)
   * Cities.
   * Routine of the NPCs
