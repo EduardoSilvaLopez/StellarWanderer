@@ -3,12 +3,13 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Sequence, Tuple
 
 import logging
 from galaxies import seeds
+from galaxies.politics import tidings
 from galaxies.rocky_world import RockyWorld
 from common.vector3 import Vector3
 from galaxies.world import World
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from common.vector3 import Vector3
     from galaxies.orbit import Orbit
     from galaxies.star import Star
+    from galaxies.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 
@@ -572,6 +574,16 @@ class JovianWorld(World):
                                flashes))
         return alive
 
+    def storms_born_between(self, start: datetime, end: datetime) -> List[Tuple[datetime, float]]:
+        """The storms born from `start` to before `end`: (birth, radius m). The great storm is never born."""
+        first, last = self._elapsed_seconds(start), self._elapsed_seconds(end)
+        born: List[Tuple[datetime, float]] = []
+        for epoch in range(math.floor(first / JovianWorld.STORM_EPOCH), math.floor(last / JovianWorld.STORM_EPOCH) + 1):
+            for _, birth, _, _, _, radius, _ in self._storms_born(epoch):
+                if first <= birth < last:
+                    born.append((start + timedelta(seconds=birth - first), radius))
+        return born
+
     def _storms_born(self, epoch: int) -> List[Tuple[int, float, float, float, float, float, float]]:
         """The storms born in an epoch: (key, birth s, life s, sine of latitude, longitude, radius m, twist rad)."""
         if epoch not in self._storm_cache:
@@ -762,3 +774,13 @@ class JovianWorld(World):
         logger.info(f" - Atmosphere: molecular weight {1000 * self.mean_molecular_weight:.3f} g/mol")
         return self
     # endregion
+
+
+@tidings.source
+def _storms_broken_out(system: StellarSystem, first: date, last: date) -> Iterator[tidings.Event]:
+    for world in system.get_all_worlds():
+        if isinstance(world, JovianWorld):
+            for birth, radius in world.storms_born_between(datetime.combine(first, time()),
+                                                           datetime.combine(last + tidings.DAY, time())):
+                yield tidings.Event(birth.date(), tidings.Happening.STORM_BORN, system, subject=world.name,
+                                    facts={'radius': radius})

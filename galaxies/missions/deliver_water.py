@@ -1,11 +1,12 @@
 """Deliver raw water: bring any amount of scooped raw water to the outpost that asked for it."""
 
 from __future__ import annotations
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, List, Optional
+from datetime import date, datetime, time, timedelta
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional
 import random
 
 import logging
+from galaxies.politics import tidings
 from galaxies.seeds import of_text
 from galaxies.world_surface import SurfaceType
 from .mission import OPEN, Mission, register
@@ -216,8 +217,8 @@ class DeliverWater(Mission):
     # endregion
 
     def icy_worlds(self) -> List[RockyWorld]:
-        """The icy worlds of the planetary system of the issuer's planet: the planet and its moons, or for an outpost on a
-        moon, the moons of its giant (the giant is not rock)."""
+        """The icy worlds of the planetary system of the issuer's planet: the planet and its moons, or for an
+        outpost on a moon, the moons of its giant (the giant is not rock)."""
         from galaxies.rocky_world import RockyWorld
         from galaxies.outpost import Outpost
         settlement = self.issuer_settlement
@@ -314,3 +315,16 @@ class DeliverWater(Mission):
     @classmethod
     def _deserialize(cls, source: dict) -> DeliverWater:
         return DeliverWater(source['asteroid_site'], loaded=True, **Mission._common(source))
+
+
+@tidings.source
+def _water_emergencies(system: StellarSystem, first: date, last: date) -> Iterator[tidings.Event]:
+    """Each offer of this kind is a water emergency in its settlement."""
+    for settlement in system.settlements():
+        if not settlement.needs_water():
+            continue
+        day = first
+        while day <= last:
+            if DeliverWater.chance_on(datetime.combine(day, time()), settlement) is not None:
+                yield tidings.Event(day, tidings.Happening.WATER_EMERGENCY, system, subject=settlement.name)
+            day += tidings.DAY

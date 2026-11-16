@@ -188,6 +188,7 @@ class SettlementChat(Conversation):
             'the network': self.talk_the_network,
             'The Shining Throne, Shining Throne, TST': self.talk_the_shining_throne,
             'Those-Who-Share, TWS': self.talk_those_who_share,
+            'tiding, tidings, news': self.talk_tidings,
             'United Diversity, UniDiv': self.talk_united_diversity,
         }
 
@@ -2080,6 +2081,30 @@ class SettlementChat(Conversation):
             ("We take care of each other.", "Good.", "We're family here."),
         )
         return self.talk_political(topics, friend_topics, generic, own_entity=True, praise_guarded=False)
+
+    def talk_tidings(self) -> str:
+        # Sympathy: a brush-off below 20. Sociability: how much is wrapped around the tiding. The tiding is drawn from
+        # the person's seed and the day, so they tell the same one all day long.
+        import game_environment as gem
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
+        today: date = self.date_time.date()
+        current = gem.current_environment.galaxy.tidings.collect_for(today, self.place.stellar_system, self.place)
+        if not current:
+            if soc < 20:
+                return "No news."
+            if soc < 80:
+                return "Nothing new. Quiet days."
+            return "I know nothing new... do you? Has something happened?"
+        text: str = random.Random(
+            seeds.derive(self.interlocutor.seed, 'tidings', today.toordinal())
+            ).choice(current).text
+        if soc < 20:
+            return text
+        if soc < 80:
+            return f"I have heard that {text}"
+        return f"Yes! Have you heard? {text.capitalize()} Wow!"
 
     def talk_united_diversity(self) -> str:
         # Political conversation, about the other entity (see talk_political). Everybody lives in Those-Who-Share (see

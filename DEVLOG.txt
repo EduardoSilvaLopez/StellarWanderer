@@ -24,12 +24,15 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 ### 2026-11-15 (6/12)
 
-> STARTED: Extra time: 207h00' + 9:30 - 10:45 + 18:00 - 19:15
+### 2026-11-16 (7/12)
 
   * Extra: New focus: Life support (farmer)
+  * Extra: More News: pilot found dead, water crisis in settlement.
+
+> STARTED: Extra time: 204h30' + 12:15
+
   * Testing.
   * More complex answers to profession tags when own profession.
-    * FARMER
     * JANITOR
     * KOMISAR
     * protection (CAPTAIN, SECURITY)
@@ -37,7 +40,6 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
     * RINGMASTER
     * SMITH
     * STEVEDORE
-  * Extra: More News: pilot found dead, water crisis in settlement.
 
 > BACKLOG
 
