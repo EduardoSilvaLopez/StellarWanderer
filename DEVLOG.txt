@@ -126,7 +126,7 @@ This generation sets already some basic characteristics, which are the current o
 - sexuality: float = 50.0
   * Uniform distribution.
 
-We make the history of the NPC:
+Lazy generation of the past life, when asked about life or family.
 - When they finished their studies, which depends on the role: at age 16 or 22 with a small random factor.
 - Time keeping the role, which depends on how adequate it is for this person.
 - Gap between roles, which depend on loyalty (more loyalty, less gap)
@@ -134,4 +134,8 @@ We make the history of the NPC:
 - Time of death, which depends on longevity.
 - Number of relationships, which depends on sexuality.
 - Each individual relationship, with uniform probability and the change to overlap.
-- 
+
+Lazy generation of friends, when asked about friends. Requires basic generation.
+- Friendships, which can be ex- or different ones.
+
+La

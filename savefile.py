@@ -12,7 +12,8 @@ from common.paths import data_path, SAVEFILES_DIR
 
 logger = logging.getLogger(__name__)
 
-# A save's file name is "<seed> <game date> <name typed>" plus ".json": the name typed is optional.
+# A save's file name is "<seed> <game date> <name typed>" plus ".json": the name typed is optional. It sits in the
+# folder of its seed (data/Savefiles/<seed>).
 SAVE_NAME_FORBIDDEN = '\\/:*?"<>|'
 SAVE_NAME_MAX_LENGTH = 60
 
@@ -37,8 +38,23 @@ class Savefile:
         return f"{int(env.galaxy.seed)} {env.date_time.strftime('%Y-%m-%d')} "
 
     @staticmethod
+    def folder() -> str:
+        '''The folder of the current game's saves: one folder per galactic seed, named by it.'''
+        return data_path(SAVEFILES_DIR, str(int(gem.current_environment.galaxy.seed)))
+
+    @staticmethod
+    def all_paths() -> list[str]:
+        '''Every save of every seed. Only the folders named by a seed are looked at: any other folder in the saves
+        folder (a backup, an archive of the player's) is the player's own and is left alone.'''
+        paths: list[str] = []
+        for folder in glob.glob(data_path(SAVEFILES_DIR, '*')):
+            if os.path.isdir(folder) and os.path.basename(folder).lstrip('-').isdigit():
+                paths.extend(glob.glob(os.path.join(folder, '*.json')))
+        return paths
+
+    @staticmethod
     def exists(name: str) -> bool:
-        return os.path.exists(data_path(SAVEFILES_DIR, name + '.json'))
+        return os.path.exists(os.path.join(Savefile.folder(), name + '.json'))
     # endregion
 
     # region Saving
@@ -60,8 +76,8 @@ class Savefile:
             , 'player': player.serialize()
             , 'knowledge': knowledge.current_knowledge.serialize()
         }
-        os.makedirs(data_path(SAVEFILES_DIR), exist_ok=True)
-        file_path = data_path(SAVEFILES_DIR, name + '.json')
+        os.makedirs(Savefile.folder(), exist_ok=True)
+        file_path = os.path.join(Savefile.folder(), name + '.json')
         logger.info("New savefile's name: " + file_path)
         # A replaced save is a new file: it is written beside the old one and moved over it, so its creation time (what
         # the savefile list shows) is the time of this save.
@@ -77,7 +93,7 @@ class Savefile:
         '''Loads the most recently written savefile directly into GameEnvironment and Player singletons.
 
         WARNING: if you retrieved them before calling this method, remember to re-assign those variables.'''
-        savefiles = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
+        savefiles = Savefile.all_paths()
         if not savefiles:
             raise FileNotFoundError("No savefiles found.")
         Savefile.load_from_file(max(savefiles, key=os.path.getctime))

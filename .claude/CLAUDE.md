@@ -60,7 +60,7 @@ def generate_default(self) -> None:
   - `resources/`: fonts, textures, portraits, people names (always reach them through `resource_path`)
   - `design/`: the program's standing design policies (versioned)
 - `tools/`: the build files (`StellarWanderer.spec`, `installer.iss`, `build_windows.ps1`) and the generators of the outpost texture, the sounds and the Milky Way panorama (`generate_milky_way.py`, drawn by `presentation/scene/interstellar/milky_way.py`)
-- `data/`, `temp/`, `release/`: not tracked. `data/Savefiles` is the player's progress, `data/Logs` the logs and `data/dist` the packaged game: all deleted only on purpose, and `data/Savefiles` never as a clean-up. `temp/` holds `pycache` and `build`, which can be deleted at any time. `release/` holds the installer (also not to be deleted as a clean-up).
+- `data/`, `temp/`, `release/`: not tracked. `data/Savefiles/<seed>/` is the player's progress (one folder per galactic seed; any other folder there is the player's own archive and the game ignores it), `data/Logs` the startup log and `data/Logs/<seed>/` the log of each game, and `data/dist` the packaged game: all deleted only on purpose, and `data/Savefiles` never as a clean-up. `temp/` holds `pycache` and `build`, which can be deleted at any time. `release/` holds the installer (also not to be deleted as a clean-up).
 
 ## Rules the code does not show
 
@@ -77,7 +77,7 @@ def generate_default(self) -> None:
 
 - Window size: always use `pygame.display.get_window_size()` for rendering size and mouse mapping, never `screen.get_size()`. For the OpenGL window pygame keeps returning a surface of the size first requested (1920×1080) while the real client area is smaller (window frame), which crops the frame and shifts mouse positions.
 - No external config files: settings are module-level constants (e.g., `common/game_logging/constants.py`)..
-- Saves and logs are written through `paths.data_path`: `data/` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`.
+- Saves and logs are written through `paths.data_path`: `data/` below the project folder when run from source (whatever the working directory), `%LOCALAPPDATA%\StellarWanderer` in the packaged build. Resources are read through `paths.resource_path`. The file log starts in `data/Logs` and `log_to_seed` (called by `main.start_game`) switches it to the seed's folder.
 
 ## Working Policies (for Claude)
 

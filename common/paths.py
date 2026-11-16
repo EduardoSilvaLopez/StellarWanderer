@@ -18,7 +18,7 @@ def data_path(*parts: str) -> str:
     folder, whatever the current directory is.
 
     Args:
-        parts: Folder and file names inside the data folder, e.g. ('Savefiles', 'my save.json')
+        parts: Folder and file names inside the data folder, e.g. ('Savefiles', '4', '4 0700-01-01 my save.json')
 
     Returns:
         The joined path.'''

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
-import glob
 import logging
 import math
 import os
@@ -10,7 +9,7 @@ import pygame
 from datetime import datetime
 
 from presentation import audio
-from common.paths import data_path, resource_path, SAVEFILES_DIR
+from common.paths import resource_path
 from savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
@@ -137,18 +136,16 @@ class StartingDialog(Dialog):
     def _load_savefiles(self) -> None:
         """Load list of available savefiles."""
         self.savefiles = []
-        if os.path.exists(data_path(SAVEFILES_DIR)):
-            files = glob.glob(data_path(SAVEFILES_DIR, '*.json'))
-            for filepath in sorted(files, key=os.path.getctime, reverse=True):
-                filename = os.path.basename(filepath)
-                name = os.path.splitext(filename)[0]
-                created_at = datetime.fromtimestamp(os.path.getctime(filepath)).isoformat(timespec='seconds')
+        for filepath in sorted(Savefile.all_paths(), key=os.path.getctime, reverse=True):
+            filename = os.path.basename(filepath)
+            name = os.path.splitext(filename)[0]
+            created_at = datetime.fromtimestamp(os.path.getctime(filepath)).isoformat(timespec='seconds')
 
-                self.savefiles.append({
-                    'path': filepath,
-                    'filename': filename,
-                    'display_name': f"{name}   -   Saved at {created_at}",
-                })
+            self.savefiles.append({
+                'path': filepath,
+                'filename': filename,
+                'display_name': f"{name}   -   Saved at {created_at}",
+            })
 
     def _savefile_rect(self, index: int) -> pygame.Rect:
         """Screen rectangle of the savefile at `index` (only meaningful while it is visible)."""

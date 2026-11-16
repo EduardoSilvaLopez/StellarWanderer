@@ -39,7 +39,7 @@ if not getattr(sys, 'frozen', False):
 import pygame
 import logging
 from common import sound_events
-from common.game_logging import configure_logging
+from common.game_logging import configure_logging, log_to_seed
 from presentation.font_cache import FontCache
 from presentation.scene.planetary.terrain_gl import TerrainGl
 import game_environment as gem
@@ -245,9 +245,11 @@ def start_game(action: str, value: str | int) -> None:
         if not isinstance(value, str):
             raise Exception("A saved game is loaded from its file path.")
         Savefile.load_from_file(value)
+        log_to_seed(int(gem.current_environment.galaxy.seed))
     else:
         if not isinstance(value, int):
             raise Exception("A new game starts from its galactic seed.")
+        log_to_seed(value)
         logger.info(f"New game with seed: {value}")
         knowledge.current_knowledge = knowledge.Knowledge()  # before the environment: its systems add to it
         gem.current_environment = gem.GameEnvironment(value, EPOCH, None, None)
