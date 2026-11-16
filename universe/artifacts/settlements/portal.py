@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING, Optional
 import numpy as np
 
 from common.vector3 import Vector3
-from galaxies import seeds
+from universe.structure import seeds
 
 if TYPE_CHECKING:
-    from galaxies.portals.portal_base import PortalBase
+    from universe.artifacts.settlements.portal_base import PortalBase
 
 # Physical constants, SI (CODATA 2018).
 SPEED_OF_LIGHT = 299792458.0  # m/s

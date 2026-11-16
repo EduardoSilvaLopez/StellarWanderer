@@ -1,4 +1,5 @@
-"""Sound effects (not music). Game code names an event with `play(name)`; this module does the rest.
+"""Sound effects (not music). The presentation names an event with `play(name)`; the universe asks through
+`common/sound_events.py`, which main connects to this module.
 
 The game is in vacuum: only what the pilot hears inside the ship exists here (the cockpit and its dialogs, the ship's
 systems, the radio and the alarms), never a sound from space itself. A sound is a WAV or an MP3 in
@@ -70,7 +71,7 @@ _last_played_at: Dict[str, int] = {}
 
 def _is_fast() -> bool:
     """True while time is compressed above x1."""
-    import galaxies.people.player as player_module  # local: the player's module imports this package's users
+    import universe.society.people.player as player_module  # local: the player's module imports this package's users
     player = player_module.current_player
     return player is not None and player.time_scale > player.TIME_SCALE_MIN
 

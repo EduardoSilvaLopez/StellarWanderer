@@ -1,18 +1,18 @@
 """The TRAVEL button, in the cockpit's left column while the ship is unbound, under the ORBIT button (see
 orbit_button.py):
-it starts the TRAVEL autopilot (spaceships/travel_assist.py), which flies the ship to the targeted body, or gives the
-controls back."""
+it starts the TRAVEL autopilot (universe/artifacts/spaceships/travel_assist.py), which flies the ship to the targeted
+body, or gives the controls back."""
 
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 
-from ..constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, READOUT_BG
+from presentation.constants import ACCENT, ACCENT_DIM, BINDING_NEAR_GREEN, READOUT_BG
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class TravelButton:
@@ -24,7 +24,7 @@ class TravelButton:
     @staticmethod
     def hit(position: Tuple[int, int], ship: Ship) -> bool:
         """Whether a click at `position` is on the button while it does something: lit, or flying (to give it up)."""
-        from spaceships.travel_assist import TravelAssist
+        from universe.artifacts.spaceships.travel_assist import TravelAssist
         if ship.owner.inside is not None or Broken.is_broken(Instrument.TRAVEL):
             return False
         return TravelButton.rect.collidepoint(position) and (ship.navigation.travel is not None
@@ -33,7 +33,7 @@ class TravelButton:
     @staticmethod
     def draw(surface: pygame.Surface, fonts: Any, h: int, ship: Ship, left: int, top: int, width: int) -> None:
         """The button at `top`, `width` wide from `left`."""
-        from spaceships.travel_assist import TravelAssist
+        from universe.artifacts.spaceships.travel_assist import TravelAssist
         if ship.is_bound:
             return
         label_font = fonts.get(max(9, int(h * 0.017)))

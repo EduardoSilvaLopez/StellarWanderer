@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, Tuple
 import pygame
 
-from common import audio
+from presentation import audio
 from .dialog import is_cancel
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
@@ -24,8 +24,8 @@ from .scroll_bar import ScrollBar
 from . import search_box
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.person import Person
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.person import Person
 
 BODY_SIZE = 16
 HEADING_SIZE = 18

@@ -1,20 +1,21 @@
-'''The whole galaxy. We won't have more than one. Its history (galaxies/politics) is made with it, up to the game date.'''
+'''The whole galaxy. We won't have more than one. Its history (universe/society/politics) is made with it, up to the
+game date.'''
 
 from __future__ import annotations
 import copy
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from galaxies import fixed_stars
-from galaxies.constants import EPOCH, INITIAL_STAR_POSITION
-from galaxies.politics.expansion_history import ExpansionHistory, SystemHistory
-from galaxies.politics.tidings import Tidings
-from galaxies.star import Star, cell_of
-from galaxies.stellar_system import StellarSystem
+from universe.structure import fixed_stars
+from universe.structure.constants import EPOCH, INITIAL_STAR_POSITION
+from universe.society.politics.expansion_history import ExpansionHistory, SystemHistory
+from universe.society.politics.tidings import Tidings
+from universe.bodies.star import Star, cell_of
+from universe.structure.stellar_system import StellarSystem
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
-    from galaxies.settlement import Settlement
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.artifacts.settlements.settlement import Settlement
 
 
 class Galaxy:

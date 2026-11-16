@@ -31,11 +31,11 @@ from typing import Dict, List, Optional
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import game_environment as gem  # noqa: E402  (first: it loads the galaxy package in the order the game does)
-from galaxies import seeds  # noqa: E402
-from galaxies.km2 import Km2  # noqa: E402
-from galaxies.people import knowledge  # noqa: E402
-from galaxies.rocky_world import RockyWorld  # noqa: E402
-from galaxies.stellar_system import StellarSystem  # noqa: E402
+from universe.structure import seeds  # noqa: E402
+from universe.bodies.km2 import Km2  # noqa: E402
+from universe.society.people import knowledge  # noqa: E402
+from universe.bodies.rocky_world import RockyWorld  # noqa: E402
+from universe.structure.stellar_system import StellarSystem  # noqa: E402
 
 OLD_MAX_OUTPOSTS = 6  # the old draw, int(abs(gauss(1.5, 0.5))), never gave more than a few
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'

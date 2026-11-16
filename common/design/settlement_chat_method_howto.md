@@ -1,11 +1,11 @@
 # How to write a `talk_*` method of the settlement chat
 
 How-to for Claude. Read it when the user asks for a new (or a reworked) method in
-`galaxies/people/conversations/settlement_chat.py`. The model to follow for a political talk is `talk_political`
+`universe/society/people/conversations/settlement_chat.py`. The model to follow for a political talk is `talk_political`
 (with `political_tone`), used by `talk_the_shining_throne`, `talk_united_diversity` and `talk_those_who_share`.
 
 ## What the user gives, and what not to invent
-- The facts are in `common/wiki/*.txt` (United Diversity, Those-Who-Share; more may come) and in the user's
+- The facts are in `universe/wiki/*.txt` (United Diversity, Those-Who-Share; more may come) and in the user's
   own words in the request. **Use only those facts.** No new lore, names, numbers or places. If a fact is
   missing, ask or leave it out.
 - First step when a wiki text is new: check its spelling and report the errors with links (file#Lline), and
@@ -84,9 +84,9 @@ between person and political_entity otherwise fails). Call the method unbound wi
 
 ```python
 from types import SimpleNamespace as NS
-from galaxies.people.conversations.settlement_chat import SettlementChat
-from galaxies.people.person import Person
-from galaxies.people.chat_log import parse_marks
+from universe.society.people.conversations.settlement_chat import SettlementChat
+from universe.society.people.person import Person
+from universe.society.people.chat_log import parse_marks
 # NPC: loyalty100, empathy100, sociability100, sympathy100, reputation, role (NS(name=)), name, surname,
 # get_title, address (Person.address bound to it), interactions; pilot: those_who_share.reputation, ...
 text = SettlementChat.talk_xxx(NS(interlocutor=npc, player=pilot))

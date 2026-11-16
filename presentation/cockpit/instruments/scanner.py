@@ -5,22 +5,24 @@ from typing import Any, Optional, Tuple, TYPE_CHECKING
 import math
 import numpy as np
 import pygame
-from ..constants import ACCENT, ACCENT_LABEL, AMBER
-from ..constants import MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR
-from ..rock_instances import form_seed
-from ..rock_shape import FINE_DETAIL, rock_meshes, rotate
-from ..special_rocks import special_mesh
-from ..portal_base_hero import PortalBaseHero
+from presentation.constants import ACCENT, ACCENT_LABEL, AMBER
+from presentation.constants import (
+    MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_CAP_COLOR,
+)
+from presentation.scene.planetary.rock_instances import form_seed
+from presentation.scene.planetary.rock_shape import FINE_DETAIL, rock_meshes, rotate
+from presentation.scene.planetary.special_rocks import special_mesh
+from presentation.scene.artificial.portal_base_hero import PortalBaseHero
 from .common import draw_beveled_panel, bezel_depth, panel_box_top
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
-    from galaxies.asteroid import Asteroid
-    from galaxies.rock import Rock
-    from galaxies.ore_mine import OreMine
-    from galaxies.outpost import Outpost
+    from universe.artifacts.spaceships.ship import Ship
+    from universe.bodies.asteroids.asteroid import Asteroid
+    from universe.bodies.rock import Rock
+    from universe.artifacts.ore_mine import OreMine
+    from universe.artifacts.settlements.outpost import Outpost
 
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
 _portrait_cache: Optional[Tuple[int, Tuple[int, int], pygame.Surface]] = None
@@ -172,10 +174,10 @@ class Scanner:
 
     @staticmethod
     def _draw_asteroid(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, asteroid: Asteroid) -> None:
-        """The asteroid's mesh (graphics/asteroids.py) seen from the ship, filling the square: each face in the colour
-        the star gives it, the ones turned away from the ship left out, the farthest first."""
+        """The asteroid's mesh (presentation/scene/interplanetary/asteroids.py) seen from the ship, filling the square:
+        each face in the colour the star gives it, the ones turned away from the ship left out, the farthest first."""
         import game_environment as gem
-        from ..asteroids import Asteroids
+        from presentation.scene.interplanetary.asteroids import Asteroids
         model = Asteroids.model(asteroid.seed, 2.0 * asteroid.radius)
         date = gem.current_environment.date_time
         centre = np.array(tuple(asteroid.calculate_stellar_position(date)))
@@ -224,7 +226,8 @@ class Scanner:
     def _draw_scanned_rock(surface: pygame.Surface, rect: pygame.Rect, ship: Ship, rock: Rock) -> None:
         """Render `rock`'s boulder inside `rect`, at the same relative orientation the player currently sees it
         from, normalized to its bounding cube so every rock, regardless of true size or distance, fills the square.
-        The shape is the one the 3D view draws (graphics/rock_shape.py); each triangle is shaded by its normal."""
+        The shape is the one the 3D view draws (presentation/scene/planetary/rock_shape.py); each triangle is shaded by
+        its normal."""
         view = math.radians(ship.attitude.yaw)
         cos_view, sin_view = math.cos(view), math.sin(view)
         tilt, orientation = np.array([rock.tilt]), np.array([rock.orientation])

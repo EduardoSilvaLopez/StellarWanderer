@@ -18,18 +18,18 @@ import random
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from galaxies.seeds import of_text
+from universe.structure.seeds import of_text
 
 from .mission import DONE, FAILED, OPEN, Mission, register
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.asteroid import Asteroid
-    from galaxies.asteroid_belt import AsteroidBelt
-    from galaxies.settlement import Settlement
-    from galaxies.stellar_system import StellarSystem
-    from galaxies.people.player import Player
+    from universe.bodies.asteroids.asteroid import Asteroid
+    from universe.structure.asteroid_belt import AsteroidBelt
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.structure.stellar_system import StellarSystem
+    from universe.society.people.player import Player
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +79,9 @@ class ScanAsteroid(Mission):
     # region The asteroid
     def _choose_asteroid_site(self) -> dict | None:
         """The target, from the mission's seed: None if the belt has no asteroid in the place drawn (no offer then)."""
-        from galaxies.asteroid import Asteroid  # local: these modules need the galaxy package to load first
-        from galaxies.asteroid_belt import AsteroidBelt
+        # local: these modules need the galaxy package to load first
+        from universe.bodies.asteroids.asteroid import Asteroid
+        from universe.structure.asteroid_belt import AsteroidBelt
         system = self.issuer_settlement.stellar_system
         belts = [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
         is_free_living = not belts or self.my_random.random() < ScanAsteroid.FREE_LIVING_CHANCE
@@ -103,7 +104,7 @@ class ScanAsteroid(Mission):
         """The system of the target and its belt (None for a free-living one). None if the galaxy has no such system, or
         the system has no belt of that number."""
         import game_environment as gem
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.structure.asteroid_belt import AsteroidBelt
         system = gem.current_environment.galaxy.system_of_key(site['system'])
         if system is None:
             return None
@@ -118,7 +119,7 @@ class ScanAsteroid(Mission):
         """The target. For an asteroid of a belt, the promoted one if it is, else one made for the moment
         (the belt is not changed)."""
         if self._asteroid is None:
-            from galaxies.asteroid import Asteroid, AsteroidKey
+            from universe.bodies.asteroids.asteroid import Asteroid, AsteroidKey
             site = self.asteroid_site
             if site is None:
                 raise ValueError(f"{self.KIND} has no asteroid site")
@@ -165,7 +166,7 @@ class ScanAsteroid(Mission):
         """The pilot takes the offer: the asteroid is promoted (kept and saved: by its belt, or by its system if it
         is free-living), so it is the one the mission asks for."""
         super().accept(now)
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self.asteroid_site
         if site is None:
             return
@@ -213,7 +214,7 @@ class ScanAsteroid(Mission):
         return self._kept()
 
     def forget(self) -> None:
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self.asteroid_site
         if site is None:
             return
@@ -228,7 +229,7 @@ class ScanAsteroid(Mission):
 
     def _kept(self) -> bool:
         """Whether the asteroid is still kept: by its system (free-living) or its belt."""
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self.asteroid_site
         if site is None:
             return False

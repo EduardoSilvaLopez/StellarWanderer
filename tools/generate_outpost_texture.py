@@ -10,7 +10,7 @@ The building is 24 m x 12 m x 6 m, two levels of 3 m. Atlas 2048 x 1024, 40 pixe
     right side (12 x 6 m)              x 976..1456,   y 248..488
     flag       (3:2, any size on the quad)  x 1472..1856, y 0..256
     steel      (plain patch, for the flagpole)  x 1472..1504, y 264..296
-Keep this layout when replacing the PNG by hand (graphics/outposts.py has the same rectangles).
+Keep this layout when replacing the PNG by hand (presentation/scene/artificial/outposts.py has the same rectangles).
 
 It is a building for a world without air or water: sealed hatches and a docking collar, round portholes, thermal
 radiator panels, gold insulation foil, thruster clusters with soot, EVA handrails, a sensor dome and beacons. No

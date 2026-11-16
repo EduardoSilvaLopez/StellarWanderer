@@ -4,15 +4,15 @@ import logging
 import random
 from functools import cached_property
 
-from galaxies import seeds
-from galaxies.ore_mine import ExternalMine, OreMine
+from universe.structure import seeds
+from universe.artifacts.ore_mine import ExternalMine, OreMine
 
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from galaxies.km2 import Km2
-    from galaxies.rock import Rock
+    from universe.bodies.km2 import Km2
+    from universe.bodies.rock import Rock
 
 logger = logging.getLogger(__name__)
 

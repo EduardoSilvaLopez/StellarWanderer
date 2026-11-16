@@ -5,15 +5,15 @@ from __future__ import annotations
 import math
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import (ACCENT, ACCENT_DIM, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR,
+from presentation.constants import (ACCENT, ACCENT_DIM, ACCENT_LABEL, ADVICE_ACCELERATE_COLOR, ADVICE_COLOR,
                          ADVICE_DECELERATE_COLOR, ADVICE_STAY_COLOR, AMBER, BINDING_NEAR_GREEN, SPEED_WARNING_RED)
 from .common import draw_beveled_panel, bezel_depth
 from common.units import format_compact_distance, format_compact_duration, format_compact_speed
-from spaceships.long_distance_advice import Advice, LongDistanceAdvisor
+from universe.artifacts.spaceships.long_distance_advice import Advice, LongDistanceAdvisor
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.artifacts.spaceships.ship import Ship
 
 Colour = Tuple[int, int, int]
 
@@ -62,7 +62,7 @@ class ProximityMeter:
         """The fixed zone's scale in `bar_rect`: a beveled panel, filled from the bottom while the ship is in the fixed
         zone."""
         import game_environment as gem
-        from spaceships.navigation import Navigation
+        from universe.artifacts.spaceships.navigation import Navigation
         body = gem.current_environment.targeted_body
 
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
@@ -89,8 +89,8 @@ class ProximityMeter:
         highest point (only while the path is closed and inside the fixed zone), and the bind shell, a thin line. The
         lowest point is what the ORBIT assist needs above the shell (see OrbitAssist.begin). Drawn only while the ship
         falls freely: compensating the pull, it moves in a straight line, not along that path."""
-        from galaxies.kepler import apsides
-        from spaceships.navigation import Navigation
+        from universe.structure.kepler import apsides
+        from universe.artifacts.spaceships.navigation import Navigation
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         periapsis, apoapsis, _ = apsides(body.gravitational_parameter, r_vec, v_vec)
         shell = Navigation.BIND_RADIUS_MULTIPLE * body.radius

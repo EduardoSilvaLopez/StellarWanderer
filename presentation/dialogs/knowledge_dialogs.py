@@ -18,13 +18,13 @@ from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR, MessageDialog
 from .dialog import DialogResult
 from . import search_box
-from .messages import Message
+from common.messages import Message
 from .settlement_screen import HEAT_SHIELD_OPTIONS
 
 if TYPE_CHECKING:
-    from galaxies.asteroid import Asteroid
-    from galaxies.people.person import Person
-    from spaceships.ship import Ship
+    from universe.bodies.asteroids.asteroid import Asteroid
+    from universe.society.people.person import Person
+    from universe.artifacts.spaceships.ship import Ship
 
 LABEL_COLOR = (120, 175, 175)
 HEADING_COLOR = (225, 245, 245)
@@ -201,8 +201,8 @@ class KnownSystemsDialog(_ListDialog):
 
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
-        from galaxies.asteroid_belt import AsteroidBelt
-        from galaxies.people import knowledge
+        from universe.structure.asteroid_belt import AsteroidBelt
+        from universe.society.people import knowledge
 
         galaxy = gem.current_environment.galaxy
         systems = [system for key in knowledge.current_knowledge.bodies
@@ -301,8 +301,8 @@ class KnownSystemsDialog(_ListDialog):
     def _locked(item) -> bool:
         """Whether a mission is about the item: an asteroid of one, or a belt with one of its asteroids. Such an item
         can be neither hidden nor forgotten."""
-        from galaxies.asteroid import Asteroid
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.bodies.asteroids.asteroid import Asteroid
+        from universe.structure.asteroid_belt import AsteroidBelt
         if isinstance(item, Asteroid):
             return item.stellar_system.is_mission_target(item)
         if isinstance(item, AsteroidBelt):
@@ -413,7 +413,7 @@ class KnownPeopleDialog(_ListDialog):
     # region Cards
     def _build(self, width: int) -> List[Tuple[pygame.Surface, int]]:
         import game_environment as gem
-        from galaxies.people import knowledge
+        from universe.society.people import knowledge
 
         galaxy = gem.current_environment.galaxy
         settlements = [
@@ -648,7 +648,7 @@ def _si(value: float, unit: str) -> str:
 
 class ShipSpecificationsDialog(_ListDialog):
     """The specifications of the pilot's ship: its kind (the name of its configuration), then the values that vary from
-    one kind to another (see spaceships/ship_configurations). Same results as KnownSystemsDialog."""
+    one kind to another (see universe/artifacts/spaceships/configurations). Same results as KnownSystemsDialog."""
 
     def __init__(self, ship: Ship) -> None:
         self._ship: Ship = ship

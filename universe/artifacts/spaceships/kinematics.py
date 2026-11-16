@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, TypeVar
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
+    from universe.bodies.km2 import Km2
 
 _ComponentsT = TypeVar('_ComponentsT', bound='_Components')
 

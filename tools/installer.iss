@@ -1,4 +1,4 @@
-; Inno Setup script: packs temp\dist\StellarWanderer (built by StellarWanderer.spec) into a Windows installer.
+; Inno Setup script: packs data\dist\StellarWanderer (built by StellarWanderer.spec) into a Windows installer.
 ; Build with tools\build_windows.ps1, or compile this file with the Inno Setup compiler (ISCC.exe).
 ; Paths here are relative to this file's folder (tools), so the project folder is "..".
 
@@ -29,7 +29,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
 
 [Files]
-Source: "..\temp\dist\StellarWanderer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\data\dist\StellarWanderer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"

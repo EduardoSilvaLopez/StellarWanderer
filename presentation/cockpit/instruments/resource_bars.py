@@ -10,12 +10,12 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import pygame
 from .broken import Broken
-from spaceships.malfunction import Instrument
-from ..constants import (ACCENT, ACCENT_DIM, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN, GRAVITY_AMBER,
+from universe.artifacts.spaceships.malfunction import Instrument
+from presentation.constants import (ACCENT, ACCENT_DIM, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN, GRAVITY_AMBER,
                          GRAVITY_GREEN, GRAVITY_RED)
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 # The bar's colour by how much is left: red when empty, amber at half, green when full.
 GRADIENT = ((0.0, BINDING_MARK_RED), (0.5, AMBER), (1.0, BINDING_NEAR_GREEN))
@@ -74,7 +74,7 @@ def credits_shown() -> bool:
     """Credits are hidden in Those-Who-Share space, where they are illegal (the cargo list then shows them, in red, as
     contraband). The row keeps its place, so the other rows do not move."""
     import game_environment as gem
-    from galaxies.politics import political_entity
+    from universe.society.politics import political_entity
     return gem.current_environment.nearest_system.political_entity != political_entity.THOSE_WHO_SHARE
 
 

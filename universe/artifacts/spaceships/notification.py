@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional
 
-from common import audio
+from common import sound_events
 from common.updating import Updatable, update_queue
 
 import game_environment as gem
@@ -28,9 +28,9 @@ class Notification(Updatable):
         self.message = message
         self.bad = bad
         self.next_update_at = gem.current_environment.date_time + timedelta(seconds=60)
-        audio.play(sound or ('alert' if message.startswith('CRITICAL') else 'notify'))
+        sound_events.play(sound or ('alert' if message.startswith('CRITICAL') else 'notify'))
 
-        from galaxies.people.player import current_player
+        from universe.society.people.player import current_player
         current_player.time_scale = min(current_player.TIME_SCALE_MIN, current_player.time_scale)
 
         if self not in update_queue:

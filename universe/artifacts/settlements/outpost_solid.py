@@ -1,14 +1,14 @@
 """What a ship cannot fly through at an outpost: its building and, from size 3, the annex behind it. Each is a solid box
 standing on the ground and turned by the outpost's orientation, with the door of the building on its local +z (see
-graphics/outposts.py). Its frame is the surface frame of the planet (x east, y up, z north) with the origin at the
-outpost's place on the ground, which is the frame of a bound ship, so the ship's position and axes are used as they
-are (Navigation._collide_with_outposts)."""
+presentation/scene/artificial/outposts.py). Its frame is the surface frame of the planet (x east, y up, z north) with
+the origin at the outpost's place on the ground, which is the frame of a bound ship, so the ship's position and axes are
+used as they are (Navigation._collide_with_outposts)."""
 
 from __future__ import annotations
 import math
 from typing import Sequence
 
-from galaxies.solid import Solid, Vec, box_distance, hull_radius
+from universe.artifacts.solid import Solid, Vec, box_distance, hull_radius
 
 # A box of the structure: width (local x), height, depth (local z) and where its centre is along local z, in m.
 Part = tuple[float, float, float, float]

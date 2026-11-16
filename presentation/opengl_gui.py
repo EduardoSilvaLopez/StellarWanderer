@@ -11,60 +11,62 @@ from OpenGL import GL
 
 from common.frame_watch import frame_watch
 from .constants import CONSOLE_TOP, SPACE_COLOR, MAX_DEPTH
-from .cockpit import Cockpit
-from .milky_way import MilkyWay
-from .distant_stars import DistantStars
-from .local_star import view_of, erase, sun_visibility
-from .star_gl import StarGl
-from .star_surface import visor_strength
-from .starlight import Starlight, AtmosphereLight, HeatVignette
+from presentation.cockpit.cockpit import Cockpit
+from presentation.scene.interstellar.milky_way import MilkyWay
+from presentation.scene.interstellar.distant_stars import DistantStars
+from presentation.scene.interplanetary.local_star import view_of, erase, sun_visibility
+from presentation.scene.interplanetary.star_gl import StarGl
+from presentation.scene.interplanetary.star_surface import visor_strength
+from presentation.scene.starlight import Starlight, AtmosphereLight, HeatVignette
 from .debug_fps import DebugFps
-from .lit_worlds import LitWorlds
-from .outpost_markers import OutpostMarkers
-from .fixed_world import FixedWorld
-from .orbit_path import OrbitPath
-from .asteroids import Asteroids
-from .portal_base_gl import PortalBaseGl
-from .portal_gl import PortalGl
-from .other_worlds import OtherWorlds
-from .rocks import Rocks
-from .rock_batches import RockBatches
-from .terrain_gl import TerrainGl
-from .ore_fields import OreFields
-from .ore_mines import OreMines
-from .outposts import Outposts
-from .giant_gl import GiantGl
-from .laser import Laser
-from .surface_light import SurfaceLight
-from .scoop_view import ScoopView
-from .incident_view import IncidentView
-from .instruments.scanner import Scanner
+from presentation.scene.lit_worlds import LitWorlds
+from presentation.cockpit.outpost_markers import OutpostMarkers
+from presentation.scene.planetary.bound_world import BoundWorld
+from presentation.cockpit.orbit_path import OrbitPath
+from presentation.scene.interplanetary.asteroids import Asteroids
+from presentation.scene.artificial.portal_base_gl import PortalBaseGl
+from presentation.scene.artificial.portal_gl import PortalGl
+from presentation.scene.interplanetary.other_worlds import OtherWorlds
+from presentation.scene.planetary.rocks import Rocks
+from presentation.scene.planetary.rock_batches import RockBatches
+from presentation.scene.planetary.terrain_gl import TerrainGl
+from presentation.scene.planetary.ore_fields import OreFields
+from presentation.scene.artificial.ore_mines import OreMines
+from presentation.scene.artificial.outposts import Outposts
+from presentation.scene.interplanetary.giant_gl import GiantGl
+from presentation.scene.artificial.laser import Laser
+from presentation.scene.surface_light import SurfaceLight
+from presentation.cockpit.scoop_view import ScoopView
+from presentation.cockpit.incident_view import IncidentView
+from presentation.cockpit.instruments.scanner import Scanner
 
 if TYPE_CHECKING:
-    from galaxies.people.player import Player
-    from spaceships.ship import Ship
+    from universe.society.people.player import Player
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
-    from galaxies.outpost import Outpost
+    from universe.artifacts.settlements.outpost import Outpost
 
 
 class OpenGLGui:
     """Compose the software UI and depth-tested OpenGL rock pass.
 
     The sky is layered, from the back: the fixed stars (dots drawn straight in OpenGL), the giants (their haze and rings
-    cover the stars; see graphics/giant_gl.py), the sun, and the rest of the sky (the worlds farther than the sun, a hole
-    where the sun is, the worlds nearer than it, the targeted body), an RGBA texture with per-pixel alpha, transparent where
-    nothing is drawn, so the sun shows through the hole, and the glare goes over the sky. Under the
-    sun, straight on the black the window is cleared to, goes the Milky Way (graphics/milky_way.py). See
-    graphics/star_gl.py. The giants (graphics/giant_gl.py) are under the sky too, after the sun: the sky is made
-    transparent over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from
-    `Navigation.direction_to_star` and passed down to the renderers. Software surfaces are uploaded to OpenGL as BGRA straight from `surface.get_buffer()`
-    (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to `image.tostring`). Both were measured at
-    about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of full-window surfaces and per-frame
-    `image.tostring`.
+    cover the stars; see presentation/scene/interplanetary/giant_gl.py), the sun, and the rest of the sky (the worlds
+    farther than the sun, a hole where the sun is, the worlds nearer than it, the targeted body), an RGBA texture with
+    per-pixel alpha, transparent where nothing is drawn, so the sun shows through the hole, and the glare goes over the
+    sky. Under the sun, straight on the black the window is cleared to, goes the Milky Way
+    (presentation/scene/interstellar/milky_way.py). See presentation/scene/interplanetary/star_gl.py. The giants
+    (presentation/scene/interplanetary/giant_gl.py) are under the sky too, after the sun: the sky is made transparent
+    over each, once what is farther than it is drawn. The SurfaceLight is built once per frame here from
+    `Navigation.direction_to_star` and passed down to the renderers. Software surfaces are uploaded to OpenGL as BGRA
+    straight from `surface.get_buffer()` (`_upload_texture`; 32-bit BGRA surfaces only, other formats fall back to
+    `image.tostring`). Both were measured at about 14 ms per frame, so avoid per-frame `pygame.transform.scale` of
+    full-window surfaces and per-frame `image.tostring`.
 
     With the scoop open (Ship.scoop_open) the cockpit leaves the scanner's square empty and the scoop's view is drawn
-    over it, after the cockpit (graphics/scoop_view.py), from the Km2s, outposts and asteroids of this frame's passes.
-    While the hull leaks, a red light waves over the whole window after the cockpit (graphics/incident_view.py).
+    over it, after the cockpit (presentation/cockpit/scoop_view.py), from the Km2s, outposts and asteroids of this
+    frame's passes. While the hull leaks, a red light waves over the whole window after the cockpit
+    (presentation/cockpit/incident_view.py).
 
     What does not change from one frame to the next is not drawn nor uploaded again: the console is redrawn
     CONSOLE_REFRESH_FRAMES apart (at once when the mouse moves over it), and the sky's layer only when the view, the
@@ -145,7 +147,7 @@ class OpenGLGui:
             OrbitPath.draw(self.world_surface, width, height, environment, ship)
             frame_watch.mark('orbit path')
             if light is not None:
-                FixedWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
+                BoundWorld.draw_surface(self.world_surface, width, height, environment, ship, light.ground_colour())
             elif ship.is_bound:
                 LitWorlds.draw_targeted(self.world_surface, width, height, environment, ship)
             frame_watch.mark('fixed world')

@@ -9,10 +9,10 @@ import random
 from functools import cached_property
 
 from common.updating import Updatable, update_queue
-from galaxies import seeds
+from universe.structure import seeds
 
 if TYPE_CHECKING:
-    from galaxies.ore_fields import OreField
+    from universe.artifacts.ore_fields import OreField
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +157,8 @@ class OreMine(Updatable):
         """Whether this mine sells its extraction for credits: the pilot has sold the mine codes of this mine's system
         and has not denounced the smugglers since (the flags `sold mine codes <system seed>` and `ratted ore smugglers
         <system seed>` of the Those-Who-Share standing, see settlement_chat)."""
-        import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
-        from galaxies.politics import political_entity
+        import universe.society.people.player as gpp  # local: the player loads the world, which loads this module
+        from universe.society.politics import political_entity
         system = self.parent_field.parent_km2.parent_world.stellar_system
         flags = gpp.current_player.political_status[political_entity.THOSE_WHO_SHARE].flags
         return f"sold mine codes {system.seed}" in flags and f"ratted ore smugglers {system.seed}" not in flags

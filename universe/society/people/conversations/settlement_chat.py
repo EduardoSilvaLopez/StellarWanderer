@@ -18,19 +18,19 @@ from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional
 
 import logging
-from galaxies.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
-from galaxies.people.conversation import Conversation
-from galaxies.people.person import Person
-from galaxies import seeds
-from galaxies.people.role import (
+from universe.society.people.chat_log import NPC, PLAYER, ChatLog, parse_marks
+from universe.society.people.conversation import Conversation
+from universe.society.people.person import Person
+from universe.structure import seeds
+from universe.society.people.role import (
     BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, FARMER,
     GUNNER, JANITOR, KOMISAR, RESEARCHER, RINGMASTER, SECURITY, SMITH, STEVEDORE,
 )
-from galaxies.people.player import Player
-from galaxies.politics import political_entity
-from galaxies.portals.portal_base import PortalBase
-from galaxies.settlement import Settlement
-from common.prices import at_date
+from universe.society.people.player import Player
+from universe.society.politics import political_entity
+from universe.artifacts.settlements.portal_base import PortalBase
+from universe.artifacts.settlements.settlement import Settlement
+from universe.society.prices import at_date
 
 # A political text: its three tones, in the order -1, 0, 1.
 PoliticalTexts = tuple[str, str, str]
@@ -42,7 +42,7 @@ PoliticalTopics = dict[str, tuple[float, PoliticalTexts, tuple[PoliticalText, Po
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
+    from universe.artifacts.settlements.settlement import Settlement
 
 # Flags of the Those-Who-Share standing, each followed by the seed of the system (see ore_mine._sells_for_credits).
 SOLD_FLAG = "sold mine codes"
@@ -1341,7 +1341,7 @@ class SettlementChat(Conversation):
         )
 
     def talk_outpost(self) -> str:
-        from galaxies.outpost import Outpost
+        from universe.artifacts.settlements.outpost import Outpost
         if isinstance(self.place, Outpost):
             founded: datetime = self.place.founded_at
             now: datetime = self.date_time

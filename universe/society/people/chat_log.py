@@ -1,5 +1,5 @@
 """The chat of an outpost: what has been said with the person selected in the Chat option, as data (the lines, and the
-replies the player is offered). common/dialogs/chat_view.py draws it; settlement_chat.py writes into it.
+replies the player is offered). presentation/dialogs/chat_view.py draws it; settlement_chat.py writes into it.
 
 An expression of a text written for the chat is a conversation tag if, and only if, it is one of the known tags, present
 case-insensitively as whole words: "I came with my family" has the tag "family" if that is known. The tag words are shown
@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, List, Mapping, Optional, Tuple
 
 if TYPE_CHECKING:
-    from galaxies.people.person import Person
+    from universe.society.people.person import Person
 
 PLAYER = 'player'
 NPC = 'npc'

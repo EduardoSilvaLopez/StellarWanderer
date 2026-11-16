@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import pygame
 
 from common.paths import resource_path
-from galaxies import seeds
+from universe.structure import seeds
 from .outpost_yard import BILLBOARD_HEIGHT as HEIGHT
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
+    from universe.artifacts.settlements.outpost import Outpost
 
 POSTERS_FOLDER = resource_path('posters')
 EXTENSIONS = ('.jpg', '.jpeg', '.png')

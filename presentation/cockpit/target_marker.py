@@ -5,12 +5,14 @@ when the body is out of view. Drawn while unbound only (while bound, the target 
 from __future__ import annotations
 from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 import pygame
-from .constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP, NEAR_CLIP, TARGET_MARKER_COLOR
+from presentation.constants import (
+    CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP, NEAR_CLIP, TARGET_MARKER_COLOR,
+)
 from .instruments.common import view_geometry
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 Point = Tuple[float, float]
 

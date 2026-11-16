@@ -24,12 +24,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from galaxies.politics import political_entity
-from common.dialogs.messages import Message, show_message
+from universe.society.politics import political_entity
+from common.messages import Message, show_message
 
 if TYPE_CHECKING:
-    from galaxies.portals.portal_base import PortalBase
-    from galaxies.people.player import Player
+    from universe.artifacts.settlements.portal_base import PortalBase
+    from universe.society.people.player import Player
     from game_environment import GameEnvironment
 
 logger = logging.getLogger(__name__)

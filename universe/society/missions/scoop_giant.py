@@ -7,19 +7,19 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Any, Optional
 
-from galaxies.seeds import of_text
+from universe.structure.seeds import of_text
 
 from .mission import register
 from .scoop_body import ScoopBody
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from galaxies.jovian_world import JovianWorld
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.bodies.jovian_world import JovianWorld
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
+    from universe.artifacts.spaceships.ship import Ship
 
 
 @register
@@ -46,7 +46,7 @@ class ScoopGiant(ScoopBody):
 
     @classmethod
     def _target(cls, outpost: Settlement, seed: int) -> Optional[dict]:
-        from galaxies.jovian_world import JovianWorld
+        from universe.bodies.jovian_world import JovianWorld
         giants = [world for world in outpost.stellar_system.get_all_worlds() if isinstance(world, JovianWorld)]
         if not giants:
             return None
@@ -55,7 +55,7 @@ class ScoopGiant(ScoopBody):
 
     def giant_world(self) -> JovianWorld:
         """The giant, found from its place in the system."""
-        from galaxies.jovian_world import JovianWorld
+        from universe.bodies.jovian_world import JovianWorld
         orbit_key, index = self.giant.split('|')
         for orbit in self.issuer_settlement.stellar_system.orbits:
             if orbit.get_alterations_key() == orbit_key:

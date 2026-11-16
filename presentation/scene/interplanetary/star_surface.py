@@ -1,7 +1,8 @@
 """The sun's surface: granulation, sunspots and the visor that darkens the view when the sun is large.
 
 Granulation is a fine, random mottling of the disc (the convection cells of the photosphere). It is baked, once per star
-colour, into the texture that graphics/star_gl.py draws, so it costs nothing per frame and it does not turn.
+colour, into the texture that presentation/scene/interplanetary/star_gl.py draws, so it costs nothing per frame and it
+does not turn.
 
 Sunspots are darker patches on the star's face. Each has a fixed place on the star (a latitude and a longitude at game
 time 0) and turns with the star's rotation period, so it crosses the disc, is foreshortened towards the rim and goes
@@ -18,7 +19,7 @@ import random
 from typing import List, NamedTuple
 import numpy as np
 import pygame
-from .constants import (
+from presentation.constants import (
     GRANULATION_STRENGTH, GRANULE_CELL_SHARE, SPOT_COUNT_MIN, SPOT_COUNT_EXTRA, SPOT_RADIUS_MIN, SPOT_RADIUS_MAX,
     VISOR_START_PX, VISOR_FULL_PX, VISOR_MAX_ALPHA,
 )

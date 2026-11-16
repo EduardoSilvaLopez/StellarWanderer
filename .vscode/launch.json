@@ -19,7 +19,7 @@
             "name": "History simulation",
             "type": "debugpy",
             "request": "launch",
-            "module": "galaxies.politics.simulation_script",
+            "module": "universe.society.politics.simulation_script",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "justMyCode": false,

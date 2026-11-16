@@ -26,31 +26,31 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import math
 import pygame
 
-from galaxies.politics import political_entity
-from galaxies.settlement_kind import SettlementKind
-from common import audio
+from universe.society.politics import political_entity
+from universe.artifacts.settlements.settlement_kind import SettlementKind
+from presentation import audio
 from common.paths import resource_path
-from common.dialogs.area_pictures import (
+from presentation.dialogs.area_pictures import (
     AREA_PICTURE_PREFIXES, choose as _choose, cover as _cover, darken as _darken, faded as _faded,
 )
-from graphics.constants import CONSOLE_TOP
-from graphics.fallback_font import FallbackFont
+from presentation.constants import CONSOLE_TOP
+from presentation.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
-from .messages import Message, ResultCallback, confirm
-from galaxies.people.chat_log import ChatLog
+from common.messages import Message, ResultCallback, confirm
+from universe.society.people.chat_log import ChatLog
 from .chat_view import ChatTags, ChatView
 from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
 from .scroll_bar import ScrollBar
 from .staff_list import StaffList
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.conversation import Conversation
-    from galaxies.people.conversations.settlement_chat import SettlementChat
-    from galaxies.people.person import Person
-    from spaceships.cargo_hold import Supply
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.conversation import Conversation
+    from universe.society.people.conversations.settlement_chat import SettlementChat
+    from universe.society.people.person import Person
+    from universe.artifacts.spaceships.cargo_hold import Supply
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
 BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave', 'Retire')
@@ -246,7 +246,7 @@ class SettlementScreenDialog(Dialog):
         self._leave_conversation: Optional[Conversation] = None  # the coordinator's, while the Leave is being decided
         self._leaving: bool = False  # it was answered Yes: the next event ends the screen
         # local: the player needs the missions, which need the settlements, which need the dialogs
-        from galaxies.people.player import current_player
+        from universe.society.people.player import current_player
         self.ship = current_player.ship  # docked by the player's enter_settlement, which comes before this screen
         if self.settlement.player_reputation_on_entering is None:  # a fresh entry, not a screen remade after a load
             self.settlement.player_reputation_on_entering = current_player.reputation
@@ -293,8 +293,8 @@ class SettlementScreenDialog(Dialog):
 
     def notification_height(self, window_size: Tuple[int, int]) -> int:
         """The height of the notification bar along the bottom: the cockpit's, the same share of the console
-        (graphics/instruments/console.py). The host draws it (see main.draw_settlement_view); the blocks end above
-        it."""
+        (presentation/cockpit/instruments/console.py). The host draws it (see main.draw_settlement_view); the blocks end
+        above it."""
         return int(window_size[1] * (1 - CONSOLE_TOP) * 0.12)
 
     def draw(self, surface: pygame.Surface) -> None:
@@ -342,7 +342,8 @@ class SettlementScreenDialog(Dialog):
     def _equipment(self) -> Tuple[str, ...]:
         """The equipment rows the ship is offered (EQUIPMENT): the Heat Shield and the Solar Panels on every ship but
         the Shabby TWS miner."""
-        from spaceships.ship_configurations import ShabbyTwsMiner  # local: the configurations are the game's
+        # local: the configurations are the game's
+        from universe.artifacts.spaceships.configurations import ShabbyTwsMiner
         if isinstance(self.ship, ShabbyTwsMiner):
             return tuple(name for name in EQUIPMENT if name not in ('Heat Shield', 'Solar Panels'))
         return EQUIPMENT
@@ -351,7 +352,8 @@ class SettlementScreenDialog(Dialog):
         """The cargo view (see the class): the ship's picture, the levels and the equipment on the left, the room left
         in
         the hold and the cargo rows on the right. There is no conversation here."""
-        from spaceships.cargo_hold import CARGO, MINES  # local: the ship's hold is the game's, not the dialogs'
+        # local: the ship's hold is the game's, not the dialogs'
+        from universe.artifacts.spaceships.cargo_hold import CARGO, MINES
         margin = _margin(height)
         font = body_font(max(14, height // 48))
         row_height, gap = _button_size(height)
@@ -498,7 +500,7 @@ class SettlementScreenDialog(Dialog):
 
         names = self._chat_tags_now()
         tags_focus = names.index(self._focus[1]) if focus_kind == 'tag' and self._focus[1] in names else None
-        from galaxies.people.player import current_player  # local: as in _chat_tags_now
+        from universe.society.people.player import current_player  # local: as in _chat_tags_now
         self._chat_tags.place(_list_in_panel(surface, tags, margin))
         self._chat_tags.draw(surface, names, self._chat_active(), current_player.pinned_tags, tags_focus)
 
@@ -531,7 +533,7 @@ class SettlementScreenDialog(Dialog):
     def _chat_tags_now(self) -> List[str]:
         """The pilot's conversation tags the tags' search shows: the pinned ones in the order they were pinned, then the
         others alphabetically (Player.PRESENTATION_TAG comes first among them)."""
-        from galaxies.people.player import current_player  # local: the player needs the dialogs
+        from universe.society.people.player import current_player  # local: the player needs the dialogs
         if self._chat_tags is None:
             raise Exception("The chat's tags are not made.")
         pinned = current_player.pinned_tags
@@ -547,9 +549,9 @@ class SettlementScreenDialog(Dialog):
     def _start_tag(self, tag: str) -> None:
         """A tag starts its conversation with the person selected, in the same log as the chat before (see
         SettlementChat). Nothing happens while the chat is not active (see _chat_active)."""
-        from galaxies.people.conversations.settlement_chat import SettlementChat
+        from universe.society.people.conversations.settlement_chat import SettlementChat
             # local: the conversations need the dialogs
-        from galaxies.people.player import current_player
+        from universe.society.people.player import current_player
         self._sync_chat_log()
         if not self._chat_active():
             return
@@ -565,7 +567,7 @@ class SettlementScreenDialog(Dialog):
     def _toggle_pin(self, tag: str) -> None:
         """The Pin or Unpin button of a tag: a pinned tag goes to the end of the pinned ones, an unpinned one leaves
         them."""
-        from galaxies.people.player import current_player  # local: as in _start_tag
+        from universe.society.people.player import current_player  # local: as in _start_tag
         if tag in current_player.pinned_tags:
             current_player.pinned_tags.remove(tag)
         else:
@@ -574,7 +576,7 @@ class SettlementScreenDialog(Dialog):
     def _delete_tag(self, tag: str) -> None:
         """Right-click on a tag: after a confirmation, the pilot's list loses it, pinned or not. The presentation tag
         stays, as the one every pilot starts with."""
-        from galaxies.people.player import Player, current_player  # local: as in _start_tag
+        from universe.society.people.player import Player, current_player  # local: as in _start_tag
         if tag == Player.PRESENTATION_TAG:
             return
 
@@ -611,7 +613,7 @@ class SettlementScreenDialog(Dialog):
     def _supply_limit(self, key: str) -> float:
         """The most of the supply `key` the pilot may have in the hold: the hold's maximum, and the reputation's limit
         (_reputation_limit). Only for a supply the settlement gives."""
-        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        from universe.artifacts.spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         maximum = SUPPLIES[key].maximum
         if maximum is None:
             return math.inf  # no maximum: the room of the hold is the only limit
@@ -638,7 +640,7 @@ class SettlementScreenDialog(Dialog):
         """The supply `key` moved in one press: a supply the settlement gives is taken up to its limit (what the hold
         lacks
         of it, within its room, CargoHold.load), and one it only takes is given all."""
-        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        from universe.artifacts.spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         hold = self.ship.cargo_hold
         if SUPPLIES[key].takeable:
             wanted = self._supply_limit(key) - getattr(hold, key)
@@ -656,7 +658,7 @@ class SettlementScreenDialog(Dialog):
         leaving Cargo. A take that gets less than it asked for is refused, with a notification and the sound of the
         refusal (failed for a mine, the click for the others): the Community's message when a mine goes over the
         reputation limit (_reputation_limit), else the ship's. A take that goes through plays the click."""
-        from spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
+        from universe.artifacts.spaceships.cargo_hold import SUPPLIES  # local: as in _draw_cargo
         supply = SUPPLIES[key]
         hold = self.ship.cargo_hold
         before = getattr(hold, key)
@@ -809,7 +811,9 @@ class SettlementScreenDialog(Dialog):
         """The knowledge buttons (KNOWLEDGE_ORDER) in one row across the left block, from `top`, each square and as wide
         as its share of the row; Missions only where the cockpit shows it (shows_missions). Returns the y under the
         row."""
-        from graphics.instruments.cockpit_buttons import KNOWLEDGE_ORDER, MISSIONS, CockpitButtons, shows_missions
+        from presentation.cockpit.instruments.cockpit_buttons import (
+            KNOWLEDGE_ORDER, MISSIONS, CockpitButtons, shows_missions,
+        )
         # local: the instruments import the player, which imports the dialogs
         margin = _margin(height)
         gap = _button_size(height)[1]
@@ -983,9 +987,9 @@ class SettlementScreenDialog(Dialog):
         handling up to date (so the levels are current), the others show nothing yet."""
         if BUTTON_LABELS[self.selected] == 'Dockmaster' and self.officer is not None:
             # local: the conversation needs the settlement and the people, which need the dialogs
-            from galaxies.people.conversations.outpost_report_further import OutpostReportFurther
-            from galaxies.people.conversations.outpost_report_first import OutpostReportFirst
-            from galaxies.people.player import current_player
+            from universe.society.people.conversations.outpost_report_further import OutpostReportFurther
+            from universe.society.people.conversations.outpost_report_first import OutpostReportFirst
+            from universe.society.people.player import current_player
             if first_time:
                 self.conversation = OutpostReportFirst(current_player, self.officer, self.settlement, self._show)
             else:
@@ -1089,8 +1093,8 @@ class SettlementScreenDialog(Dialog):
             self._leaving = True
             return
         # local: the conversation needs the settlement and the people, which need the dialogs
-        from galaxies.people.conversations.settlement_on_leaving import SettlementOnLeaving
-        from galaxies.people.player import current_player
+        from universe.society.people.conversations.settlement_on_leaving import SettlementOnLeaving
+        from universe.society.people.player import current_player
         self._close_option()
         self._leave_conversation = SettlementOnLeaving(current_player, self.settlement.officer_for_leaving,
                                                        self.settlement, self._on_leave_decided, self._show)
@@ -1100,8 +1104,8 @@ class SettlementScreenDialog(Dialog):
     def _retire() -> None:
         """The Retire button: after a confirmation, the pilot hands the ship back and the game is over, as for a
         death (Player.game_over)."""
-        from galaxies.people.player import current_player  # local: the player needs the dialogs
-        from galaxies.people.conversations.settlement_chat import RATTED_FLAG
+        from universe.society.people.player import current_player  # local: the player needs the dialogs
+        from universe.society.people.conversations.settlement_chat import RATTED_FLAG
 
         has_ratted: bool = any(flag.startswith(RATTED_FLAG) for flag in current_player.flags)
 
@@ -1248,7 +1252,7 @@ class SettlementScreenDialog(Dialog):
         controls (the −, + and ++, or the −− and − of a give-only row), the people listed while Chat is selected, and
         the
         answers of the shown message. Then round again."""
-        from spaceships.cargo_hold import CARGO  # local: as in _draw_cargo
+        from universe.artifacts.spaceships.cargo_hold import CARGO  # local: as in _draw_cargo
         targets: List[tuple] = [] if self._blocks_options() else \
             [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
         if self._shows_cargo():

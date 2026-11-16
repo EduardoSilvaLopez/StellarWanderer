@@ -23,13 +23,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from common.vector3 import Vector3
-from galaxies.kepler import apsides
-from galaxies.world import World
+from universe.structure.kepler import apsides
+from universe.bodies.world import World
 import game_environment as gem
-from spaceships.navigation import Navigation
+from universe.artifacts.spaceships.navigation import Navigation
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
+    from universe.bodies.body import Body
     from .ship import Ship
 
 Thrust = Tuple[float, float, float]  # shares of the right, up and forward engines, -1 to 1

@@ -4,14 +4,14 @@ position, attitude and speed readouts (drawn in whatever column the console give
 from __future__ import annotations
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import CANOPY_TOP, ACCENT
+from presentation.constants import CANOPY_TOP, ACCENT
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 from common.units import format_compact_distance
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.artifacts.spaceships.ship import Ship
 
 
 ATTITUDE_INSTRUMENTS = {'Yaw': Instrument.YAW, 'Pitch': Instrument.PITCH, 'Roll': Instrument.ROLL}

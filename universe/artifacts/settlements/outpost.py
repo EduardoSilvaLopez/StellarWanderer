@@ -8,23 +8,24 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from common.vector3 import Vector3
 
-from galaxies import seeds
-from galaxies.outpost_solid import OutpostSolid, Part
-from galaxies.people.role import \
+from universe.structure import seeds
+from universe.artifacts.settlements.outpost_solid import OutpostSolid, Part
+from universe.society.people.role import \
     BUREAUCRAT, CAPTAIN, ENGINEER, FARMER, KOMISAR, \
     RESEARCHER, SECURITY, SMITH, STEVEDORE, Role
-from galaxies.rocky_world import RockyWorld
-from galaxies.settlement_kind import SettlementKind
-from galaxies.world_surface import SurfaceType
-from galaxies.settlement import (  # re-exported: the outposts' staff rota (SHIFT_HOURS) is read from here too
+from universe.bodies.rocky_world import RockyWorld
+from universe.artifacts.settlements.settlement_kind import SettlementKind
+from universe.bodies.world_surface import SurfaceType
+# re-exported: the outposts' staff rota (SHIFT_HOURS) is read from here too
+from universe.artifacts.settlements.settlement import (
     DATE_FORMAT, SHIFT_HOURS, Settlement, SettlementFocus,
 )
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from galaxies.body import Body
-    from galaxies.stellar_system import StellarSystem
+    from universe.bodies.body import Body
+    from universe.structure.stellar_system import StellarSystem
 
 __all__ = ['Outpost', 'DATE_FORMAT', 'SHIFT_HOURS']
 
@@ -35,25 +36,26 @@ class Outpost(Settlement):
     """A two-level building on a planet's surface (24 m x 12 m x 6 m, two levels of 3 m).
 
     Outposts belong to rocky worlds (`RockyWorld.outposts`, keyed by "lon lat"). They are the settlements of the history
-    of their system (galaxies/politics) after the portal base; `StellarSystem._place_settlements` makes them, so only
-    the initial system has any so far.
+    of their system (universe/society/politics) after the portal base; `StellarSystem._place_settlements` makes them, so
+    only the initial system has any so far.
     `surface_point_stellar` on the planet gives their surface position, and `stellar_position(t)` moves them with
     the planet. Rocks are not generated within `clearing_radius` of an outpost's centre (Km2), which grows with the
     size. From PAD_FROM_SIZE the outpost has a concrete square and a landing pad on the ground (drawn by
-    graphics/outposts.py). From ANNEX_FROM_SIZE the pad is a lift platform (the same place and radius) and a newer,
-    bigger block, the annex, stands behind the building and reaches ANNEX_OVERLAP into it, on bare ground: the pad's
-    square does not extend under it, and the annex has no door of its own. From SECOND_PAD_FROM_SIZE there is a second
-    pad beside the first (the concrete grows to hold it), on the same side of the building and at the same distance
-    from its door, and the clearing grows again. Every outpost has a `focus`, drawn from its seed: it matters (it
-    shows in the almanack, `Outpost.known_focus`) from FOCUS_FROM_SIZE, and from size 4 it brings a team of its own
-    (SIZE_FOCUS_TEAMS).
+    presentation/scene/artificial/outposts.py). From ANNEX_FROM_SIZE the pad is a lift platform (the same place and
+    radius) and a newer, bigger block, the annex, stands behind the building and reaches ANNEX_OVERLAP into it, on bare
+    ground: the pad's square does not extend under it, and the annex has no door of its own. From SECOND_PAD_FROM_SIZE
+    there is a second pad beside the first (the concrete grows to hold it), on the same side of the building and at the
+    same distance from its door, and the clearing grows again. Every outpost has a `focus`, drawn from its seed: it
+    matters (it shows in the almanack, `Outpost.known_focus`) from FOCUS_FROM_SIZE, and from size 4 it brings a team of
+    its own (SIZE_FOCUS_TEAMS).
 
     Labels, the sky dot and the world map show outposts (see ObjectLabels, OutpostMarkers, WorldMap). The scanner
     can target them (`Scanner._outpost_entry`, the building box with the door on local +z, so `orientation`
     is the heading the door faces), but the beam does nothing to them yet, and neither the laser nor the ground
     affects them yet. A ship cannot fly through the building (`solid`).
 
-    What happens inside (the staff, the repairs, the mission board) is the settlement's (galaxies/settlement.py).
+    What happens inside (the staff, the repairs, the mission board) is the settlement's
+    (universe/artifacts/settlements/settlement.py).
     """
 
     kind = SettlementKind.OUTPOST

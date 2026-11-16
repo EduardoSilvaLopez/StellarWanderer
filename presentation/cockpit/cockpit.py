@@ -12,14 +12,14 @@ from .instruments.location_info import LocationInfo
 from .instruments.crosshair import Crosshair
 from .instruments.cockpit_buttons import CockpitButtons
 from .instruments.broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 from .instruments.political_info import PoliticalInfo
 from .object_labels import ObjectLabels
 from .target_marker import TargetMarker
 from .velocity_markers import VelocityMarkers
 
 if TYPE_CHECKING:
-    from galaxies.people.player import Player
+    from universe.society.people.player import Player
 
 
 class Cockpit:

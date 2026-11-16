@@ -14,18 +14,18 @@ import logging
 import math
 import random
 
-from galaxies.seeds import of_text
+from universe.structure.seeds import of_text
 from .mission import Mission, OPEN, register
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
-    from galaxies.rock import Rock
-    from galaxies.rocky_world import RockyWorld
-    from galaxies.world import World
+    from universe.bodies.km2 import Km2
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
+    from universe.bodies.rock import Rock
+    from universe.bodies.rocky_world import RockyWorld
+    from universe.bodies.world import World
 
 logger = logging.getLogger(__name__)
 
@@ -78,13 +78,13 @@ class ScanRock(Mission):
         if self.object_type == 'rock' and self.rock_site is None:
             self.rock_site = self._choose_rock_site()
             if self.rock_site is not None:
-                from galaxies.rock import Rock  # local: the rock module needs the galaxy package to load first
+                from universe.bodies.rock import Rock  # local: the rock module needs the galaxy package to load first
                 self.adjective = self.my_random.choice(Rock.ADJECTIVES)
 
     # region The rock's site
     def _planet(self) -> RockyWorld:
         """The planet of the outpost that asked: a scan is only offered by outposts (see TERMS)."""
-        from galaxies.outpost import Outpost
+        from universe.artifacts.settlements.outpost import Outpost
         settlement = self.issuer_settlement
         if not isinstance(settlement, Outpost):
             raise ValueError(f"{self.KIND} is asked by {settlement.name}, which has no planet")
@@ -99,7 +99,7 @@ class ScanRock(Mission):
     def _world_at(self, index: Optional[int]) -> RockyWorld:
         """The outpost's planet (index None, an outpost on a planet only), or a moon of `_host`, which are rocky worlds
         too."""
-        from galaxies.rocky_world import RockyWorld
+        from universe.bodies.rocky_world import RockyWorld
         if index is None:
             return self._planet()
         moon = self._host().moons[index]
@@ -117,7 +117,7 @@ class ScanRock(Mission):
         """A random rock that is not molten, on a world of the outpost's system of worlds (see `_host`), from the mission's
         seed. One place is tried: None if that place has no rock left, or has an outpost (the people there would have
         scanned it themselves)."""
-        from galaxies.km2 import Km2
+        from universe.bodies.km2 import Km2
         host = self._host()
         first = -1 if host is self._planet() else 0  # -1 is the planet itself, a place only for an outpost on a planet
         index = self.my_random.randrange(first, len(host.moons))
@@ -142,7 +142,7 @@ class ScanRock(Mission):
     def _km2_at(world: RockyWorld, cell_longitude: int, cell_latitude: int, keep: bool) -> Km2:
         """The Km2 of a cell: the one in memory if it is loaded, else a new one, which is put in the world's Km2s if
         `keep` (so that a change to it is kept), or only made for the moment."""
-        from galaxies.km2 import Km2
+        from universe.bodies.km2 import Km2
         km2 = world.get_km2_at(cell_longitude, cell_latitude)
         if km2 is None:
             km2 = Km2(world, cell_longitude, cell_latitude, world.saved_alterations)

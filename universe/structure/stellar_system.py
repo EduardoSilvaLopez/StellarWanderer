@@ -6,26 +6,26 @@ import random
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import galaxies.constants
-from galaxies.people import knowledge
+import universe.structure.constants
+from universe.society.people import knowledge
 from common.units import format_compact_distance
-from galaxies import seeds
-from galaxies.asteroid import Asteroid, AsteroidKey
-from galaxies.asteroid_belt import AsteroidBelt
-from galaxies.body import Body
-from galaxies.orbit import Orbit
-from galaxies.orbit_layout import OrbitKind, OrbitLayout
-from galaxies.outpost import Outpost
-from galaxies.portals.portal import Portal
-from galaxies.portals.portal_base import PortalBase
-from galaxies.politics import political_entity
-from galaxies.rocky_world import RockyWorld
-from galaxies.star import Star
-from galaxies.world import World
+from universe.structure import seeds
+from universe.bodies.asteroids.asteroid import Asteroid, AsteroidKey
+from universe.structure.asteroid_belt import AsteroidBelt
+from universe.bodies.body import Body
+from universe.structure.orbit import Orbit
+from universe.structure.orbit_layout import OrbitKind, OrbitLayout
+from universe.artifacts.settlements.outpost import Outpost
+from universe.artifacts.settlements.portal import Portal
+from universe.artifacts.settlements.portal_base import PortalBase
+from universe.society.politics import political_entity
+from universe.bodies.rocky_world import RockyWorld
+from universe.bodies.star import Star
+from universe.bodies.world import World
 
 if TYPE_CHECKING:
-    from galaxies.galaxy import Galaxy
-    from galaxies.politics.expansion_history import SystemHistory
+    from universe.structure.galaxy import Galaxy
+    from universe.society.politics.expansion_history import SystemHistory
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class StellarSystem:
 
         # Only the initial star has a history so far; it gives the system its entity.
         self.history: SystemHistory | None = parent_galaxy.initial_history \
-            if star.position == galaxies.constants.INITIAL_STAR_POSITION else None
+            if star.position == universe.structure.constants.INITIAL_STAR_POSITION else None
         self.political_entity: political_entity.PoliticalEntity | None = \
             self.history.entity if self.history is not None else None
         # When the system was colonised, which is also when its portal base was founded.
@@ -131,7 +131,7 @@ class StellarSystem:
         jovian planets, at distances that follow the star's luminosity (see orbit_layout.py); none for a star of type O.
         The initial system always has an earthlike planet in orbit `OrbitLayout.INITIAL_ORBIT_NUMBER`. The layout is
         logged."""
-        is_initial_system = self.star.position == galaxies.constants.INITIAL_STAR_POSITION
+        is_initial_system = self.star.position == universe.structure.constants.INITIAL_STAR_POSITION
         layout = OrbitLayout.generate(self.star, my_random, is_initial_system)
         orbits = [
             (AsteroidBelt if plan.kind is OrbitKind.ASTEROID_BELT else Orbit)(
@@ -176,8 +176,8 @@ class StellarSystem:
         """The asteroids of the pilot's accepted, not yet finished scan missions whose target is in this system. They
         are shown, and can be targeted and fixed to."""
         # Local: the player imports the missions, which import this package.
-        import galaxies.people.player as player_module
-        from galaxies.missions import OPEN, DeliverWater, ScanAsteroid
+        import universe.society.people.player as player_module
+        from universe.society.missions import OPEN, DeliverWater, ScanAsteroid
         player = player_module.current_player
         if player is None:
             return []
@@ -202,8 +202,8 @@ class StellarSystem:
     def is_mission_target(self, asteroid: Asteroid) -> bool:
         """Whether an open mission of the pilot is about this asteroid: it can be neither hidden nor forgotten then."""
         # Local: as mission_asteroids, the missions import this package.
-        import galaxies.people.player as player_module
-        from galaxies.missions import OPEN, DeliverWater, ScanAsteroid
+        import universe.society.people.player as player_module
+        from universe.society.missions import OPEN, DeliverWater, ScanAsteroid
         player = player_module.current_player
         if player is None:
             return False
@@ -217,7 +217,7 @@ class StellarSystem:
     def promoted_asteroids(self) -> list[Asteroid]:
         """The asteroids that matter in this system, whatever became of their missions: the relevant ones of its belts,
         then the free-living ones."""
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.structure.asteroid_belt import AsteroidBelt
         result = [asteroid for orbit in self.orbits if isinstance(orbit, AsteroidBelt)
                   for asteroid in orbit.relevant.values()]
         return result + list(self.free_asteroids.values())

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from common.game_logging import configure_logging
-from galaxies.politics.expansion_history import ExpansionHistory
+from universe.society.politics.expansion_history import ExpansionHistory
 
 
 def main() -> None:

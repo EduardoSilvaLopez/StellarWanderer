@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING, Optional
 
 from .mission import register
 from .scoop_body import ScoopBody
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
+    from universe.artifacts.spaceships.ship import Ship
 
 
 @register

@@ -3,17 +3,17 @@
 import math
 
 # The font of the cockpit instruments and of the message dialogs' body text: a file in common/resources/fonts (SIL OFL).
-# Change it here to change both. The dialogs' body size goes with it (common/dialogs/dialog_fonts.py).
+# Change it here to change both. The dialogs' body size goes with it (presentation/dialogs/dialog_fonts.py).
 FONT_FILE = 'Oxanium.ttf'
 
 # Color palette
 # pitch black: in vacuum there is no sky glow. What light the sky has is the Milky Way and the stars
 SPACE_COLOR = (0, 0, 0)
-# The Milky Way, Andromeda and the Magellanic Clouds (graphics/milky_way.py). The panorama (tools/generate_milky_way.py)
-# keeps the real ratios between the brightness of its regions, but the real sky is far too faint for a screen (the
-# brightest Milky Way is about 1e-3 cd/m2, under one 8-bit step), so it is shown at this share of its stored brightness:
-# 0.2 puts the bulge near code 50 and the band near 20 on black. 0 hides it, 1 is the stored brightness. Ratios stay the
-# same.
+# The Milky Way, Andromeda and the Magellanic Clouds (presentation/scene/interstellar/milky_way.py). The panorama
+# (tools/generate_milky_way.py) keeps the real ratios between the brightness of its regions, but the real sky is far too
+# faint for a screen (the brightest Milky Way is about 1e-3 cd/m2, under one 8-bit step), so it is shown at this share
+# of its stored brightness: 0.2 puts the bulge near code 50 and the band near 20 on black. 0 hides it, 1 is the stored
+# brightness. Ratios stay the same.
 MILKY_WAY_EXPOSURE = 0.2
 HULL_COLOR = (38, 42, 55)
 HULL_DARK = (26, 24, 24)
@@ -55,9 +55,9 @@ RADAR_BASE_COLOR = (130, 215, 150)  # the portal base: a green, apart from the w
 RADAR_BASE_DOT_RADIUS = 2
 READOUT_BG = (9, 17, 21)
 LASER_COLOR = (255, 255, 0)
-# The beam's glow (graphics/laser.py) is additive, so it brightens what is behind it. It is round: concentric
-# cylinders, each a layer (radius as a share of the beam's half-size, colour, alpha 0-255). Stacked, the layers near
-# the axis add up to white-hot, and the light falls off smoothly, with no edge.
+# The beam's glow (presentation/scene/artificial/laser.py) is additive, so it brightens what is behind it. It is round:
+# concentric cylinders, each a layer (radius as a share of the beam's half-size, colour, alpha 0-255). Stacked, the
+# layers near the axis add up to white-hot, and the light falls off smoothly, with no edge.
 LASER_HALO_COLOR = (255, 170, 40)
 LASER_CORE_COLOR = (255, 255, 230)
 LASER_BEAM_SEGMENTS = 20  # the round cross-section of the beam and of the muzzle flash
@@ -114,15 +114,16 @@ CONSOLE_TOP = 0.66
 VIEW_VERTICAL_FOV_RADIANS = math.radians(40)  # was 60; narrowed ~1/3 to better match real eye-to-screen viewing angle
 NEAR_CLIP = 0.5  # metres
 MAX_DEPTH = 2000  # metres
-# The scoop's view (graphics/scoop_view.py): the camera under the hull, and how far its lamps reach.
-# The local star (graphics/local_star.py): a limb-darkened disc and its corona.
+# The scoop's view (presentation/cockpit/scoop_view.py): the camera under the hull, and how far its lamps reach.
+# The local star (presentation/scene/interplanetary/local_star.py): a limb-darkened disc and its corona.
 STAR_LIMB_DARKENING = 0.5  # u in I(mu) = 1 - u (1 - mu): the rim's brightness is 1 - u of the centre's
 STAR_CORE_WHITENESS = 0.6  # the centre of the disc: the star's colour mixed this much towards white
 STAR_CORONA_EXTENT = 4.0  # the corona fades out at this many star radii from the centre
 STAR_CORONA_FALLOFF = 2.5  # the corona's brightness falls as (R / r) ** this
 STAR_CORONA_ALPHA = 150  # the corona's opacity at the rim, 0-255
 STAR_GLOW_MIN_PX = 14  # the corona's radius in pixels is never less: a distant star is a glowing point
-# The sun's surface and visor (graphics/star_surface.py). Granulation and sunspots are baked into its texture.
+# The sun's surface and visor (presentation/scene/interplanetary/star_surface.py). Granulation and sunspots are baked
+# into its texture.
 GRANULATION_STRENGTH = 0.08  # how much the granules darken and brighten the disc
 GRANULE_CELL_SHARE = 0.04  # a granule's size, in disc radii
 SPOT_COUNT_MIN = 3  # sunspots: this many, and up to SPOT_COUNT_EXTRA more, by the star's seed
@@ -135,7 +136,8 @@ SPOT_MAX_TURN_PER_FRAME = 0.25  # above this share of a turn per frame, a sunspo
 VISOR_START_PX = 120  # the visor starts to darken the view when the sun's disc is this big on the screen
 VISOR_FULL_PX = 400  # and is at its darkest at this size
 VISOR_MAX_ALPHA = 0.8  # the darkest the visor makes the view (0 to 1)
-# The sun's flares and glare (graphics/star_flares.py, graphics/star_gl.py). Flares are in game time.
+# The sun's flares and glare (presentation/scene/interplanetary/star_flares.py,
+# presentation/scene/interplanetary/star_gl.py). Flares are in game time.
 FLARE_SLOT_SECONDS = 6 * 3600  # each slot of game time may hold one flare
 FLARE_CHANCE = 0.5  # the chance that a slot holds one
 FLARE_RISE_SECONDS = 60  # game seconds from start to peak
@@ -145,10 +147,10 @@ FLARE_SIZE_SHARE = 0.6  # a flare's size, in disc radii
 GLARE_MAX = 0.5  # the glare's brightness at the sun's position when it is at the screen centre
 GLARE_RADIUS_SHARE = 0.6  # the glare fades out at this share of the window's height from the sun
 GLARE_SIZE_OF_CORONA = 1.0  # the glare's half-size, in corona radii: it follows the sun's apparent size, not the window
-# Debug frame rate (graphics/debug_fps.py): source runs only.
+# Debug frame rate (presentation/debug_fps.py): source runs only.
 DEBUG_FPS_WINDOW_SECONDS = 0.5  # the rate is measured over this long
 DEBUG_FPS_POSITION = (12, 10)  # (x, y) of the top-right corner of the window, in pixels: the clock is on the left
-# Starlight on the cockpit and the heat vignette (graphics/starlight.py).
+# Starlight on the cockpit and the heat vignette (presentation/scene/starlight.py).
 STARLIGHT_TINT_MAX = 0.35  # share of the star's colour added to the cockpit at the death radius and nearer
 HEAT_VIGNETTE_COLOUR = (220, 30, 10)
 HEAT_VIGNETTE_MAX_ALPHA = 200  # at the window's corners, when the temperature is at its maximum

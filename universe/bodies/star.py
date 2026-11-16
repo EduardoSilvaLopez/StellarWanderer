@@ -8,11 +8,11 @@ import random
 from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
-from galaxies.body import Body
-from galaxies.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, LIGHT_YEAR_M, STAR_COLOUR_VIVIDNESS
+from universe.bodies.body import Body
+from universe.structure.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, LIGHT_YEAR_M, STAR_COLOUR_VIVIDNESS
 
 if TYPE_CHECKING:
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.stellar_system import StellarSystem
 
 
 def cell_of(position: tuple[float, float, float]) -> tuple[int, int, int]:
@@ -232,7 +232,8 @@ class Star(Body):
     @property
     def gravitational_parameter(self) -> float:
         """The star pulls every unbound ship outside the planets' fixed zones (see Navigation.attractor)."""
-        from galaxies.world import World  # local: the world module imports the knowledge base, which imports the star
+        # local: the world module imports the knowledge base, which imports the star
+        from universe.bodies.world import World
         return World.GRAVITATIONAL_CONSTANT * self.mass
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:

@@ -5,7 +5,7 @@ the date reads it from here. Nothing keeps a copy of the date: a copy would not 
 from __future__ import annotations
 import datetime
 
-from galaxies.constants import EPOCH
+from universe.structure.constants import EPOCH
 
 # datetime tops out at year 9999
 MAX_SECONDS = (datetime.datetime.max.replace(microsecond=0) - EPOCH).total_seconds()

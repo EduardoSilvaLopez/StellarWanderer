@@ -16,7 +16,7 @@ import pygame
 from OpenGL import GL
 
 from common.frame_watch import frame_watch
-from .constants import (
+from presentation.constants import (
     MINE_SEGMENTS, MINE_BASE_HEIGHT,
     MINE_TEXTURE_WIDTH, MINE_TEXTURE_HEIGHT,
     MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT,
@@ -26,8 +26,8 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from galaxies.ore_mine import OreMine
-    from .surface_light import SurfaceLight
+    from universe.artifacts.ore_mine import OreMine
+    from presentation.scene.surface_light import SurfaceLight
 
 # The colours of each look: hull, seams, highlights, accent band, hazard stripes (two).
 _ACTIVE_PALETTE = (MINE_HULL_COLOR, MINE_HULL_DARK, MINE_HULL_LIGHT, MINE_ACCENT, MINE_WARNING_A, MINE_WARNING_B)
@@ -72,7 +72,7 @@ class OreMines:
         """Camera-relative (x, y, z, u) points around a mine's circumference.
 
         Rotated by the mine's orientation using the same convention as
-        the rocks (graphics/rock_shape.py, rotate; no tilt term — mines stand vertical). Longitude/
+        the rocks (presentation/scene/planetary/rock_shape.py, rotate; no tilt term — mines stand vertical). Longitude/
         latitude are made relative to the player here, in double precision,
         before reaching glVertex3f — see the comment in Rocks.draw() for why.
         """

@@ -15,18 +15,20 @@ import random
 from typing import TYPE_CHECKING, Optional
 
 from common.vector3 import Vector3
-from galaxies import seeds
-from galaxies.body import Body
-from galaxies.people.role import (COM_OFFICER, DOCKMASTER, GUNNER, JANITOR, KOMISAR, RINGMASTER, SECURITY, STEVEDORE)
-from galaxies.portals.portal_base_solid import PortalBaseSolid
-from galaxies.settlement import Settlement, SettlementFocus
-from galaxies.settlement_kind import SettlementKind
-from galaxies.world import World
+from universe.structure import seeds
+from universe.bodies.body import Body
+from universe.society.people.role import (
+    COM_OFFICER, DOCKMASTER, GUNNER, JANITOR, KOMISAR, RINGMASTER, SECURITY, STEVEDORE,
+)
+from universe.artifacts.settlements.portal_base_solid import PortalBaseSolid
+from universe.artifacts.settlements.settlement import Settlement, SettlementFocus
+from universe.artifacts.settlements.settlement_kind import SettlementKind
+from universe.bodies.world import World
 
 if TYPE_CHECKING:
-    from galaxies.people.person import Person
-    from galaxies.stellar_system import StellarSystem
-    from spaceships.ship import Ship
+    from universe.society.people.person import Person
+    from universe.structure.stellar_system import StellarSystem
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class PortalBase(Body, Settlement):
@@ -53,8 +55,9 @@ class PortalBase(Body, Settlement):
     MOUTH_DEPTH = 48.0  # m, from the ring's centre to the mouth of the hangar, at the reference radius (100 m)
     BERTH_CLEARANCE = 200.0  # m, how far in front of the mouth the ship is put when the pilot leaves
     DOCK_MAX_SPEED = 1.0  # m/s relative to the base: the ship docks only below this, inside the docking place
-    # The hangar, at the reference radius (see graphics/portal_base_shape.py): its outer width and height, and the hub's
-    # length, which is where the hangar meets the ring's spokes; the mouth, and the docking place behind it.
+    # The hangar, at the reference radius (see presentation/scene/artificial/portal_base_shape.py): its outer width and
+    # height, and the hub's length, which is where the hangar meets the ring's spokes; the mouth, and the docking place
+    # behind it.
     HANGAR_WIDTH = 12.0
     HANGAR_HEIGHT = 10.0
     HUB_LENGTH = 8.0
@@ -152,7 +155,8 @@ class PortalBase(Body, Settlement):
 
     def approach_position(self, clearance: float = BERTH_CLEARANCE) -> Vector3:
         """The point `clearance` metres in front of the mouth of the hangar, on the axis, toward the star: where the
-        ship is put when the pilot leaves (the mouth faces the star, see graphics/portal_base_shape.py)."""
+        ship is put when the pilot leaves (the mouth faces the star, see
+        presentation/scene/artificial/portal_base_shape.py)."""
         mouth = self.MOUTH_DEPTH * self.radius / self.RING_RADIUS_MIN
         return Vector3(0.0, 0.0, self.height - mouth - clearance)
 

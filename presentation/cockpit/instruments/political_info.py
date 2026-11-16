@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Any, Optional, Tuple
 import pygame
-from ..constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP
+from presentation.constants import CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP
 
 
 class PoliticalInfo:

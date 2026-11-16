@@ -4,12 +4,12 @@ from __future__ import annotations
 from typing import List, Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
 import pygame
-from galaxies.jovian_world import JovianWorld
-from .lit_worlds import LitWorlds
+from universe.bodies.jovian_world import JovianWorld
+from presentation.scene.lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from galaxies.world import World
-    from spaceships.ship import Ship
+    from universe.bodies.world import World
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 

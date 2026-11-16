@@ -22,11 +22,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 from OpenGL import GL
 
-from . import shadow_map
-from .constants import SURFACE_STARLIGHT
+from presentation.scene import shadow_map
+from presentation.constants import SURFACE_STARLIGHT
 from .rock_shape import COARSE_DETAIL, FINE_DETAIL, rock_meshes
-from .shadow_map import ShadowMap
-from .surface_light import SurfaceLight
+from presentation.scene.shadow_map import ShadowMap
+from presentation.scene.surface_light import SurfaceLight
 from .terrain_gl import GRAIN_GLSL
 
 FORMS = 64                  # the shapes in the set

@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pygame
 
-from .constants import NEAR_CLIP, ORBIT_PATH_COLOR
-from .giant_gl import GiantGl
+from presentation.constants import NEAR_CLIP, ORBIT_PATH_COLOR
+from presentation.scene.interplanetary.giant_gl import GiantGl
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class OrbitPath:
@@ -26,9 +26,9 @@ class OrbitPath:
 
     @staticmethod
     def draw(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
-        from galaxies.asteroid import Asteroid
-        from galaxies.people import player as pem  # local: the player's choice to show orbits (toggled with O)
-        from galaxies.world import World
+        from universe.bodies.asteroids.asteroid import Asteroid
+        from universe.society.people import player as pem  # local: the player's choice to show orbits (toggled with O)
+        from universe.bodies.world import World
         body = environment.targeted_body
         if not pem.current_player.show_orbits or ship.is_bound or not isinstance(body, (World, Asteroid)):
             return  # the star has no orbit

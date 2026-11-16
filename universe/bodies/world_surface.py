@@ -13,13 +13,13 @@ import random
 from enum import Enum
 from typing import Dict, Tuple, TYPE_CHECKING
 
-from galaxies.constants import (
+from universe.structure.constants import (
     WORLD_BOND_ALBEDO, WORLD_BRIGHTNESS_JITTER, WORLD_COLOUR_REALISM, WORLD_VIVID_SATURATION_MAX,
     WORLD_VIVID_SATURATION_MIN,
 )
 
 if TYPE_CHECKING:
-    from galaxies.star import Star
+    from universe.bodies.star import Star
 
 Colour = Tuple[int, int, int]
 

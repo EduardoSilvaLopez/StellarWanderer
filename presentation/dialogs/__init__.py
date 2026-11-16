@@ -2,7 +2,7 @@
 
 from .dialog import Dialog, DialogResult, run_in_window
 from .message_dialog import MessageDialog
-from .messages import Message, confirm, show_message, next_pending_message
+from common.messages import Message, confirm, show_message, next_pending_message
 from .starting_dialog import StartingDialog
 from .knowledge_dialogs import KnownSystemsDialog, KnownPeopleDialog, ShipSpecificationsDialog
 from .mission_board_dialog import PendingMissionsDialog

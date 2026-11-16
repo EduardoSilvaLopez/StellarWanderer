@@ -1,6 +1,6 @@
 """What a size 4 outpost has around its pads and on its old roof, as plain geometry (no GL, so the preview in
-temp/ uses it too; graphics/outposts.py draws it): piles of small metal crates and cages on the concrete, antenna masts on the old
-building's roof, and the stand of the propaganda billboard.
+temp/ uses it too; presentation/scene/artificial/outposts.py draws it): piles of small metal crates and cages on the
+concrete, antenna masts on the old building's roof, and the stand of the propaganda billboard.
 
 Points are in the outpost's frame, in metres: x along the width, y up from the ground, z on the door axis. Every face
 comes with its outward normal, as the outposts are lit face by face. Each face costs the PyOpenGL calls of one quad,

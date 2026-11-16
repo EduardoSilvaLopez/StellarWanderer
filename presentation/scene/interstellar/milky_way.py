@@ -6,10 +6,10 @@ around the camera, before the sun and under the sky layer (`OpenGLGui.draw`), wh
 nothing: the GPU does the work, and a frame costs one display list.
 
 Where things are: the stellar frame (x right, y up, z forward) is the galactic frame turned, with the initial star as
-origin (galaxies/fixed_stars.py): the galactic centre is straight to -z, the north galactic pole is +y, and a direction
-at galactic longitude l and latitude b is (cos b sin l, sin b, -cos b cos l). The sky is so far away that it is the same
-for every system of the region. Unbound, the sphere stays in the stellar frame; bound, it is turned into the surface
-frame by `Navigation.sky_rotation`, so it moves with the world's spin and the ship's place on it.
+origin (universe/structure/fixed_stars.py): the galactic centre is straight to -z, the north galactic pole is +y, and a
+direction at galactic longitude l and latitude b is (cos b sin l, sin b, -cos b cos l). The sky is so far away that it
+is the same for every system of the region. Unbound, the sphere stays in the stellar frame; bound, it is turned into the
+surface frame by `Navigation.sky_rotation`, so it moves with the world's spin and the ship's place on it.
 
 The picture's brightness is the real one in ratios, not in absolute terms (see MILKY_WAY_EXPOSURE in constants.py).
 """
@@ -22,11 +22,11 @@ import pygame
 from OpenGL import GL, GLU
 
 from common.paths import resource_path
-from .constants import CONSOLE_TOP, MAX_DEPTH, MILKY_WAY_EXPOSURE, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
+from presentation.constants import CONSOLE_TOP, MAX_DEPTH, MILKY_WAY_EXPOSURE, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 PANORAMA_PATH = resource_path('textures', 'milky_way.png')
 SPHERE_RADIUS = 1000.0  # between the near and far planes: it only has to enclose the camera

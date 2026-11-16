@@ -8,23 +8,25 @@ import numpy as np
 from OpenGL import GL, GLU
 
 from common.frame_watch import frame_watch
-from .constants import CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, SHADOWS_BELOW_TIME_SCALE
+from presentation.constants import (
+    CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, SHADOWS_BELOW_TIME_SCALE,
+)
 from .ore_fields import OreFields
-from .ore_mines import OreMines
-from .outposts import Outposts
+from presentation.scene.artificial.ore_mines import OreMines
+from presentation.scene.artificial.outposts import Outposts
 from .rock_batches import RockBatches
-from .shadow_map import ShadowMap
-from .shadowed_surface import ShadowedSurface
-from .surface_light import SurfaceLight
+from presentation.scene.shadow_map import ShadowMap
+from presentation.scene.shadowed_surface import ShadowedSurface
+from presentation.scene.surface_light import SurfaceLight
 from .terrain_gl import TerrainGl
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from spaceships.ship import Ship
-    from galaxies.km2 import Km2
-    from galaxies.ore_fields import OreField
-    from galaxies.ore_mine import OreMine
-    from galaxies.outpost import Outpost
+    from universe.artifacts.spaceships.ship import Ship
+    from universe.bodies.km2 import Km2
+    from universe.artifacts.ore_fields import OreField
+    from universe.artifacts.ore_mine import OreMine
+    from universe.artifacts.settlements.outpost import Outpost
 
 
 class Rocks:
@@ -78,7 +80,7 @@ class Rocks:
         GL.glDepthMask(GL.GL_TRUE)
         import game_environment as gem
         world = gem.current_environment.fixed_world
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         shadows = not light.lamp and player_module.current_player.time_scale < SHADOWS_BELOW_TIME_SCALE
 
         def casters(shadow: ShadowMap, cascade: int) -> None:

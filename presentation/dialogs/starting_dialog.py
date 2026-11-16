@@ -9,14 +9,14 @@ import os
 import pygame
 from datetime import datetime
 
-from common import audio
+from presentation import audio
 from common.paths import data_path, resource_path, SAVEFILES_DIR
-from common.savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
+from savefile import Savefile, SAVE_NAME_FORBIDDEN, SAVE_NAME_MAX_LENGTH
 from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .instructions_dialog import InstructionsDialog
 from .message_dialog import MessageDialog
-from .messages import Message
+from common.messages import Message
 from .scroll_bar import ScrollBar
 
 logger = logging.getLogger(__name__)

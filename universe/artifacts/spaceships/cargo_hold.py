@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional
 
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class CargoHold(ABC):
     """What the ship carries: air, water, food, sealing packs, repair kits, mines and ore, and the room they take.
-    A configuration (a subclass, see spaceships/ship_configurations) gives the capacity and the maxima; the stock is
-    saved, and the configuration is found again by its qualified name (the class name, prefixed by the ship's name
-    for a hold of a ship)."""
+    A configuration (a subclass, see universe/artifacts/spaceships/configurations) gives the capacity and the maxima;
+    the stock is saved, and the configuration is found again by its qualified name (the class name, prefixed by the
+    ship's name for a hold of a ship)."""
 
     # Days left at which air, water and food show their warning: red in the cargo list, and the ship's notice.
     WARNING_DAYS = {'air': 5.0, 'water': 2.0, 'food': 2.0}

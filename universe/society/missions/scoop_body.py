@@ -17,14 +17,14 @@ from abc import abstractmethod
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Optional
 
-from galaxies.seeds import of_text
+from universe.structure.seeds import of_text
 
 from .mission import DONE, FAILED, Mission
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
-    from spaceships.ship import Ship
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
+    from universe.artifacts.spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class ScoopBody(Mission):
         was_full = self.probe_progress >= 1.0
         self.probe_progress = min(1.0, self.probe_progress + game_seconds / self.COLLECTION_SECONDS)
         if self.probe_progress >= 1.0 and not was_full:
-            import galaxies.people.player as player_module
+            import universe.society.people.player as player_module
             player_module.current_player.ship.notification.set(
                 f"Probe of {self.subject()} complete. Bring it to the portal base.")
 
@@ -115,7 +115,7 @@ class ScoopBody(Mission):
 
     def warning(self) -> Optional[str]:
         """No scoop on the ship, and, as for any far target, what the trip may lack."""
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         lines = []
         if not player_module.current_player.ship.has_scoop:
             lines.append("Your ship has no scoop installed, and this mission requires one.")

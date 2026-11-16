@@ -4,12 +4,12 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import math
 import pygame
-from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
+from presentation.constants import READOUT_BG, CONSOLE_EDGE_COLOR, ACCENT, ACCENT_DIM
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class Compass:

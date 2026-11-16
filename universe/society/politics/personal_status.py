@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-import galaxies.politics.political_entity as gppe
+import universe.society.politics.political_entity as gppe
 
 
 logger = logging.getLogger(__name__)

@@ -5,24 +5,24 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Tuple
 import math
 
 import logging
-from galaxies.ore_fields import OreField
-from galaxies.ore_mine import OreMine
+from universe.artifacts.ore_fields import OreField
+from universe.artifacts.ore_mine import OreMine
 import game_environment as gem
-from .laser import Laser
+from universe.artifacts.spaceships.systems.laser import Laser
 from .cargo_hold import CargoHold
 from .incident import AIR_FACTOR, MAINTENANCE_LOSS, Leak
 from .malfunction import Instrument
-from .scanner import Scanner
+from universe.artifacts.spaceships.systems.scanner import Scanner
 from .notification import Notification
 from .kinematics import Position, Velocity
 from .attitude import Attitude
 from .navigation import Navigation
-from common import audio
+from common import sound_events
 from common.updating import Updatable, update_queue
 if TYPE_CHECKING:
-    from galaxies.asteroid import Asteroid
-    from galaxies.people.player import Player
-    from galaxies.star import Star
+    from universe.bodies.asteroids.asteroid import Asteroid
+    from universe.society.people.player import Player
+    from universe.bodies.star import Star
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class Ship(Updatable):
     """The ship: where it is and how it moves (position, velocity, attitude, navigation), its systems (scanner,
     laser, cargo hold) and its flight limits.
 
-    This class is abstract: a configuration (a subclass, see spaceships/ship_configurations) gives the values that
-    change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS), the forward and backward
+    This class is abstract: a configuration (a subclass, see universe/artifacts/spaceships/configurations) gives the
+    values that change with the pilot's standing (ENERGY_MAX, PRECARIOUSNESS), the forward and backward
     acceleration (FORWARD_BACKWARD_ACC), the braking (BRAKE_ACC, never less than the acceleration) and the cargo hold
     class (CARGO_HOLD), and its cockpit texture (COCKPIT_TEXTURE). The ship is upgraded by replacing it
     with another configuration (see upgrade_to).
@@ -64,7 +64,8 @@ class Ship(Updatable):
     MAX_ANGULAR_SPEED = 45.0  # degrees per second
     MINE_FRONT_DISTANCE = 50  # metres ahead of the ship where a new mine is placed
     SCOOP_MAX_SPEED = 100.0  # m/s relative to the fixed object (the ground while bound): above it the scoop is closed
-    SCOOP_RANGE = 100.0  # metres: the ground the scoop shows, and what it takes from it (graphics/scoop_view.py)
+    # metres: the ground the scoop shows, and what it takes from it (presentation/cockpit/scoop_view.py)
+    SCOOP_RANGE = 100.0
     SCOOP_WATER_KG_PER_SECOND = 100.0  # Kg per second scooped
     SCOOP_VIEW_HALF_ANGLE = 40.0  # degrees from straight down: the scoop's view is a square of twice this (scoop_view)
     SCOOP_OPENED = "Scoop opened. Hull integrity compromised."
@@ -107,7 +108,7 @@ class Ship(Updatable):
     HEIGHT: ClassVar[float]  # m, of the hull, up to the camera
     DEPTH: ClassVar[float]  # m, of the hull, along the ship's forward axis
     MASS: ClassVar[float]  # kg, of the hull, without its equipment and its hold's contents (see mass)
-    PRICE_AT_700: ClassVar[float]  # credits, the ship alone, as the year 700 prices it (see common/prices.py)
+    PRICE_AT_700: ClassVar[float]  # credits, the ship alone, as the year 700 prices it (see universe/society/prices.py)
     # J per (kg*m/s): what the engines draw per kg of the ship for each m/s of change of velocity. The drive throws
     # nothing out, so no physics fixes it: it is tuned with ENERGY_MAX to the range a battery should give (ENERGY_MAX
     # * 3600 / (MASS * this) is the change of velocity of a full battery). A configuration may set its own.
@@ -181,11 +182,11 @@ class Ship(Updatable):
         self.cargo_hold: CargoHold = self.CARGO_HOLD(self)
         self.notification: Notification = Notification()
         self.is_docked: bool = False  # the pilot is inside an outpost: nothing is consumed (see dock). Not saved
-        # The open air leaks, one per impact (see spaceships/incident.py). Saved.
+        # The open air leaks, one per impact (see universe/artifacts/spaceships/incident.py). Saved.
         self.leaks: list[Leak] = []
         # Docked with a leak, which the dock closed: the Dockmaster's report says so (see dock). Not saved
         self.leaked_on_arrival: bool = False
-        # The instruments a malfunction broke (see spaceships/malfunction.py). Saved.
+        # The instruments a malfunction broke (see universe/artifacts/spaceships/malfunction.py). Saved.
         self.broken: set[Instrument] = set()
         self.last_update_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
@@ -226,7 +227,7 @@ class Ship(Updatable):
             self.scoop_open = False
             self.notification.set(Ship.SCOOP_CLOSED)
         elif not self.can_stay_open():
-            audio.play('failed')
+            sound_events.play('failed')
         else:
             self.scoop_open = True
             self.notification.set(Ship.SCOOP_OPENED)
@@ -239,37 +240,37 @@ class Ship(Updatable):
         has taken all of it, and it is gone (no scan mission may need it). A bigger one stays, and the water fills the
         hold as from ice. Returns whether the scoop has SPACE, so that it does not reach the scanner or the laser. A
         full hold closes the scoop."""
-        from galaxies.rocky_world import RockyWorld
-        from galaxies.world_surface import SurfaceType
-        from galaxies import asteroid as asteroid_module
+        from universe.bodies.rocky_world import RockyWorld
+        from universe.bodies.world_surface import SurfaceType
+        from universe.bodies.asteroids import asteroid as asteroid_module
         environment = gem.current_environment
         asteroid: Optional[Asteroid] = None
         if not self.scoop_open:
-            audio.set_loop('scoop_ice', False)
+            sound_events.set_loop('scoop_ice', False)
             return False
         if self.is_bound:
             world = environment.fixed_world
             if not (self.navigation.altitude() <= Ship.SCOOP_RANGE and isinstance(world, RockyWorld)
                     and world.surface_type is SurfaceType.ICE):
-                audio.set_loop('scoop_ice', False)
+                sound_events.set_loop('scoop_ice', False)
                 return False
         else:
             targeted = environment.targeted_body
             if not (isinstance(targeted, asteroid_module.Asteroid) and self._in_scoop_view(targeted)):
-                audio.set_loop('scoop_ice', False)
+                sound_events.set_loop('scoop_ice', False)
                 return False
             asteroid = targeted
         self.laser.cease_fire()
         hold = self.cargo_hold
         if hold.free_capacity() < hold.RAW_WATER_WEIGHT:
             self.scoop_open = False
-            audio.set_loop('scoop_ice', False)
+            sound_events.set_loop('scoop_ice', False)
             self.notification.set(Ship.SCOOP_WATER_FULL)
             return True
         if self.scoop_speed() != 0.0:
-            audio.set_loop('scoop_ice', False)
+            sound_events.set_loop('scoop_ice', False)
             return True
-        audio.set_loop('scoop_ice', True)
+        sound_events.set_loop('scoop_ice', True)
         if asteroid is not None and self._fits_whole(asteroid):
             asteroid.scoop_progress += Ship.SCOOP_WATER_KG_PER_SECOND * game_seconds / asteroid.mass
             if asteroid.scoop_progress >= 1.0:
@@ -299,7 +300,7 @@ class Ship(Updatable):
 
     def _fits_whole(self, asteroid: Asteroid) -> bool:
         """The asteroid's whole mass fits the hold's free room, and no open scan mission asks for the asteroid."""
-        from galaxies.missions import OPEN, ScanAsteroid
+        from universe.society.missions import OPEN, ScanAsteroid
         if asteroid.mass > self.cargo_hold.free_capacity():
             return False
         return not any(isinstance(mission, ScanAsteroid) and mission.status == OPEN and mission.asteroid() is not None
@@ -320,7 +321,7 @@ class Ship(Updatable):
 
     def probe_missions(self) -> list:
         """The open missions whose probe the scoop can fill where the ship is now (`ScoopBody.can_collect`)."""
-        from galaxies.missions import OPEN, ScoopBody
+        from universe.society.missions import OPEN, ScoopBody
         return [mission for mission in self.owner.missions
                 if isinstance(mission, ScoopBody) and mission.status == OPEN and mission.can_collect(self)]
 
@@ -328,7 +329,7 @@ class Ship(Updatable):
         """Every frame: with the scoop open (it is closed when it may not stay open: see `check_scoop`) where a probe
         fills, the probe of each such open mission fills. The gas sound plays while one fills."""
         missions = self.probe_missions() if self.scoop_open else []
-        audio.set_loop('scoop_gas', bool(missions))
+        sound_events.set_loop('scoop_gas', bool(missions))
         for mission in missions:
             mission.collect(game_seconds)
     # endregion
@@ -407,7 +408,7 @@ class Ship(Updatable):
         leak.packs_left -= 1
         if leak.packs_left == 0:
             self.leaks.pop(0)
-        audio.play('using_sealing')
+        sound_events.play('using_sealing')
         return True
 
     def break_instrument(self, instrument: Instrument) -> None:
@@ -421,7 +422,7 @@ class Ship(Updatable):
             return False
         self.broken.discard(instrument)
         self.cargo_hold.repair_kit -= 1
-        audio.play('repair')
+        sound_events.play('repair')
         return True
 
     def death_radius(self, star: Star) -> float:
@@ -624,7 +625,7 @@ class Ship(Updatable):
         new_mine = OreMine(targeted_field, front_lon, front_lat, self.attitude.yaw)
         targeted_field.mines.append(new_mine)
         self.cargo_hold.mines -= 1
-        audio.play('mine_placed')
+        sound_events.play('mine_placed')
 
     def _mine_spot(self) -> Tuple[float, float]:
         '''Where a mine placed now would stand:

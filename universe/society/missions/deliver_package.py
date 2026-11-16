@@ -5,19 +5,19 @@ from datetime import datetime, timedelta
 import random
 
 import logging
-from galaxies.politics import political_entity
-from galaxies.seeds import of_text
+from universe.society.politics import political_entity
+from universe.structure.seeds import of_text
 from .mission import Mission, register
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.person import Person
-    from galaxies.people.player import Player
-    from galaxies.body import Body
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.person import Person
+    from universe.society.people.player import Player
+    from universe.bodies.body import Body
 
 @register
 class DeliverPackage(Mission):
@@ -158,7 +158,7 @@ class DeliverPackage(Mission):
         self.recipient.adjust_sympathy(40)
 
         # But also so the whole outpost.
-        from galaxies.settlement import Settlement
+        from universe.artifacts.settlements.settlement import Settlement
         if isinstance(self.sender.residency, Settlement):
             for s in self.sender.residency.staff:
                 s.adjust_sympathy(200 / len(self.sender.residency.staff))

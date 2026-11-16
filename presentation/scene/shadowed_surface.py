@@ -16,7 +16,7 @@ import numpy as np
 from OpenGL import GL
 
 from . import shadow_map
-from .constants import SURFACE_STARLIGHT
+from presentation.constants import SURFACE_STARLIGHT
 from .shadow_map import ShadowMap
 from .surface_light import SurfaceLight
 

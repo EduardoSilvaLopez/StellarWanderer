@@ -12,7 +12,7 @@ import math
 from typing import Callable, Dict, Tuple, TYPE_CHECKING
 import numpy as np
 from OpenGL import GL
-from .constants import (
+from presentation.constants import (
     STAR_CORONA_EXTENT, FLARE_SIZE_SHARE, FLARE_MAX_TIME_SCALE, GLARE_MAX, GLARE_RADIUS_SHARE,
     GLARE_SIZE_OF_CORONA, SPOT_DEPTH, SPOT_FRAME_SECONDS, SPOT_MAX_TURN_PER_FRAME,
 )
@@ -21,7 +21,7 @@ from .star_surface import granulation, sunspots, sunspot_quads
 from .star_flares import flares_active
 
 if TYPE_CHECKING:
-    from galaxies.star import Star
+    from universe.bodies.star import Star
 
 # the disc's radius in the star's texture, in texels; its corona reaches STAR_CORONA_EXTENT times that
 STAR_TEXTURE_DISC = 192

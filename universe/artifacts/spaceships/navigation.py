@@ -7,18 +7,18 @@ from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple
 import logging
 import math
 
-from common.dialogs.messages import Message, show_message
+from common.messages import Message, show_message
 from common.frame_watch import frame_watch
 from common.vector3 import Vector3, rotate_2d
-from galaxies import kepler
-from galaxies.jovian_world import JovianWorld
-from galaxies.rocky_world import RockyWorld
-from galaxies.solid import SWEEP_STEP
-from galaxies.world import World
+from universe.structure import kepler
+from universe.bodies.jovian_world import JovianWorld
+from universe.bodies.rocky_world import RockyWorld
+from universe.artifacts.solid import SWEEP_STEP
+from universe.bodies.world import World
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
+    from universe.bodies.body import Body
     from .orbit_assist import OrbitAssist
     from .ship import Ship
     from .travel_assist import TravelAssist

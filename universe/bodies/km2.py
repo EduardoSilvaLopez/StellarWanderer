@@ -7,15 +7,15 @@ from typing import List, TYPE_CHECKING, Optional
 
 import logging
 
-from galaxies import seeds
-from galaxies.rock import Rock
-from galaxies.ore_fields import OreField
-from galaxies.ore_mine import ExternalMine
+from universe.structure import seeds
+from universe.bodies.rock import Rock
+from universe.artifacts.ore_fields import OreField
+from universe.artifacts.ore_mine import ExternalMine
 from common.updating import update_queue
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
-    from galaxies.rocky_world import RockyWorld
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.bodies.rocky_world import RockyWorld
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
 """What a ship cannot fly through in a portal base: the ring, the hub, the spokes, the thrusters and the hangar, whose
 docking place is hollow and closed at its back by the door. The base is described by a signed distance (negative inside
-a solid) in its own frame (see graphics/portal_base_shape.py, whose dimensions these are, scaled by the ring's radius
-over `REFERENCE_RADIUS`). How a hull is kept out of a solid is in galaxies/solid.py."""
+a solid) in its own frame (see presentation/scene/artificial/portal_base_shape.py, whose dimensions these are, scaled by
+the ring's radius over `REFERENCE_RADIUS`). How a hull is kept out of a solid is in universe/artifacts/solid.py."""
 
 from __future__ import annotations
 import math
 
-from galaxies.solid import Solid, Vec, box_distance, hull_radius
+from universe.artifacts.solid import Solid, Vec, box_distance, hull_radius
 
 REFERENCE_RADIUS = 100.0  # m, the outer radius of the ring that the dimensions below are for
 

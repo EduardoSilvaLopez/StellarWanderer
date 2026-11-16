@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from spaceships.cargo_hold import CargoHold
-from spaceships.ship import Ship
+from universe.artifacts.spaceships.cargo_hold import CargoHold
+from universe.artifacts.spaceships.ship import Ship
 
 
 class TwsVersatile(Ship):

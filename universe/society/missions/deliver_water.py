@@ -6,20 +6,20 @@ from typing import TYPE_CHECKING, Any, Iterator, List, Optional
 import random
 
 import logging
-from galaxies.politics import tidings
-from galaxies.seeds import of_text
-from galaxies.world_surface import SurfaceType
+from universe.society.politics import tidings
+from universe.structure.seeds import of_text
+from universe.bodies.world_surface import SurfaceType
 from .mission import OPEN, Mission, register
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.asteroid import Asteroid
-    from galaxies.asteroid_belt import AsteroidBelt
-    from galaxies.settlement import Settlement
-    from galaxies.stellar_system import StellarSystem
-    from galaxies.people.player import Player
-    from galaxies.rocky_world import RockyWorld
+    from universe.bodies.asteroids.asteroid import Asteroid
+    from universe.structure.asteroid_belt import AsteroidBelt
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.structure.stellar_system import StellarSystem
+    from universe.society.people.player import Player
+    from universe.bodies.rocky_world import RockyWorld
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +100,8 @@ class DeliverWater(Mission):
         nearest that orbit. A system with no belt has a free-living one, made for the offer. None when the sector drawn
         has no
         asteroid of the tier: the water can come from elsewhere."""
-        from galaxies.asteroid import Asteroid
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.bodies.asteroids.asteroid import Asteroid
+        from universe.structure.asteroid_belt import AsteroidBelt
         system = self.issuer_settlement.stellar_system
         site = {'system': system.get_alterations_key(), 'belt': None, 'key': None, 'seed': None}
         belts = [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
@@ -139,7 +139,7 @@ class DeliverWater(Mission):
 
     def _belt(self, system: StellarSystem) -> AsteroidBelt:
         """The belt of the asteroid site."""
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.structure.asteroid_belt import AsteroidBelt
         belt = system.get_orbit(float(self._site()['belt']))
         if not isinstance(belt, AsteroidBelt):
             raise ValueError(f"{self.KIND}: the asteroid's belt is not there")
@@ -150,7 +150,7 @@ class DeliverWater(Mission):
         when the offer has none, or when the scoop has taken it."""
         if self.asteroid_site is None:
             return None
-        from galaxies.asteroid import Asteroid, AsteroidKey
+        from universe.bodies.asteroids.asteroid import Asteroid, AsteroidKey
         system = self._system()
         if self.asteroid_site['belt'] is None:
             seed = self.asteroid_site['seed']
@@ -172,7 +172,7 @@ class DeliverWater(Mission):
         super().accept(now)
         if self.asteroid() is None:
             return
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self._site()
         system = self._system()
         if site['belt'] is None:
@@ -196,7 +196,7 @@ class DeliverWater(Mission):
         return self._kept()
 
     def forget(self) -> None:
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self._site()
         system = self._system()
         if site['belt'] is None:
@@ -207,7 +207,7 @@ class DeliverWater(Mission):
 
     def _kept(self) -> bool:
         """Whether the asteroid is still kept: by its system (free-living) or its belt."""
-        from galaxies.asteroid import AsteroidKey
+        from universe.bodies.asteroids.asteroid import AsteroidKey
         site = self._site()
         system = self._system()
         if site['belt'] is None:
@@ -219,8 +219,8 @@ class DeliverWater(Mission):
     def icy_worlds(self) -> List[RockyWorld]:
         """The icy worlds of the planetary system of the issuer's planet: the planet and its moons, or for an
         outpost on a moon, the moons of its giant (the giant is not rock)."""
-        from galaxies.rocky_world import RockyWorld
-        from galaxies.outpost import Outpost
+        from universe.bodies.rocky_world import RockyWorld
+        from universe.artifacts.settlements.outpost import Outpost
         settlement = self.issuer_settlement
         if not isinstance(settlement, Outpost):  # a portal base has no planet, so no planetary ice
             return []
@@ -231,7 +231,7 @@ class DeliverWater(Mission):
 
     def icy_stellar_worlds(self) -> List[RockyWorld]:
         """The icy worlds of the whole star's system: every planet and moon of it."""
-        from galaxies.rocky_world import RockyWorld
+        from universe.bodies.rocky_world import RockyWorld
         system = self.issuer_settlement.stellar_system
         return [world for world in system.get_all_worlds()
                 if isinstance(world, RockyWorld) and world.surface_type is SurfaceType.ICE]
@@ -257,12 +257,12 @@ class DeliverWater(Mission):
     def progress(self) -> str:
         if self.status != OPEN:
             return ''
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         return f"Raw water in the hold: {player_module.current_player.ship.cargo_hold.raw_water:.0f} Kg."
 
     def warning(self) -> Optional[str]:
         """Without a scoop the water cannot be taken: a warning on the offer, before the long distance one."""
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         if not player_module.current_player.ship.has_scoop:
             return "Your ship has no scoop, so it cannot take raw water."
         return super().warning()

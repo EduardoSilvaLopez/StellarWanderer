@@ -1,6 +1,6 @@
 """The antenna dish on the roof of a size 3 outpost's annex: a low-poly paraboloid on a mast, tilted towards the door
 side, with three struts to its feed. It is plain geometry, with no GL, so that the preview in temp/ can use it too;
-graphics/outposts.py draws it.
+presentation/scene/artificial/outposts.py draws it.
 
 Each face costs the PyOpenGL calls of one quad, not GPU time, so the mesh is kept small (about 45 faces, as much as
 the flagpole and its flag). Points are in metres from the middle of the roof, x along the width, y up from the roof,

@@ -50,8 +50,8 @@ from .outpost_poster import poster_for
 from .outpost_yard import billboard_faces, mast_faces, poster_quad, yard_faces
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
-    from .surface_light import SurfaceLight
+    from universe.artifacts.settlements.outpost import Outpost
+    from presentation.scene.surface_light import SurfaceLight
 
 logger = logging.getLogger(__name__)
 

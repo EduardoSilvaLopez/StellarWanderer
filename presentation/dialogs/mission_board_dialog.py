@@ -1,10 +1,10 @@
-"""The missions as windows, both over one list (see galaxies/missions/mission_board.py for the rules)."""
+"""The missions as windows, both over one list (see universe/society/missions/mission_board.py for the rules)."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pygame
 
-from common import audio
+from presentation import audio
 from common.paths import resource_path
 from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import body_font, title_font
@@ -12,8 +12,8 @@ from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR, Message
 from .scroll_bar import ScrollBar
 
 if TYPE_CHECKING:
-    from galaxies.missions import Mission
-    from galaxies.missions.mission_board import MissionBoard
+    from universe.society.missions import Mission
+    from universe.society.missions.mission_board import MissionBoard
 
 TEXTURE_PATH = resource_path('textures', 'dialog_background.png')
 LABEL_COLOR = (120, 175, 175)
@@ -70,7 +70,7 @@ class MissionList:
 
     def _deadline_line(self, mission: Mission) -> str:
         # local: the board's module imports the player, which imports this package
-        from galaxies.missions.mission_board import DATE_FORMAT
+        from universe.society.missions.mission_board import DATE_FORMAT
         return f"Deadline: {mission.deadline.strftime(DATE_FORMAT)}"
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
@@ -340,13 +340,14 @@ class PendingMissionsDialog(MissionListDialog):
         self.missions: List[Mission] = missions
 
     def _sections(self) -> List[Section]:
-        from galaxies.missions import OPEN
+        from universe.society.missions import OPEN
         pending = [mission for mission in self.missions if mission.status == OPEN]
         finished = [mission for mission in self.missions if mission.status != OPEN]
         return [('Pending missions', pending, 'None.'), ('Finished', finished, 'None.')]
 
     def _action(self, mission: Mission) -> Optional[Tuple[str, Callable[[], None]]]:
-        import galaxies.people.player as player_module  # local: the player's module imports this package's users
+        # local: the player's module imports this package's users
+        import universe.society.people.player as player_module
         if not mission.can_forget(player_module.current_player):
             return None
         return 'Forget', lambda: self._ask_forget(mission)
@@ -355,7 +356,7 @@ class PendingMissionsDialog(MissionListDialog):
         self.outcome = ('forget', mission)
 
     def _deadline_line(self, mission: Mission) -> str:
-        from galaxies.missions import DONE, OPEN
+        from universe.society.missions import DONE, OPEN
         if mission.status != OPEN:
             return 'Done' if mission.status == DONE else 'Failed'
         import game_environment as gem  # local: the game's environment, not needed by the rest of this module

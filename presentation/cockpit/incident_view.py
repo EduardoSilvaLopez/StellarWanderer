@@ -10,10 +10,10 @@ from typing import Dict, Optional, Tuple, TYPE_CHECKING
 from OpenGL import GL
 import pygame
 
-from spaceships.incident import Size
+from universe.artifacts.spaceships.incident import Size
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class IncidentView:

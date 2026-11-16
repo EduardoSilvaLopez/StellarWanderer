@@ -7,8 +7,8 @@ import pygame
 from common.paths import resource_path
 import logging
 
-from galaxies.people.person import Ethnicity
-import galaxies.politics.expansion_profile as ep
+from universe.society.people.person import Ethnicity
+import universe.society.politics.expansion_profile as ep
 
 logger = logging.getLogger(__name__)
 

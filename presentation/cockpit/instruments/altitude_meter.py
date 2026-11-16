@@ -4,11 +4,11 @@ While unbound, the ProximityMeter is shown in its place."""
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, ACCENT_DIM, SPEED_WARNING_RED
+from presentation.constants import ACCENT, ACCENT_DIM, SPEED_WARNING_RED
 from .common import draw_beveled_panel, bezel_depth
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class AltitudeMeter:
@@ -24,7 +24,7 @@ class AltitudeMeter:
         draw_beveled_panel(surface, bar_rect, depth=bezel_depth(h))
 
         import game_environment as gem
-        from spaceships.navigation import Navigation
+        from universe.artifacts.spaceships.navigation import Navigation
         world = gem.current_environment.fixed_world
         # Meter spans from surface (altitude=0) to unbinding altitude
         unbinding_altitude = world.radius * (Navigation.UNBIND_RADIUS_MULTIPLE - 1.0)

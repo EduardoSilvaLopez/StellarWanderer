@@ -25,17 +25,17 @@ import numpy as np
 
 from common.units import format_compact_distance
 from common.vector3 import Vector3
-from galaxies import seeds
-from galaxies.asteroid_class import class_of
-from galaxies.asteroid_sizes import AsteroidTier, sample_diameters
-from galaxies.body import Body
-from galaxies.kepler import eccentric_anomaly, orbit_axes
-from galaxies.orbit_layout import SystemScales
-from galaxies.world import World
+from universe.structure import seeds
+from universe.bodies.asteroids.asteroid_class import class_of
+from universe.bodies.asteroids.asteroid_sizes import AsteroidTier, sample_diameters
+from universe.bodies.body import Body
+from universe.structure.kepler import eccentric_anomaly, orbit_axes
+from universe.structure.orbit_layout import SystemScales
+from universe.bodies.world import World
 
 if TYPE_CHECKING:
-    from galaxies.asteroid_belt import AsteroidBelt
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.asteroid_belt import AsteroidBelt
+    from universe.structure.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class Asteroid(Body):
 
     def _generate_name(self, my_random: random.Random) -> str:
         """The asteroid's name, derived from its discoverer, usually a scientist."""
-        from galaxies.people.person import _pick_name
+        from universe.society.people.person import _pick_name
 
         gender = 'female' if my_random.random() < 0.55 else 'male'
         language: str = 'chinese' if my_random.random() < 0.6 else 'english'

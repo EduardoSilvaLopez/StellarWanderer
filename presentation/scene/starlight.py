@@ -19,17 +19,17 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import math
 import numpy as np
 import pygame
-from galaxies.jovian_world import JovianWorld
-from .constants import (
+from universe.bodies.jovian_world import JovianWorld
+from presentation.constants import (
     STARLIGHT_TINT_MAX, HEAT_VIGNETTE_COLOUR, HEAT_VIGNETTE_MAX_ALPHA, HEAT_VIGNETTE_INNER,
     ATMOSPHERE_TINT_MAX,
     GIANT_LIGHT_PENETRATION,
 )
-from .instruments.resource_bars import TEMPERATURE_IDEAL, temperature_stress
+from presentation.cockpit.instruments.resource_bars import TEMPERATURE_IDEAL, temperature_stress
 from .lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 

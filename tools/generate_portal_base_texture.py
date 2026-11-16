@@ -2,14 +2,15 @@
 
 Run from the project root:  python tools/generate_portal_base_texture.py
 
-Five files, all at 32 pixels per metre (graphics/portal_base_shape.py maps them in metres, so a bigger base shows more
-of the same plating, not bigger plating):
+Five files, all at 32 pixels per metre (presentation/scene/artificial/portal_base_shape.py maps them in metres, so a
+bigger base shows more of the same plating, not bigger plating):
     portal_base_hull.png            1024 x 1024, a tile of 32 m that repeats: dark armour plating
     portal_base_hull_glow.png       the same tile, black except what shines (windows, gun port slits, lamps)
     portal_base_interior.png        512 x 512, a tile of 16 m that repeats: the walls of the docking place
     portal_base_interior_glow.png   the same tile, only the lamps
     portal_base_marks.png           1024 x 512, with transparency: the sector numbers, the hazard stripes, the guide
-                                    chevron (rectangles below, they must match graphics/portal_base_shape.py)
+                                    chevron (rectangles below, they must match
+                                    presentation/scene/artificial/portal_base_shape.py)
 
 The hull is armour for a station that guards a portal: gunmetal plates, riveted, with hazard stripes, a red line, gun
 ports that glow red, sealed hatches and rows of lit windows. The glow is a separate texture because the light on the
@@ -31,7 +32,7 @@ EMBLEM = os.path.join(ROOT, 'common', 'resources', 'textures', 'PoliticalEntity.
 HULL_SIZE = 1024
 INTERIOR_SIZE = 512
 # The hangar's atlas (2048 x 1024, 20 pixels per metre of its faces) and the spoke's tile (256 pixels, 8 m): the
-# rectangles must match graphics/portal_base_shape.py.
+# rectangles must match presentation/scene/artificial/portal_base_shape.py.
 HANGAR_SIZE = (2048, 1024)
 LEFT_SIDE = (0, 0, 880, 200)
 RIGHT_SIDE = (0, 208, 880, 200)
@@ -43,7 +44,7 @@ FREE_LIGHTS_FROM = 480  # on the sides, the first column of lights: the flag and
 EMBLEM_SIZE = (96, 90)  # the emblem on the flag, in pixels
 MARKS_SIZE = (1024, 512)
 
-# Rectangles (x, y, w, h) of portal_base_marks.png; they must match graphics/portal_base_shape.py.
+# Rectangles (x, y, w, h) of portal_base_marks.png; they must match presentation/scene/artificial/portal_base_shape.py.
 NUMBERS = [(0, 0, 256, 256), (256, 0, 256, 256), (512, 0, 256, 256), (768, 0, 256, 256)]
 STRIPES = (0, 272, 768, 64)
 CHEVRON = (784, 272, 224, 224)

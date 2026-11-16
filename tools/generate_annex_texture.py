@@ -20,7 +20,7 @@ Atlas 2048 x 2048, 32 pixels per metre on every face:
     dish (in plan, 8 m across)             x 976..1232, y 992..1248
     steel (plain patch)                    x 1240..1272, y 992..1024
     crate side, cage side (size 4 yard)    x 1280..1408 and 1416..1544, y 992..1120
-Keep this layout when replacing the PNG by hand (graphics/outposts.py has the same rectangles).
+Keep this layout when replacing the PNG by hand (presentation/scene/artificial/outposts.py has the same rectangles).
 
 As for the old building: a world without air or water, so no vents, fans or rain stains. The light pass (lit windows,
 LED lines, beacons) is added after the weathering, so it stays bright.
@@ -289,8 +289,8 @@ def paint_roof(rng: np.random.Generator) -> Tuple[pygame.Surface, List[old.Emiss
             pygame.draw.polygon(panel, (40, 62, 110), [(0, field.height), (90, 0), (130, 0), (40, field.height)])
             surface.blit(panel, field.topleft)
 
-    # In the middle, where the fields meet: the round deck of the dish (a real 3D one, see graphics/outposts.py), which
-    # takes the inner corners of the four fields.
+    # In the middle, where the fields meet: the round deck of the dish (a real 3D one, see
+    # presentation/scene/artificial/outposts.py), which takes the inner corners of the four fields.
     centre = (w // 2, h // 2)
     for radius, colour in ((152, LEDGE), (146, EDGE), (142, BODY), (118, CELL), (112, BODY)):
         pygame.draw.circle(surface, colour, centre, radius)

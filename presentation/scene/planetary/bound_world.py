@@ -6,14 +6,14 @@ import math
 
 import numpy as np
 import pygame
-from graphics.instruments.common import view_geometry
+from presentation.cockpit.instruments.common import view_geometry
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
-class FixedWorld:
+class BoundWorld:
     """Renders the planet below the horizon, seen from the cockpit while bound (see draw_surface)."""
 
     @staticmethod
@@ -47,7 +47,7 @@ class FixedWorld:
         focal = focal_length_px
         cos_sq = cos_angular * cos_angular
         if abs(nadir_x * nadir_x - cos_sq) > 1e-9:
-            FixedWorld._fill_rows(surface, colour, w, view_h, centre_y, focal, cos_sq, (nadir_x, nadir_y, nadir_z))
+            BoundWorld._fill_rows(surface, colour, w, view_h, centre_y, focal, cos_sq, (nadir_x, nadir_y, nadir_z))
             return
 
         def clamp_x(x: float) -> int:

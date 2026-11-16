@@ -3,13 +3,13 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, List, Optional
 
-from galaxies import seeds
-from galaxies.orbit_layout import OrbitKind
-from galaxies.jovian_world import JovianWorld
-from galaxies.rocky_world import RockyWorld
-from galaxies.world import World
+from universe.structure import seeds
+from universe.structure.orbit_layout import OrbitKind
+from universe.bodies.jovian_world import JovianWorld
+from universe.bodies.rocky_world import RockyWorld
+from universe.bodies.world import World
 if TYPE_CHECKING:
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.stellar_system import StellarSystem
 
 
 class Orbit:

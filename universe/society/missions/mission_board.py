@@ -1,6 +1,6 @@
 """The mission board of an outpost, for a pilot whose reputation is MIN_REPUTATION or more. It is the Missions option of
-the settlement's screen (OutpostMissions, common/dialogs/mission_board_dialog.py), which updates its offers when it
-opens.
+the settlement's screen (OutpostMissions, presentation/dialogs/mission_board_dialog.py), which updates its offers when
+it opens.
 The reputation that counts is the one the pilot had on entering the outpost (`Settlement.player_reputation_on_entering`),
 so a fall inside does not hide the offers.
 A pilot below MIN_REPUTATION sees no offers, but still the missions they took from here (the Taken column), so that the
@@ -26,16 +26,16 @@ from typing import TYPE_CHECKING, List, Optional
 
 import logging
 
-from common import audio
-import galaxies.people.player as player_module
-from galaxies.missions import (Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock,
+from common import sound_events
+import universe.society.people.player as player_module
+from universe.society.missions import (Mission, OPEN, DeliverOre, DeliverPackage, DeliverWater, ScanAsteroid, ScanRock,
                                ScoopGiant, ScoopStar)
-from galaxies.missions.terms import check_terms
+from universe.society.missions.terms import check_terms
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class MissionBoard:
         offer.accept(now)
         self.player.missions.append(offer)
         self.player.ship.notification.set(f"Mission taken: {offer.title()}.")
-        audio.play('mission_taken')
+        sound_events.play('mission_taken')
 
     def deliver(self, mission: Mission) -> Optional[str]:
         """The player brings what a mission they have taken asks for. Returns the reward text, to show, when it is
@@ -150,5 +150,5 @@ class MissionBoard:
             self.player.ship.notification.set(mission.shortfall(self.player), bad=True)
             return None
         mission.finish(self.player)
-        audio.play('mission_delivered')
+        sound_events.play('mission_delivered')
         return mission.reward_text(self.player)

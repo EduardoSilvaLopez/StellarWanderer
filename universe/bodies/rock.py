@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING, Optional, Sequence
 import numpy as np
 
 from common.updating import Updatable, update_queue
-from galaxies import seeds
+from universe.structure import seeds
 
 if TYPE_CHECKING:
-    from galaxies.terrain import Terrain
-    from galaxies.km2 import Km2
+    from universe.bodies.terrain import Terrain
+    from universe.bodies.km2 import Km2
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,8 @@ class Rock(Updatable):
         self.tilt: float = my_random.random() * 45
         self.composition: float = self._generate_composition(my_random)
         self.initial_color: tuple = self._generate_initial_color(my_random)
-        # Seed of the rock's irregular shape (graphics/rock_shape.py). Drawn last, so every value above is as before.
+        # Seed of the rock's irregular shape (presentation/scene/planetary/rock_shape.py). Drawn last, so every value
+        # above is as before.
         self.shape_seed: int = my_random.getrandbits(32)
         self.max_temperature: float = my_random.lognormvariate(Rock.TEMP_MAX_MU, Rock.TEMP_MAX_SIGMA)
         self.temperature: float = 0.0

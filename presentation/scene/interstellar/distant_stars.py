@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Optional
 import numpy as np
 from OpenGL import GL
 
-from galaxies.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, FIXED_STAR_SHOW_RADIUS, LIGHT_YEAR_M
+from universe.structure.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, FIXED_STAR_SHOW_RADIUS, LIGHT_YEAR_M
 
-from .constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE, NEAR_CLIP
+from presentation.constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE, NEAR_CLIP
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
-    from .local_star import StarView
-    from spaceships.ship import Ship
+    from presentation.scene.interplanetary.local_star import StarView
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class DistantStars:
@@ -51,7 +51,7 @@ class DistantStars:
     @staticmethod
     def visible_dots(environment: GameEnvironment, ship: Ship, w: int, h: int) -> list[tuple[tuple, tuple[int, int]]]:
         """(colour, screen position) for every fixed star in range, bright enough and in front of the camera."""
-        from .instruments.common import view_geometry
+        from presentation.cockpit.instruments.common import view_geometry
         _, horizon_y, focal_length_px = view_geometry(h)
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)

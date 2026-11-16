@@ -13,15 +13,15 @@ import time
 
 from OpenGL import GL, GLU
 
-from .constants import (
+from presentation.constants import (
     CONSOLE_TOP, VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP, MAX_DEPTH, LASER_BEAM_SEGMENTS, LASER_BEAM_LAYERS,
     LASER_MUZZLE_COLOR, LASER_MUZZLE_RADIUS, LASER_MUZZLE_STEADY, LASER_MUZZLE_BURST_SECONDS, LASER_IMPACT_COLOR,
     LASER_IMPACT_RADIUS, LASER_IMPACT_LIFT, LASER_IMPACT_ALPHA, LASER_IMPACT_SEGMENTS,
 )
 
 if TYPE_CHECKING:
-    from galaxies.rock import Rock
-    from spaceships.ship import Ship
+    from universe.bodies.rock import Rock
+    from universe.artifacts.spaceships.ship import Ship
 
 Vector = Tuple[float, float, float]
 
@@ -40,9 +40,9 @@ class Laser:
         """Draw the laser beam if the player is firing.
 
         Laser is a straight segment from just below the camera to its end point (Scanner.update_target in
-        spaceships/scanner.py): while bound the end is on the ground MAX_LENGTH metres ahead, while unbound it extends
-        MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground. The beam, its muzzle flash
-        and the hot spot on a rock are all added light, so none of them writes depth.
+        universe/artifacts/spaceships/systems/scanner.py): while bound the end is on the ground MAX_LENGTH metres ahead,
+        while unbound it extends MAX_LENGTH metres along the ship's forward axis. Depth-tested against rocks/ground. The
+        beam, its muzzle flash and the hot spot on a rock are all added light, so none of them writes depth.
         """
         if not ship.laser.firing:
             return

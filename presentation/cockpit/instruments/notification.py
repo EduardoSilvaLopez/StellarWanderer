@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import pygame
-from ..constants import READOUT_BG, CONSOLE_EDGE_COLOR, BINDING_NEAR_GREEN, NOTIFICATION_BAD_ORANGE
+from presentation.constants import READOUT_BG, CONSOLE_EDGE_COLOR, BINDING_NEAR_GREEN, NOTIFICATION_BAD_ORANGE
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 ALERT_COLOUR = (255, 64, 64)
 ALERT_PREFIXES = ('CRITICAL', 'WARNING')

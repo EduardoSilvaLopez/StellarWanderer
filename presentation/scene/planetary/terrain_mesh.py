@@ -1,8 +1,8 @@
 """The meshes of the ground: chunks of the surface frame, built from the world's heights.
 
 Plain numpy on purpose, with no OpenGL or pygame: the helper processes that build the chunks load only this module and
-`galaxies.terrain`. A chunk is a node of a quadtree over the plane (x east, z north): its key is (level, ix, iz), its
-side ROOT_SIZE / 2 ** level and its corner (ix, iz) times that. Every chunk is CELLS x CELLS cells, so a finer level
+`universe.bodies.terrain`. A chunk is a node of a quadtree over the plane (x east, z north): its key is (level, ix, iz),
+its side ROOT_SIZE / 2 ** level and its corner (ix, iz) times that. Every chunk is CELLS x CELLS cells, so a finer level
 is a smaller chunk with finer cells, and a coarser one a larger chunk.
 
 A vertex is its x and z from the chunk's corner (small, float32-safe: the corner is added in double precision with the
@@ -15,7 +15,7 @@ from typing import Tuple
 
 import numpy as np
 
-from galaxies.terrain import Terrain
+from universe.bodies.terrain import Terrain
 
 CELLS = 32                  # cells along a chunk's side; the same topology for every chunk
 ROOT_SIZE = 32768.0         # m: the side of a chunk of level 0 (its cells 1 km: the far landmarks)

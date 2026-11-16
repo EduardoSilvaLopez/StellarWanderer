@@ -1,10 +1,10 @@
 """How rocks with an adjective look: valuable minerals, such as a pilot could find in a collection (banded agate, lapis
 lazuli, malachite, amethyst, gold in quartz). Nothing glows or moves: the minerals only have colours and patterns.
 
-Such a rock has the shape of any rock (graphics/rock_shape.py), but each of its faces is cut into SPLITS * SPLITS
-smaller ones, and each small face takes the colour of the mineral at its place, from a noise in the rock's own
-coordinates, so the pattern turns with the rock and no two rocks are alike. Every adjective has a `Look`; one the table
-does not know gets FALLBACK. Used by rock_batches.py (the 3D view) and by the scanner instrument.
+Such a rock has the shape of any rock (presentation/scene/planetary/rock_shape.py), but each of its faces is cut into
+SPLITS * SPLITS smaller ones, and each small face takes the colour of the mineral at its place, from a noise in the
+rock's own coordinates, so the pattern turns with the rock and no two rocks are alike. Every adjective has a `Look`; one
+the table does not know gets FALLBACK. Used by rock_batches.py (the 3D view) and by the scanner instrument.
 """
 
 from __future__ import annotations

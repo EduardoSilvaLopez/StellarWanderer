@@ -5,12 +5,12 @@ EPOCH = datetime(700, 1, 1)  # the date of a new game; the initial system is cho
 # Galactic coordinates are in light-years, with the galactic centre at the origin.
 INITIAL_STAR_POSITION = (26010.0, 10.0, 10.0)  # the centre of its sector, so the star sits in the middle of the region
 
-# A star's colour is its blackbody colour at its temperature (galaxies/star.py), pushed away from grey by this factor:
-# 1.0 is the plain blackbody colour, above 1.0 is more vivid, below 1.0 is paler.
+# A star's colour is its blackbody colour at its temperature (universe/bodies/star.py), pushed away from grey by this
+# factor: 1.0 is the plain blackbody colour, above 1.0 is more vivid, below 1.0 is paler.
 STAR_COLOUR_VIVIDNESS = 1.0
 
-# A world's surface (galaxies/world_surface.py). Its colour is this share of the colour of its surface type, the rest a
-# random vivid colour of about the same brightness: 1.0 is the plain colour of the type, 0.0 is entirely random.
+# A world's surface (universe/bodies/world_surface.py). Its colour is this share of the colour of its surface type, the
+# rest a random vivid colour of about the same brightness: 1.0 is the plain colour of the type, 0.0 is entirely random.
 WORLD_COLOUR_REALISM = 0.85
 WORLD_VIVID_SATURATION_MIN = 0.30  # the random vivid colour's saturation (HSV) is drawn between these two
 WORLD_VIVID_SATURATION_MAX = 0.60
@@ -23,8 +23,8 @@ LIGHT_YEAR_M = 300000000 * 365.2425 * 24 * 60 * 60  # meters, about 0.07% above 
 ABSOLUTE_MAGNITUDE_DISTANCE_LY = 32.6156  # ly: the distance at which absolute magnitude is measured (about 32.6 ly)
 
 # Galactic regions: cubes aligned to multiples of their size, each holding a whole number of the next smaller. Quadrants
-# and districts only feed the seeds for now (galaxies/seeds.py); fixed stars (galaxies/fixed_stars.py) are generated per
-# sector.
+# and districts only feed the seeds for now (universe/structure/seeds.py); fixed stars
+# (universe/structure/fixed_stars.py) are generated per sector.
 QUADRANT_SIZE = 8000  # ly
 DISTRICT_SIZE = 400  # ly
 SECTOR_SIZE = 20  # ly

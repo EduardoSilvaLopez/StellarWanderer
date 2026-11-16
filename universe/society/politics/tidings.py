@@ -16,13 +16,13 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, List, Mapping, Optional
 
-from galaxies import seeds
+from universe.structure import seeds
 
 if TYPE_CHECKING:
-    from galaxies.politics.expansion_history import ExpansionHistory
-    from galaxies.politics.political_entity import PoliticalEntity
-    from galaxies.settlement import Settlement
-    from galaxies.stellar_system import StellarSystem
+    from universe.society.politics.expansion_history import ExpansionHistory
+    from universe.society.politics.political_entity import PoliticalEntity
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.structure.stellar_system import StellarSystem
 
 
 class Scope(Enum):

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Dict, Tuple
 
 import pygame
-from ..constants import CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, HULL_EDGE_COLOR
+from presentation.constants import CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, HULL_EDGE_COLOR
 from .common import get_windshield_frame_texture
 
 _frame_bytes: Dict[Tuple[str, int, int], bytes] = {}   # the frame's memory, for the window size in use

@@ -6,14 +6,14 @@ from typing import List, Tuple, TYPE_CHECKING
 import math
 import pygame
 from common.vector3 import Vector3
-from ..constants import (
+from presentation.constants import (
     ACCENT_DIM, RADAR_BAR_OVER, RADAR_BAR_UNDER, RADAR_WORLD_COLOR, RADAR_MOON_COLOR,
     RADAR_STAR_DOT_RADIUS, RADAR_WORLD_DOT_RADIUS, RADAR_MOON_DOT_RADIUS,
     RADAR_ASTEROID_COLOR, RADAR_ASTEROID_DOT_RADIUS, RADAR_BASE_COLOR, RADAR_BASE_DOT_RADIUS,
 )
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class Radar:

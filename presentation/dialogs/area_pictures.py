@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 import pygame
 
 from common.paths import resource_path
-from galaxies.settlement_kind import SettlementKind
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 # The picture of each area, for each kind of settlement: a file of common/resources/backgrounds named <prefix>*, if one
 # exists.

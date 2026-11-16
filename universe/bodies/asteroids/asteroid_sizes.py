@@ -19,7 +19,7 @@ from enum import Enum
 
 import numpy as np
 
-from galaxies.world import World
+from universe.bodies.world import World
 
 MIN_DIAMETER = 1.0  # m
 MAX_DIAMETER = 2.0 * World.WORLD_MIN_RADIUS  # m

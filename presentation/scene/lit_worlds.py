@@ -5,14 +5,14 @@ from typing import Tuple, TYPE_CHECKING
 import math
 import numpy as np
 import pygame
-from .constants import (
+from presentation.constants import (
     WORLD_AMBIENT_LIGHT, WORLD_LIGHT_TINT_MIX, WORLD_MIN_RADIUS_PX, LIT_WORLD_PIXEL_BUDGET, MIN_VISIBLE_PX,
 )
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from galaxies.world import World
-    from spaceships.ship import Ship
+    from universe.bodies.world import World
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
@@ -25,7 +25,7 @@ class LitWorlds:
     Every rocky world and moon drawn in the sky is lit this way. Worlds too small to see are drawn as a small
     lit disc (WORLD_MIN_RADIUS_PX), and one under MIN_VISIBLE_PX across is not drawn. While unbound, all worlds are lit this way, the targeted one too, in
     distance order (`OtherWorlds.draw`). While bound, every world except the targeted one is lit; the targeted one is
-    the disc below the horizon, lit by the sun like the ground (`FixedWorld.draw_surface`, given
+    the disc below the horizon, lit by the sun like the ground (`BoundWorld.draw_surface`, given
     `SurfaceLight.ground_colour()`)."""
 
     @staticmethod
@@ -80,7 +80,7 @@ class LitWorlds:
 
         to_world and to_star are the vectors from the ship to the world's centre and to the star, in
         the active frame (as returned by Navigation.direction_to_body / direction_to_star)."""
-        from graphics.instruments.common import view_geometry
+        from presentation.cockpit.instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(h)
 
         radius = world.radius
@@ -153,7 +153,7 @@ class LitWorlds:
     def draw_targeted(surface: pygame.Surface, w: int, h: int, environment: GameEnvironment, ship: Ship) -> None:
         """The targeted body, lit by the star, for OpenGLGui while bound when there is no surface light. The star is not
         drawn here: the OpenGL pass draws it (star_gl.py)."""
-        from galaxies.world import World
+        from universe.bodies.world import World
         body = environment.targeted_body
         if not isinstance(body, World):  # the star
             return

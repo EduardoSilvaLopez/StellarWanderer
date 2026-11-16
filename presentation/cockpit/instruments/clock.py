@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, Optional, Tuple
 from datetime import datetime
 import pygame
-from galaxies.people.player import Player
-from ..constants import ACCENT, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
+from universe.society.people.player import Player
+from presentation.constants import ACCENT, AMBER, READOUT_BG, CONSOLE_EDGE_COLOR, HULL_DARK
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 DANGER_BG = (190, 30, 34)  # the box when the time compression is clearly dangerous
 DANGER_INK = (255, 240, 240)

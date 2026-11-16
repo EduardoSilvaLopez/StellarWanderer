@@ -3,14 +3,14 @@
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from ..constants import ACCENT, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN
+from presentation.constants import ACCENT, AMBER, BINDING_MARK_RED, BINDING_NEAR_GREEN
 from .common import draw_beveled_panel, bezel_depth, draw_panel_title
 from .resource_bars import credits_shown, format_credits
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 def format_quantity(value: float) -> str:

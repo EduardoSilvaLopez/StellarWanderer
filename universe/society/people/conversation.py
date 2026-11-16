@@ -4,11 +4,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 
 import logging
-from common.dialogs.messages import ShowMessage, show_message
+from common.messages import ShowMessage, show_message
 
-from galaxies.people.player import Player
+from universe.society.people.player import Player
 import game_environment as gem
-from galaxies.people.person import Person
+from universe.society.people.person import Person
 
 logger = logging.getLogger(__name__)
 

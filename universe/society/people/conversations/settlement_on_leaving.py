@@ -4,16 +4,16 @@ tell them before the departure. This can change their opinion."""
 from __future__ import annotations
 from typing import Callable, List, Optional
 
-from common.dialogs.messages import Message, ShowMessage, show_message
-from galaxies.settlement import Settlement
-from galaxies.people.player import Player
-from galaxies.politics.political_entity import PoliticalEntity
-from galaxies.missions.mission import DONE, Mission
-from galaxies.missions.deliver_ore import DeliverOre
-from spaceships.ship_configurations.tws_miner import TwsMiner
-from spaceships.ship_configurations.tws_shabby_miner import ShabbyTwsMiner
-from spaceships.ship_configurations.tws_versatile import TwsVersatile
-from spaceships.ship_configurations.tws_hauler import TwsHauler
+from common.messages import Message, ShowMessage, show_message
+from universe.artifacts.settlements.settlement import Settlement
+from universe.society.people.player import Player
+from universe.society.politics.political_entity import PoliticalEntity
+from universe.society.missions.mission import DONE, Mission
+from universe.society.missions.deliver_ore import DeliverOre
+from universe.artifacts.spaceships.configurations.tws_miner import TwsMiner
+from universe.artifacts.spaceships.configurations.tws_shabby_miner import ShabbyTwsMiner
+from universe.artifacts.spaceships.configurations.tws_versatile import TwsVersatile
+from universe.artifacts.spaceships.configurations.tws_hauler import TwsHauler
 from ..person import Person
 from ..conversation import Conversation
 

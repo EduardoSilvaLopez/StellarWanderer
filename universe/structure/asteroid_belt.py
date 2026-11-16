@@ -44,15 +44,17 @@ import numpy as np
 
 from common.units import format_compact_distance
 from common.vector3 import Vector3
-from galaxies import seeds
-from galaxies.asteroid import Asteroid, AsteroidKey
-from galaxies.asteroid_sizes import MIN_DIAMETER, AsteroidTier, generated_count, sample_diameters, tier_share
-from galaxies.orbit import Orbit
-from galaxies.orbit_layout import OrbitKind
-from galaxies.world import World
+from universe.structure import seeds
+from universe.bodies.asteroids.asteroid import Asteroid, AsteroidKey
+from universe.bodies.asteroids.asteroid_sizes import (
+    MIN_DIAMETER, AsteroidTier, generated_count, sample_diameters, tier_share,
+)
+from universe.structure.orbit import Orbit
+from universe.structure.orbit_layout import OrbitKind
+from universe.bodies.world import World
 
 if TYPE_CHECKING:
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 

@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING, Any, Optional
 import random
 
 import logging
-from galaxies.seeds import of_text
+from universe.structure.seeds import of_text
 from .mission import Mission, register
-from galaxies.missions.terms import Terms
-from galaxies.settlement_kind import SettlementKind
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
-    from galaxies.people.player import Player
+    from universe.artifacts.settlements.settlement import Settlement
+    from universe.society.people.player import Player
 
 logger = logging.getLogger(__name__)
 

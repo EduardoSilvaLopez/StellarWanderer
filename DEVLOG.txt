@@ -19,7 +19,7 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Malfunctions and repair kits.
   * Sealing pack and repair kit become green when they can be used.
   * Scraps of a depleted mine.
-  * news
+  * Tidings
   * More complex answers to 1-reply tags.
 
 ### 2026-11-15 (6/12)
@@ -29,13 +29,17 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Extra: New focus: Life support (farmer)
   * Extra: More News: pilot found dead, water crisis in settlement.
 
-> STARTED: Extra time: 204h30' + 12:15
+* INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
+  * Complete revamp of the structure of the project.
+  * Testing.
+
+> STARTED: Extra time: 204h30' + 12:15 - 13:15 + 15:30
+
+  * Past and environment of the NPCs. Tidings associated.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
-  * Testing.
-  * Past and environment of the NPCs. Tidings associated.
   * More complex answers to profession tags when own profession.
     * JANITOR
     * KOMISAR
@@ -104,49 +108,30 @@ Fold Level 2 (Ctrl+K Ctrl+2) collapses every method body, so the class turns int
 Fold All Regions (Ctrl+K Ctrl+8)
 Go to Symbol in File (Ctrl+Shift+O) lists the methods, and typing : groups them by kind.
 
-Colors of rocky worlds. To increase realism.
-WORLD_COLOUR_REALISM = 0.85
-WORLD_VIVID_SATURATION_MIN = 0.30  # the random vivid colour's saturation (HSV) is drawn between these two
-WORLD_VIVID_SATURATION_MAX = 0.60
+### Past of the NPCs
 
-### Packages?
+NPCs are generated in steps and from different "crawling" mechanisms following a lazy-loading strategy.
 
-common: tech stack commons
-  resources
-  game_logging
-  data_presentation
-  wiki
-universe: what exists in the universe
-  people
-    player
-    npc
-    conversations
-  artifacts
-    ore fields
-    ore mines
-    spaceships
-      configurations
-      instruments
-    settlements
-      outposts
-      bases
-      missions
-  bodies
-    asteroids
-    rocky_worlds
-    jovian_worlds
-    stars
-  politics
-    entities
-graphics: how to represent it
-  dialogs
-    settlement
-  cockpit
-    instruments
-    hud
-temp:
-  per seed:
-    save files
-    log files
-  build
-  dist
+What we have no is the "generation from settlement": We give a current role and we generate from there.
+
+This generation sets already some basic characteristics, which are the current ones plus:
+- longevity: float = 50.0
+- perception: float = 50.0
+- education: float = 50.0 - with a minimum for advanced roles
+- pronoun: Optional[Person.Pronoun] << 45% 10% 45%
+- physiology: float = 50.0 << This is the source of the profiles and thus the former gender.
+  * A skewed gauss-like curve centered on 20 or 80 respectively, or a uniform distribution for THEY.
+- attracted_to: float = 50.0
+  * A skewerd gauss-like curve centered on 20 or 80, by physiology <= 50
+- sexuality: float = 50.0
+  * Uniform distribution.
+
+We make the history of the NPC:
+- When they finished their studies, which depends on the role: at age 16 or 22 with a small random factor.
+- Time keeping the role, which depends on how adequate it is for this person.
+- Gap between roles, which depend on loyalty (more loyalty, less gap)
+- Time of retirement, which depends on loyalty, adequacy and longevity
+- Time of death, which depends on longevity.
+- Number of relationships, which depends on sexuality.
+- Each individual relationship, with uniform probability and the change to overlap.
+- 

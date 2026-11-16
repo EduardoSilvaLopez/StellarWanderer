@@ -3,14 +3,14 @@
 Flares are scheduled on the game clock: each slot of FLARE_SLOT_SECONDS of game time may hold one flare, decided by the
 star's seed, so the sun behaves the same whatever the frame rate or the time scale. A flare rises over
 FLARE_RISE_SECONDS of game time and decays over FLARE_DECAY_SECONDS. Above FLARE_MAX_TIME_SCALE flares are not drawn
-(graphics/star_gl.py): at high time compression a flare would last a few frames and flicker.
+(presentation/scene/interplanetary/star_gl.py): at high time compression a flare would last a few frames and flicker.
 """
 
 from __future__ import annotations
 import math
 import random
 from typing import List, Tuple
-from .constants import FLARE_SLOT_SECONDS, FLARE_CHANCE, FLARE_RISE_SECONDS, FLARE_DECAY_SECONDS
+from presentation.constants import FLARE_SLOT_SECONDS, FLARE_CHANCE, FLARE_RISE_SECONDS, FLARE_DECAY_SECONDS
 
 FLARE_MIN_SHAPE = 0.01  # a flare fainter than this is not drawn
 

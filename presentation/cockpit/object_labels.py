@@ -9,16 +9,16 @@ from common.units import format_compact_distance
 from common.vector3 import Vector3
 from .instruments.common import view_geometry, project_to_camera
 from .outpost_markers import OutpostMarkers
-from .constants import (
+from presentation.constants import (
     ACCENT, OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX, CANOPY_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET, CONSOLE_TOP,
 )
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
-    from galaxies.world import World
-    from graphics.fallback_font import FallbackFont
-    from graphics.font_cache import FontCache
-    from spaceships.ship import Ship
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.bodies.world import World
+    from presentation.fallback_font import FallbackFont
+    from presentation.font_cache import FontCache
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 
@@ -39,7 +39,7 @@ class ObjectLabels:
     offset is the nearest copy of the world, since the ship wraps at the anti-meridian.
 
     One thing is not flat: how far below the horizontal a bound label sits. That is the sphere's, from R + altitude,
-    like the planet's edge that `FixedWorld.draw_surface` draws. With flat offsets only, an outpost beyond the horizon
+    like the planet's edge that `BoundWorld.draw_surface` draws. With flat offsets only, an outpost beyond the horizon
     would hang in the empty sky above the planet's edge, a few degrees below the view axis, when the real horizon is
     far lower (at 400 km of altitude on a 6,000 km world it is 20 degrees down). So an outpost beyond the horizon is
     labelled on the horizon line, in its flat direction.

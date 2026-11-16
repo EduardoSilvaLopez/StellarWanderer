@@ -3,24 +3,24 @@ import logging
 
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from common import audio
-from common.dialogs.messages import Message, show_message
-from galaxies.asteroid import Asteroid
-from galaxies.missions import Mission
-from galaxies.people.person import Person
-from galaxies.people.pilot_identity import PilotIdentity
-from galaxies.portals.portal_base import PortalBase
-from galaxies.world import World
-from galaxies.politics import political_entity
-from galaxies.politics.personal_status import PersonalStatus
+from common import sound_events
+from common.messages import Message, show_message
+from universe.bodies.asteroids.asteroid import Asteroid
+from universe.society.missions import Mission
+from universe.society.people.person import Person
+from universe.society.people.pilot_identity import PilotIdentity
+from universe.artifacts.settlements.portal_base import PortalBase
+from universe.bodies.world import World
+from universe.society.politics import political_entity
+from universe.society.politics.personal_status import PersonalStatus
 from common.updating import update_queue
-from spaceships.incident import IncidentCheck
-from spaceships.ship import Ship
-from spaceships.ship_configurations import ShabbyTwsMiner
+from universe.artifacts.spaceships.incident import IncidentCheck
+from universe.artifacts.spaceships.ship import Ship
+from universe.artifacts.spaceships.configurations import ShabbyTwsMiner
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.settlement import Settlement
+    from universe.artifacts.settlements.settlement import Settlement
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,8 @@ class Player:
         self.missions: List[Mission] = []  # every one taken, with its status (see missions.py)
         self.is_gone: bool = False  # set by game_over; main then opens the starting dialog
         self.inside: Optional[Settlement] = None  # the settlement the pilot is in, if any (not the cockpit)
-        # The conversation tags of the chat (see settlement_chat.py): one set for the pilot, not per person, saved sorted.
+        # The conversation tags of the chat (see settlement_chat.py):
+        # one set for the pilot, not per person, saved sorted.
         self.conversation_tags: set[str] = {Player.PRESENTATION_TAG}
         # The pinned ones, in the order they were pinned: they come first in the chat, and each is one of the tags.
         self.pinned_tags: list[str] = []
@@ -135,7 +136,7 @@ class Player:
         wished = self.wished_time_scale()
         self.time_scale = min(max(wished * self.TIME_SCALE_STEP, self.TIME_SCALE_MIN), self.TIME_SCALE_MAX)
         if self.time_scale != old_time_scale:
-            audio.play('time_up')
+            sound_events.play('time_up')
         return self
 
     def present_yourself_first_time(self) -> str:
@@ -149,7 +150,7 @@ class Player:
         old_time_scale = self.time_scale
         self.time_scale = max(self.wished_time_scale() // self.TIME_SCALE_STEP, self.TIME_SCALE_MIN)
         if self.time_scale != old_time_scale:
-            audio.play('time_down')
+            sound_events.play('time_down')
         return self
     # endregion
 

@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Type
 
-from galaxies.settlement_kind import SettlementKind
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 
 @dataclass(frozen=True)

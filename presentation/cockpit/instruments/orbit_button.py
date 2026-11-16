@@ -1,6 +1,7 @@
 """The ORBIT button, in the cockpit's left column while the ship is unbound, under the target's name: the sideways speed
 an orbit needs, as a bar the drift fills over the column's width, then the button that starts the ORBIT assist
-(spaceships/orbit_assist.py), or leaves the orbit. The TRAVEL button sits under it (see travel_button.py)."""
+(universe/artifacts/spaceships/orbit_assist.py), or leaves the orbit. The TRAVEL button sits under it (see
+travel_button.py)."""
 
 from __future__ import annotations
 import math
@@ -8,12 +9,14 @@ from typing import Any, Tuple, TYPE_CHECKING
 import pygame
 
 from .broken import Broken
-from spaceships.malfunction import Instrument
-from ..constants import ACCENT, ACCENT_DIM, ACCENT_LABEL, BINDING_NEAR_GREEN, GRAVITY_GREEN, GRAVITY_RED, READOUT_BG
+from universe.artifacts.spaceships.malfunction import Instrument
+from presentation.constants import (
+    ACCENT, ACCENT_DIM, ACCENT_LABEL, BINDING_NEAR_GREEN, GRAVITY_GREEN, GRAVITY_RED, READOUT_BG,
+)
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class OrbitButton:
@@ -29,7 +32,7 @@ class OrbitButton:
     def enabled(ship: Ship) -> bool:
         """The button lights up in a fixed zone of a world that pulls, unbound, but not inside a giant."""
         import game_environment as gem
-        from galaxies.world import World
+        from universe.bodies.world import World
         body = gem.current_environment.fixed_body
         return not ship.is_bound and isinstance(body, World) and body.gravitational_parameter > 0.0 \
             and ship.navigation.in_fixed_zone(body) and not ship.navigation.is_inside(body)
@@ -67,8 +70,8 @@ class OrbitButton:
         """The label and the track of the sideways speed, on the row at `top`: the drift as a share of the circular
         speed at the ship's distance, red while the lowest point is under the bind shell, else green."""
         import game_environment as gem
-        from galaxies.kepler import apsides
-        from spaceships.navigation import Navigation
+        from universe.structure.kepler import apsides
+        from universe.artifacts.spaceships.navigation import Navigation
         body: Body = gem.current_environment.fixed_body
         r_vec, v_vec = ship.navigation._relative_to_body(body)
         periapsis, _, _ = apsides(body.gravitational_parameter, r_vec, v_vec)

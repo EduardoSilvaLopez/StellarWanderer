@@ -19,12 +19,12 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from common.vector3 import Vector3
-from galaxies.star import Star
+from universe.bodies.star import Star
 import game_environment as gem
-from spaceships.long_distance_advice import Advice, LongDistanceAdvisor
+from universe.artifacts.spaceships.long_distance_advice import Advice, LongDistanceAdvisor
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
+    from universe.bodies.body import Body
     from .ship import Ship
 
 Thrust = Tuple[float, float, float]  # shares of the right, up and forward engines, -1 to 1

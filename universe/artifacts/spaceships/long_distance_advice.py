@@ -1,5 +1,5 @@
 """Long distance advice: whether to accelerate, stay or decelerate to reach the targeted body, shown under the proximity
-meter's "Target" (see graphics/instruments/proximity_meter.py). The instruments and the main loop use it
+meter's "Target" (see presentation/cockpit/instruments/proximity_meter.py). The instruments and the main loop use it
 (`LongDistanceAdvisor.update` runs once per
 frame), and so do the missions, to warn about a trip the ship may not manage (`LongDistanceAdvisor.shortage`).
 
@@ -106,14 +106,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from common import audio
-from galaxies.world import World
+from common import sound_events
+from universe.bodies.world import World
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from galaxies.body import Body
-    from galaxies.people.player import Player
+    from universe.bodies.body import Body
+    from universe.society.people.player import Player
     from game_environment import GameEnvironment
     from .ship import Ship
 
@@ -245,7 +245,7 @@ class LongDistanceAdvisor:
         if (previous is not None and advice is not None and advice is not previous
                 and player.ship.navigation.travel is None):  # the autopilot follows the advice: nothing to miss
             player.time_scale = min(player.time_scale, player.TIME_SCALE_MIN)
-            audio.play(LongDistanceAdvisor.CHANGE_SOUND)
+            sound_events.play(LongDistanceAdvisor.CHANGE_SOUND)
 
     @staticmethod
     def time_limit() -> float:
@@ -272,7 +272,8 @@ class LongDistanceAdvisor:
                 <= advisor.PLAN_END_DISTANCE + advisor.END_TOLERANCE)
         if near and navigation.orbit is not None:
             return None
-        from galaxies.portals.portal_base import PortalBase  # local: the portals import this module's neighbours
+        # local: the portals import this module's neighbours
+        from universe.artifacts.settlements.portal_base import PortalBase
         if isinstance(body, World):
             near_end_radii = advisor.NEAR_END_RADII
         elif isinstance(body, PortalBase):

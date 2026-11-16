@@ -1,10 +1,11 @@
-"""Generate the sky panorama common/resources/textures/milky_way.png (drawn by graphics/milky_way.py).
+"""Generate the sky panorama common/resources/textures/milky_way.png (drawn by
+presentation/scene/interstellar/milky_way.py).
 
 Run from the project root:  python tools/generate_milky_way.py [width of the model, default 2048]
 
-The panorama is the Milky Way as seen from the initial star (galaxies/constants.py INITIAL_STAR_POSITION), plus
-Andromeda and the two Magellanic Clouds. It is an equirectangular picture in galactic coordinates: the column is the
-galactic longitude l (the centre of the picture is l = 0, the direction of the galactic centre, and l grows to the
+The panorama is the Milky Way as seen from the initial star (universe/structure/constants.py INITIAL_STAR_POSITION),
+plus Andromeda and the two Magellanic Clouds. It is an equirectangular picture in galactic coordinates: the column is
+the galactic longitude l (the centre of the picture is l = 0, the direction of the galactic centre, and l grows to the
 right), the row is the galactic latitude b (the top is the north galactic pole). The picture is twice as wide as the
 model, which is smoothed up.
 
@@ -19,8 +20,9 @@ How it is made:
   Everything is a luminance in cd/m2.
 - The picture stores what a display needs to show the right ratios between regions: brightness in the display's gamma
   (GAMMA), where 255 is the luminance of REFERENCE_MAG. Nothing in it is meant to be shown at that absolute brightness:
-  real sky is far too faint for a screen (the brightest Milky Way is about 1e-3 cd/m2). graphics/milky_way.py shows it
-  scaled by MILKY_WAY_EXPOSURE (graphics/constants.py), which keeps the ratios.
+  real sky is far too faint for a screen (the brightest Milky Way is about 1e-3 cd/m2).
+  presentation/scene/interstellar/milky_way.py shows it scaled by MILKY_WAY_EXPOSURE (presentation/constants.py), which
+  keeps the ratios.
 """
 
 import math
@@ -34,7 +36,7 @@ import pygame
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from galaxies.constants import INITIAL_STAR_POSITION  # noqa: E402
+from universe.structure.constants import INITIAL_STAR_POSITION  # noqa: E402
 
 OUT_PATH = os.path.join(ROOT, 'common', 'resources', 'textures', 'milky_way.png')
 

@@ -5,11 +5,11 @@ from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
 import math
 import pygame
 from datetime import datetime
-from ..constants import ACCENT, ACCENT_DIM
+from presentation.constants import ACCENT, ACCENT_DIM
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
-    from galaxies.rocky_world import RockyWorld
+    from universe.artifacts.spaceships.ship import Ship
+    from universe.bodies.rocky_world import RockyWorld
 
 MINE_MARK_COLOR = (255, 255, 0)
 ROCK_MARK_COLOR = (255, 140, 0)  # the rock of an open scan mission: an orange cross, apart from the yellow mines
@@ -242,7 +242,8 @@ class WorldMap:
     @staticmethod
     def _draw_rock_targets(surface: pygame.Surface, world: RockyWorld, ship: Ship, to_pixel: PixelFunction) -> None:
         """An orange cross on the rock of each open scan mission that is on this world."""
-        from galaxies.missions import ScanRock  # local: the missions import the player, which imports this package
+        # local: the missions import the player, which imports this package
+        from universe.society.missions import ScanRock
         for mission in ship.owner.missions:
             if not isinstance(mission, ScanRock):
                 continue

@@ -21,17 +21,17 @@ import random
 import numpy as np
 from typing import TYPE_CHECKING, Dict, Optional, Type
 
-from common import audio
+from common import sound_events
 from common.updating import Updatable, update_queue
-from galaxies.seeds import of_text
-from galaxies.missions.terms import Terms
-from galaxies.settlement import Settlement
-from galaxies.settlement_kind import SettlementKind
+from universe.structure.seeds import of_text
+from universe.society.missions.terms import Terms
+from universe.artifacts.settlements.settlement import Settlement
+from universe.artifacts.settlements.settlement_kind import SettlementKind
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from galaxies.people.player import Player
-    from galaxies.rock import Rock
+    from universe.bodies.body import Body
+    from universe.society.people.player import Player
+    from universe.bodies.rock import Rock
 
 OPEN = 'open'  # taken, not yet delivered and not yet late
 DONE = 'done'
@@ -171,12 +171,12 @@ class Mission(Updatable):
 
     def update(self, game_date_time: datetime) -> None:
         """The deadline has passed."""
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         player = player_module.current_player
         self.status = FAILED
         self.finished_at = self.deadline  # it failed at the deadline, whenever the queue got to it
         player.ship.notification.set(f"WARNING: Mission failed: {self.title()}.")
-        audio.play('failed')
+        sound_events.play('failed')
         self.fail(player)
     # endregion
 
@@ -207,7 +207,7 @@ class Mission(Updatable):
         (`LongDistanceAdvisor.shortage`). It never stops the player from taking the mission: they may be an expert, or
         willing to die trying."""
         import game_environment as gem
-        from spaceships.long_distance_advice import LongDistanceAdvisor
+        from universe.artifacts.spaceships.long_distance_advice import LongDistanceAdvisor
         body = self.target_body()
         if body is None:
             return None
@@ -215,7 +215,7 @@ class Mission(Updatable):
         settlement = self.issuer_settlement
         position = np.array(tuple(settlement.stellar_position(date)))
         velocity = np.array(tuple(settlement.stellar_velocity(date)))
-        import galaxies.people.player as player_module
+        import universe.society.people.player as player_module
         lacking = LongDistanceAdvisor.shortage(player_module.current_player.ship, body, date, position, velocity)
         return None if lacking is None else f"Your ship may lack the necessary {lacking} for this trip."
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.stellar_system import StellarSystem
 
 
 class Body:

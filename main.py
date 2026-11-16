@@ -30,7 +30,7 @@ import multiprocessing
 import os
 import sys
 
-from galaxies.politics.political_entity import THOSE_WHO_SHARE
+from universe.society.politics.political_entity import THOSE_WHO_SHARE
 
 # The compiled bytecode goes to temp/pycache, not next to each source file. Set before the project's imports.
 if not getattr(sys, 'frozen', False):
@@ -38,35 +38,36 @@ if not getattr(sys, 'frozen', False):
 
 import pygame
 import logging
+from common import sound_events
 from common.game_logging import configure_logging
-from graphics.font_cache import FontCache
-from graphics.terrain_gl import TerrainGl
+from presentation.font_cache import FontCache
+from presentation.scene.planetary.terrain_gl import TerrainGl
 import game_environment as gem
-from galaxies.people import knowledge
-from common import audio
+from universe.society.people import knowledge
+from presentation import audio
 from common.paths import resource_path
-import galaxies.people.player as player_module
-from common.savefile import Savefile
-from common.dialogs import (
+import universe.society.people.player as player_module
+from savefile import Savefile
+from presentation.dialogs import (
     Dialog, DialogResult, KnownSystemsDialog, Message, MessageDialog, KnownPeopleDialog, ShipSpecificationsDialog,
     StartingDialog, PilotIdentityDialog, confirm,
     PendingMissionsDialog, SettlementScreenDialog, next_pending_message, run_in_window, show_message
 )
-from galaxies.outpost import Outpost
-from galaxies.portals.portal_base import PortalBase
-from galaxies.portals.portal_defence import PortalDefence
-from spaceships.long_distance_advice import LongDistanceAdvisor
-from graphics.opengl_gui import OpenGLGui
-from graphics.instruments.clock import Clock
-from graphics.instruments.notification import notification_bar
-from graphics.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
-from graphics.instruments.orbit_button import OrbitButton
-from graphics.instruments.cargo import Cargo
-from graphics.instruments.broken import Repair
-from graphics.instruments.travel_button import TravelButton
-from spaceships.orbit_assist import OrbitAssist
-from spaceships.travel_assist import TravelAssist
-from graphics.instruments.world_map import WorldMap
+from universe.artifacts.settlements.outpost import Outpost
+from universe.artifacts.settlements.portal_base import PortalBase
+from universe.artifacts.settlements.portal_defence import PortalDefence
+from universe.artifacts.spaceships.long_distance_advice import LongDistanceAdvisor
+from presentation.opengl_gui import OpenGLGui
+from presentation.cockpit.instruments.clock import Clock
+from presentation.cockpit.instruments.notification import notification_bar
+from presentation.cockpit.instruments.cockpit_buttons import MISSIONS, SHIP, SYSTEMS, CockpitButtons
+from presentation.cockpit.instruments.orbit_button import OrbitButton
+from presentation.cockpit.instruments.cargo import Cargo
+from presentation.cockpit.instruments.broken import Repair
+from presentation.cockpit.instruments.travel_button import TravelButton
+from universe.artifacts.spaceships.orbit_assist import OrbitAssist
+from universe.artifacts.spaceships.travel_assist import TravelAssist
+from presentation.cockpit.instruments.world_map import WorldMap
 from common.frame_watch import frame_watch
 from common.updating import update_queue
 
@@ -186,8 +187,8 @@ def sync_settlement_screen(
 def open_knowledge(
         pressed: str, screen: pygame.Surface, gui: OpenGLGui, fonts: FontCache, clock: pygame.time.Clock
         ) -> Tuple[bool, pygame.Surface]:
-    """The dialog of a knowledge button (graphics/instruments/cockpit_buttons.py): the missions, else the known systems,
-    the known people or the ship. Returns (keep running, window)."""
+    """The dialog of a knowledge button (presentation/cockpit/instruments/cockpit_buttons.py): the missions, else the
+    known systems, the known people or the ship. Returns (keep running, window)."""
     if pressed == MISSIONS:
         return manage_missions(screen, gui, fonts, clock)
     if pressed == SHIP:
@@ -351,6 +352,7 @@ def open_start_menu(
 
 def main() -> None:
     configure_logging()
+    sound_events.connect(audio.play, audio.set_loop)  # the universe asks for sounds; the presentation plays them
     frame_watch.watch_garbage_collector()
     pygame.init()
     pygame.display.set_icon(pygame.transform.smoothscale(
@@ -658,5 +660,6 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    multiprocessing.freeze_support()  # a packaged helper process (see graphics/terrain_helpers.py) starts and ends here
+    # a packaged helper process (see presentation/scene/planetary/terrain_helpers.py) starts and ends here
+    multiprocessing.freeze_support()
     main()

@@ -19,8 +19,8 @@ import random
 from collections import Counter
 from itertools import product
 
-from galaxies import seeds
-from galaxies.constants import (
+from universe.structure import seeds
+from universe.structure.constants import (
     DISTRICT_SIZE,
     FIXED_STARS_MEAN_PER_SECTOR,
     INITIAL_STAR_POSITION,
@@ -29,7 +29,7 @@ from galaxies.constants import (
     SECTOR_RADIUS,
     SECTOR_SIZE,
 )
-from galaxies.star import Star, cell_of
+from universe.bodies.star import Star, cell_of
 
 logger = logging.getLogger(__name__)
 

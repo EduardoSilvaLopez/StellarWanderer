@@ -15,16 +15,16 @@ from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
 
 import game_environment as gem
-from galaxies import seeds
-from galaxies.settlement_kind import SettlementKind
-from galaxies.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, STEVEDORE, Role
-from galaxies.people.staffing import Staffing
+from universe.structure import seeds
+from universe.artifacts.settlements.settlement_kind import SettlementKind
+from universe.society.people.role import COM_OFFICER, COORDINATOR, DOCKMASTER, STEVEDORE, Role
+from universe.society.people.staffing import Staffing
 
 if TYPE_CHECKING:
-    from galaxies.body import Body
-    from galaxies.people.person import Person
-    from galaxies.stellar_system import StellarSystem
-    from spaceships.ship import Ship
+    from universe.bodies.body import Body
+    from universe.society.people.person import Person
+    from universe.structure.stellar_system import StellarSystem
+    from universe.artifacts.spaceships.ship import Ship
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'  # the dates a settlement saves
 SHIFT_HOURS = 8  # a shift of the staff, from the start of the day: shift 0 at 00:00, shift 1 at 08:00, shift 2 at 16:00
@@ -82,7 +82,7 @@ class Settlement(Updatable):
         self.handling_due_at: Optional[datetime] = None
         self.handling_checked_at: Optional[datetime] = None
         # local: the board needs the player, which needs missions
-        from galaxies.missions.mission_board import MissionBoard
+        from universe.society.missions.mission_board import MissionBoard
         self.mission_board: MissionBoard = MissionBoard(self)  # its offers live as long as this place is in memory
 
     @property
@@ -250,7 +250,7 @@ class Settlement(Updatable):
 
     def imprison(self, person: Person) -> Settlement:
         """The pilot had `person` arrested: they leave the staff now, for good, and somebody is hired in their role."""
-        from galaxies.people.person import IMPRISONED
+        from universe.society.people.person import IMPRISONED
         now = gem.current_environment.date_time
         person.status_changes.append((now, IMPRISONED))
         person.record()
@@ -411,7 +411,7 @@ class Settlement(Updatable):
         """Gives `ship` what the handling has done up to `now`. Call it before showing the ship's levels."""
         if self.handling_due_at is None:
             return self
-        import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
+        import universe.society.people.player as gpp  # local: the player loads the world, which loads this module
         until = min(now, self.handling_due_at)
         seconds = (until - self.handling_checked_at).total_seconds() if self.handling_checked_at else 0
         if seconds > 0:
@@ -455,7 +455,7 @@ class Settlement(Updatable):
         """The handling is done: whatever had to be done, is done."""
         if self.dockmaster is None:
             raise Exception("Dockmaster is none.")
-        from common.dialogs.messages import Message, show_message
+        from common.messages import Message, show_message
         self.stop_handle(ship, now)
         ship.owner.time_scale = 1
         show_message(Message(
@@ -474,7 +474,7 @@ class Settlement(Updatable):
     def update(self, game_date_time: datetime) -> None:
         """What is due: the end of the handling, and the next employee on duty (the shifts are 8 hours)."""
         if self.handling_due_at is not None and self.handling_due_at <= game_date_time:
-            import galaxies.people.player as gpp  # local: the player loads the world, which loads this module
+            import universe.society.people.player as gpp  # local: the player loads the world, which loads this module
             self._finish_handling(gpp.current_player.ship, game_date_time)
         self.generate_staff(game_date_time)
         if self.next_update_at <= game_date_time:

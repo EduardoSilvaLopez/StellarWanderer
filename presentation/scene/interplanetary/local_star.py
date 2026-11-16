@@ -6,8 +6,8 @@ surface normal (1 at the centre, 0 at the rim) and u is STAR_LIMB_DARKENING. The
 (R / r) ** STAR_CORONA_FALLOFF and fades out at STAR_CORONA_EXTENT radii; its radius on screen is never below
 STAR_GLOW_MIN_PX, so a distant star is a glowing point.
 
-The OpenGL pass draws the image (graphics/star_gl.py) under the sky. The sky is drawn with a hole where the star is
-(erase), so the worlds in front of the star cover it and the worlds behind it are not seen there.
+The OpenGL pass draws the image (presentation/scene/interplanetary/star_gl.py) under the sky. The sky is drawn with a
+hole where the star is (erase), so the worlds in front of the star cover it and the worlds behind it are not seen there.
 """
 
 from __future__ import annotations
@@ -15,14 +15,14 @@ from typing import TYPE_CHECKING, NamedTuple, Optional, Tuple
 import math
 import numpy as np
 import pygame
-from .constants import (
+from presentation.constants import (
     STAR_LIMB_DARKENING, STAR_CORE_WHITENESS, STAR_CORONA_EXTENT, STAR_CORONA_FALLOFF, STAR_CORONA_ALPHA,
     STAR_GLOW_MIN_PX,
 )
 
 if TYPE_CHECKING:
-    from galaxies.star import Star
-    from spaceships.ship import Ship
+    from universe.bodies.star import Star
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 STAR_EDGE_PX = 1.5  # width of the disc's rim, blended into the corona, in pixels of the disc
@@ -86,7 +86,7 @@ def star_rgba(width: int, height: int, centre_x: float, centre_y: float, disc_px
 
 def view_of(environment: GameEnvironment, ship: Ship, width: int, height: int) -> Optional[StarView]:
     """Where the targeted body's star is on the screen, or None when it is not in front of the ship."""
-    from graphics.instruments.common import view_geometry, project_to_camera
+    from presentation.cockpit.instruments.common import view_geometry, project_to_camera
     body = environment.targeted_body
     star = body.stellar_system.star
     star_vector = ship.navigation.direction_to_star(body, environment.date_time)

@@ -1,4 +1,4 @@
-"""Generate the sound effects in common/resources/sounds (see common/audio.py).
+"""Generate the sound effects in common/resources/sounds (see presentation/audio.py).
 
 Run from the project root:  python tools/generate_sounds.py
 

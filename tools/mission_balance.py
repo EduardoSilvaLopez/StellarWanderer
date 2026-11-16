@@ -2,9 +2,9 @@
 
 For each kind of mission and kind of issuing settlement it samples the offers the boards would make over some days (the
 game's own `Mission.offered_on`), takes the median distance of the trip, the Travel autopilot's duration for it (the
-planner of spaceships/long_distance_advice.py, with the energy of the ship across the legs) and the reputation the
-mission gives (the mission's own `give_reward`, so that a change of the formulas is followed). The scenario is that of
-the constants below. Nothing is saved: the game is started in memory and never written.
+planner of universe/artifacts/spaceships/long_distance_advice.py, with the energy of the ship across the legs) and the
+reputation the mission gives (the mission's own `give_reward`, so that a change of the formulas is followed). The
+scenario is that of the constants below. Nothing is saved: the game is started in memory and never written.
 
 Run from anywhere:
     python tools/mission_balance.py [--seeds 1 2 3] [--days 365] [--ship TwsMiner] [--load 0.5] [--out table.md]
@@ -32,19 +32,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import main  # noqa: E402  (first: it loads the packages in the order the game does)
 import game_environment as gem  # noqa: E402
-import galaxies.people.player as player_module  # noqa: E402
+import universe.society.people.player as player_module  # noqa: E402
 from common.units import format_compact_distance  # noqa: E402
-from galaxies.constants import EPOCH  # noqa: E402
-from galaxies.missions import (DeliverOre, DeliverPackage, DeliverWater, Mission, ScanAsteroid,  # noqa: E402
+from universe.structure.constants import EPOCH  # noqa: E402
+from universe.society.missions import (DeliverOre, DeliverPackage, DeliverWater, Mission, ScanAsteroid,  # noqa: E402
                                ScanRock, ScoopGiant, ScoopStar)
-from galaxies.missions.mission_board import KINDS, LOCAL_KINDS  # noqa: E402
-from galaxies.missions.terms import Terms  # noqa: E402
-from galaxies.settlement import Settlement  # noqa: E402
-from galaxies.settlement_kind import SettlementKind  # noqa: E402
-from galaxies.body import Body  # noqa: E402
-from spaceships.long_distance_advice import LongDistanceAdvisor, energy_cost, make_plan  # noqa: E402
-from spaceships.ship import Ship  # noqa: E402
-import spaceships.ship_configurations  # noqa: E402,F401  (registers the ships in Ship.by_name)
+from universe.society.missions.mission_board import KINDS, LOCAL_KINDS  # noqa: E402
+from universe.society.missions.terms import Terms  # noqa: E402
+from universe.artifacts.settlements.settlement import Settlement  # noqa: E402
+from universe.artifacts.settlements.settlement_kind import SettlementKind  # noqa: E402
+from universe.bodies.body import Body  # noqa: E402
+from universe.artifacts.spaceships.long_distance_advice import LongDistanceAdvisor, energy_cost, make_plan  # noqa: E402
+from universe.artifacts.spaceships.ship import Ship  # noqa: E402
+import universe.artifacts.spaceships.configurations  # noqa: E402,F401  (registers the ships in Ship.by_name)
 
 SECONDS_PER_DAY = 86400.0
 SHIP_NAME = 'TwsMiner'
@@ -118,8 +118,8 @@ def _mine_world(origin: Settlement, date) -> Body | None:
     """Where the ore comes from: a rocky world of the issuer's planetary system (its planet and moons, or the moons of
     its giant), other than its own; the one at the median distance. A portal base has no planet: any rocky world of the
     system. None if there is none."""
-    from galaxies.outpost import Outpost
-    from galaxies.rocky_world import RockyWorld
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.bodies.rocky_world import RockyWorld
     if isinstance(origin, Outpost):
         host = origin.planet.parent_planet or origin.planet
         worlds = ([host] if host is origin.planet else []) + list(host.moons)
@@ -144,7 +144,7 @@ def route_of(mission: Mission, load: float) -> Route:
         return Route(mission._world(), True)  # a rock on the issuer's own world is a flight over the ground
     if isinstance(mission, ScanAsteroid):
         asteroid = mission.asteroid()
-        from galaxies.asteroid import Asteroid
+        from universe.bodies.asteroids.asteroid import Asteroid
         return Route(asteroid, True, Asteroid.SCAN_SECONDS_PER_SQRT_KM * math.sqrt(2.0 * asteroid.radius / 1000.0))
     if isinstance(mission, ScoopStar):
         star = origin.stellar_system.star

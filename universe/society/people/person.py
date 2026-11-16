@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple
 import pygame
 
 if TYPE_CHECKING:
-    from galaxies.people.player import Player
-    from galaxies.settlement import Settlement
+    from universe.society.people.player import Player
+    from universe.artifacts.settlements.settlement import Settlement
 
-from galaxies.politics import political_entity
-from galaxies.people.role import (RETIREMENT_AGE_MAX, RETIREMENT_AGE_MIN, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
+from universe.society.politics import political_entity
+from universe.society.people.role import (RETIREMENT_AGE_MAX, RETIREMENT_AGE_MIN, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
 import game_environment as gem
 from common.paths import resource_path
 
@@ -258,7 +258,7 @@ class Person:
             else 'mature' if self.age < 65\
             else 'old'
 
-        from galaxies.settlement import Settlement
+        from universe.artifacts.settlements.settlement import Settlement
         occupations: list[str] = [self.role.portrait, 'uniform'] if isinstance(self.residency, Settlement)\
             else ['generic']
         suffix: str = "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
@@ -333,7 +333,7 @@ class Person:
     def work_hours_text(self) -> str:
         """When the person works in their outpost, as a phrase for the chat: "all the time" for the Coordinator,
         "from time to time" for the substitute, else the shift as "from 16 to 24" (the hours of the day)."""
-        from galaxies.outpost import SHIFT_HOURS
+        from universe.artifacts.settlements.outpost import SHIFT_HOURS
         if self.role.shifts == 1 and self.role.vacation == 0:
             return "24/7, as usual"
         shift: Optional[int] = self.residency.shift_of(self)
@@ -355,7 +355,7 @@ class Person:
             ('Last time met', self.last_time_met_text()),
         ]
 
-        from galaxies.settlement import Settlement
+        from universe.artifacts.settlements.settlement import Settlement
         if isinstance(self.residency, Settlement):
             result.append(('Residency', self.residency.residency_line()))
         return result
@@ -420,7 +420,7 @@ class Person:
 
     def get_player_title(self) -> Optional[str]:
         # Subjective.
-        import galaxies.people.player as gpp
+        import universe.society.people.player as gpp
         player_rep = gpp.current_player.reputation
         mood_mod = random.gauss(0.5, 0.01)
         final_rep = player_rep * mood_mod * (self.sympathy100 + 50)/100
@@ -489,7 +489,7 @@ class Person:
         they were first met at, which is written once. For now the residence is always an outpost (on a planet, or a
         moon with its planet): a person with any other residence has no place yet."""
         if self.first_met_at is None:
-            from galaxies.settlement import Settlement
+            from universe.artifacts.settlements.settlement import Settlement
             self.first_met_at = self.residency.address() if isinstance(self.residency, Settlement) else ''
             self.record()
         return self

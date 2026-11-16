@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Optional
 import logging
 
-from common.dialogs.messages import Message, ShowMessage, show_message
-from galaxies.settlement import Settlement
-from galaxies.people.player import Player
+from common.messages import Message, ShowMessage, show_message
+from universe.artifacts.settlements.settlement import Settlement
+from universe.society.people.player import Player
 from ..person import Person
 from ..conversation import Conversation
 

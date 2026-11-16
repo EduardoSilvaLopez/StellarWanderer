@@ -46,8 +46,8 @@ import math
 import random
 from typing import List, Optional, Tuple
 
-from galaxies.star import Star
-from galaxies.rocky_world import RockyWorld
+from universe.bodies.star import Star
+from universe.bodies.rocky_world import RockyWorld
 
 Entry = Tuple[float, "OrbitKind"]  # (distance from the star in metres, kind)
 

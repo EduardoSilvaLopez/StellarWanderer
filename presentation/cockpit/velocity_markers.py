@@ -3,10 +3,10 @@
 from __future__ import annotations
 from typing import Any, Tuple, TYPE_CHECKING
 import pygame
-from .constants import PROGRADE_COLOR, RETROGRADE_COLOR
+from presentation.constants import PROGRADE_COLOR, RETROGRADE_COLOR
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class VelocityMarkers:
@@ -31,7 +31,7 @@ class VelocityMarkers:
         if relative.length() < VelocityMarkers.MIN_SPEED:
             return
 
-        from graphics.instruments.common import view_geometry, project_to_camera
+        from presentation.cockpit.instruments.common import view_geometry, project_to_camera
         _, horizon_y, focal_length_px = view_geometry(h)
 
         # project_to_camera's near-clip check expects a position-like vector in

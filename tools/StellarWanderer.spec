@@ -1,5 +1,5 @@
 # PyInstaller build recipe: onedir, windowed. Run through tools/build_windows.ps1.
-# Output: temp/dist/StellarWanderer/StellarWanderer.exe (the folder is what the installer packs).
+# Output: data/dist/StellarWanderer/StellarWanderer.exe (the folder is what the installer packs).
 
 import os
 from PyInstaller.utils.hooks import collect_all

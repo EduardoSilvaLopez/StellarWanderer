@@ -1,4 +1,5 @@
-"""The roles of the staff of a settlement (galaxies/settlement.py says which roles it has, and how many teams of each).
+"""The roles of the staff of a settlement (universe/artifacts/settlements/settlement.py says which roles it has, and how
+many teams of each).
 
 A role is data only: what depends on the role and not on the settlement. The teams, the rota, the substitute and the
 people themselves belong to the settlement (see people/staffing.py). A role with shifts takes one member for each 8-hour

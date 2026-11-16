@@ -7,14 +7,14 @@ import pygame
 from typing import Dict, Optional, Tuple, TYPE_CHECKING
 from common.vector3 import Vector3
 from common.paths import resource_path
-from ..constants import (
+from presentation.constants import (
     ACCENT, CANOPY_TOP, CONSOLE_TOP, CANOPY_TOP_INSET, CANOPY_BOTTOM_INSET,
     CONSOLE, HULL_EDGE_COLOR, HULL_DARK, READOUT_BG, CONSOLE_EDGE_COLOR,
     VIEW_VERTICAL_FOV_RADIANS, NEAR_CLIP,
 )
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 

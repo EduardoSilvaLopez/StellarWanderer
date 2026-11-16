@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import pygame
 
 from common.paths import resource_path
-from ..constants import ACCENT, ACCENT_DIM, READOUT_BG
+from presentation.constants import ACCENT, ACCENT_DIM, READOUT_BG
 from .political_info import PoliticalInfo
 from .broken import Broken
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from galaxies.people.player import Player
+    from universe.society.people.player import Player
 
 SYSTEMS = 'systems'  # the names the buttons are known by (see hit)
 PEOPLE = 'people'
@@ -29,8 +29,8 @@ KNOWLEDGE_ORDER = (SYSTEMS, PEOPLE, SHIP, MISSIONS)  # the order of the buttons,
 def shows_missions(player: Player) -> bool:
     """The missions button is there for a pilot the outposts trust (the mission board's rule) or with a mission to
     see."""
-    from galaxies.missions import OPEN  # local: the missions import the player, which imports this package
-    from galaxies.missions.mission_board import MissionBoard
+    from universe.society.missions import OPEN  # local: the missions import the player, which imports this package
+    from universe.society.missions.mission_board import MissionBoard
     return MissionBoard.is_trusted(player.reputation) or any(m.status == OPEN for m in player.missions)
 
 

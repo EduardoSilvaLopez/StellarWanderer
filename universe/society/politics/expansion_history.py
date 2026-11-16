@@ -10,7 +10,7 @@ import logging
 import random
 from typing import Dict, List, Optional
 
-from galaxies import seeds
+from universe.structure import seeds
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class SystemHistory:
         self.origin: SystemHistory = origin  # type: ignore
         self.size: int = 0
 
-        import galaxies.politics.political_entity as pe
+        import universe.society.politics.political_entity as pe
         self.entity: pe.PoliticalEntity =  pe.UNITED_DIVERSITY if origin is None else origin.entity
         if self.entity == pe.UNITED_DIVERSITY \
                 and self.founded_at >= datetime(555,1,1) and not self.full_history.was_ths_founded:
@@ -151,7 +151,8 @@ class ExpansionHistory:
         outpost by then; a system still without one (too young) gives way to the next newest. Dates and entities do
         not depend on the date the history is run to, so the choice is the same whatever `now` is. A history without
         one is an error: a galaxy needs its initial system."""
-        import galaxies.politics.political_entity as pe  # local: the entities import the people, who import the galaxy
+        # local: the entities import the people, who import the galaxy
+        import universe.society.politics.political_entity as pe
         candidates = [system for system in self.all_systems
                       if system.entity is pe.THOSE_WHO_SHARE and system.founded_at <= epoch]
         for system in reversed(candidates):

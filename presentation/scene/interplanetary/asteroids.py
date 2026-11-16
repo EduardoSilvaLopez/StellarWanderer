@@ -29,19 +29,19 @@ from OpenGL import GL, GLU
 
 from common.frame_watch import frame_watch
 from common.vector3 import Vector3
-from galaxies import seeds
-from galaxies.asteroid import AsteroidKey
-from galaxies.asteroid_sizes import AsteroidTier
+from universe.structure import seeds
+from universe.bodies.asteroids.asteroid import AsteroidKey
+from universe.bodies.asteroids.asteroid_sizes import AsteroidTier
 from .asteroid_looks import Look, corner_colours, look_of, shade
 from .asteroid_shape import asteroid_mesh, orientation
-from .constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
-from .instruments.common import view_geometry
+from presentation.constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
+from presentation.cockpit.instruments.common import view_geometry
 
 if TYPE_CHECKING:
-    from galaxies.asteroid_belt import AsteroidBelt
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.asteroid_belt import AsteroidBelt
+    from universe.structure.stellar_system import StellarSystem
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class AsteroidModel:
@@ -225,7 +225,7 @@ class Asteroids:
 
     @staticmethod
     def _belts(system: StellarSystem) -> list[AsteroidBelt]:
-        from galaxies.asteroid_belt import AsteroidBelt
+        from universe.structure.asteroid_belt import AsteroidBelt
         return [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
 
     @staticmethod

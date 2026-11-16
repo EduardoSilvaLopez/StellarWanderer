@@ -1,7 +1,7 @@
 """The chat of the settlement screen (the Chat option): the conversation tags on the left, the chat log in the middle
 (see
-galaxies/people/chat_log.py for what it holds). Both are lists in the rectangle `place` gives, with a scroll bar beside
-them, scrolled with the wheel, Page Up and Page Down, and the scroll bar.
+universe/society/people/chat_log.py for what it holds). Both are lists in the rectangle `place` gives, with a scroll bar
+beside them, scrolled with the wheel, Page Up and Page Down, and the scroll bar.
 
 ChatView draws the lines as bubbles, one colour per speaker: the pilot's on the left, the person's on the right, in the
 person's colour (chat_log.py, speaker_colour). A tag word is in the accent colour, and a click on it calls `on_tag` with
@@ -19,8 +19,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Tuple
 import pygame
 
-from common import audio
-from galaxies.people.chat_log import PLAYER, ChatLog, Word
+from presentation import audio
+from universe.society.people.chat_log import PLAYER, ChatLog, Word
 from .dialog import is_cancel
 from .dialog_fonts import body_font
 from .message_dialog import ACCENT, ACCENT_DIM, TEXT_COLOR
@@ -29,7 +29,7 @@ from .scroll_bar import ScrollBar
 from . import search_box
 
 if TYPE_CHECKING:
-    from galaxies.people.person import Person
+    from universe.society.people.person import Person
 
 BODY_SIZE = 16
 BUBBLE_PAD = 10

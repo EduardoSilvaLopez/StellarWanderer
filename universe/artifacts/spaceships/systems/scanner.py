@@ -6,17 +6,17 @@ import math
 
 import numpy as np
 
-from common import audio
+from common import sound_events
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
-    from galaxies.rocky_world import RockyWorld
-    from galaxies.km2 import Km2
-    from galaxies.rock import Rock
-    from galaxies.ore_mine import OreMine
-    from galaxies.outpost import Outpost
-    from galaxies.portals.portal_base import PortalBase
-    from galaxies.asteroid import Asteroid
+    from universe.artifacts.spaceships.ship import Ship
+    from universe.bodies.rocky_world import RockyWorld
+    from universe.bodies.km2 import Km2
+    from universe.bodies.rock import Rock
+    from universe.artifacts.ore_mine import OreMine
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.artifacts.settlements.portal_base import PortalBase
+    from universe.bodies.asteroids.asteroid import Asteroid
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +27,14 @@ Target = Union['Rock', 'OreMine', 'Outpost']
 class Scanner:
     """Aiming and targeting: what the crosshair hits (rocks, ore mines, outposts) and ore collection.
 
-    The scanner decides what is targeted; the laser (spaceships/laser.py) only fires at it. While bound, the beam
-    (drawn by graphics/laser.py while `Laser.firing` is set, i.e. SPACE held on a rock or on nothing) is a shallow
-    slope from the emitter (half of Ship.HEIGHT below the camera) down to the ground at
-    MAX_LENGTH metres ahead (horizontally), so it hits the ground at full range when the ship is low. Rocks closer
-    than the slope's height at their distance pass over the beam. A hit counts only within MAX_LENGTH metres of the
-    camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach.
-    `targeted_rock` and `targeted_mine` are what the scanner panel (graphics/instruments/scanner.py, a different class
-    with the same name) shows, and what `activate` heats or collects from.
+    The scanner decides what is targeted; the laser (universe/artifacts/spaceships/systems/laser.py) only fires at it.
+    While bound, the beam (drawn by presentation/scene/artificial/laser.py while `Laser.firing` is set, i.e. SPACE held
+    on a rock or on nothing) is a shallow slope from the emitter (half of Ship.HEIGHT below the camera) down to the
+    ground at MAX_LENGTH metres ahead (horizontally), so it hits the ground at full range when the ship is low. Rocks
+    closer than the slope's height at their distance pass over the beam. A hit counts only within MAX_LENGTH metres of
+    the camera: from higher up the beam is steeper and longer, and what it meets on the ground is out of reach.
+    `targeted_rock` and `targeted_mine` are what the scanner panel (presentation/cockpit/instruments/scanner.py, a
+    different class with the same name) shows, and what `activate` heats or collects from.
 
     Unbound, the targeted body (`GameEnvironment.targeted_body`) can be an asteroid that is not yet fully scanned and
     within scan range: it is `scan_asteroid`, and `scan_problem` says why the beam cannot work on it now (None if it
@@ -63,25 +63,26 @@ class Scanner:
         self.end_z = 0.0
 
     # region Targets
-    # Imported here, not at module level: galaxies.ore_mine needs spaceships.ship to load first.
+    # Imported here, not at module level: universe.artifacts.ore_mine needs universe.artifacts.spaceships.ship to load
+    # first.
     @property
     def targeted_rock(self) -> Optional[Rock]:
-        from galaxies.rock import Rock
+        from universe.bodies.rock import Rock
         return self.target if isinstance(self.target, Rock) else None
 
     @property
     def targeted_mine(self) -> Optional[OreMine]:
-        from galaxies.ore_mine import OreMine
+        from universe.artifacts.ore_mine import OreMine
         return self.target if isinstance(self.target, OreMine) else None
 
     @property
     def targeted_base(self) -> Optional[PortalBase]:
-        from galaxies.portals.portal_base import PortalBase
+        from universe.artifacts.settlements.portal_base import PortalBase
         return self.target if isinstance(self.target, PortalBase) else None
 
     @property
     def targeted_outpost(self) -> Optional[Outpost]:
-        from galaxies.outpost import Outpost
+        from universe.artifacts.settlements.outpost import Outpost
         return self.target if isinstance(self.target, Outpost) else None
 
     def update_target(self) -> None:
@@ -176,7 +177,7 @@ class Scanner:
         range, and `scan_problem` to what keeps the beam from working on it. Out of range, it is not set at all: the
         scanner shows nothing until the asteroid is in reach."""
         import game_environment as gem
-        from galaxies.asteroid import Asteroid
+        from universe.bodies.asteroids.asteroid import Asteroid
         environment = gem.current_environment
         body = environment.targeted_body
         if not isinstance(body, Asteroid) or body.scan_progress >= 1.0 or not body.is_shown:
@@ -221,7 +222,7 @@ class Scanner:
             return
         mine.scrap()
         hold.scraps += mine.SCRAPS_FROM_MINE
-        audio.play('ore_collected')
+        sound_events.play('ore_collected')
 
     def activate(self, time_passed: float) -> Scanner:
         """SPACE held. On a targeted ore mine, transfer its ore to the ship and its credits to the pilot (the beam
@@ -258,7 +259,7 @@ class Scanner:
                 self.ship.owner.credits += mine.credits
                 mine.credits = 0
                 if ore_transfer > 0:
-                    audio.play('ore_collected')
+                    sound_events.play('ore_collected')
             return self
 
         if self.targeted_outpost is not None:
@@ -266,7 +267,7 @@ class Scanner:
 
         self._scan_held = self._scan_held or self.scan_asteroid is not None
         scanning = self.scan_asteroid is not None and self.scan_problem is None
-        audio.set_loop('scan', scanning)
+        sound_events.set_loop('scan', scanning)
         if scanning:
             self._scan(self.scan_asteroid, time_passed)
         if self._scan_held:
@@ -280,7 +281,7 @@ class Scanner:
             self.ship.laser.cease_fire()
             if self._announced_rock is not rock:
                 self._announced_rock = rock
-                from common.dialogs.messages import Message, show_message
+                from common.messages import Message, show_message
                 show_message(Message(
                     title='ROCK SCANNED',
                     text=f"This {rock.adjective} rock has been scanned, and the results stored in the ship computer, "
@@ -297,7 +298,7 @@ class Scanner:
         """SPACE is up: the next press of it announces a scanned rock again."""
         self._announced_rock = None
         self._scan_held = False
-        audio.set_loop('scan', False)
+        sound_events.set_loop('scan', False)
         return self
 
     def in_base_zone(self) -> bool:
@@ -308,7 +309,7 @@ class Scanner:
 
     def deactivate(self) -> Scanner:
         self.ship.laser.cease_fire()
-        audio.set_loop('scan', False)
+        sound_events.set_loop('scan', False)
         return self
     # endregion
 
@@ -419,8 +420,9 @@ class Scanner:
     def _rock_entry(self, rock: Rock) -> Optional[float]:
         """t-value where the beam first enters the rock, or None. The test is the rock's bounding cube, of side
         rock.size, centred at its altitude over the ground at (longitude, latitude), tilted by rock.tilt and turned by
-        rock.orientation. The boulder drawn inside it (graphics/rock_shape.py) touches the cube on every axis, but is
-        not the whole cube, so a beam can hit the cube a little before the visible rock; close enough for aiming."""
+        rock.orientation. The boulder drawn inside it (presentation/scene/planetary/rock_shape.py) touches the cube on
+        every axis, but is not the whole cube, so a beam can hit the cube a little before the visible rock; close enough
+        for aiming."""
         half = rock.size / 2.0
         ground = rock.ground_height
         return self._beam_enters_oriented_box(

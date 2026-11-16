@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from galaxies.people.person import Person
+from universe.society.people.person import Person
 
 
 @dataclass

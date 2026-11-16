@@ -2,13 +2,13 @@ import datetime
 import logging
 import math
 from typing import Optional
-from galaxies.body import Body
-from galaxies.constants import EPOCH as EPOCH_DATE, INITIAL_STAR_POSITION
-from galaxies.galaxy import Galaxy
-from galaxies.game_clock import GameClock
-from galaxies.orbit_layout import OrbitLayout
-from galaxies.stellar_system import StellarSystem
-from galaxies.world import World
+from universe.bodies.body import Body
+from universe.structure.constants import EPOCH as EPOCH_DATE, INITIAL_STAR_POSITION
+from universe.structure.galaxy import Galaxy
+from universe.structure.game_clock import GameClock
+from universe.structure.orbit_layout import OrbitLayout
+from universe.structure.stellar_system import StellarSystem
+from universe.bodies.world import World
 from common.vector3 import Vector3
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class GameEnvironment:
         default, not a choice of the pilot. From one zone into another, and with `keep_target` (the autopilot flies to
         it), it stays. last_fixed_body records the body while fixed. A hidden body has no fixed zone. Call only while
         unbound, see Navigation.update_position_and_velocity."""
-        from spaceships.navigation import Navigation  # local: navigation imports this module
+        from universe.artifacts.spaceships.navigation import Navigation  # local: navigation imports this module
 
         fixed: Optional[Body] = None
         fixed_distance = math.inf

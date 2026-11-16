@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import pygame
-from ..constants import CONSOLE_TOP, ACCENT
+from presentation.constants import CONSOLE_TOP, ACCENT
 
 
 class Crosshair:

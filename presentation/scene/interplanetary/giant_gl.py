@@ -21,9 +21,9 @@ import math
 from datetime import datetime
 import numpy as np
 from OpenGL import GL
-from galaxies.jovian_world import JovianWorld
+from universe.bodies.jovian_world import JovianWorld
 from common.vector3 import Vector3
-from .constants import (
+from presentation.constants import (
     WORLD_AMBIENT_LIGHT, WORLD_MIN_RADIUS_PX, MIN_VISIBLE_PX, GIANT_HAZE_TOP, GIANT_SUN_GAIN, GIANT_STEP_DEPTH,
     GIANT_STEP_HEIGHT, GIANT_PIXEL_BUDGET, GIANT_TARGET_SIZE, GIANT_LIMB_DARKENING, GIANT_LIGHT_PENETRATION,
     GIANT_FORWARD_SCATTERING, GIANT_CLOUD_WAVELENGTH, GIANT_CLOUD_STRETCH, GIANT_CLOUD_OCTAVES, GIANT_CLOUD_WARP,
@@ -31,10 +31,10 @@ from .constants import (
     GIANT_CLOUD_LAYER_EDGE, GIANT_CLOUD_RELIEF_SHADING, GIANT_LIGHTNING_GAIN, GIANT_LIGHTNING_COLOUR,
     GIANT_LIGHTNING_MAX_TIME_SCALE, GIANT_LIGHTNING_MAX_FLASHES, GIANT_STORM_RAISE, GIANT_STORM_MAX, NEAR_CLIP,
 )
-from .lit_worlds import LitWorlds
+from presentation.scene.lit_worlds import LitWorlds
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
 # The table of the gas: its extinction coefficient and the optical depth of the column above, at NODES altitudes spaced
@@ -605,7 +605,7 @@ class GiantGl:
         distance from the ship and the polygon of its outline on the screen, or None when the ship is inside it and
         everything is hidden. The giants are drawn under the sky texture, so the sky is made transparent over them, after
         what is farther than they are is drawn and before what is nearer."""
-        from graphics.instruments.common import view_geometry
+        from presentation.cockpit.instruments.common import view_geometry
         _, horizon_y, focal = view_geometry(height)
         erasers: List[Tuple[float, object]] = []
         for world in environment.nearest_system.get_all_worlds():
@@ -766,7 +766,7 @@ class GiantGl:
         if not chosen:
             return
 
-        from graphics.instruments.common import view_geometry
+        from presentation.cockpit.instruments.common import view_geometry
         view_h, horizon_y, focal = view_geometry(height)
         star_color = environment.targeted_body.stellar_system.star.color
         program = GiantGl._get_program()

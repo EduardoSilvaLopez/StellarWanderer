@@ -8,6 +8,7 @@ first chunk. The terrain is rebuilt from the seed, so nothing is lost when a hel
 """
 
 from __future__ import annotations
+import logging
 import multiprocessing
 import os
 import threading
@@ -18,7 +19,10 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from common.frame_watch import frame_watch
 from .terrain_mesh import Key, build_chunk_timed
+
+logger = logging.getLogger(__name__)
 
 WORKERS = 2
 
@@ -87,10 +91,14 @@ class ChunkBuilder:
         return done
 
     def _replace_pool(self) -> None:
+        """A helper has died. Not expected in play, so it is logged; the new pool's start is timed, as it waits for the
+        helpers to come up and so stalls the frame it happens in."""
+        logger.warning('A terrain helper process died: the helper pool is replaced.')
         if self._pool is not None:
             self._pool.shutdown(wait=False, cancel_futures=True)
         self._pending.clear()
-        self.start()
+        with frame_watch.timed('helper pool start'):
+            self.start()
 
     def shutdown(self) -> None:
         if self._pool is not None:

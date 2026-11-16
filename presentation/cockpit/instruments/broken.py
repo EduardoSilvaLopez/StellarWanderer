@@ -13,10 +13,10 @@ import random
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 import pygame
 
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 
 if TYPE_CHECKING:
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 BROKEN_FACE = (30, 32, 36)
 BROKEN_EDGE = (78, 82, 88)
@@ -47,7 +47,7 @@ HAMMER_HOTSPOT = (2, 2)
 
 def _ship() -> Optional[Ship]:
     """The ship of the game being played, if there is one."""
-    import galaxies.people.player as player_module
+    import universe.society.people.player as player_module
     player = player_module.current_player
     return None if player is None else player.ship
 

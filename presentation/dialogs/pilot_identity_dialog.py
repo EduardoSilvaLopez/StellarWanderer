@@ -6,13 +6,13 @@ import calendar
 from typing import List, Optional, Tuple
 import pygame
 
-from galaxies.people.person import Person
-from galaxies.people.pilot_identity import PilotIdentity
+from universe.society.people.person import Person
+from universe.society.people.pilot_identity import PilotIdentity
 from .dialog import DialogResult
 from .dialog_fonts import body_font
 from .form_controls import NumberField, Slider, TextField, draw_box
 from .message_dialog import ACCENT, MessageDialog, TEXT_COLOR
-from .messages import Message
+from common.messages import Message
 
 NAME_MAX_LENGTH = 20
 # The dates of birth run from the first to the last date given here (year, month, day), inclusive.

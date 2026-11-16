@@ -12,8 +12,8 @@ from common.frame_watch import frame_watch
 from common.paths import resource_path
 
 if TYPE_CHECKING:
-    from galaxies.ore_fields import OreField
-    from .surface_light import SurfaceLight
+    from universe.artifacts.ore_fields import OreField
+    from presentation.scene.surface_light import SurfaceLight
 
 
 class OreFields:

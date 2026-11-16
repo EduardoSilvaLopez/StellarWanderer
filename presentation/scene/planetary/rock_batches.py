@@ -34,19 +34,19 @@ import numpy as np
 from OpenGL import GL
 
 from common.frame_watch import frame_watch
-from .constants import SURFACE_STARLIGHT
+from presentation.constants import SURFACE_STARLIGHT
 from .rock_instances import DOWNWARD_DARKENING, VISIBLE_TOP_SHARE, InstancedRocks
 from .rock_shape import FACES, rock_meshes, rotate
-from .shadowed_surface import ShadowedSurface
+from presentation.scene.shadowed_surface import ShadowedSurface
 from .special_rocks import SPLITS, special_mesh
 from .terrain_gl import TerrainGl
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
-    from galaxies.rock import Rock
-    from galaxies.rocky_world import RockyWorld
-    from .shadow_map import ShadowMap
-    from .surface_light import SurfaceLight
+    from universe.bodies.km2 import Km2
+    from universe.bodies.rock import Rock
+    from universe.bodies.rocky_world import RockyWorld
+    from presentation.scene.shadow_map import ShadowMap
+    from presentation.scene.surface_light import SurfaceLight
 
 # The cached colours are reused until the sun has moved this far. At 0.1 degrees the brightness changes by less
 # than 0.002, under half a level of 255, so nobody can see the difference. At normal speed the sun moves about

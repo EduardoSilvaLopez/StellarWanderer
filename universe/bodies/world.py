@@ -8,15 +8,15 @@ import random
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from galaxies.body import Body
-from galaxies.people import knowledge
+from universe.bodies.body import Body
+from universe.society.people import knowledge
 from common.vector3 import Vector3
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
-    from galaxies.orbit import Orbit
-    from galaxies.stellar_system import StellarSystem
-    from spaceships.ship import Ship
+    from universe.bodies.km2 import Km2
+    from universe.structure.orbit import Orbit
+    from universe.structure.stellar_system import StellarSystem
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class World(Body):

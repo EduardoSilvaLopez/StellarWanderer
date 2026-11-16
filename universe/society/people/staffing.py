@@ -18,12 +18,12 @@ import heapq
 from datetime import datetime
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from galaxies import seeds
+from universe.structure import seeds
 
 if TYPE_CHECKING:
-    from galaxies.people.person import Person
-    from galaxies.people.role import Role
-    from galaxies.settlement import Settlement
+    from universe.society.people.person import Person
+    from universe.society.people.role import Role
+    from universe.artifacts.settlements.settlement import Settlement
 
 STAFFING_START = datetime(620, 1, 1)  # an older settlement starts with the staff of its size at this date
 
@@ -88,7 +88,8 @@ class Staffing:
                 self._hire(role, when)
 
     def _hire(self, role: Role, when: datetime) -> None:
-        from galaxies.people.person import Person  # local: the people load the world, which loads the settlements
+        # local: the people load the world, which loads the settlements
+        from universe.society.people.person import Person
         index = len(self.everyone)
         person = Person(seeds.derive(self.settlement.seed, 'person', index), self.settlement, role, when)
         self.everyone.append(person)

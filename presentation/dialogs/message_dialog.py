@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 import pygame
 
-from graphics.fallback_font import FallbackFont
+from presentation.fallback_font import FallbackFont
 from .dialog import Dialog, DialogResult, is_cancel
 from .dialog_fonts import BODY_FONT_SIZE, body_font, title_font
-from .messages import Message
+from common.messages import Message
 from .scroll_bar import ScrollBar
 from common.paths import resource_path
 

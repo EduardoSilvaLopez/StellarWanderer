@@ -19,8 +19,8 @@ has more plating and more windows, not bigger ones (the textures are in tools/ge
 The light is the star's alone and is parallel to the axis, so a face is lit by how much it looks at the star and nothing
 changes as the ring spins: the lighting is baked into the colours of the vertices once.
 
-The result is a `BaseModel`: groups of vertices that the renderer (graphics/portal_base_gl.py) draws with their own
-texture, those that spin with the ring and those that do not."""
+The result is a `BaseModel`: groups of vertices that the renderer (presentation/scene/artificial/portal_base_gl.py)
+draws with their own texture, those that spin with the ring and those that do not."""
 
 from __future__ import annotations
 import math

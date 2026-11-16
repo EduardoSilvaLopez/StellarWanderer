@@ -1,7 +1,7 @@
 # Seeds: design policy
 
 This is a permanent policy. It says what the seeds must guarantee and why; the chain of seeds itself is documented
-in the docstring of `galaxies/seeds.py`, and the code that uses it in the modules that own each object.
+in the docstring of `universe/structure/seeds.py`, and the code that uses it in the modules that own each object.
 
 ## The guarantee
 

@@ -32,7 +32,8 @@ def add_sealing_packs(node: Any) -> int:
 
 
 def migrate_file(path: str) -> int:
-    """Converts the savefile `path` in place. Returns the number of holds given the stock (0: the file is not touched)."""
+    """Converts the savefile `path` in place. Returns the number of holds given the stock (0: the file is not
+    touched)."""
     with open(path, encoding='utf-8') as file:
         data = json.load(file)
     added = add_sealing_packs(data)

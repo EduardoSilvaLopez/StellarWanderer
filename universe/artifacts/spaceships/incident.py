@@ -15,12 +15,12 @@ import random
 from typing import TYPE_CHECKING, Any
 
 from common.updating import Updatable, update_queue
-from spaceships.malfunction import Instrument
+from universe.artifacts.spaceships.malfunction import Instrument
 import game_environment as gem
 
 if TYPE_CHECKING:
-    from galaxies.people.player import Player
-    from spaceships.ship import Ship
+    from universe.society.people.player import Player
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class Size(Enum):
@@ -71,8 +71,8 @@ def failures() -> int:
 def profile_at(ship: Ship, current_datetime: datetime) -> ImpactProfile:
     """The impact profile of the ship's place: a giant's ring if the ship is in one, else an asteroid belt, else normal
     space. A ring is looked for first: it is the smaller of the two, and the belts are far from the giants."""
-    from galaxies.asteroid_belt import AsteroidBelt
-    from galaxies.jovian_world import JovianWorld
+    from universe.structure.asteroid_belt import AsteroidBelt
+    from universe.bodies.jovian_world import JovianWorld
     position = ship.navigation.stellar_position(current_datetime)
     orbits = gem.current_environment.nearest_system.orbits
     for orbit in orbits:
@@ -87,8 +87,8 @@ def profile_at(ship: Ship, current_datetime: datetime) -> ImpactProfile:
 
 @dataclass
 class Leak:
-    """An open air leak: its seed (its crack is drawn from it, see graphics/incident_view.py), its size, and the sealing
-    packs it still needs."""
+    """An open air leak: its seed (its crack is drawn from it, see presentation/cockpit/incident_view.py), its size, and
+    the sealing packs it still needs."""
     seed: int
     size: Size
     packs_left: int

@@ -6,8 +6,8 @@ import logging
 from datetime import datetime
 
 import game_environment as gem
-from galaxies.people import knowledge
-import galaxies.people.player as pem
+from universe.society.people import knowledge
+import universe.society.people.player as pem
 from common.paths import data_path, SAVEFILES_DIR
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,8 @@ class Savefile:
         ship_position = pem.current_player.ship.position.as_vector()
         if not player_data['ship']['is_bound']:
             gem.current_environment.refresh_fixed_body(ship_position)
-            from spaceships.orbit_assist import OrbitAssist  # local: it imports the dialogs, which import this module
+            # local: it imports the dialogs, which import this module
+            from universe.artifacts.spaceships.orbit_assist import OrbitAssist
             OrbitAssist.resume(pem.current_player.ship)  # an orbit is worked out again, not saved
         target_index: int = load_object['environment']['target_index']
         if target_index >= 0:

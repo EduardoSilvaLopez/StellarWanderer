@@ -6,15 +6,15 @@ import logging
 import os
 import pygame
 
-from graphics.constants import FONT_FILE
-from graphics.fallback_font import FALLBACK_FONTS, FallbackFont
+from presentation.constants import FONT_FILE
+from presentation.fallback_font import FALLBACK_FONTS, FallbackFont
 from common.paths import resource_path
 
 logger = logging.getLogger(__name__)
 
 FONTS_DIR = resource_path('fonts')
 TITLE_FONT_FILE = 'Orbitron.ttf'
-# The body font is the same as the instruments' (graphics/constants.py), and its size goes with it: 20 for Oxanium,
+# The body font is the same as the instruments' (presentation/constants.py), and its size goes with it: 20 for Oxanium,
 # chosen by eye. Change the size here when the font changes.
 BODY_FONT_FILE = FONT_FILE
 BODY_FONT_SIZE = 20

@@ -13,7 +13,7 @@ mountains tens of kilometres away: first the far pass (from the depth where the 
 depth buffer is cleared and the near pass (up to MAX_DEPTH, the game's limit, with the rocks and everything else of
 the surface) is drawn over it. The same leaves of the quadtree serve both: far chunks are coarse and cheap, so the
 landmarks show at any distance. Only at the edge of FAR_RANGE does the relief fall to the ground under the camera and
-the colour to the flat disc beyond (FixedWorld), too far for the fall to be seen as the ship moves.
+the colour to the flat disc beyond (BoundWorld), too far for the fall to be seen as the ship moves.
 
 A node of the quadtree is split into its four children only when all of them are built, so that what is drawn has no
 holes and never falls back more than one level; the missing ones are requested coarsest first, and ahead of time by the
@@ -39,18 +39,18 @@ import numpy as np
 from OpenGL import GL
 
 from common.frame_watch import frame_watch
-from galaxies.terrain import Terrain
+from universe.bodies.terrain import Terrain
 from . import terrain_mesh as mesh
-from .constants import MAX_DEPTH, SURFACE_STARLIGHT
-from . import shadow_map
-from .shadow_map import ShadowMap
+from presentation.constants import MAX_DEPTH, SURFACE_STARLIGHT
+from presentation.scene import shadow_map
+from presentation.scene.shadow_map import ShadowMap
 from .terrain_helpers import ChunkBuilder
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
-    from galaxies.world import World
-    from spaceships.ship import Ship
-    from .surface_light import SurfaceLight
+    from universe.bodies.km2 import Km2
+    from universe.bodies.world import World
+    from universe.artifacts.spaceships.ship import Ship
+    from presentation.scene.surface_light import SurfaceLight
 
 NEAR_RANGE = float(MAX_DEPTH)     # m: the near pass reaches this deep (the rocks and the rest of the surface are there)
 DEPTH_OVERLAP = 20.0              # m: the far pass starts this much before the near pass ends, so that no line is left
@@ -535,6 +535,7 @@ class _Renderer:
         ground = ship.navigation.ground_height_at(ship.position.x, ship.position.z)
         self.horizon = (ground, math.sqrt(2.0 * terrain.radius * max(ship.position.y - ground, 0.0)), terrain.radius)
         right, up, back = modelview[0, :3], modelview[1, :3], modelview[2, :3]
+        frame_watch.mark('ground: setup')
         arrived = self._collect()
         if arrived:
             self.selection = None   # something new can be shown
@@ -560,13 +561,18 @@ class _Renderer:
                 self.planes.append((float(unit[0]), float(unit[1]), float(unit[2])))
             roots = self._roots()
             self._build_roots_now(roots)
+            frame_watch.mark('ground: near roots')
             out: List[Tuple[_Chunk, float]] = []
             requests: List[Tuple[float, Key]] = []
             self.holes = 0
             self.unsettled = []
-            for root in self._visible_roots(roots):
+            visible = self._visible_roots(roots)
+            frame_watch.mark('ground: visible roots')
+            for root in visible:
                 self._select(root, out, requests)
+            frame_watch.mark('ground: select')
             self._request(requests)
+            frame_watch.mark('ground: request')
             # A chunk is in the near pass if it can have anything within that depth (a point at that depth can be
             # farther from the camera, to the side), and in the far pass if it can have anything beyond the split.
             near = [chunk for chunk, gap in out if gap < NEAR_RANGE * NEAR_SLACK]
@@ -736,7 +742,8 @@ class TerrainGl:
     @staticmethod
     def preload() -> None:
         """Starts the helper processes when the game's worlds have relief, so that the first ground does not wait."""
-        from galaxies.rocky_world import RockyWorld   # not at the top: the graphics are loaded before the galaxies
+        # not at the top: the presentation is loaded before the universe
+        from universe.bodies.rocky_world import RockyWorld
         if RockyWorld.TERRAIN_RELIEF > 0.0:
             TerrainGl._get().builder.start()
 

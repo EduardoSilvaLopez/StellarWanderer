@@ -8,18 +8,18 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Sequence, Tuple
 
 import logging
-from galaxies import seeds
-from galaxies.politics import tidings
-from galaxies.rocky_world import RockyWorld
+from universe.structure import seeds
+from universe.society.politics import tidings
+from universe.bodies.rocky_world import RockyWorld
 from common.vector3 import Vector3
-from galaxies.world import World
-from galaxies.world_surface import Colour, equilibrium_temperature, vary_colour
+from universe.bodies.world import World
+from universe.bodies.world_surface import Colour, equilibrium_temperature, vary_colour
 
 if TYPE_CHECKING:
     from common.vector3 import Vector3
-    from galaxies.orbit import Orbit
-    from galaxies.star import Star
-    from galaxies.stellar_system import StellarSystem
+    from universe.structure.orbit import Orbit
+    from universe.bodies.star import Star
+    from universe.structure.stellar_system import StellarSystem
 
 logger = logging.getLogger(__name__)
 

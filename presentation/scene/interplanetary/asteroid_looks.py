@@ -1,10 +1,10 @@
 """How the surface of an asteroid looks: its class, its colour and how patchy it is, and how the sun lights it.
 
-An asteroid has one of the classes the real ones are sorted in (galaxies/asteroid_class.py): carbonaceous (dark, most of
-those in the main belt), stony (a reddish brown), metallic (grey) and basaltic (bright). Each class has several
-variants that differ in how patchy the surface is: broad dark and light areas, finer mottling. The class and the variant
-come from the asteroid's seed, so the same asteroid always looks the same. The colours are display values: the real
-differences in reflectance are compressed, so that the darkest is still seen against the sky.
+An asteroid has one of the classes the real ones are sorted in (universe/bodies/asteroids/asteroid_class.py):
+carbonaceous (dark, most of those in the main belt), stony (a reddish brown), metallic (grey) and basaltic (bright).
+Each class has several variants that differ in how patchy the surface is: broad dark and light areas, finer mottling.
+The class and the variant come from the asteroid's seed, so the same asteroid always looks the same. The colours are
+display values: the real differences in reflectance are compressed, so that the darkest is still seen against the sky.
 
 No image is used: the surface colour is a smooth noise over the asteroid's own directions (so it has no seams), times
 the tones of the mesh (darker crater floors, lighter rims, see asteroid_shape.py). The mesh is lit face by face
@@ -17,9 +17,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from galaxies.asteroid_class import class_of
+from universe.bodies.asteroids.asteroid_class import class_of
 from .asteroid_shape import AsteroidMesh, smooth_noise
-from .constants import SURFACE_STARLIGHT
+from presentation.constants import SURFACE_STARLIGHT
 
 Colour = tuple[float, float, float]
 

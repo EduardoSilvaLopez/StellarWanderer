@@ -6,17 +6,17 @@ import numpy as np
 import pygame
 from OpenGL import GL
 
-from .asteroids import Asteroids
-from spaceships.ship import Ship
-from .rocks import Rocks
+from presentation.scene.interplanetary.asteroids import Asteroids
+from universe.artifacts.spaceships.ship import Ship
+from presentation.scene.planetary.rocks import Rocks
 
 if TYPE_CHECKING:
-    from galaxies.km2 import Km2
-    from galaxies.outpost import Outpost
+    from universe.bodies.km2 import Km2
+    from universe.artifacts.settlements.outpost import Outpost
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
-    from .asteroids import Sighting
-    from .surface_light import SurfaceLight
+    from universe.artifacts.spaceships.ship import Ship
+    from presentation.scene.interplanetary.asteroids import Sighting
+    from presentation.scene.surface_light import SurfaceLight
 
 SCOOP_FOV_DEGREES = 2.0 * Ship.SCOOP_VIEW_HALF_ANGLE  # vertical, and horizontal: the view is a square
 LAMP_REACH = 0.6  # the spread of each corner lamp's light (a Gaussian's sigma), in half sides of the square

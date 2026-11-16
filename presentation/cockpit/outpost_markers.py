@@ -3,11 +3,11 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING
 import pygame
-from .constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
+from presentation.constants import OUTPOST_DOT_COLOR, OUTPOST_DOT_RADIUS_PX
 
 if TYPE_CHECKING:
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 
 class OutpostMarkers:
@@ -24,7 +24,7 @@ class OutpostMarkers:
 
         `visible` is False when the outpost is on the far side of its world (its surface normal points away from the
         ship). Such outposts still get a label, but no dot."""
-        from spaceships.navigation import Navigation
+        from universe.artifacts.spaceships.navigation import Navigation
         date_time = environment.date_time
         ship_position = ship.navigation.stellar_position(date_time)
         result = []

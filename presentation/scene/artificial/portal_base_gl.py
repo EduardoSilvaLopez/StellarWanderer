@@ -30,14 +30,14 @@ from OpenGL import GL, GLU
 
 from common.frame_watch import frame_watch
 from common.paths import resource_path
-from .constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
-from .instruments.common import view_geometry
+from presentation.constants import CONSOLE_TOP, MIN_VISIBLE_PX, VIEW_VERTICAL_FOV_RADIANS
+from presentation.cockpit.instruments.common import view_geometry
 from .portal_base_shape import BaseModel, Mesh, make_model
 
 if TYPE_CHECKING:
-    from galaxies.portals.portal_base import PortalBase
+    from universe.artifacts.settlements.portal_base import PortalBase
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
 

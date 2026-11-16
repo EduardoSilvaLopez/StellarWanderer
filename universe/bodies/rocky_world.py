@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import logging
 from common.units import format_compact_distance
-import galaxies.constants
-from galaxies import seeds
-from galaxies.km2 import Km2
-from galaxies.rock import Rock
-from galaxies.terrain import Terrain
-from galaxies.world import World
-from galaxies.world_surface import SurfaceType, equilibrium_temperature, generate_surface
+import universe.structure.constants
+from universe.structure import seeds
+from universe.bodies.km2 import Km2
+from universe.bodies.rock import Rock
+from universe.bodies.terrain import Terrain
+from universe.bodies.world import World
+from universe.bodies.world_surface import SurfaceType, equilibrium_temperature, generate_surface
 
 if TYPE_CHECKING:
-    from galaxies.outpost import Outpost
-    from galaxies.orbit import Orbit
+    from universe.artifacts.settlements.outpost import Outpost
+    from universe.structure.orbit import Orbit
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ class RockyWorld(World):
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
             and (self.stellar_system.x, self.stellar_system.y,
-                 self.stellar_system.z) == galaxies.constants.INITIAL_STAR_POSITION
+                 self.stellar_system.z) == universe.structure.constants.INITIAL_STAR_POSITION
 
     def _generate_mass_density_and_radius(self, my_random: random.Random, radius: float) -> None:
         """Sets `density`, `mass` and `radius`. The density before compression is drawn by the surface type (icy or

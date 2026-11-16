@@ -1,7 +1,7 @@
 """The class of an asteroid, as the real ones are sorted by their spectra: what it is made of, how much of the light it
 reflects and how dense it is. The class is a function of the asteroid's seed, with the shares of the main belt, so the
-same asteroid is always of the same class. The graphics give each class its colour (graphics/asteroid_looks.py) and the
-knowledge base shows it (`Asteroid.markdown`).
+same asteroid is always of the same class. The graphics give each class its colour
+(presentation/scene/interplanetary/asteroid_looks.py) and the knowledge base shows it (`Asteroid.markdown`).
 """
 
 from __future__ import annotations

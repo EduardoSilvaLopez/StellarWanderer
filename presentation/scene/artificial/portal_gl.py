@@ -12,7 +12,7 @@ the sky. Three things follow from it, in the order of the frame:
     whose band never gets narrower than a pixel, and which is not drawn at all while the ring is under a pixel across.
     Its opening is drawn as the rest of the sky, from both sides.
   * the cockpit (`tint_cockpit`): white added to the opaque pixels of the cockpit, as the star's colour is
-    (graphics/starlight.py).
+    (presentation/scene/starlight.py).
 
 Like the base, the ring is drawn from the camera's own frame: where it is in relation to the ship is worked out in
 double precision before it goes to OpenGL.
@@ -27,14 +27,14 @@ import numpy as np
 import pygame
 from OpenGL import GL, GLU
 
-from .constants import MIN_VISIBLE_PX, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
-from .instruments.common import view_geometry
+from presentation.constants import MIN_VISIBLE_PX, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
+from presentation.cockpit.instruments.common import view_geometry
 from .portal_base_gl import PortalBaseGl
 
 if TYPE_CHECKING:
-    from galaxies.portals.portal import Portal
+    from universe.artifacts.settlements.portal import Portal
     from game_environment import GameEnvironment
-    from spaceships.ship import Ship
+    from universe.artifacts.spaceships.ship import Ship
 
 LIGHT_COLOUR = (235, 242, 255)  # the Portal's light: white, a little cold
 
