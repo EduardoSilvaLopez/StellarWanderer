@@ -28,7 +28,13 @@ from universe.society.people.role import (
 )
 from universe.society.people.player import Player
 from universe.society.politics import political_entity
+from universe.society.people import promotion
+from universe.artifacts.spaceships.configurations.tws_miner import TwsMiner
+from universe.artifacts.spaceships.configurations.tws_shabby_miner import ShabbyTwsMiner
+from universe.artifacts.spaceships.configurations.tws_versatile import TwsVersatile
+from universe.artifacts.spaceships.configurations.tws_hauler import TwsHauler
 from universe.artifacts.settlements.portal_base import PortalBase
+from universe.bodies.rocky_world import RockyWorld
 from universe.artifacts.settlements.settlement import Settlement
 from universe.society.prices import at_date
 
@@ -48,7 +54,9 @@ if TYPE_CHECKING:
 SOLD_FLAG = "sold mine codes"
 RATTED_FLAG = "ratted ore smugglers"
 RAT_REPUTATION = 500.0  # what the pilot gains for denouncing the smugglers
+GIVE_AWAY_REPUTATION_SHARE = 0.8  # of a mine's reputational cost, what the pilot gains for each mine given away
 OWNER_FLAG = "owner of the ship"  # a flag of the pilot (Player.flags) once the ship is bought from the Ringmaster
+NOOBIE_UNTIL = datetime(year=700, month=4, day=1)  # from then on the pilot is no longer new: nobody calls them noobie
 
 def pretty_date(dt: datetime) -> str:
     ordinal: str = ''
@@ -163,6 +171,7 @@ class SettlementChat(Conversation):
             'engineer': self.talk_engineer,
             'farmer, farmers': self.talk_farmer,
             'Founders, Founder': self.talk_founders,
+            'give away the mine codes': self.talk_give_away_the_mine_codes,
             'gunner': self.talk_gunner,
             'Happy birthday, birthday': self.talk_happy_birthday,
             'Happy founding, founded': self.talk_happy_founding,
@@ -208,8 +217,8 @@ class SettlementChat(Conversation):
         if not any("Presented himself." in lines for lines in self.interlocutor.interactions.values()):
             self.interlocutor.adjust_sympathy(1)
             self.flags.append("Presented himself.")
-            return greeting + self.talk_present_yourself_first_time()
-        return greeting + self.talk_present_yourself_further_times()
+            return greeting + self.talk_present_yourself_first_time() + self.promotion_effects()
+        return greeting + self.talk_present_yourself_further_times() + self.promotion_effects()
 
     def talk_present_yourself_first_time(self) -> str:
         # Short names to make the rest more legible
@@ -238,8 +247,8 @@ class SettlementChat(Conversation):
             ] \
             if x is not None
         )
-        noobie_or_not: str = 'the noobie' if self.date_time < datetime(year=700, month=7, day=1) \
-            else you
+        is_noobie: bool = self.date_time < NOOBIE_UNTIL
+        noobie_or_not: str = 'The noobie' if is_noobie else you  # always at the start of a sentence
 
         if emp < 20:
             if soc < 20:
@@ -253,10 +262,10 @@ class SettlementChat(Conversation):
                 if sym < 20:
                     return "You. What do you want?"
                 elif sym < 80:
-                    return f"{noobie_or_not.capitalize()}. We will see how much you last."
+                    return f"{noobie_or_not}. We will see how much you last."
                 else:
                     return (
-                        f"I know, Paladin Xi's last discovery. {noobie_or_not.capitalize()}, eager to die in space..."
+                        f"I know, Paladin Xi's last discovery. {noobie_or_not}, eager to die in space..."
                         "Miner's job is hard. You will see <smiles a wicked smile>."
                     )
             else:  # noqa: PLR5501
@@ -270,7 +279,7 @@ class SettlementChat(Conversation):
                     )
                 else:
                     return (
-                        f"I know, Paladin Xi's last discovery. {noobie_or_not.capitalize()}, eager to die here..."
+                        f"I know, Paladin Xi's last discovery. {noobie_or_not}, eager to die here..."
                         " Space is hard. You will see <smiles a wicked smile>."
                         "\n\nYou should not move away from orbit. Moon and planet. Ore and rocks. Don't be stupid."
                     )
@@ -351,7 +360,8 @@ class SettlementChat(Conversation):
                         "So here we have you, Paladin Xi's last discovery! He wants everybody on space.\n\n"
                         " I get, we need the PGMs, and more valuable asteroids, but the belts are dangerous."
                         " People have been killed. No beacon signal can save you if you are too far away,"
-                        " drifting between planets. Be careful, noobie, ok? Life is a precious thing."
+                        f" drifting between planets. Be careful, {'noobie' if is_noobie else you}, ok?"
+                        " Life is a precious thing."
                     )
                 else:
                     return (
@@ -1327,12 +1337,22 @@ class SettlementChat(Conversation):
                 return text
 
     def talk_noobie(self) -> str:
-        # Sympathy: a brush-off below 20. Sociability: the length of the answer.
+        # Sympathy: a brush-off below 20. Sociability: the length of the answer. Once the pilot is no longer new, the
+        # word is only explained, never said of them.
         soc: float = self.interlocutor.sociability100
         if self.interlocutor.sympathy100 < 20:
             return random.choice(self.unfriendly_rejections(soc))
+        if self.date_time >= NOOBIE_UNTIL:
+            if soc < 20:
+                return "The new ones."
+            if soc < 80:
+                return "A new pilot, just after finishing the training."
+            return (
+                "A noobie? A new pilot, after being trained. Many are all eagerness and no idea."
+                " Most of them learn fast. The rest... <shivers>."
+            )
         if soc < 20:
-            return "You are new."
+            return "You."
         if soc < 80:
             return "Paladin Xi finished your training recently, yes? So... that's it."
         return (
@@ -2276,6 +2296,140 @@ class SettlementChat(Conversation):
 
     # endregion
 
+#region Promotion
+    def promotion_effects(self) -> str:
+        """What the one who has the say when the pilot leaves (Settlement.officer_for_leaving) tells and gives a pilot
+        who has earned the next step of the promotions (see promotion.py), when the pilot presents themselves to them:
+        a better hold, the missions, a better ship. Empty text for anybody else, or when no step is due. The Dockmaster
+        sends the pilot here when leaving (SettlementOnLeaving); the questions of the ship offers are replies."""
+        step: str | None = promotion.next_step(self.player)
+        if self.interlocutor is not self.place.officer_for_leaving or step is None:
+            return ""
+        ship = self.player.ship
+        title: str = self.player.get_title()
+        you: str = self.interlocutor.get_player_title() or 'ERROR'
+        long_live: str = "Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ""
+        text: str = ""
+        if step == promotion.STANDARD_HOLD:
+            ship.change_cargo_hold(ShabbyTwsMiner.StandardHold)
+            text = (
+                "You have proven you can do the job without wasting mines.\n\n"
+                f"We decided to repair your cargo hold... {you}.\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.MISSIONS:
+            self.player.flags.add(promotion.MISSIONS_FLAG)
+            text = (
+                "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
+                "Anytime you want, check the mission board of any outpost. But be careful you really can"
+                " do the thing.\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.EXTENDED_HOLD:
+            ship.change_cargo_hold(ShabbyTwsMiner.ExtendedHold)
+            text = (
+                f"You are doing the best of your ship... {you}. Really.\n\n"
+                "We found a cargo extension you could use.\n\n"
+                "Keep doing the good job.\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.MINER:
+            ship.upgrade_to(TwsMiner)
+            text = (
+                "People were asking why you still have to go around with that piece of..."
+                f" no offense intended, {you}.\n\n"
+                "We consulted and the Community thinks you deserve a modern THS miner.\n\n"
+                "It has better batteries and a connector for solar panels, you can recharge around the sun."
+                " If you dare.\n\n"
+                "Take care of it, will you?\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.VERSATILE:
+            self.player.flags.add(promotion.VERSATILE_FLAG)
+            self.offer(['Yes, please', 'No, thanks.'], self.promotion_versatile_answered)
+            text = (
+                f"If looks like you have been doing much more than just mining ore... {title}."
+                " All according to The Three Aspects, though. Very well!\n\n"
+                "Maybe you could use a... more versatile ship, Pilot? One with less cargo capacity, about"
+                " the half. But more acceleration and containers for life support. And a bit more robust.\n\n"
+                "You decide, Pilot, you know better how you can serve.\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.HAULER:
+            self.player.flags.add(promotion.HAULER_FLAG)
+            self.offer(['Yes, please', 'No, thanks.'], self.promotion_hauler_answered)
+            text = (
+                f"A real miner through and through, yes? Paladin Xi must be proud of you... {title}."
+                "\n\nWe have got a Hauler, and we thought this is exactly your kind of stuff. If you want it."
+                " It's a real piece, this one. Solid as a rock, food for half a year, and more place for ore"
+                " you will never... wait, no, maybe YOU can fill up this guy."
+                "\n\nDo you want it?\n\n"
+                f"{long_live}"
+                )
+        elif step == promotion.VACATION:
+            self.player.flags.add(promotion.VACATION_FLAG)
+            text = (
+                "I wanted you to come because you have meanwhile done so much here, that people think you can"
+                " take a break, if you want. We trust you. If you want to go back home or whatever, you can"
+                " use the ship, no need to leave it here.\n\n"
+                "Some things, though... first, if you are leaving the system for good, please give away the mine"
+                " codes. And also... please be aware I cannot give you clearance to bring the ship outside our"
+                " whole territory. This exceeds my authority."
+                "So... think about it. And if we don't see you again, it has been a"
+                " honour to know you.\n\n"
+                f"{long_live}"
+                )
+        return f"\n\n{text.rstrip()}"
+
+    def promotion_versatile_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.player.ship.upgrade_to(TwsVersatile)
+
+    def promotion_hauler_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.player.ship.upgrade_to(TwsHauler)
+#endregion Promotion
+
+#region Give away mine codes
+    def talk_give_away_the_mine_codes(self) -> str:
+        """The pilot gives the control of all their mines in this system to the Community. Only the Coordinator and the
+        Ringmaster are responsible for that; anybody else, the Komisar included, sends the pilot to them."""
+        if self.interlocutor.role not in (COORDINATOR, RINGMASTER):
+            return "Talk to the authorities for that."
+        count: int = sum(world.count_own_mines() for world in self.place.stellar_system.get_all_worlds()
+                         if isinstance(world, RockyWorld))
+        if count == 0:
+            return f"You control no mines in this system, {self.interlocutor.get_player_title()}."
+        self.offer(["Yes, I am sure.", "Wait, I must think this again."], self.give_away_answered)
+        return (
+            f"Are you sure? You give away the control of all your {count} mine{'s' if count > 1 else ''} in this"
+            " system. We will give the codes to ther miners, so for us it's all good. And thanks."
+            )
+
+    def give_away_answered(self, answer: int) -> None:
+        if answer == 0:
+            self.say(self.give_away_done)
+        else:
+            self.say(self.give_away_declined)
+
+    def give_away_declined(self) -> str:
+        return "As you wish, we are no in a rush."
+
+    def give_away_done(self) -> str:
+        """All the pilot's mines of the system become 'not theirs'."""
+        count: int = sum(world.give_away_mines(self.date_time) for world in self.place.stellar_system.get_all_worlds()
+                         if isinstance(world, RockyWorld))
+        standing = self.player._standing()
+        if standing is None:
+            logger.warning("The pilot gave away mines with no standing for this place (see Player._standing).")
+        else:
+            self.player.adjust_reputation(
+                count * standing.entity.exchange_reputation_changes['mines'] * GIVE_AWAY_REPUTATION_SHARE)
+        self.flags.append(f"Gave away mine codes {self.place.stellar_system.seed}")
+        return f"It is done. The Community thanks you, {self.interlocutor.get_player_title()}."
+
+#endregion
+
 # region Traitor's Path
     def traitor_chance(self, answer: int) -> None:
         if answer == 0:
@@ -2709,9 +2863,9 @@ class SettlementChat(Conversation):
                 " assigned a labor camp, where you will reflect about your decisions."
             )
 
-    # endregion
+# endregion
 
-    # region Auxiliar methods
+# region Auxiliar methods
 
     def _standing_flags(self) -> set[str]:
         return self.player.political_status[political_entity.THOSE_WHO_SHARE].flags

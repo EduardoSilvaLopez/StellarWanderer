@@ -24,6 +24,7 @@ AREA_PICTURE_PREFIXES: Dict[SettlementKind, Dict[str, str]] = {
         'Dockmaster': 'outpost.dockmaster.',
         'Cargo': 'outpost.cargo.',
         'Missions': 'outpost.mission.',
+        'Offices': 'outpost.offices.',
         'Chat': 'outpost.chat.',
         'Leave': 'outpost.leave.',  # the Leave is being decided: its picture covers the right side
     },
@@ -31,6 +32,7 @@ AREA_PICTURE_PREFIXES: Dict[SettlementKind, Dict[str, str]] = {
         'Dockmaster': 'portal_base.dockmaster.',
         'Cargo': 'portal_base.cargo.',
         'Missions': 'portal_base.mission.',
+        'Offices': 'portal_base.offices.',
         'Chat': 'portal_base.chat.',
         'Leave': 'portal_base.leave.',
     },

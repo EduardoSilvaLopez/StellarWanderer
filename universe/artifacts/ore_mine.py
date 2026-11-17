@@ -33,6 +33,8 @@ class OreMine(Updatable):
     CREDITS_PER_ORE: int = 100
     # The scraps the ship takes from a mine that is empty and whose field is depleted, when it is scrapped.
     SCRAPS_FROM_MINE: int = 100
+    INACTIVE_AFTER: float = 10 * 365.25 * 86400.0  # s of being unused (see ExternalMine) after which a mine looks old
+    TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
     def __init__(
             self,
@@ -51,6 +53,7 @@ class OreMine(Updatable):
             self.credits: int = 0
             self.last_updated_at: Optional[datetime] = None
             self.next_update_at: Optional[datetime] = None
+            self.given_away_at: Optional[datetime] = None
         else:
             self.longitude: float = saved_attributes['longitude']
             self.latitude: float = saved_attributes['latitude']
@@ -63,15 +66,22 @@ class OreMine(Updatable):
             self.next_update_at: Optional[datetime] = \
                 datetime.strptime(saved_attributes['next_update_at'], '%Y-%m-%d %H:%M:%S.%f') \
                 if 'next_update_at' in saved_attributes else None
+            self.given_away_at: Optional[datetime] = \
+                datetime.strptime(saved_attributes['given_away_at'], self.TIME_FORMAT) \
+                if 'given_away_at' in saved_attributes else None
 
         registered = self.parent_field.parent_km2.parent_world.registered_mines
-        if (self.longitude, self.latitude) not in registered:  # a loaded world lists its mines already
-            registered.append((self.longitude, self.latitude))
-        update_queue.add(self)
+        if self.given_away_at is None and (self.longitude, self.latitude) not in registered:
+            registered.append((self.longitude, self.latitude))  # (a loaded world lists its mines already)
+        if self.given_away_at is None:
+            update_queue.add(self)
 
         logger.info(f"Ore Mine created at {self.longitude}, {self.latitude}. Content: {self.content}.")
 
-    is_external: bool = False  # see ExternalMine
+    @property
+    def is_external(self) -> bool:
+        """Whether the mine is not the pilot's (see ExternalMine): one the pilot has given away (see give_away)."""
+        return self.given_away_at is not None
 
     @cached_property
     def ground_height(self) -> float:
@@ -79,8 +89,31 @@ class OreMine(Updatable):
         return self.parent_field.parent_km2.parent_world.ground_height(self.longitude, self.latitude)
 
     def is_inactive(self, game_date_time: datetime) -> bool:
-        """Whether the mine looks out of use (see ExternalMine). The player's mines never do."""
-        return False
+        """Whether the mine looks out of use (see ExternalMine): the pilot's mines never do, but one the pilot has given
+        away does as time passes."""
+        return self.given_away_at is not None and (game_date_time - self.given_away_at).total_seconds() \
+            > self.INACTIVE_AFTER
+
+    def give_away(self, game_date_time: datetime) -> None:
+        """The pilot gives the control of the mine away: from now it is not theirs. It stays in its field, still an
+        alteration, but it works no more, holds no ore or credits and is no more registered in its world (the map).
+        The same changes as `give_away_serialized`, which RockyWorld.give_away_mines completes."""
+        update_queue.remove(self)
+        self.content = 0.0
+        self.credits = 0
+        self.next_update_at = None
+        self.given_away_at = game_date_time
+        registered = self.parent_field.parent_km2.parent_world.registered_mines  # the world's map shows only the own
+        registered[:] = [position for position in registered if position != (self.longitude, self.latitude)]
+
+    @staticmethod
+    def give_away_serialized(mine: dict, game_date_time: datetime) -> None:
+        """What `give_away` does to a mine that is not in memory yet, in its saved form (`serialize`), so the save is
+        the same as if its Km2 had been loaded first."""
+        mine['content'] = 0.0
+        mine.pop('credits', None)
+        mine.pop('next_update_at', None)
+        mine['given_away_at'] = game_date_time.strftime(OreMine.TIME_FORMAT)
 
     def serialize(self) -> dict:
         result = {
@@ -95,6 +128,8 @@ class OreMine(Updatable):
             result['last_updated_at'] = self.last_updated_at.strftime('%Y-%m-%d %H:%M:%S.%f')
         if self.next_update_at:
             result['next_update_at'] = self.next_update_at.strftime('%Y-%m-%d %H:%M:%S.%f')
+        if self.given_away_at:
+            result['given_away_at'] = self.given_away_at.strftime(self.TIME_FORMAT)
         return result
 
     def get_next_update(self) -> datetime:
@@ -106,6 +141,8 @@ class OreMine(Updatable):
     def update(self, game_date_time: datetime) -> None:
         # Called by the queue (which took this mine out first) or by Km2.start_updating (which only calls it when the
         # mine is not queued). Queued already means a second entry would be made: fail early.
+        if self.given_away_at is not None:
+            return  # not ours anymore: it works no more
         if self in update_queue:
             raise RuntimeError(f"Mine at {self.longitude}, {self.latitude} updated while queued: a second queue entry.")
         if self.last_updated_at is None:
@@ -164,6 +201,8 @@ class OreMine(Updatable):
         return f"sold mine codes {system.seed}" in flags and f"ratted ore smugglers {system.seed}" not in flags
 
     def stop_updating(self) -> None:
+        if self.given_away_at is not None:
+            return
         import game_environment as gem
         update_queue.remove(self)
         if self.last_updated_at is not None:
@@ -189,9 +228,10 @@ class ExternalMine(OreMine):
     UNDISCOVERED_SHARE: float = 0.1  # of the ore-rich rocks, which never become external
     CONVERSION_WINDOW: float = 100 * 365.25 * 86400.0  # s after EPOCH in which all the others have become external
     FRONT_LOADING: float = 1.5  # above 1, more conversions early in the window; 1 spreads them evenly
-    INACTIVE_AFTER: float = 10 * 365.25 * 86400.0  # s
 
-    is_external = True
+    @property
+    def is_external(self) -> bool:
+        return True
 
     def __init__(self, parent_field: OreField, converted_at: datetime) -> None:
         # No super().__init__: it registers the mine and queues it.
@@ -201,6 +241,7 @@ class ExternalMine(OreMine):
         self.orientation: float = parent_field.orientation
         self.content: float = 0.0
         self.credits: int = 0
+        self.given_away_at: Optional[datetime] = None
         self.converted_at: datetime = converted_at
 
     @staticmethod
@@ -215,5 +256,5 @@ class ExternalMine(OreMine):
         return gem.GameEnvironment.EPOCH + timedelta(seconds=seconds)
 
     def is_inactive(self, game_date_time: datetime) -> bool:
-        return (game_date_time - self.converted_at).total_seconds() > ExternalMine.INACTIVE_AFTER
+        return (game_date_time - self.converted_at).total_seconds() > self.INACTIVE_AFTER
 

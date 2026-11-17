@@ -9,7 +9,7 @@ from enum import Enum
 import random
 import logging
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from common.updating import Updatable, update_queue
 from common.vector3 import Vector3
@@ -62,6 +62,8 @@ class Settlement(Updatable):
     # a substitute). Outposts have one team of each role; the portal base has what is listed for it (its first version).
     # A kind whose teams depend on its size overrides `teams_at_size`.
     roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
+    # The roles the pilot can call on in their office (the Offices of the settlement screen), in the order shown.
+    offices: Tuple[Role, ...] = (COORDINATOR,)
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
     name: str  # each kind sets its own name
@@ -222,21 +224,21 @@ class Settlement(Updatable):
         """Everyone on duty now, in the order of the roles."""
         return [person for role in self.teams_now() for person in self.on_duty.get(role, [])]
 
-    def _first_on_duty(self, role: Role) -> Optional[Person]:
+    def first_on_duty(self, role: Role) -> Optional[Person]:
         people = self.on_duty.get(role)
         return people[0] if people else None
 
     @property
     def com_officer(self) -> Optional[Person]:
-        return self._first_on_duty(COM_OFFICER)
+        return self.first_on_duty(COM_OFFICER)
 
     @property
     def dockmaster(self) -> Optional[Person]:
-        return self._first_on_duty(DOCKMASTER)
+        return self.first_on_duty(DOCKMASTER)
 
     @property
     def coordinator(self) -> Optional[Person]:
-        return self._first_on_duty(COORDINATOR)
+        return self.first_on_duty(COORDINATOR)
 
     @property
     def officer_for_leaving(self) -> Optional[Person]:

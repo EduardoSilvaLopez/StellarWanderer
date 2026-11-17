@@ -9,10 +9,10 @@ main.draw_settlement_view).
 Left block: clock, settlement name and details, the knowledge buttons (the cockpit's, see main.open_knowledge) and a
 radio group of options, one always selected: Dockmaster (selected on opening, or Cargo if the ship is ready, see
 Settlement.is_ready), Cargo, Missions (only from the reputation the board needs on entering, or while a taken
-mission is open here), Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the block.
-Right block: the picture of the area on show (one per area, chosen from the settlement's seed, see area_pictures),
-faded dark, and what the option shows: the dockmaster's conversation, the cargo, the missions (OutpostMissions) or
-the chat (chat_view.py).
+mission is open here), Offices, Chat, and the action Leave. Retire, the other action, sits apart at the bottom of the
+block. Right block: the picture of the area on show (one per area, chosen from the settlement's seed, see
+area_pictures), faded dark, and what the option shows: the dockmaster's conversation, the cargo, the missions
+(OutpostMissions), the offices or the chat (chat_view.py).
 
 A conversation shows its messages in a dark panel here, not in a dialog, and its answers as translucent rectangles
 (mouse, number keys or Enter). While a message with more than one answer waits, the options and the knowledge buttons
@@ -39,7 +39,7 @@ from .dialog import Dialog, DialogResult
 from .dialog_fonts import body_font, title_font
 from .message_dialog import ACCENT, ACCENT_DIM, BUTTON_FILL, TEXT_COLOR
 from common.messages import Message, ResultCallback, confirm
-from universe.society.people.chat_log import ChatLog
+from universe.society.people.chat_log import NPC, ChatLog
 from .chat_view import ChatTags, ChatView
 from .mission_board_dialog import OutpostMissions, PAGE_KEYS, SCROLL_BAR_GAP
 from .scroll_bar import ScrollBar
@@ -50,10 +50,11 @@ if TYPE_CHECKING:
     from universe.society.people.conversation import Conversation
     from universe.society.people.conversations.settlement_chat import SettlementChat
     from universe.society.people.person import Person
+    from universe.society.people.role import Role
     from universe.artifacts.spaceships.cargo_hold import Supply
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
-BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Leave', 'Retire')
+BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Offices', 'Chat', 'Leave', 'Retire')
 ACTION_LABELS = ('Retire', 'Leave')  # the buttons that do something instead of staying selected
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values
@@ -86,6 +87,9 @@ ANSWER_HOVER_SHADE = (94, 234, 212, 90)  # ...tinted with the accent colour whil
 CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of the window's height
 CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the people (the chat takes the rest)
 NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
+OFFICE_PORTRAIT_FRACTION = 0.15  # the portrait's box over the chat log of Offices, of the window's height
+OFFICE_WELCOME = "Welcome. How can I serve?"  # what the holder of an office says first
+NOBODY_IN_OFFICE = "Nobody is in this office now."
 
 
 def _wrap(text: str, font: pygame.font.Font | FallbackFont, width: int) -> List[str]:
@@ -108,13 +112,32 @@ def _margin(height: int) -> int:
     return max(10, height // 50)
 
 
-def _list_in_panel(surface: pygame.Surface, panel: pygame.Rect, margin: int) -> pygame.Rect:
-    """Draws `panel` as a dark panel (MESSAGE_PANEL_SHADE, ACCENT_DIM border), and returns where a list in it goes:
-    inside the margin, with the room of its scroll bar on the right (see _ScrolledList.place)."""
+def _dark_panel(surface: pygame.Surface, panel: pygame.Rect) -> None:
     shade = pygame.Surface(panel.size, pygame.SRCALPHA)
     shade.fill(MESSAGE_PANEL_SHADE)
     surface.blit(shade, panel)
     pygame.draw.rect(surface, ACCENT_DIM, panel, 1)
+
+
+def _draw_radio_button(surface: pygame.Surface, rect: pygame.Rect, label: str, selected: bool, focused: bool,
+                       font: FallbackFont) -> None:
+    """A button of a radio group: the selected one filled with the accent colour, the focused one ringed."""
+    if selected:
+        pygame.draw.rect(surface, ACCENT, rect)
+        caption = font.render(label, True, SELECTED_TEXT_COLOR)
+        if focused:  # a dark ring inside the accent fill
+            pygame.draw.rect(surface, SELECTED_TEXT_COLOR, rect.inflate(-6, -6), 2)
+    else:
+        pygame.draw.rect(surface, BUTTON_FILL, rect)
+        pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
+        caption = font.render(label, True, ACCENT if focused else TEXT_COLOR)
+    surface.blit(caption, caption.get_rect(center=rect.center))
+
+
+def _list_in_panel(surface: pygame.Surface, panel: pygame.Rect, margin: int) -> pygame.Rect:
+    """Draws `panel` as a dark panel (MESSAGE_PANEL_SHADE, ACCENT_DIM border), and returns where a list in it goes:
+    inside the margin, with the room of its scroll bar on the right (see _ScrolledList.place)."""
+    _dark_panel(surface, panel)
     inner = panel.inflate(-2 * margin, -2 * margin)
     return pygame.Rect(inner.left, inner.top, inner.width - SCROLL_BAR_GAP - ScrollBar.MIN_WIDTH, inner.height)
 
@@ -160,9 +183,10 @@ def _draw_wrapped(surface: pygame.Surface, x: int, width: int, top: int, text: s
 class SettlementScreenDialog(Dialog):
     """The screen of `settlement`. Its pictures are chosen from the settlement's seed, so it always looks the same.
 
-    Leave closes the screen (result ('close', None)), decided by the coordinator's SettlementOnLeaving conversation: if
-    the settlement is still handling the ship it asks first, and Yes leaves with what is done so far (the coordinator's
-    portrait replaces the dockmaster's meanwhile). Retire asks for a confirmation and ends the game (Player.game_over).
+    Leave closes the screen (result ('close', None)), decided by the Dockmaster's SettlementOnLeaving conversation: if
+    the settlement is still handling the ship, or the pilot's title has improved (the officer for leaving wants to
+    see them), it asks first, and Yes leaves with what is done so far. Retire asks for a confirmation and ends the
+    game (Player.game_over).
     While the pilot is inside, the ship is docked (Ship.dock): nothing of it is consumed.
 
     Keyboard: Tab (Shift+Tab back) moves the focus over the options, the answers and, in Cargo, the rows' controls;
@@ -184,7 +208,11 @@ class SettlementScreenDialog(Dialog):
     Chat: the people listed now (Settlement.available_staff, see StaffList) on the right, the conversation tags on the
     left, the log (ChatView) in the middle. A click on a tag starts a SettlementChat with the selected person in the
     same log; a log belongs to one person, so selecting another starts an empty one. Tags can be pinned (_toggle_pin)
-    and deleted by right-click (_delete_tag). Typing goes to a search box while it is focused."""
+    and deleted by right-click (_delete_tag). Typing goes to a search box while it is focused.
+
+    Offices: Chat with the settlement's offices (Settlement.offices) in place of the people, as a radio group with
+    the first one selected on entering. The holder on duty of the office selected is the one chatted with: their
+    profile is over the log, which starts with their welcome (OFFICE_WELCOME)."""
 
     OPEN_SOUND = 'ui_open'
     CLOSE_SOUND = 'ui_close'
@@ -242,6 +270,11 @@ class SettlementScreenDialog(Dialog):
         self._chat_log: Optional[ChatLog] = None  # the chat with the person selected (see _sync_chat_log)
         self._chat_conversation: Optional[SettlementChat] = None  # the conversation the last tag started
         self._chat_areas: List[pygame.Rect] = []  # the three areas of Chat (tags, log, people), where last drawn
+        self._offices: Tuple[Role, ...] = settlement.offices
+        self._office: int = 0  # the radio group of Offices: the office selected
+        # its holder on duty when it was selected, who stays the one chatted with while it is
+        self._office_person: Optional[Person] = None
+        self._office_rects: List[pygame.Rect] = []  # the office buttons, where last drawn
         self._focus_visible: bool = False
         self._leave_conversation: Optional[Conversation] = None  # the coordinator's, while the Leave is being decided
         self._leaving: bool = False  # it was answered Yes: the next event ends the screen
@@ -320,6 +353,8 @@ class SettlementScreenDialog(Dialog):
             self._draw_missions(surface, right, height)
         elif self._shows_chat():
             self._draw_chat(surface, right, height)
+        elif self._shows_offices():
+            self._draw_offices(surface, right, height)
         else:
             self._cargo_controls = []
             officer_bottom = self._draw_officer(surface, right, height)
@@ -483,8 +518,49 @@ class SettlementScreenDialog(Dialog):
     def _draw_chat(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
         """Chat: three areas in the block, inside its margin: the tags and the chat log share the left, in dark panels,
         and the people are on the right, CHAT_PEOPLE_FRACTION of the height wide."""
-        if self._chat_tags is None or self._chat_view is None or self._chat is None:
-            raise Exception("The chat's panels are not made.")
+        if self._chat is None:
+            raise Exception("The chat's list is not made.")
+        _, conversation, people = self._layout_chat(surface, right, height)
+        person_focus = self._focus[1] if self._focus_visible and self._focus[0] == 'person' else None
+        self._draw_chat_log(surface, conversation, height)
+        self._chat.place(_list_in_panel(surface, people, _margin(height)))
+        self._chat.draw(surface, person_focus)
+
+    def _draw_offices(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> None:
+        """Offices: as Chat, with the office buttons in place of the people, and the profile of the one chatted with
+        over the chat log."""
+        _, conversation, offices = self._layout_chat(surface, right, height)
+        margin = _margin(height)
+        if self._office_person is not None:
+            box = int(height * OFFICE_PORTRAIT_FRACTION)
+            log_top = self._draw_profile(surface, self._office_person, conversation, height, box) + margin
+        else:
+            font = body_font(max(16, height // 40))
+            log_top = _draw_wrapped(surface, conversation.left, conversation.width, conversation.top,
+                                    NOBODY_IN_OFFICE, font, TEXT_COLOR) + margin
+        self._draw_chat_log(surface, pygame.Rect(conversation.left, log_top, conversation.width,
+                                                 conversation.bottom - log_top), height)
+
+        button_height, gap = _button_size(height)
+        font = body_font(max(13, height // 50))
+        panel = pygame.Rect(offices.left, offices.top, offices.width,
+                            2 * margin + len(self._offices) * (button_height + gap) - gap)
+        _dark_panel(surface, panel)
+        self._office_rects = []
+        for index, role in enumerate(self._offices):
+            rect = pygame.Rect(panel.left + margin, panel.top + margin + index * (button_height + gap),
+                               panel.width - 2 * margin, button_height)
+            self._office_rects.append(rect)
+            focused = self._focus_visible and self._focus == ('office', index)
+            _draw_radio_button(surface, rect, role.name, index == self._office, focused, font)
+
+    def _layout_chat(self, surface: pygame.Surface, right: pygame.Rect,
+                     height: int) -> Tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
+        """The three areas of Chat and Offices, inside the block's margin: the tags and the conversation share the
+        left, and the people or the offices are on the right, CHAT_PEOPLE_FRACTION of the height wide. Draws the tags,
+        and returns the three areas."""
+        if self._chat_tags is None:
+            raise Exception("The chat's tags are not made.")
         margin = _margin(height)
         top = right.top + margin
         area = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
@@ -496,32 +572,52 @@ class SettlementScreenDialog(Dialog):
         conversation = pygame.Rect(tags.right + margin, area.top, left_width - tags_width - margin, area.height)
         self._chat_areas = [tags, conversation, people]
         self._sync_chat_log()
-        focus_kind = self._focus[0] if self._focus_visible else None
 
         names = self._chat_tags_now()
-        tags_focus = names.index(self._focus[1]) if focus_kind == 'tag' and self._focus[1] in names else None
+        tag_focused = self._focus_visible and self._focus[0] == 'tag' and self._focus[1] in names
         from universe.society.people.player import current_player  # local: as in _chat_tags_now
         self._chat_tags.place(_list_in_panel(surface, tags, margin))
-        self._chat_tags.draw(surface, names, self._chat_active(), current_player.pinned_tags, tags_focus)
+        self._chat_tags.draw(surface, names, self._chat_active(), current_player.pinned_tags,
+                             names.index(self._focus[1]) if tag_focused else None)
+        return tags, conversation, people
 
-        reply_focus = self._focus[1] if focus_kind == 'reply' else None
-        self._chat_view.place(_list_in_panel(surface, conversation, margin))
+    def _draw_chat_log(self, surface: pygame.Surface, rect: pygame.Rect, height: int) -> None:
+        """The chat log in a dark panel filling `rect`."""
+        if self._chat_view is None:
+            raise Exception("The chat's log view is not made.")
+        reply_focus = self._focus[1] if self._focus_visible and self._focus[0] == 'reply' else None
+        self._chat_view.place(_list_in_panel(surface, rect, _margin(height)))
         self._chat_view.draw(surface, self._chat_log, reply_focus, self._chat_active())
 
-        person_focus = self._focus[1] if focus_kind == 'person' else None
-        self._chat.place(_list_in_panel(surface, people, margin))
-        self._chat.draw(surface, person_focus)
-
-    def _sync_chat_log(self) -> None:
-        """The chat log is the chat with the person selected: another person, or none, ends the conversation and
-        starts a new log, so each person has their own chat."""
+    def _chat_person(self) -> Optional[Person]:
+        """Who the chat is with: the holder of the office selected in Offices, else the person selected in Chat."""
+        if BUTTON_LABELS[self.selected] == 'Offices':
+            return self._office_person
         if self._chat is None:
             raise Exception("The chat's list is not made.")
-        person = self._chat.selected
+        return self._chat.selected
+
+    def _select_office(self, index: int) -> None:
+        """Selects an office of Offices: its holder on duty is the one chatted with from now (see _sync_chat_log)."""
+        if index == self._office and self._office_person is not None:
+            return
+        audio.play('ui_click')
+        self._office = index
+        self._office_person = self.settlement.first_on_duty(self._offices[index])
+
+    def _sync_chat_log(self) -> None:
+        """The chat log is the chat with the person selected (see _chat_person): another person, or none, ends the
+        conversation and starts a new log, so each person has their own chat. An office's log starts with its
+        welcome."""
+        person = self._chat_person()
         if self._chat_log is not None and self._chat_log.person is person:
             return
         self._end_chat()
-        self._chat_log = ChatLog(person) if person is not None else None
+        if person is None:
+            return
+        self._chat_log = ChatLog(person)
+        if BUTTON_LABELS[self.selected] == 'Offices':
+            self._chat_log.add(NPC, [[(word, None) for word in OFFICE_WELCOME.split()]])
 
     def _end_chat(self) -> None:
         """Ends the conversation of the chat, if one is going, and the log with it."""
@@ -542,9 +638,7 @@ class SettlementScreenDialog(Dialog):
 
     def _chat_active(self) -> bool:
         """Tags start a conversation while a person is selected and no reply is open (the conversation is not over)."""
-        if self._chat is None:
-            raise Exception("The chat's list is not made.")
-        return self._chat.selected is not None and (self._chat_log is None or self._chat_log.replies is None)
+        return self._chat_person() is not None and (self._chat_log is None or self._chat_log.replies is None)
 
     def _start_tag(self, tag: str) -> None:
         """A tag starts its conversation with the person selected, in the same log as the chat before (see
@@ -603,10 +697,7 @@ class SettlementScreenDialog(Dialog):
         margin = _margin(height)
         top = right.top + margin
         panel = pygame.Rect(right.left + margin, top, right.width - 2 * margin, right.bottom - margin - top)
-        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
-        shade.fill(MESSAGE_PANEL_SHADE)
-        surface.blit(shade, panel)
-        pygame.draw.rect(surface, ACCENT_DIM, panel, 1)
+        _dark_panel(surface, panel)
         self._missions.place(panel.inflate(-2 * margin, -2 * margin))  # the columns, each with its scroll bar inside
         self._missions.draw_content(surface)
 
@@ -832,9 +923,9 @@ class SettlementScreenDialog(Dialog):
         """Who is shown at the top: the coordinator while the Leave is being decided, else the dockmaster."""
         return self._leave_conversation.interlocutor if self._leave_conversation is not None else self.officer
 
-    def _scaled_portrait(self, box: int) -> Optional[pygame.Surface]:
-        """The speaker's portrait, fitted in a box x box square, made again when the speaker or the box changes."""
-        icon = self.speaker.icon if self.speaker is not None else None
+    def _scaled_portrait(self, person: Person, box: int) -> Optional[pygame.Surface]:
+        """The portrait of `person`, fitted in a box x box square, made again when the person or the box changes."""
+        icon = person.icon
         if icon is None:
             return None
         if self._portrait is None or self._portrait_source is not icon or self._portrait_box != box:
@@ -857,18 +948,21 @@ class SettlementScreenDialog(Dialog):
         return self._frame_image
 
     def _draw_officer(self, surface: pygame.Surface, right: pygame.Rect, height: int) -> int:
-        """The speaker (see `speaker`), at the top left of the right block: the portrait, and beside it the full name
-        (with its title), and under the name the age and the role. Nothing is drawn while there is none. Returns the y
-        under what was drawn."""
+        """The speaker (see `speaker`), at the top left of the right block (see _draw_profile). Nothing is drawn while
+        there is none. Returns the y under what was drawn."""
         margin = _margin(height)
-        top = right.top + margin
-        officer = self.speaker
-        if officer is None:
-            return top
-        box = int(height * OFFICER_PORTRAIT_FRACTION)
-        x = right.left + margin
+        if self.speaker is None:
+            return right.top + margin
+        return self._draw_profile(surface, self.speaker, right.inflate(-2 * margin, -2 * margin), height,
+                                  int(height * OFFICER_PORTRAIT_FRACTION))
+
+    def _draw_profile(self, surface: pygame.Surface, officer: Person, area: pygame.Rect, height: int, box: int) -> int:
+        """The profile of `officer` at the top left of `area`: the portrait, fitted in a `box` square, and beside it
+        the full name (with its title), and under the name the age and the role. Returns the y under it."""
+        top = area.top
+        x = area.left
         bottom = top
-        portrait = self._scaled_portrait(box)
+        portrait = self._scaled_portrait(officer, box)
         if portrait is not None:
             # the frame goes round the picture, outside it, so the picture is inset by its thickness
             thickness = max(4, int(height * BEZEL_FRACTION))
@@ -878,7 +972,7 @@ class SettlementScreenDialog(Dialog):
             surface.blit(portrait, frame)
             x = frame.right + thickness + _button_size(height)[1]  # the same gap as between two buttons
             bottom = outer.bottom
-        width = right.right - margin - x
+        width = area.right - x
         name_font = title_font(max(12, height // 40))
         y = _draw_wrapped(surface, x, width, top, officer.get_full_name(), name_font, ACCENT)
         role = officer.role.name
@@ -968,16 +1062,7 @@ class SettlementScreenDialog(Dialog):
             rect = pygame.Rect(left.left + margin, row_top, left.width - 2 * margin, button_height)
             self._button_rects.append((index, rect))
             focused = self._focus_visible and self._focus == ('option', index)
-            if index == self.selected:
-                pygame.draw.rect(surface, ACCENT, rect)
-                caption = font.render(label, True, SELECTED_TEXT_COLOR)
-                if focused:  # a dark ring inside the accent fill
-                    pygame.draw.rect(surface, SELECTED_TEXT_COLOR, rect.inflate(-6, -6), 2)
-            else:
-                pygame.draw.rect(surface, BUTTON_FILL, rect)
-                pygame.draw.rect(surface, ACCENT if focused else ACCENT_DIM, rect, 2 if focused else 1)
-                caption = font.render(label, True, ACCENT if focused else TEXT_COLOR)
-            surface.blit(caption, caption.get_rect(center=rect.center))
+            _draw_radio_button(surface, rect, label, index == self.selected, focused, font)
             if label != 'Retire':
                 top += button_height + gap
 
@@ -1000,16 +1085,19 @@ class SettlementScreenDialog(Dialog):
         elif BUTTON_LABELS[self.selected] == 'Cargo':
             import game_environment as gem  # local: as in _open_missions
             self.settlement.update_handle(self.ship, gem.current_environment.date_time)
-        elif BUTTON_LABELS[self.selected] == 'Chat':
+        elif BUTTON_LABELS[self.selected] in ('Chat', 'Offices'):
             self._open_chat()
 
     def _open_chat(self) -> None:
-        """Chat: the people listed now, the tags and an empty chat log. The log is made when a person is selected."""
-        self._chat = StaffList(self.settlement)
+        """Chat and Offices: the tags and an empty chat log, made when a person is selected; Chat's people listed now,
+        or the first office of Offices selected."""
+        self._chat = StaffList(self.settlement) if BUTTON_LABELS[self.selected] == 'Chat' else None
         self._chat_tags = ChatTags(self._start_tag, self._delete_tag, self._toggle_pin)
         self._chat_view = ChatView(self._choose_reply, self._start_tag)
         self._chat_log = None
         self._chat_conversation = None
+        self._office = 0
+        self._office_person = self.settlement.first_on_duty(self._offices[0]) if self._chat is None else None
 
     def _open_missions(self) -> None:
         """Missions: the board's offers are brought up to date, and their list is made (see OutpostMissions). The list
@@ -1085,18 +1173,18 @@ class SettlementScreenDialog(Dialog):
     # endregion
 
     def _try_leave(self) -> None:
-        """The Leave button: the option is set aside and the coordinator's SettlementOnLeaving conversation
-        decides, asking the pilot if the settlement is still handling the ship."""
+        """The Leave button: the option is set aside and the Dockmaster's SettlementOnLeaving conversation
+        decides, asking the pilot if the settlement is still handling the ship or the pilot has been promoted."""
         if self._leave_conversation is not None:
             return
-        if self.settlement.officer_for_leaving is None:  # nobody to ask
+        if self.settlement.dockmaster is None:  # nobody to ask
             self._leaving = True
             return
         # local: the conversation needs the settlement and the people, which need the dialogs
         from universe.society.people.conversations.settlement_on_leaving import SettlementOnLeaving
         from universe.society.people.player import current_player
         self._close_option()
-        self._leave_conversation = SettlementOnLeaving(current_player, self.settlement.officer_for_leaving,
+        self._leave_conversation = SettlementOnLeaving(current_player, self.settlement.dockmaster,
                                                        self.settlement, self._on_leave_decided, self._show)
         self._leave_conversation.start()
 
@@ -1223,22 +1311,37 @@ class SettlementScreenDialog(Dialog):
         """Chat is the view while it is selected and no message is shown (see _shows_cargo)."""
         return BUTTON_LABELS[self.selected] == 'Chat' and self._shown is None
 
+    def _shows_offices(self) -> bool:
+        """Offices is the view while it is selected and no message is shown (see _shows_cargo)."""
+        return BUTTON_LABELS[self.selected] == 'Offices' and self._shown is None
+
     def _chat_event(self, event: pygame.event.Event) -> bool:
-        """The events of Chat's three lists: the tags, the log (its replies) and the people. A click goes to the list it
-        is in, the wheel to the list under the mouse, and Page Up and Page Down to all of them; the scroll bars drag on
-        their own. The arrow keys stay with the options. The search boxes of the tags and the people take the typing
-        first. True if a list took the event."""
-        if self._chat is None or self._chat_tags is None or self._chat_view is None:
+        """The events of Chat's three lists: the tags, the log (its replies) and the people (in Offices, the office
+        buttons). A click goes to the list it is in, the wheel to the list under the mouse, and Page Up and Page Down to
+        all of them; the scroll bars drag on their own. The arrow keys stay with the options. The search boxes of the
+        tags and the people take the typing first. True if a list took the event."""
+        if self._chat_tags is None or self._chat_view is None:
             raise Exception("The chat's panels are not made.")
-        searches = [self._chat_tags, self._chat]
+        searches: List[Any] = [self._chat_tags]
+        lists: List[Any] = [self._chat_tags, self._chat_view]
+        if BUTTON_LABELS[self.selected] == 'Chat':
+            if self._chat is None:
+                raise Exception("The chat's list is not made.")
+            searches.append(self._chat)
+            lists.append(self._chat)
         if event.type == pygame.MOUSEBUTTONDOWN:  # the box that is clicked goes last, so that it keeps the text input
             searches.sort(key=lambda search: search.search_rect.collidepoint(event.pos))
         if any(search.search_event(event) for search in searches):
             return True
+        if self._shows_offices() and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            office = next((index for index, rect in enumerate(self._office_rects) if rect.collidepoint(event.pos)),
+                          None)
+            if office is not None:
+                self._select_office(office)
+                return True
         if event.type == pygame.KEYDOWN and event.key not in PAGE_KEYS:
             return False
         self._sync_chat_log()
-        lists = (self._chat_tags, self._chat_view, self._chat)
         if event.type == pygame.MOUSEWHEEL:
             mouse = pygame.mouse.get_pos()
             return any(widget.handle_event(event) for area, widget in zip(self._chat_areas, lists)
@@ -1249,9 +1352,8 @@ class SettlementScreenDialog(Dialog):
     def _focus_targets(self) -> List[Tuple[Any, ...]]:
         """What Tab goes over, in order: the options (Leave among them) unless a message with more than one answer waits
         (_blocks_options), the equipment rows while Cargo is selected (their controls, left to right), the cargo rows'
-        controls (the −, + and ++, or the −− and − of a give-only row), the people listed while Chat is selected, and
-        the
-        answers of the shown message. Then round again."""
+        controls (the −, + and ++, or the −− and − of a give-only row), the tags and the people listed while Chat is
+        selected (the offices in Offices), the open replies, and the answers of the shown message. Then round again."""
         from universe.artifacts.spaceships.cargo_hold import CARGO  # local: as in _draw_cargo
         targets: List[tuple] = [] if self._blocks_options() else \
             [('option', index) for index in range(len(BUTTON_LABELS)) if self._shows_option(index)]
@@ -1268,12 +1370,15 @@ class SettlementScreenDialog(Dialog):
                     targets += [('cargo', supply.key, -1), ('cargo', supply.key, 1), ('fill', supply.key)]
                 else:
                     targets += [('fill', supply.key), ('cargo', supply.key, -1)]
-        if self._shows_chat():
+        if self._shows_chat() or self._shows_offices():
             self._sync_chat_log()
             targets += [('tag', tag) for tag in self._chat_tags_now()]
-            if self._chat is None:
+            if self._shows_offices():
+                targets += [('office', index) for index in range(len(self._offices))]
+            elif self._chat is None:
                 raise Exception("The chat's list is not made.")
-            targets += [('person', index) for index in range(len(self._chat.available()))]
+            else:
+                targets += [('person', index) for index in range(len(self._chat.available()))]
             if self._chat_log is not None and self._chat_log.replies:
                 targets += [('reply', j) for j in range(len(self._chat_log.replies))]
         if self._shown is not None:
@@ -1307,6 +1412,8 @@ class SettlementScreenDialog(Dialog):
             if self._chat is None:
                 raise Exception("The chat's list is not made.")
             self._chat.select_at(token[1])
+        elif token[0] == 'office':
+            self._select_office(token[1])
         elif token[0] == 'tag':
             self._start_tag(token[1])
         elif token[0] == 'reply':
@@ -1337,7 +1444,7 @@ class SettlementScreenDialog(Dialog):
         pressed: Optional[str] = None  # a knowledge button clicked: its name, the host opens its dialog
         if ((self._shown is not None and self._answer_event(event))
                 or (self._shows_missions() and self._missions_event(event))
-                or (self._shows_chat() and self._chat_event(event))):
+                or ((self._shows_chat() or self._shows_offices()) and self._chat_event(event))):
             pass
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
             self._move_focus(-1 if event.mod & pygame.KMOD_SHIFT else 1)

@@ -48,6 +48,7 @@ class PortalBase(Body, Settlement):
         KOMISAR: 1,
         RINGMASTER: 1
         }
+    offices = (KOMISAR, RINGMASTER)
 
     def has_settlements(self) -> bool:
         return True
@@ -185,7 +186,7 @@ class PortalBase(Body, Settlement):
     @property
     def officer_for_leaving(self) -> Optional[Person]:
         """The Komisar, who has the say when a pilot wants to leave (see SettlementOnLeaving)."""
-        return self._first_on_duty(KOMISAR)
+        return self.first_on_duty(KOMISAR)
 
     def place_after_leaving(self, ship: Ship) -> None:
         """The ship is put in front of the hangar, at rest, facing the star with the base behind it (forward along -z, up

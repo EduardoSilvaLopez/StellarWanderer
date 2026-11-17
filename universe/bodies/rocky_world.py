@@ -10,6 +10,7 @@ import logging
 from common.units import format_compact_distance
 import universe.structure.constants
 from universe.structure import seeds
+from universe.artifacts.ore_mine import OreMine
 from universe.bodies.km2 import Km2
 from universe.bodies.rock import Rock
 from universe.bodies.terrain import Terrain
@@ -199,7 +200,7 @@ class RockyWorld(World):
                 (mine_dict['longitude'], mine_dict['latitude'])
                 for km2_alt in self.saved_alterations['Km2s'].values() if 'ore_fields' in km2_alt
                 for field_dict in km2_alt['ore_fields'] if 'mines' in field_dict
-                for mine_dict in field_dict['mines'])
+                for mine_dict in field_dict['mines'] if 'given_away_at' not in mine_dict)
 
         # Moons:
         if not self.parent_planet:
@@ -328,6 +329,40 @@ class RockyWorld(World):
             return False
         return my_random.random() < RockyWorld.RESONANCE_CHANCE
 
+    # region Mines
+    def _unloaded_mine_dicts(self) -> List[dict]:
+        """The saved mines of the Km2s not in memory, which exist only as saved dicts (`saved_alterations`) until the
+        pilot goes there: the next save writes them as they are (see get_alterations). A Km2 in memory is the one
+        saved, and an altered one stays in memory."""
+        loaded = {km2.get_alterations_key() for km2 in self.km2s}
+        km2_dicts: dict = (self.saved_alterations or {}).get('Km2s') or {}
+        return [mine for key, km2_dict in km2_dicts.items() if key not in loaded
+                for field in km2_dict.get('ore_fields', []) for mine in field.get('mines', [])]
+
+    def count_own_mines(self) -> int:
+        """The mines on this world that are still the pilot's, whether their Km2 is in memory or only saved."""
+        in_memory = sum(1 for km2 in self.km2s for field in km2.ore_fields for mine in field.mines
+                        if not mine.is_external)
+        return in_memory + sum(1 for mine in self._unloaded_mine_dicts() if 'given_away_at' not in mine)
+
+    def give_away_mines(self, game_date_time: datetime) -> int:
+        """The pilot gives away the control of all their mines on this world (see OreMine.give_away). Returns how many.
+        The saved result is the same whether their Km2 was in memory or not."""
+        count = 0
+        for km2 in self.km2s:
+            for field in km2.ore_fields:
+                for mine in field.mines:
+                    if not mine.is_external:
+                        mine.give_away(game_date_time)
+                        count += 1
+        for mine_dict in self._unloaded_mine_dicts():
+            if 'given_away_at' not in mine_dict:
+                OreMine.give_away_serialized(mine_dict, game_date_time)
+                position = (mine_dict['longitude'], mine_dict['latitude'])
+                self.registered_mines[:] = [registered for registered in self.registered_mines if registered != position]
+                count += 1
+        return count
+    # endregion
 
     # region Alterations
     def get_alterations(self) -> Optional[dict]:

@@ -1,5 +1,7 @@
-"""The pilot wants to leave a settlement. Its coordinator (the Komisar, at a portal base) may have something to
-tell them before the departure. This can change their opinion."""
+"""The pilot wants to leave a settlement. The Dockmaster warns them of what they may want to settle first: that the ship
+is not ready yet, and that the one who has the say (Settlement.officer_for_leaving, the Coordinator or the Komisar)
+wants them to present themselves in their office while a promotion is due (see promotion.py; what it gives is in
+SettlementChat.promotion_effects). Either way, the pilot may leave at once."""
 
 from __future__ import annotations
 from typing import Callable, List, Optional
@@ -7,18 +9,14 @@ from typing import Callable, List, Optional
 from common.messages import Message, ShowMessage, show_message
 from universe.artifacts.settlements.settlement import Settlement
 from universe.society.people.player import Player
-from universe.society.politics.political_entity import PoliticalEntity
-from universe.society.missions.mission import DONE, Mission
-from universe.society.missions.deliver_ore import DeliverOre
-from universe.artifacts.spaceships.configurations.tws_miner import TwsMiner
-from universe.artifacts.spaceships.configurations.tws_shabby_miner import ShabbyTwsMiner
-from universe.artifacts.spaceships.configurations.tws_versatile import TwsVersatile
-from universe.artifacts.spaceships.configurations.tws_hauler import TwsHauler
+from universe.society.people import promotion
 from ..person import Person
 from ..conversation import Conversation
 
 
 class SettlementOnLeaving(Conversation):
+    """`interlocutor` is the Dockmaster, who speaks. `on_decided` is told whether the pilot leaves."""
+
     def __init__(
             self,
             player: Player,
@@ -31,150 +29,35 @@ class SettlementOnLeaving(Conversation):
         self.settlement: Settlement = settlement
         self.on_decided: Callable[[bool], object] = on_decided
 
-        standing = self.player._standing()
-        if standing is None:
-            raise Exception("No standing available.")
-        if self.settlement.player_reputation_on_entering is None:
-            raise Exception("init: No reputation recorded on entering.")
-        entity: PoliticalEntity = standing.entity
-        self.old_rep: float = self.settlement.player_reputation_on_entering
-        self.new_rep: float = self.player.reputation
-        old_title: str = entity.title_for(self.old_rep)
-        new_title: str = entity.title_for(self.new_rep)
-        self.title_has_improved: bool = self.old_rep < self.new_rep and old_title != new_title
+        self.has_promotion: bool = promotion.next_step(self.player) is not None
 
-        self.title: str = "Good news" if self.title_has_improved else "Not ready yet"
+        self.title: str = "Not ready yet" if self.settlement.handling_due_at is not None else "Good news"
 
     def start(self) -> None:
-        if not self.title_has_improved and self.settlement.handling_due_at is None:
+        is_not_ready: bool = self.settlement.handling_due_at is not None
+        if not self.has_promotion and not is_not_ready:
             self._decide(True)
             return
 
-        it: str = self.generate_introduction_text()
-        speaker: str = f"{self.interlocutor.role.name} {self.interlocutor.surname} speaks.\n\n"
-
-        title_improved_text: str = self._higher_title_effects(self.old_rep) if self.title_has_improved else ''
-
-        if self.settlement.dockmaster is None:
-            raise Exception("No dockmaster.")
-        not_ready_text: str = '' if self.settlement.handling_due_at is None \
-            else (
-                f"{self.settlement.dockmaster.role.name} {self.settlement.dockmaster.surname} says"
-                " the ship is not ready yet. Do you want to leave anyway?"
-                )
-
-        text: str = speaker + it + (title_improved_text if self.title_has_improved else not_ready_text)
-
-        buttons: List[str] = ['Ok'] if self.title_has_improved else ['Yes', 'No']
+        paragraphs: List[str] = [self.generate_introduction_text().strip()]
+        officer: Optional[Person] = self.settlement.officer_for_leaving
+        if self.has_promotion and officer is not None:
+            his: str = "her" if officer.gender_group is Person.GenderGroup.FEMALE else "his"
+            paragraphs.append(f"The {officer.role.name} wants you to present yourself in {his} office.")
+        if is_not_ready:
+            paragraphs.append("The ship is not ready yet.")
+        paragraphs.append("Do you want to leave anyway?")
 
         self.show(Message(
                 title=self.title,
-                text=text,
-                buttons=buttons,
+                text="\n\n".join(paragraph for paragraph in paragraphs if paragraph),
+                buttons=['Yes', 'No'],
                 open_sound='radio_open'
                 ), self._answered
             )
 
-    def _higher_title_effects(self, old_rep: float) -> str:
-        new_title: str = self.player.get_title()
-        if old_rep < 10 \
-                and isinstance(self.player.ship, ShabbyTwsMiner) \
-                and isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ShabbyHold):
-            self.player.ship.change_cargo_hold(ShabbyTwsMiner.StandardHold)
-            return (
-                f"You have proven you can do the job without wasting mines.\n\n"
-                f"We decided to repair your cargo hold... {self.interlocutor.get_player_title()}.\n\n"
-                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-                )
-        elif old_rep < 20:
-            return (
-                "We have spoken about you and think can trust you to do something more than collect ore.\n\n"
-                "Anytime you want, check the mission board of any outpost. But be careful you really can"
-                " do the thing.\n\n"
-                f"Long live the Community... {self.interlocutor.get_player_title()}\n\n" \
-                   if self.interlocutor.loyalty100 > 5 else ''
-                )
-        elif old_rep < 50 \
-                and isinstance(self.player.ship, ShabbyTwsMiner) \
-                and not isinstance(self.player.ship.cargo_hold, ShabbyTwsMiner.ExtendedHold):
-            self.player.ship.change_cargo_hold(ShabbyTwsMiner.ExtendedHold)
-            return (
-                f"You are doing the best of your ship... {self.interlocutor.get_player_title()}. Really.\n\n"
-                f"We found a cargo extension you could use.\n\n"
-                f"Keep doing the good job.\n\n"
-                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-                )
-        elif old_rep < 100 and isinstance(self.player.ship, ShabbyTwsMiner):
-            self.player.ship.upgrade_to(TwsMiner)
-            return  (
-                "People were asking why you still have to go around with that piece of..."
-                f" no offense intended, {self.interlocutor.get_player_title()}.\n\n"
-                "We consulted and the Community thinks you deserve a modern THS miner.\n\n"
-                "It has better batteries and a connector for solar panels, you can recharge around the sun."
-                " If you dare.\n\n"
-                "Take care of it, will you?\n\n"
-                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-                )
-        elif old_rep < 200 and 'Versatile Asked' not in self.player.flags:
-            self.player.flags.add('Versatile Asked')
-            done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
-            ore_factor: float = sum(isinstance(m, DeliverOre) for m in done) / len(done) if len(done) > 0 else 1.0
-            if ore_factor <= 0.65:
-                self.show(Message(
-                    title=self.title,
-                    text=(
-                        f"If looks like you have been doing much more than just mining ore... {new_title}."
-                        "All according to The Three Aspects, though. Very well!\n\n"
-                        "Maybe you could use a... more versatile ship, Pilot? One with less cargo capacity, about"
-                        " the half. But more acceleration and containers for life support. And a bit more robust.\n\n"
-                        " You decide, Pilot, you know better how you can serve."
-                    ),
-                    buttons=['Yes, please', 'No, thanks.'],
-                    ), self._versatile_answered
-                )
-                return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-        elif old_rep < 500 \
-                and not isinstance(self.player.ship, TwsVersatile) \
-                and 'Hauler Asked' not in self.player.flags:
-            self.player.flags.add('Hauler Asked')
-            done: List[Mission] = [m for m in self.player.missions if m.status == DONE]
-            self.show(Message(
-                title=self.title,
-                text=(
-                    f"A real miner through and through, yes? Paladin Xi must be proud of you... {new_title}."
-                    "\n\nWe have got a Hauler, and we thought this is exactly your kind of stuff. If you want it."
-                    " It's a real piece, this one. Solid as a rock, food for half a year, and more place for ore"
-                    " you will never... wait, no, maybe YOU can fill up this guy."
-                    "\n\nDo you want it?"
-                ),
-                buttons=['Yes, please', 'No, thanks.'],
-                ), self._hauler_answered
-            )
-            return f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-        elif old_rep < 1000:
-            return  (
-                "I came to talk with you because you have meanwhile done so much here, that people think you can"
-                " take a break. We trust you. If you want to go back home or whatever, you can use the ship, no"
-                " need to leave it here. Just don't leave the Community with it.\n\n"
-                " So... take a vacation, base yourself where you want... and if we don't see you again, it has been"
-                " a honour to have you working here.\n\n"
-                f"{"Long live the Community.\n\n" if self.interlocutor.loyalty100 > 5 else ''}"
-                )
-
-        return f"People are starting to call you {self.player.get_title()}..."
-
     def _answered(self, chosen_button: Optional[int]) -> None:
         self._decide(chosen_button == 0)
-
-    def _versatile_answered(self, chosen_button: Optional[int]) -> None:
-        if chosen_button == 0:
-            self.player.ship.upgrade_to(TwsVersatile)
-        self._decide(True)
-
-    def _hauler_answered(self, chosen_button: Optional[int]) -> None:
-        if chosen_button == 0:
-            self.player.ship.upgrade_to(TwsHauler)
-        self._decide(True)
 
     def _decide(self, leaves: bool) -> None:
         self.close()

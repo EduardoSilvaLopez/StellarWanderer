@@ -85,14 +85,13 @@ MAX_AGE: dict[Scope, timedelta] = {
     Scope.SETTLEMENT: 5 * DAY,
 }
 
-# TODO: the built-in tidings.
+# The built-in tidings.
 STATIC_TIDINGS: List[Tiding] = [
     Tiding(date(700, 1, 3), Scope.SYSTEM, "Paladin Xi left the system."),
 ]
 
 # The incidents a system may have on any day, with their chance per day, drawn from the system's seed in this order (a
 # new one goes last).
-# TODO: more incidents.
 INCIDENTS: tuple[tuple[Happening, float], ...] = (
     (Happening.SHIP_LOST, 0.005),
     (Happening.SHIP_RESCUED, 0.005),
