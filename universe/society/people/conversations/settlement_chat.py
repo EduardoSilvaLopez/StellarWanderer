@@ -2366,8 +2366,8 @@ class SettlementChat(Conversation):
                 "\n\nDo you want it?\n\n"
                 f"{long_live}"
                 )
-        elif step == promotion.VACATION:
-            self.player.flags.add(promotion.VACATION_FLAG)
+        elif step == promotion.INTERSTELLAR_CLEARANCE:
+            self.player.flags.add(promotion.INTERSTELLAR_CLEARANCE_FLAG)
             text = (
                 "I wanted you to come because you have meanwhile done so much here, that people think you can"
                 " take a break, if you want. We trust you. If you want to go back home or whatever, you can"

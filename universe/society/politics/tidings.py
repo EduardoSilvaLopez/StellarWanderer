@@ -1,12 +1,5 @@
-"""The tidings of the galaxy, so the pilot can learn what is going on. Each tiding is dated by day and scoped to whom it
-concerns; the ages per scope are the window of days a tiding stays current.
-
-The rest of the galaxy reports what happened as events, with the facts it knows; this module alone decides what an
-event is to a pilot at a location (its scope and text) and whether it is told there at all (`_tiding_of`). The events
-are not pushed when they happen: they are pure functions of the seed and the date, so the tidings ask every source for
-the events of their window, and the same tidings come out whatever was visited, saved or loaded. A source is a function
-registered with `@source` in the module that owns the logic (it must be imported before the tidings are collected); the
-history and the system's incidents are the tidings' own sources."""
+"""The tidings of the galaxy, so the pilot can learn what is going on. The rest of the galaxy reports events; this
+module decides what each one is to a pilot at a location."""
 
 from __future__ import annotations
 
@@ -59,7 +52,9 @@ class Event:
     facts: Mapping[str, Any] = field(default_factory=dict)  # whatever else the source knows
 
 
-# The events between two days (both included) that a pilot in the system could hear of.
+# A source gives the events between two days (both included) that a pilot in the system could hear of.
+# It is registered with `@source` in the module that owns the logic, which must be imported
+# before the tidings are collected.
 Source = Callable[['StellarSystem', date, date], Iterable[Event]]
 _SOURCES: List[Source] = []
 

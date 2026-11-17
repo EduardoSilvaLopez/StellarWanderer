@@ -1,8 +1,4 @@
-"""The promotions of the pilot: what the Community gives a pilot who has earned it, one step at a time, by the pilot's
-current reputation, ship and flags alone (no memory of when they came in). `next_step` says which one is due, if any;
-the one who has the say when the pilot leaves (Settlement.officer_for_leaving) gives it when the pilot presents
-themselves to them (SettlementChat.promotion_effects), and the Dockmaster sends the pilot there while one is due
-(SettlementOnLeaving). Giving a step changes the ship or sets its flag, which makes the next one due."""
+"""The promotions of the pilot: what the Community gives a pilot who has earned it."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
@@ -22,12 +18,12 @@ EXTENDED_HOLD = 'extended hold'
 MINER = 'miner'  # the Shabby miner is replaced by a modern one
 VERSATILE = 'versatile'  # offered to a pilot who does more than mine
 HAULER = 'hauler'  # offered
-VACATION = 'vacation'  # the pilot may take the ship and go
+INTERSTELLAR_CLEARANCE = 'vacation'  # the pilot may take the ship and go
 
 MISSIONS_FLAG = 'Missions Added'
 VERSATILE_FLAG = 'Versatile Asked'
 HAULER_FLAG = 'Hauler Asked'
-VACATION_FLAG = 'Vacation Offered'
+INTERSTELLAR_CLEARANCE_FLAG = 'Interstellar Clearance'
 VERSATILE_MAX_ORE_SHARE = 0.65  # the Versatile is for a pilot whose done missions are at most this share of ore
 
 
@@ -35,7 +31,6 @@ def ore_share(player: Player) -> float:
     """The share of the pilot's done missions that deliver ore (1 while none is done)."""
     done = [mission for mission in player.missions if mission.status == DONE]
     return sum(isinstance(mission, DeliverOre) for mission in done) / len(done) if done else 1.0
-
 
 def next_step(player: Player) -> Optional[str]:
     """The first step due to `player` now, or None. The order is the order they are given in."""
@@ -54,6 +49,6 @@ def next_step(player: Player) -> Optional[str]:
         return VERSATILE
     if rep >= 500 and HAULER_FLAG not in player.flags and not isinstance(ship, (TwsVersatile, TwsHauler)):
         return HAULER
-    if rep >= 1000 and VACATION_FLAG not in player.flags:
-        return VACATION
+    if rep >= 1000 and INTERSTELLAR_CLEARANCE_FLAG not in player.flags:
+        return INTERSTELLAR_CLEARANCE
     return None
