@@ -31,13 +31,15 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 * INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
   * Complete revamp of the structure of the project.
-  * Testing.
+  * Offices: Give up the mine codes. Authorities no longer available in "chat".
 
 ### 2026-11-17 (8/12)
 
-> STARTED: Extra time: 205h00' + 11:00-11:15 + 13:15-
+### 2026-11-18 (9/12)
 
-  * Offices: Give up the mine codes. Authorities no longer available in "chat".
+> STARTED: Extra time: 205h45' + 11:30 - 12:30
+
+  * Testing. I got my clearance too soon.
 
 > BACKLOG
 

@@ -45,9 +45,13 @@ class RockyWorld(World):
     '''
 
     SURROUNDINGS_RADIUS = 2 * Km2.SIZE
-    # How much of its relief a world's ground has (see Terrain): 0, flat, until the graphics draw the ground that the
-    # ship's logic then stands on.
-    TERRAIN_RELIEF = 1.0
+    # The relief of a world's ground (see Terrain, terrain_relief): a share of the natural relief's ceiling, by the
+    # surface, and by the radius to a power below 1. A small world is rougher in proportion to its size, and a fixed
+    # share of the radius would give absurd mountains on a large one.
+    TERRAIN_REFERENCE_RADIUS = 6.0e6  # m: the relief of a rock world of this radius is the natural one
+    TERRAIN_EXPONENT = 0.5
+    TERRAIN_KIND_FACTOR = {SurfaceType.BASALT: 1.0, SurfaceType.HIGHLAND: 1.0, SurfaceType.RUST: 1.0,
+                           SurfaceType.OCHRE: 1.0, SurfaceType.REGOLITH: 0.5, SurfaceType.ICE: 0.7}
 
     # Bulk density, kg/m^3, before the world's weight squeezes it: mean and sigma of a normal draw, lowest, highest. A
     # world of an icy surface is a mix of rock and ice (the icy moons of the giants, Pluto); the others are rock and
@@ -98,6 +102,13 @@ class RockyWorld(World):
     RESONANCE_TURNS_PER_ORBIT = 1.5  # the 3:2 resonance: three turns for two orbits
 
     # region Generation
+    @staticmethod
+    def terrain_relief(radius: float, surface_type: SurfaceType) -> float:
+        """The `relief` of a world's ground (see Terrain) for a world of `radius` m with this surface: the kind's factor
+        times the radius over the reference radius, to TERRAIN_EXPONENT."""
+        return RockyWorld.TERRAIN_KIND_FACTOR[surface_type] \
+            * (radius / RockyWorld.TERRAIN_REFERENCE_RADIUS) ** RockyWorld.TERRAIN_EXPONENT
+
     @staticmethod
     def moon_limit_in_radii(distance_to_star: float, star_mass: float, density: float) -> float:
         """The farthest a moon's orbit (semi-major axis) can be from a planet, in planet radii, when it is
@@ -172,7 +183,8 @@ class RockyWorld(World):
             # Why were you sent here...? :D
             self.rocks_prevalence = 0.8 + 0.2 * my_random.random()
             self.ore_prevalence = (1.0 - Rock.ORE_RICH_THRESHOLD) * (0.8 + 0.2 * my_random.random())
-        self.terrain = Terrain(seeds.derive(self.seed, 'terrain'), self.radius, RockyWorld.TERRAIN_RELIEF)
+        self.terrain = Terrain(seeds.derive(self.seed, 'terrain'), self.radius,
+                               RockyWorld.terrain_relief(self.radius, self.surface_type))
 
         # Alterations:
         self.is_altered = False

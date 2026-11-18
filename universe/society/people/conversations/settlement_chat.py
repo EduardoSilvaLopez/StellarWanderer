@@ -197,7 +197,7 @@ class SettlementChat(Conversation):
             'the network': self.talk_the_network,
             'The Shining Throne, Shining Throne, TST': self.talk_the_shining_throne,
             'Those-Who-Share, TWS': self.talk_those_who_share,
-            'tiding, tidings, news': self.talk_tidings,
+            'news, tiding, tidings': self.talk_tidings,
             'United Diversity, UniDiv': self.talk_united_diversity,
         }
 

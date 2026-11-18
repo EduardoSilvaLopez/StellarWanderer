@@ -100,6 +100,13 @@ class ChunkBuilder:
         with frame_watch.timed('helper pool start'):
             self.start()
 
+    def cancel(self) -> None:
+        """Drops the requests not yet collected, without waiting for the helpers: the pool stays up, as starting it
+        again stalls the frame."""
+        for future in self._pending.values():
+            future.cancel()
+        self._pending.clear()
+
     def shutdown(self) -> None:
         if self._pool is not None:
             self._pool.shutdown(wait=True, cancel_futures=True)

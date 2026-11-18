@@ -42,7 +42,7 @@ class ScanRock(Mission):
             taken_by_others=0.1,
             deadline_days_min=2,
             deadline_days_max=5,
-            reward=4,  # Constant
+            reward=8,  # Constant
             failure_penalty=-5.0
             ),
         SettlementKind.PORTAL_BASE: None,
@@ -114,9 +114,9 @@ class ScanRock(Mission):
         return self.rock_site
 
     def _choose_rock_site(self) -> Optional[dict]:
-        """A random rock that is not molten, on a world of the outpost's system of worlds (see `_host`), from the mission's
-        seed. One place is tried: None if that place has no rock left, or has an outpost (the people there would have
-        scanned it themselves)."""
+        """A random rock that is not molten, on a world of the outpost's system of worlds (see `_host`), from the
+        mission's seed. One place is tried: None if that place has no rock left, or has an outpost (the people there
+        would have scanned it themselves)."""
         from universe.bodies.km2 import Km2
         host = self._host()
         first = -1 if host is self._planet() else 0  # -1 is the planet itself, a place only for an outpost on a planet
@@ -211,11 +211,13 @@ class ScanRock(Mission):
             self.was_scanned = True
 
     def target_on(self, world: RockyWorld) -> Optional[Tuple[float, float]]:
-        """The longitude and latitude of the mission's rock, while the mission is open and the rock is on `world`;
-        None otherwise."""
+        """The centre of the Km2 of the mission's rock, while the mission is open and that Km2 is on `world`; None
+        otherwise. The map marks the Km2, not the rock inside it."""
         if self.status != OPEN or self.object_type != 'rock' or self._world() is not world:
             return None
-        return tuple(self._site()['rock'])
+        from universe.bodies.km2 import Km2  # local: as in the other methods here
+        cell_longitude, cell_latitude = self._site()['km2']
+        return cell_longitude + Km2.SIZE / 2, cell_latitude + Km2.SIZE / 2
 
     def progress(self) -> str:
         if self.accepted_at is None:
@@ -250,7 +252,10 @@ class ScanRock(Mission):
         return f"You have not scanned the {self.object_type} yet."
 
     def give_reward(self, player: Player) -> None:
+        """Double the reward when the rock is on another world than the outpost's planet (a moon of its giant)."""
         reputation_change: float = self.terms.reward
+        if self.object_type == 'rock' and self._world() is not self._planet():
+            reputation_change *= 2
         player.reputation += reputation_change
         logger.info(f"MISSION COMPLETE: {self.object_type} scanned. Reputation +{reputation_change} = "
         f"{player.reputation}")

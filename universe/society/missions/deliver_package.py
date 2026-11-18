@@ -29,7 +29,7 @@ class DeliverPackage(Mission):
     TERMS = {
         SettlementKind.OUTPOST: Terms(
             base_frequency=0.05,
-            taken_by_others=0.015,
+            taken_by_others=0.01,
             deadline_days_min=5,
             deadline_days_max=20,
             reward=2.0,  # Constant. But sympathy 40 + 30 + 200/s + 150/s
@@ -37,7 +37,7 @@ class DeliverPackage(Mission):
             ),
         SettlementKind.PORTAL_BASE: Terms(
             base_frequency=0.08,
-            taken_by_others=0.02,
+            taken_by_others=0.015,
             deadline_days_min=10,
             deadline_days_max=30,
             reward=3.0,  # Constant. But sympathy 40 + 30 + 200/s + 150/s

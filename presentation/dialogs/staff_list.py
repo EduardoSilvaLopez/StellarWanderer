@@ -1,5 +1,6 @@
 """The people of an outpost that can be chatted with now, as a list of cards (the Chat of the settlement screen, see
-settlement_screen.py). Who is listed is Outpost.available_staff: not on vacation, not working and not resting.
+settlement_screen.py). Who is listed is Outpost.available_staff: not on vacation, not working and not resting, and
+not the holder of an office (Settlement.offices), who is met in Offices.
 
 Each card has the portrait on the left, then the name and the role, the last time the pilot met the person, and the
 comment (read-only here, cut to COMMENT_LINES lines). A click selects a card: it is outlined with the accent colour, and
@@ -67,10 +68,12 @@ class StaffList:
                                             ScrollBar.MIN_WIDTH, self.text_rect.height)
 
     def available(self) -> List[Person]:
-        """The people shown now, in card order: those listed (Outpost.available_staff) that match the search. The
-        selection goes when its person is no longer listed, not when the search leaves them out."""
+        """The people shown now, in card order: those listed (Outpost.available_staff, but the offices' holders) that
+        match the search. The selection goes when its person is no longer listed, not when the search leaves them
+        out."""
         import game_environment as gem  # local: the game's environment, not needed by the rest of this module
-        listed = self.outpost.available_staff(gem.current_environment.date_time)
+        listed = [person for person in self.outpost.available_staff(gem.current_environment.date_time)
+                  if person.role not in self.outpost.offices]
         if self.selected not in listed:
             self.selected = None
         self.persons = [person for person in listed if person.matches_search(self.query, SEARCH_LABELS)]

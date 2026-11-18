@@ -12,7 +12,8 @@ if TYPE_CHECKING:
     from universe.bodies.rocky_world import RockyWorld
 
 MINE_MARK_COLOR = (255, 255, 0)
-ROCK_MARK_COLOR = (255, 140, 0)  # the rock of an open scan mission: an orange cross, apart from the yellow mines
+ROCK_MARK_COLOR = (255, 140, 0)  # the Km2 of an open scan mission: an orange circle, apart from the yellow mines
+ROCK_MARK_RADIUS = 800.0  # m: the circle is drawn at this real radius, so it is a dot until the zoom is close enough
 
 # Zoom: while the mouse is over the map, the wheel zooms in logarithmic steps, centred on the ship.
 # The scales are fixed values in metres per pixel (1, 2, 5, 10, ...) down to MIN_SCALE, so a step means the same
@@ -30,8 +31,9 @@ class WorldMap:
 
     Bound only. It shows the outposts of the planet as white dots with their names (the name goes towards the middle
     of the map: left of the dot in its right half, below it in its upper half, and is kept inside the map), the ore
-    mines of the world (`RockyWorld.registered_mines`) as small yellow crosses, the rock of each open rock-scan mission on
-    the world as an orange cross (`ScanRock.target_on`), and the player as a bright dot. Other rocks are not shown.
+    mines of the world (`RockyWorld.registered_mines`) as small yellow crosses, the Km2 of each open rock-scan
+    mission on the world as an orange circle (`ScanRock.target_on`), and the player as a bright dot. Other rocks are
+    not shown.
 
     With the mouse over the map, its header shows the scale instead of the world's name and the mouse wheel zooms,
     centred on the ship (the ship's dot stays at the middle until the map is dragged). The levels are fixed scales in
@@ -136,7 +138,7 @@ class WorldMap:
             def to_pixel(lon: float, lat: float) -> Optional[Tuple[int, int]]:
                 return WorldMap._map_point(lon, lat, radius, inner_area)
 
-            WorldMap._draw_contents(surface, fonts, h, world, ship, to_pixel, inner_area)
+            WorldMap._draw_contents(surface, fonts, h, world, ship, to_pixel, inner_area, scale)
             return
 
         # Zoomed: the window around the ship, `scale` metres per pixel, the ship at its centre until dragged. The flat
@@ -162,7 +164,7 @@ class WorldMap:
         bottom = centre_y - (-half_world / 2 - centre_lat) / scale
         pygame.draw.rect(surface, ACCENT_DIM, pygame.Rect(round(left), round(top), round(right - left),
                                                           round(bottom - top)), 1)
-        WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area)
+        WorldMap._draw_contents(surface, fonts, h, world, ship, zoomed_pixel, inner_area, scale)
         surface.set_clip(previous_clip)
 
     @staticmethod
@@ -206,12 +208,12 @@ class WorldMap:
 
     @staticmethod
     def _draw_contents(surface: pygame.Surface, fonts: Any, h: int, world: RockyWorld, ship: Ship,
-                       to_pixel: PixelFunction, area: pygame.Rect) -> None:
-        """Everything the map shows: the outposts, the ore mines, the rocks of the open
-        scan missions and the player."""
+                       to_pixel: PixelFunction, area: pygame.Rect, scale: float) -> None:
+        """Everything the map shows: the outposts, the ore mines, the Km2s of the open scan missions and the player.
+        `scale` is the metres per pixel of the map being drawn."""
         WorldMap._draw_outposts(surface, fonts, h, world, to_pixel, area)
         WorldMap._draw_mines(surface, world, to_pixel)
-        WorldMap._draw_rock_targets(surface, world, ship, to_pixel)
+        WorldMap._draw_rock_targets(surface, world, ship, to_pixel, scale)
 
         # Player position as a brilliant dot
         player_pixel = to_pixel(ship.position.x, ship.position.z)
@@ -240,16 +242,21 @@ class WorldMap:
             WorldMap._draw_cross(surface, to_pixel(mine_pos[0], mine_pos[1]), MINE_MARK_COLOR)
 
     @staticmethod
-    def _draw_rock_targets(surface: pygame.Surface, world: RockyWorld, ship: Ship, to_pixel: PixelFunction) -> None:
-        """An orange cross on the rock of each open scan mission that is on this world."""
+    def _draw_rock_targets(surface: pygame.Surface, world: RockyWorld, ship: Ship, to_pixel: PixelFunction,
+                           scale: float) -> None:
+        """An orange circle of ROCK_MARK_RADIUS on the Km2 of each open scan mission that is on this world."""
         # local: the missions import the player, which imports this package
         from universe.society.missions import ScanRock
+        radius = max(1, round(ROCK_MARK_RADIUS / scale))
         for mission in ship.owner.missions:
             if not isinstance(mission, ScanRock):
                 continue
             site = mission.target_on(world)
-            if site is not None:
-                WorldMap._draw_cross(surface, to_pixel(site[0], site[1]), ROCK_MARK_COLOR)
+            if site is None:
+                continue
+            centre = to_pixel(site[0], site[1])
+            if centre is not None:
+                pygame.draw.circle(surface, ROCK_MARK_COLOR, centre, radius, min(2, radius))
 
     @staticmethod
     def _draw_cross(surface: pygame.Surface, pixel: Optional[Tuple[int, int]], colour: Tuple[int, int, int]) -> None:

@@ -362,7 +362,7 @@ class _Renderer:
         self.casters = None
         if self.shadow is not None:
             self.shadow.invalidate()
-        self.builder.shutdown()
+        self.builder.cancel()
 
     def _evict(self) -> None:
         if len(self.cache) <= MAX_CHUNKS + 100:
@@ -741,11 +741,8 @@ class TerrainGl:
 
     @staticmethod
     def preload() -> None:
-        """Starts the helper processes when the game's worlds have relief, so that the first ground does not wait."""
-        # not at the top: the presentation is loaded before the universe
-        from universe.bodies.rocky_world import RockyWorld
-        if RockyWorld.TERRAIN_RELIEF > 0.0:
-            TerrainGl._get().builder.start()
+        """Starts the helper processes, so that the first ground does not wait: every rocky world has relief."""
+        TerrainGl._get().builder.start()
 
     @staticmethod
     def draw(world: World, ship: Ship, light: SurfaceLight, shadows: bool = False,

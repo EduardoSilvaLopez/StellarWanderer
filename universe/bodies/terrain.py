@@ -44,6 +44,11 @@ COARSE_RATIO = 16.0       # an octave is smooth over a grid when its cell is thi
 PLATFORM_FLAT = 75.0      # m: the graded disc's radius (holds the pads and the annex of the largest outpost)
 PLATFORM_APRON = 100.0    # m: the width of the smooth slope from the disc to the natural ground
 PLATFORM_MAX_STEP = 16.0  # m: a mesh with cells wider than this does not show the platforms
+# m: the highest the natural relief can stand, the sum of the amplitudes of its octaves; the noise only reaches it in
+# theory. A world's `relief` multiplies the natural relief, so a relief of 1 is at most this high.
+NATURAL_CEILING = (PLAIN_AMPLITUDE / (1.0 - PLAIN_GAIN)
+                   + HILL_AMPLITUDE * (1.0 - HILL_GAIN ** (HILLS_LAST - HILLS_FIRST)) / (1.0 - HILL_GAIN)
+                   + RIDGE_AMPLITUDE / (1.0 - RIDGE_GAIN))
 
 _MASK32 = 0xFFFFFFFF
 _P1, _P2, _P3, _C1 = 374761393, 668265263, 2246822519, 2246822519
@@ -279,7 +284,8 @@ def _graded(heights: np.ndarray, xs: np.ndarray, zs: np.ndarray, platforms: Tupl
 
 
 class Terrain:
-    """The ground of one world. `height` is metres above the datum; `relief` scales it, 0 for a flat world."""
+    """The ground of one world. `height` is metres above the datum; `relief` scales the natural relief (NATURAL_CEILING
+    at most for 1), and is 0 for a flat world."""
 
     def __init__(self, seed: int, radius: float, relief: float = 0.0,
                  platforms: Tuple[Tuple[float, float, float], ...] = ()) -> None:

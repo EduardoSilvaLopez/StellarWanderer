@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from universe.artifacts.spaceships.cargo_hold import Supply
 
 NOMINAL_SIZE = 800  # the base class wants a logical size; this dialog lays out at the window's size instead
-BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Offices', 'Chat', 'Leave', 'Retire')
+BUTTON_LABELS = ('Dockmaster', 'Cargo', 'Missions', 'Chat', 'Offices', 'Leave', 'Retire')
 ACTION_LABELS = ('Retire', 'Leave')  # the buttons that do something instead of staying selected
 EQUIPMENT = ('Mines', 'Scoop', 'Heat Shield', 'Solar Panels')  # the equipment rows under the levels, in this order
 HEAT_SHIELD_OPTIONS = ('None', 'Heat Shield I', 'Heat Shield II')  # the combo box, in order: Ship.HeatShield's values

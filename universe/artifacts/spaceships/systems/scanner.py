@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, Tuple, Union
 
 import logging
 import math
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Everything the beam can hit.
-Target = Union['Rock', 'OreMine', 'Outpost']
+Target = Union['Rock', 'OreMine', 'Outpost', 'PortalBase']
 
 
 class Scanner:
@@ -52,9 +52,11 @@ class Scanner:
         self.target: Optional[Target] = None
         self.scan_asteroid: Optional[Asteroid] = None  # the targeted asteroid, if it can still be scanned
         self.scan_problem: Optional[str] = None  # why it cannot be now, for the scanner panel
+        self.scanning_rock: bool = False  # the beam is working on a rock with an adjective now, for the panel
         self._scan_held: bool = False  # SPACE went down on an asteroid and is still down: the laser stays off
         # the rock with an adjective whose scan was announced since SPACE went down
         self._announced_rock: Optional[Rock] = None
+        self._worked_rock: Optional[Rock] = None  # the rock whose unfinished scan the beam is working on
         self.start_x = 0.0
         self.start_y = 0.0
         self.start_z = 0.0
@@ -122,7 +124,9 @@ class Scanner:
             return
 
         import game_environment as gem
-        hit = self._closest_hit(gem.current_environment.fixed_world)
+        from universe.bodies.rocky_world import RockyWorld
+        world = gem.current_environment.fixed_world
+        hit = self._closest_hit(world) if isinstance(world, RockyWorld) else None
         if hit is None:
             return
         target, t = hit
@@ -210,12 +214,41 @@ class Scanner:
             self.ship.notification.set(
                 f"Asteroid {asteroid.name} scanned, Pilot {player.surname}: the results are in the ship computer.",
                 'mission_delivered')
+
+    def _drop_partial_scan(self) -> None:
+        """The scan of a rock is not saved, so an unfinished one starts over whenever the beam stops working on it."""
+        if self._worked_rock is not None:
+            self._worked_rock.scan_progress = 0.0
+            self._worked_rock = None
+
+    def _scan_rock(self, rock: Rock, game_seconds: float) -> None:
+        """The beam works on the rock for the time of this frame (the time scale rule is the asteroids'). When it
+        finishes, the pilot is told what stone it is, and the missions that asked for it are told."""
+        player = self.ship.owner
+        if player.time_scale > player.TIME_SCALE_MIN:
+            player.time_scale = player.TIME_SCALE_MIN
+            return
+        self._worked_rock = rock
+        if not rock.advance_scan(game_seconds):
+            return
+        self._worked_rock = None
+        self._announced_rock = rock
+        name, description = rock.stone
+        from common.messages import Message, show_message
+        show_message(Message(
+            title='ROCK SCANNED',
+            text=f"This {rock.adjective} rock is a rare form of {name}."
+                f" {description} The results are stored in the ship computer,"
+                " and the rock is kept from being damaged.",
+        ))
+        for mission in player.missions:
+            mission.on_rock_scanned(rock)
     # endregion
 
     # region Actions
     def _scrap_mine(self, mine: OreMine) -> None:
-        """An empty mine on a depleted field is taken down, and the ship takes OreMine.SCRAPS_FROM_MINE scraps for it. If
-        the hold has no room for them, nothing happens and the pilot is told."""
+        """An empty mine on a depleted field is taken down, and the ship takes OreMine.SCRAPS_FROM_MINE scraps for
+        it. If the hold has no room for them, nothing happens and the pilot is told."""
         hold = self.ship.cargo_hold
         if hold.free_capacity() < mine.SCRAPS_FROM_MINE * hold.SCRAPS_WEIGHT:
             self.ship.notification.set('Not enough space for the scraps of the mine', 'failed', bad=True)
@@ -229,7 +262,8 @@ class Scanner:
         stays off). On a targeted outpost,
         holding the key does nothing here: main.py enters it, once per press.
         On a rock with an adjective,
-        the beam stays off and a message says the rock has been scanned (once per press, see release). Otherwise switch
+        the beam stays off and works on it like on an asteroid (`Rock.advance_scan`, the 'scan' buzz); when the scan
+        is done a message says what stone it is. Otherwise switch
         the beam on, heating the targeted rock if there is one. Uses the target found by this frame's update_target, so
         it does not search again. Inside the fixed zone of a portal base the beam never switches on (the base is
         ours)."""
@@ -266,27 +300,27 @@ class Scanner:
             return self
 
         self._scan_held = self._scan_held or self.scan_asteroid is not None
-        scanning = self.scan_asteroid is not None and self.scan_problem is None
-        sound_events.set_loop('scan', scanning)
-        if scanning:
-            self._scan(self.scan_asteroid, time_passed)
+        asteroid = self.scan_asteroid
+        scanning = asteroid is not None and self.scan_problem is None
+        rock = self.targeted_rock
+        scanning_rock = rock is not None and bool(rock.adjective) and rock.scan_progress < 1.0
+        self.scanning_rock = scanning_rock
+        if self._worked_rock is not None and self._worked_rock is not rock:  # the beam left the rock
+            self._drop_partial_scan()
+        sound_events.set_loop('scan', scanning or scanning_rock)
+        if asteroid is not None and scanning:
+            self._scan(asteroid, time_passed)
         if self._scan_held:
             self.ship.laser.cease_fire()
             return self
 
-        rock = self.targeted_rock
         if rock is not None and rock.adjective:
-            # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten. Announced
-            # once per press.
+            # A rock with an adjective is scanned, not heated: the laser stays off, so it cannot be molten.
             self.ship.laser.cease_fire()
-            if self._announced_rock is not rock:
+            if scanning_rock:
+                self._scan_rock(rock, time_passed)
+            elif self._announced_rock is not rock:  # scanned before: the missions are told once per press
                 self._announced_rock = rock
-                from common.messages import Message, show_message
-                show_message(Message(
-                    title='ROCK SCANNED',
-                    text=f"This {rock.adjective} rock has been scanned, and the results stored in the ship computer, "
-                         "preventing it from being damaged.",
-                ))
                 for mission in self.ship.owner.missions:
                     mission.on_rock_scanned(rock)
             return self
@@ -295,9 +329,12 @@ class Scanner:
         return self
 
     def release(self) -> Scanner:
-        """SPACE is up: the next press of it announces a scanned rock again."""
+        """SPACE is up: the next press of it tells the missions about a scanned rock again. A rock's partial scan is
+        lost, as it is not saved."""
+        self._drop_partial_scan()
         self._announced_rock = None
         self._scan_held = False
+        self.scanning_rock = False
         sound_events.set_loop('scan', False)
         return self
 
@@ -308,6 +345,7 @@ class Scanner:
         return base is not None and self.ship.navigation.in_fixed_zone(base)
 
     def deactivate(self) -> Scanner:
+        self.scanning_rock = False
         self.ship.laser.cease_fire()
         sound_events.set_loop('scan', False)
         return self
@@ -323,7 +361,7 @@ class Scanner:
                 hits.append((target, t))
         return min(hits, key=lambda hit: hit[1], default=None)
 
-    def _candidates(self, world: RockyWorld) -> Iterator[Tuple[Target, Callable[[Target], Optional[float]]]]:
+    def _candidates(self, world: RockyWorld) -> Iterator[Tuple[Target, Callable[[Any], Optional[float]]]]:
         """Every target within reach (the rocks, mines and outpost of the Km2s near the beam), each with the test that
         finds where the beam enters it."""
         for km2 in self._get_relevant_km2s(world):

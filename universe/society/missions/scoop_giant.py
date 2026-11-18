@@ -31,8 +31,8 @@ class ScoopGiant(ScoopBody):
     TERMS = {
         SettlementKind.OUTPOST: None,
         SettlementKind.PORTAL_BASE: Terms(
-            base_frequency=0.05,
-            taken_by_others=0.01,
+            base_frequency=0.02,
+            taken_by_others=0.005,
             deadline_days_min=15,
             deadline_days_max=30,
             reward=160.0,  # By instantaneous resolution, 25% of it is more probable.

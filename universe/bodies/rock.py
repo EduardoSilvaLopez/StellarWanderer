@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import math
 import random
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -28,6 +28,21 @@ class Rock(Updatable):
     ORE_RICH_THRESHOLD = 0.9992
     # the adjectives a rock can have (see _generate_adjective)
     ADJECTIVES = ('weird', 'mysterious', 'strange', 'exotic', 'rare')
+    # What each adjective hides: a precious or semi-precious stone (its looks are in
+    # presentation/scene/planetary/special_rocks.py). The pilot learns it only by scanning the rock.
+    STONES = {
+        'weird': ('banded agate', 'Concentric bands of rust, orange and cream, laid down layer by layer as silica '
+                                  'filled a cavity in the rock.'),
+        'mysterious': ('lapis lazuli', 'Deep blue stone flecked with golden pyrite and crossed by a few white veins '
+                                       'of calcite, prized as a pigment and an ornament since antiquity.'),
+        'strange': ('malachite', 'A copper carbonate in rings of dark and light green, soft enough to take a fine '
+                                 'polish.'),
+        'exotic': ('amethyst', 'Violet quartz crystal crossed by white veins of quartz; traces of iron give it its '
+                               'colour.'),
+        'rare': ('native gold in quartz', 'Pale quartz with nearly pure gold in its cracks and in small flecks.'),
+    }
+    UNKNOWN_STONE = ('dark veined stone', 'Dark stone crossed by white veins.')
+    SCAN_SECONDS = 5.0  # game seconds the beam needs on a rock with an adjective
     SINK_PER_METRE = 0.008  # Extra share of its size a rock's centre sinks per metre of size: bigger rocks sink more.
     CENTRE_MIN = -0.15  # Share of its size the centre may sink at most, so the top of the rock stays visible.
 
@@ -75,6 +90,8 @@ class Rock(Updatable):
         self.temperature: float = 0.0
         self._adjust_color()
         self.adjective: str = self._generate_adjective(my_random)
+        # 0 to 1, the share of the scan done. Not saved: a rock scanned in an earlier session is scanned again.
+        self.scan_progress: float = 0.0
 
         self.last_updated_at: Optional[datetime] = None
         self.next_update_at: Optional[datetime] = None
@@ -122,6 +139,19 @@ class Rock(Updatable):
         if my_random.random() < 0.00001:
             return my_random.choice(Rock.ADJECTIVES)
         return ''
+    # endregion
+
+    # region Scan
+    @property
+    def stone(self) -> Tuple[str, str]:
+        """The name and description of the stone a rock with an adjective is."""
+        return Rock.STONES.get(self.adjective, Rock.UNKNOWN_STONE)
+
+    def advance_scan(self, game_seconds: float) -> bool:
+        """The beam works on the rock for `game_seconds`. True if this call finished the scan."""
+        was_scanned = self.scan_progress >= 1.0
+        self.scan_progress = min(1.0, self.scan_progress + game_seconds / Rock.SCAN_SECONDS)
+        return self.scan_progress >= 1.0 and not was_scanned
     # endregion
 
     # region Ore

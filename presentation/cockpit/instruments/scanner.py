@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from universe.artifacts.spaceships.ship import Ship
     from universe.bodies.asteroids.asteroid import Asteroid
     from universe.bodies.rock import Rock
-    from universe.artifacts.ore_mine import OreMine
     from universe.artifacts.settlements.outpost import Outpost
 
 # The last scaled portrait: (source surface id, target size, scaled surface). Scaling is not repeated every frame.
@@ -52,14 +51,17 @@ class Scanner:
         drawn over it (`scoop_rect`). Where it fills a probe (`Ship.probe_missions`) the title adds the
         least filled probe, with a bar between the title and the square.
 
+        A rock with an adjective that is not yet scanned shows the share scanned and a bar, as an asteroid does; once
+        scanned, its title is the name of its stone.
+
         A rock shows its temperature (only above 0°) in the centre of the square, coloured by how
         hot it is. If it is ore rich, its purity is written above the square, in place of the title.
         A mine's content is written above the square, in place of the title, and its field's remaining
         ore inside the square, at the bottom. An external mine (another miners', see ExternalMine) says "Not ours"
         instead, with no field line.
 
-        While unbound, the targeted asteroid that is not yet fully scanned and within scan range (`Scanner.scan_asteroid`)
-        takes the square
+        While unbound, the targeted asteroid that is not yet fully scanned and within scan range
+        (`Scanner.scan_asteroid`) takes the square
         when nothing else is in it: its name in place of the title, its shape as the ship sees it (the mesh the 3D view
         draws, lit by the star), and over it the share scanned in the middle with a bar under it,
         and under that, in amber, what keeps the beam from working (`Scanner.scan_problem`) or, if nothing does, an
@@ -83,7 +85,8 @@ class Scanner:
         Scanner.scoop_rect = rect if ship.scoop_open else None
         if ship.scoop_open:
             probes = [mission.probe_progress for mission in ship.probe_missions()]
-            title = label_font.render('SCOOP' if not probes else f'SCOOP  PROBE {int(min(probes) * 100)}%', True, ACCENT)
+            title = label_font.render('SCOOP' if not probes else f'SCOOP  PROBE {int(min(probes) * 100)}%', True,
+                                      ACCENT)
             surface.blit(title, title.get_rect(midtop=(rect.centerx, title_top)))
             if probes:  # the scoop's view covers the square: the bar is under the title, over the box's top edge
                 track = pygame.Rect(rect.left, rect.top - 4, rect.width, 3)
@@ -101,11 +104,15 @@ class Scanner:
         # shows its purity, a mine its content, in place of the title.
         ore_rock = rock if outpost is None and rock is not None and rock.is_ore_rich() else None
         shown_mine = mine if outpost is None and rock is None else None
-        if ore_rock is not None:
+        scanned_stone = rock if outpost is None and rock is not None and rock.adjective \
+            and rock.scan_progress >= 1.0 else None
+        if scanned_stone is not None:
+            title = label_font.render(scanned_stone.stone[0].capitalize(), True, ACCENT)
+        elif ore_rock is not None:
             title = label_font.render(f'Ore Purity: {round(ore_rock.get_purity() * 100)}%', True, (255, 255, 0))
         elif shown_mine is not None:
-            title = label_font.render('Not ours' if shown_mine.is_external else f'Content: {int(shown_mine.content)} Kg Ore',
-                                      True, ACCENT)
+            content = 'Not ours' if shown_mine.is_external else f'Content: {int(shown_mine.content)} Kg Ore'
+            title = label_font.render(content, True, ACCENT)
         elif base is not None:
             title = label_font.render(base.name, True, ACCENT)
         elif asteroid is not None:
@@ -120,7 +127,11 @@ class Scanner:
             surface.blit(PortalBaseHero.picture(base, min(rect.width, rect.height)), rect.topleft)
         elif rock is not None:
             Scanner._draw_scanned_rock(surface, rect, ship, rock)
-            if rock.temperature > 0.0:
+            if rock.adjective and rock.scan_progress < 1.0:
+                Scanner._draw_scan_progress(surface, label_font, rect, rock.scan_progress,
+                                            (ACCENT, 'Scanning...' if ship.scanner.scanning_rock else
+                                             'Hold SPACE to scan'))
+            elif rock.temperature > 0.0:
                 temperature_text = label_font.render(
                     f'{round(rock.temperature)}°', True, Scanner._temperature_color(rock)
                 )
@@ -128,7 +139,7 @@ class Scanner:
         elif asteroid is not None:
             Scanner._draw_asteroid_scan(surface, label_font, rect, ship, asteroid)
         elif mine is not None:
-            Scanner._draw_scanned_mine(surface, rect, mine)
+            Scanner._draw_scanned_mine(surface, rect)
             if not mine.is_external:
                 field_text = label_font.render(f'Field: {int(mine.parent_field.remaining_ore)} Kg Ore', True, ACCENT)
                 surface.blit(field_text, field_text.get_rect(midbottom=(rect.centerx, rect.bottom - 4)))
@@ -140,22 +151,29 @@ class Scanner:
         needs."""
         scanner = ship.scanner
         Scanner._draw_asteroid(surface, rect, ship, asteroid)
-        percentage = Scanner._outlined(font, f'{int(asteroid.scan_progress * 100)}%', ACCENT)
+        if scanner.scan_problem is not None:
+            status = (AMBER, scanner.scan_problem)
+        elif ship.laser.firing:
+            status = (ACCENT, 'Scanning...')
+        else:
+            status = (ACCENT, 'Hold SPACE to scan')
+        Scanner._draw_scan_progress(surface, font, rect, asteroid.scan_progress, status)
+
+    @staticmethod
+    def _draw_scan_progress(surface: pygame.Surface, font: pygame.font.Font, rect: pygame.Rect, progress: float,
+                            status: Tuple[Tuple[int, int, int], str]) -> None:
+        """Over what is drawn in the square: the share scanned as a number in the middle, a bar under it, and under
+        that the status (colour and text; "Too fast: 60 m/s, 50 m/s at most" goes on two lines)."""
+        colour, text = status
+        percentage = Scanner._outlined(font, f'{int(progress * 100)}%', ACCENT)
         surface.blit(percentage, percentage.get_rect(center=rect.center))
 
         pad = max(6, rect.width // 12)
         track = pygame.Rect(rect.left + pad, rect.centery + percentage.get_height(), rect.width - 2 * pad,
                             max(6, font.get_height() // 2))
         pygame.draw.rect(surface, ACCENT_LABEL, track, 1)
-        filled = int((track.width - 4) * asteroid.scan_progress)
+        filled = int((track.width - 4) * progress)
         pygame.draw.rect(surface, ACCENT, (track.left + 2, track.top + 2, filled, track.height - 4))
-
-        if scanner.scan_problem is not None:
-            colour, text = AMBER, scanner.scan_problem
-        elif ship.laser.firing:
-            colour, text = ACCENT, 'Scanning...'
-        else:
-            colour, text = ACCENT, 'Hold SPACE to scan'
         for index, line in enumerate(text.split(': ')):  # "Too fast: 60 m/s, 50 m/s at most" on two lines
             rendered = Scanner._outlined(font, line, colour)
             top = track.bottom + 6 + index * font.get_linesize()
@@ -209,7 +227,8 @@ class Scanner:
         """Draw the outpost's com officer's portrait to fill `rect`: scaled to cover it, keeping its proportions,
         and cropped equally from the top and bottom (or sides) where it overflows. No padding."""
         global _portrait_cache  # noqa: PLW0603 - a module-level cache, like the other textures
-        icon = outpost.com_officer.icon
+        officer = outpost.com_officer
+        icon = officer.icon if officer is not None else None
         if icon is None:
             return
         scale = max(rect.width / icon.get_width(), rect.height / icon.get_height())
@@ -260,8 +279,8 @@ class Scanner:
             pygame.draw.polygon(surface, colour, [(int(cx + x * scale), int(cy - y * scale)) for x, y, _ in points[i]])
 
     @staticmethod
-    def _draw_scanned_mine(surface: pygame.Surface, rect: pygame.Rect, mine: OreMine) -> None:
-        """Render a simplified elevation icon of `mine` inside `rect`."""
+    def _draw_scanned_mine(surface: pygame.Surface, rect: pygame.Rect) -> None:
+        """Render a simplified elevation icon of a mine inside `rect`."""
         padding = max(6, int(min(rect.width, rect.height) * 0.12))
         body_width = int((rect.width - padding * 2) * 0.6)
         cap_height = max(4, int(body_width * 0.28))
