@@ -264,6 +264,7 @@ class ChatTags(_ScrolledList):
         self.on_tag: Callable[[str], None] = on_tag
         self.on_delete: Callable[[str], None] = on_delete
         self.on_pin: Callable[[str], None] = on_pin
+        self.follow = False  # the rows start at the top, unlike the chat, which starts at its last line
         self.active: bool = False
         self.query: str = ''  # what the search box holds
         self.search_focused: bool = False  # whether the typed text goes into the search box

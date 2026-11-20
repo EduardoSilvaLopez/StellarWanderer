@@ -71,7 +71,8 @@ class StellarSystem:
         # that seed alone: each is rebuilt from it (see Asteroid.free_living).
         self.free_asteroids: dict[int, Asteroid] = {}
         for offer_seed, saved in (self.saved_alterations or {}).get('free_asteroids', {}).items():
-            self.free_asteroids[int(offer_seed)] = Asteroid.free_living(self, int(offer_seed)).apply_alterations(saved)
+            self.free_asteroids[int(offer_seed)] = Asteroid.free_living(
+                self, int(offer_seed), saved['name']).apply_alterations(saved)
         # The free-living asteroids taken whole by a scoop: gone for good (see Asteroid.consume).
         self.consumed_free: set[int] = {int(offer_seed) for offer_seed in
                                         (self.saved_alterations or {}).get('consumed_free', [])}
@@ -114,12 +115,12 @@ class StellarSystem:
         """Forgets a kept free-living asteroid: it is no longer in the system, and it is not made again."""
         self.free_asteroids.pop(offer_seed, None)
 
-    def promote_free_asteroid(self, offer_seed: int) -> Asteroid:
-        """The free-living asteroid of the offer's seed as a kept one (made if it was not); the system is marked as
-        altered."""
+    def promote_free_asteroid(self, offer_seed: int, name: str) -> Asteroid:
+        """The free-living asteroid of the offer's seed and name as a kept one (made if it was not); the system is marked
+        as altered."""
         asteroid = self.free_asteroids.get(offer_seed)
         if asteroid is None:
-            asteroid = Asteroid.free_living(self, offer_seed)
+            asteroid = Asteroid.free_living(self, offer_seed, name)
             self.free_asteroids[offer_seed] = asteroid
             self.set_altered()
         if asteroid.hidden:  # a mission asks for it: it is shown
@@ -192,12 +193,12 @@ class StellarSystem:
         one, or a free-living one of `free_asteroids`), else one made from the site. The same asteroid as before the
         save."""
         if site['belt'] is None:
-            return self.free_asteroids.get(site['seed']) or Asteroid.free_living(self, site['seed'])
+            return self.free_asteroids.get(site['seed']) or Asteroid.free_living(self, site['seed'], site['name'])
         belt = self.get_orbit(float(site['belt']))
         if not isinstance(belt, AsteroidBelt):
             raise ValueError(f"No asteroid belt at orbit {site['belt']} of {self.name}")
         key = AsteroidKey.from_ints(site['key'].split())
-        return belt.relevant.get(key) or belt.build(key)
+        return belt.relevant.get(key) or belt.build(key, site['name'])
 
     def is_mission_target(self, asteroid: Asteroid) -> bool:
         """Whether an open mission of the pilot is about this asteroid: it can be neither hidden nor forgotten then."""

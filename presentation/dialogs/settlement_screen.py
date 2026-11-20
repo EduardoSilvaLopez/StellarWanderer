@@ -88,7 +88,7 @@ CHAT_PEOPLE_FRACTION = 0.42  # the width of Chat's people panel, as a share of t
 CHAT_TAGS_SHARE = 0.35  # the tags' panel, as a share of the room left of the people (the chat takes the rest)
 NAME_TOP_FRACTION = 0.10  # the name's top, under the ship time display on the left, as a share of the window's height
 OFFICE_PORTRAIT_FRACTION = 0.15  # the portrait's box over the chat log of Offices, of the window's height
-OFFICE_WELCOME = "Welcome. How can I serve?"  # what the holder of an office says first
+OFFICE_WELCOME = "Welcome. <Looking at the table> How can I serve?"  # what the holder of an office says first
 NOBODY_IN_OFFICE = "Nobody is in this office now."
 
 

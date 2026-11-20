@@ -168,7 +168,7 @@ class AsteroidBelt(Orbit):
         self.relevant: dict[AsteroidKey, Asteroid] = {}
         for text, saved in (self.saved_alterations or {}).get('asteroids', {}).items():
             key = AsteroidKey.from_ints(text.split())
-            self.relevant[key] = self.build(key).apply_alterations(saved)
+            self.relevant[key] = self.build(key, saved['name']).apply_alterations(saved)
         # Taken whole by a scoop: gone for good, cosmetic or not (see Asteroid.consume).
         self.consumed: set[AsteroidKey] = {AsteroidKey.from_ints(text.split())
                                            for text in (self.saved_alterations or {}).get('consumed', [])}
@@ -419,22 +419,23 @@ class AsteroidBelt(Orbit):
         cell = rows.cell[my_random.randrange(rows.diameter.size)]
         return AsteroidKey(tier.index, epoch, sector, tuple(int(c) for c in cell))
 
-    def build(self, key: AsteroidKey) -> Asteroid:
-        """The `Asteroid` of a key, made now and not promoted: the belt is as it was (use `promote` to keep it). A new
-        object at each call, a pure function of the key. Raises KeyError if the key's sector has no such asteroid."""
+    def build(self, key: AsteroidKey, name: str) -> Asteroid:
+        """The `Asteroid` of a key and its name, made now and not promoted: the belt is as it was (use `promote` to keep
+        it). A new object at each call, a pure function of the key and the name. Raises KeyError if the key's sector has
+        no such asteroid."""
         tier = tuple(AsteroidTier)[key.tier]
         rows = self._sector(tier, key.epoch, *key.sector)
         found = np.flatnonzero(np.all(rows.cell == key.cell, axis=1))
         if found.size == 0:
             raise KeyError(f"No asteroid {key} in the belt {self.number}.")
-        return Asteroid.of_belt(self, key, float(rows.semi_major_axis[found[0]]), float(rows.diameter[found[0]]))
+        return Asteroid.of_belt(self, key, float(rows.semi_major_axis[found[0]]), float(rows.diameter[found[0]]), name)
 
-    def promote(self, key: AsteroidKey) -> Asteroid:
-        """The asteroid of the key as a relevant one (it was cosmetic until now); the belt is marked as altered. A
-        mission asks for it, so it is shown: the belt and the asteroid are unhidden if they were hidden."""
+    def promote(self, key: AsteroidKey, name: str) -> Asteroid:
+        """The asteroid of the key and its name as a relevant one (it was cosmetic until now); the belt is marked as
+        altered. A mission asks for it, so it is shown: the belt and the asteroid are unhidden if they were hidden."""
         asteroid = self.relevant.get(key)
         if asteroid is None:
-            asteroid = self.build(key)
+            asteroid = self.build(key, name)
             self.relevant[key] = asteroid
             self.set_altered()
         if asteroid.hidden:

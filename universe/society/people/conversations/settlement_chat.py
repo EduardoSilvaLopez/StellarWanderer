@@ -541,161 +541,6 @@ class SettlementChat(Conversation):
             " and a ton of sealant, at least. I mean it. We lose enough people as it is."
         )
 
-    def talk_bureaucrat(self) -> str:
-        if self.interlocutor.role is BUREAUCRAT:
-            return self.talk_of_own_role(
-                (
-                    "Forms. Always forms.",
-                    "Requests. Complaints. Stamp it.",
-                    "Paperwork. Don't ask.",
-                    "Keep society humming.",
-                    "Things must be checked.",
-                    "Hear people out. Resolve problems.",
-                    ),
-                (
-                    "Requests, inspections, complaints. That keeps the machine of the Community going.",
-                    "Inspections and complaints. Somebody has to check that everything is in order.",
-                    "I handle the complaints, the requests and the inspections.",
-                    "Information must go up and down and to the Ministry of Happiness.",
-                    "People must complain through the right channels. But when they do, they must be really heard.",
-                ),
-                (
-                    "Administration, inspection, requests, complaints... to keep the machine of the Community going."
-                    " Everybody thinks it's boring. It is. But a complaint sent through the right channel does get"
-                    " answered, and that's what the Community is for.",
-                    "I check the forms, the inspections and the complaints, all shift long. Dissent has its official"
-                    " channels, protected and anonymous, and people do use them. Somebody has to read what they"
-                    " write.\n\nDon't ask me to bend the rules for you, ok? I just follow the process.",
-                    "Everybody has a file, and every file has a stamp. I know who waited longest and who got through"
-                    " first. We don't say it aloud, but we notice it.",
-                    "To care that things are done propertly. Even more important in the frontier than elsewhere."
-                    " It saves lifes. And also a constructive concern or complaint must be heard and handled."
-                    " Good ideas can come from anywhere.",
-                ),
-            )
-        return (
-            "Administration, inspection, requests, complaints... to keep the machine of the Community going."
-        )
-
-    def talk_communication_officer(self) -> str:
-        if self.interlocutor.role is COM_OFFICER:
-            return self.talk_of_own_role(
-                (
-                    "Sit and listen. Radio.",
-                    "Talk to the ships, to places. Be ready.",
-                    "Tidings. Alarms. Beacons.",
-                    "Signals. Pings. Sit. React."
-                ),
-                (
-                    "We take care of the communications with the ships. Relay, check, keep the channel open.",
-                    "I talk with the ships all shift. Route the messages, check the signals, repeat when lost.",
-                    "Communications with the ships and the other places. Uniform on, and the radio never shuts up.",
-                    "Communicate with the base, with other settlements, with people like you. Give warnings.",
-                    "We keep also digital communication tested, and autopilot, signatures.",
-                    "Sometimes we detect a smuggler with a false transponder or obsolete keys.",
-                    "We must remain alert at all times. Some pilots are reckless *ahem*.",
-                    "We spread tidings and news. Official busybodies. But we do some important stuff too.",
-                ),
-                (
-                    "Talk with the ships and the other places, all shift long. Good news, bad news, requests for"
-                    " permission. When a ship has a fault and the pilot is panicking, you stay calm. Same when the"
-                    " other side says nothing for an hour.",
-                    "We belong to Protection, so we wear uniform. It's not for show. Every message we send could matter"
-                    " to somebody out there, so we check them twice. And digital signatures are also critical.",
-                    "The ships are our eyes out there. A quiet channel for an hour is fine, got shadowed. A quiet"
-                    " channel for a day means something went wrong, and then I am the one who has to say so.",
-                    "We coordinate with other settlements, including the portal base. Protocol updates, security, news."
-                    " This is Ministry of Protection so... uniform.",
-                    "Sometimes we detect a smuggler... false transponder signal, obsolete keys, even hack attempts."
-                    " It is not just wait and chat with pilots.",
-                    "We are the ones in the nodes of the net. We know what is going on. Where every ship is, what is"
-                    " going on in every settlement. And when a pilot approaches at 100 m/s or you get a beacon, you"
-                    " must react FAST.",
-                ),
-            )
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "Sit and talk."
-        elif soc < 80:
-            return "Take care of communications with the ship. Spread news."
-        else:
-            return (
-                "Talk with the ships and other places. Belongs to defence, Ministry of Protection, they have to"
-                " wear uniform."
-            )
-
-    def talk_coordinator(self) -> str:
-        # Sociability sets the verbosity; loyalty, the tone towards the entity.
-        soc: float = self.interlocutor.sociability100
-        loy: float = self.interlocutor.loyalty100
-        if self.interlocutor.role is COORDINATOR:
-            very_short, short, long = (
-                (  # Low loy
-                    ("Little boss. Deal with it.", "Bossing people around. Somebody has to."),
-                    ("Bossing around the outposts. Making the calls nobody else wants.",
-                     "I make things happen here, whether they like it or not."),
-                    ("The outpost is mine to manage. I make the hard calls and remove the obstacles. When they cry"
-                     " to the portal base, I just smile. They would fall apart without someone pushing.",
-                     "Little boss of the outposts, and loving it. Nobody else would bother coordinating these people,"
-                     " so... it's mine.",
-                     "Nobody here follows me because they like me. They follow because the outposts run better when I"
-                     " push."),
-                ),
-                (  # Middle loy
-                    ("Coordinating. Fine.", "Outposts. Keeping them going."),
-                    ("Coordinate things in the outposts. Settle the disputes, pass the requests on.",
-                     "I keep the outposts running. Solve the problems before they reach the portal base."),
-                    ("The outposts need someone who removes the obstacles and resolves the conflicts before they grow."
-                     " I also coordinate with the portal base when something is needed from there.",
-                     "I coordinate the outposts. Mostly I listen, settle who gets what, and pass on what the portal"
-                     " base asks. Not glamorous, but somebody has to do it.",
-                     "I take the complaints, pass them up, and bring back what the portal base decides. People are"
-                     " happier when they know who to talk to."),
-                ),
-                (  # High loy
-                    ("Outposts. I manage them. Hard calls.", "Authority over an outpost. Respected people only."),
-                    ("Authority over an outpost. Not everybody can get elected.",
-                     "I make the hard calls for the outposts, and I answer for them."),
-                    (
-                        "The authority over the outposts. Not everybody gets elected. I remove the obstacles,"
-                        " coordinate, talk with the portal base and settle the conflicts. Nobody gets left alone"
-                        " here.",
-                        "Responsible for the outposts, and proud of it. The Community trusts me to decide, so I"
-                        " decide. Hard calls, every time, and I explain them to anyone who asks.",
-                        "Every one of the outposts has to work for the people in it. That's the point of the post,"
-                        " and I hold myself to it."
-                     ),
-                ),
-            )[0 if loy < 20 else 1 if loy < 80 else 2]
-            return self.talk_of_own_role(very_short, short, long)
-
-        if soc < 20:
-            if loy < 20:
-                return "Little boss."
-            elif loy < 80:
-                return "Chief in the outpost."
-            else:
-                return "Outposts. Manage stuff. Make hard calls."
-        elif soc < 80:
-            if loy < 20:
-                return "Bossing around in the outposts."
-            elif loy < 80:
-                return "Coordinate things in the outposts."
-            else:
-                return "Authority of an outpost. Job for well-respected people."
-        else:  # noqa: PLR5501
-            if loy < 20:
-                return "Little boss of the outposts. And loving it."
-            elif loy < 80:
-                return "Responsible for the outposts. Coordinate and communicate with the portal base."
-            else:
-                return (
-                    "The authority of an outpost. Job for highly respected people. Remove obstacles, coordinate,"
-                    " communicate with the portal base and resolve conflicts."
-                )
-
     def talk_credits(self) -> str:
         text: str = "The currency, the money of UniDiv. They use a symbol like a 'c' with a slash."
         if self.interlocutor.role in (KOMISAR, COORDINATOR):
@@ -727,135 +572,6 @@ class SettlementChat(Conversation):
                 " time, one way or another. It's human nature."
             )
 
-    def talk_dockmaster(self) -> str:
-        if self.interlocutor.role is DOCKMASTER:
-            return self.talk_of_own_role(
-                (
-                    "Load. Unload. Repair.",
-                    "Ships in, ships out.",
-                    "Cargo. Pads. Repairs."
-                ),
-                (
-                    "Take care of the ships landing there. Pads, cargo, the usual.",
-                    "I see every ship that lands. Who comes in, who goes out, and what they carry.",
-                    "Load and unload, check the pads, and fix the ships that need fixing before they fly again.",
-                    "Charging the ships, checking their status, small repairs.",
-                    "Not only load and unload. It's about checking gear, small repairs. Sometimes even sealing leaks.",
-                ),
-                (
-                    "Responsible for ship maintenance and the cargo. Every ship that docks, I see it in, check the"
-                    " pads, handle the load, and see it out again. A bad landing costs more than a bad day.",
-                    "Ships come and go, and I keep them flying. Maintenance on the pads, the cargo on the racks, all"
-                    " of it. I like knowing the thing I fixed is out there working.",
-                    "We keep the pads clear, the cargo tied down and the ships fit to fly. The Community depends on"
-                    " those ships. I take that seriously, even at night.",
-                    "It is not only about loading, charging, unloading. It is check, maintenance, controlling. And"
-                    " making reparations myself. Sometimes a ship comes with a leak. Or the seal was done poorly.",
-                ),
-            )
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "Load. Unload. Repair."
-        elif soc < 80:
-            return "Take care of the ships landing there."
-        else:
-            return "Responsible for ship maintanance and the cargo."
-
-    def talk_engineer(self) -> str:
-        if self.interlocutor.role is ENGINEER:
-            return self.talk_of_own_role(
-                (
-                    "Machines. Heavy stuff.",
-                    "Not only industrial machines",
-                    "Fix it. Build it.",
-                    "Designs. Machines. Noise."
-                    "Build, enhance, share.",
-                ),
-                (
-                    "We design, build, maintain. Everything. What do you want to know?",
-                    "Here is mostly construction, printers, melters. But you know us: everything goes. And nothing"
-                    " works without us.",
-                    "Practical, cheap, and it has to last. Keep the printers working, baby...",
-                    "I love more the theoretical work, just give me a CAD assistant an I'm happy.",
-                ),
-                (
-                    "Design and handle all kinds of machinery, starting from the heavy industry that keeps us alive."
-                    " We have the biggest industry of mankind, we share even outside the Community, but I like"
-                    " more to concentrate on frontier work, it's also much needed - a new system a year, yes?",
-                    "You know our philosophy... practical designs, cheap and robust. But it is not only so, you can"
-                    " think about ergonomy and even some decoration here and there. As long as the costs don't"
-                    " explode, it is ok. We are no longer in the First Phase, are you?",
-                    "Things here must last. Micrometeoroids, dust, radiation, extreme temperatures, you name it."
-                    " But I like the challenge. And we are the best. That's why The Shining Throne has to beg to us"
-                    " for expansion equipment",
-                    "Our industry is the biggest of mankind, and somebody has to keep it honest. Designs, machines,"
-                    " the plants. People often don't realise how important that is, or how good some of us are,"
-                    " but that's ok, we remain between ourselves.",
-                    "We take the thing seriously. Some machinery is simply not allowed to fail. That's the moment"
-                    " when you need redundancies, security buffers, breaking tests. And I do my part. Sometimes"
-                    " myself, also when the instruments say it's ok. I like to touch it. People may think it's"
-                    " old-fashioned. I think it's respect.",
-                ),
-            )
-        return (
-            "Design and handle all kinds of machinery, above all heavy industry."
-        )
-
-    def talk_farmer(self) -> str:
-        if self.interlocutor.role is FARMER:
-            return self.talk_of_own_role(
-                (
-                    "Food. Luminaria. Domouses.",
-                    "Food. Medicines. Domouses.",
-                    "Food. Medicines. Luminaria.",
-                    "Algae are my thing. They don't chatter.",
-                    "Crops and orchards. Calm.",
-                    "Noninses. Tasty."
-                    "It's insects for me.",
-                    "Booze. Nice.",
-                    "Pot. In pots. Hence the name.",
-                ),
-                (
-                    "We care about the food. All food. And non edible plants too, think luminaria.",
-                    "Well, if you had a domouse you know this, but we care about the fertile ones.",
-                    "The hydroponic gardens are not everything, we have also for example the tanks, and many kinds"
-                    " of algae. Your spiced rosaspira? That one too, spira is one of the originals we got.",
-                    "I grow noninse animals, sorry if you are vegan. Centipedes, mice, demodex, all of them.",
-                    "You are looking at the Ringmaster of Ants, Pilot <laugh>. If it's a kind of ant and it's on your"
-                    " plate in this place... me and my team grew it.",
-                    "We don't grow only food. The luminaria on the walls, it's ours too. Mycena chlorophos is the old"
-                    " name. Long name. There were many kinds of living beings back then.",
-                    "Well, we make the funky stuff. Vodka, gin, vaser, birra. Lots of birra. Cheers!",
-                    "Well... sometimes people just need to relax... we grow that, too...",
-                ),
-                (
-                    "Most of us work in hydroponic gardens, but this is not all we do. Some of us care about orchards,"
-                    " plantations, gardens, forests, luminaria, herbolariums... you name it. When there is a plant,"
-                    " we plant ourselves <smile>.",
-                    "Caring about plants is only part of the job. We have funghi too, like champignons. And the"
-                    " animals, of course, the insects and the three non-insects. And yes, domouses are also mice,"
-                    " just very very different from the ones in your chili.",
-                    "Guilty. I mean, if you are vegan, I am evil <laugh>. Of all possible things we do, I do"
-                    " care about out three non-insects and yes, mice included. I don't know why people don't care"
-                    " so much about the demodex and the centipedes, but... <shrugs>.",
-                    "I care about the algae: spira, chlora and glena, with all its types. I am vegan, and it is a"
-                    " beautiful job.",
-                    "Luminaria is my stuff. The full name is mycena chlorophos, by the way. That's why walking with"
-                    " me is a bit strange. You are looking at me, I am looking at the walls. Save the dark ones."
-                    " Dark walls are boring.",
-                    "I make your burger <smiles>. I mean, I care about insects. Did you know that in old Earth they"
-                    " were all much smaller? The big ones, we have grown them ourselves. Which is not so easy, their"
-                    " full... body... is not designed for that, so to say.",
-                    "You think food, but the herbolarium is not only about spices. We grow medical supplies there,"
-                    " too. Biology is very complex, the most complex thing there is.",
-                ),
-            )
-        return (
-            "Grow all kinds of plants and care about the animals too. Even domouses, the fertile ones."
-        )
-
     def talk_founders(self) -> str:
         # Sympathy: a brush-off below 20. Sociability: the length of the answer.
         soc: float = self.interlocutor.sociability100
@@ -871,44 +587,6 @@ class SettlementChat(Conversation):
             "Well, the ones who founded Those-Who-Share, Catherine Fan and the whole lot. I think about them sometimes."
             " It must have been scary, Ài was just settled and UniDiv was not really in a sharing mood."
         )
-
-    def talk_gunner(self) -> str:
-        if self.interlocutor.role is GUNNER:
-            return self.talk_of_own_role(
-                (
-                    "Do nothing. Good.", "Wait. Drill. Wait.", "Shoot when needed. Nothing else."
-                ),
-                (
-                    "Sit, drill, simulate, wait. Until the shit hits the fan.",
-                    "The shift is to drill, read and wait for something you hope will never happen.",
-                    "This job needs a special kind of person.",
-                    "Watch the screens, drill the routines, and wait. And hope nobody needs me.",
-                ),
-                (
-                    "Well, when things go really bad, we are the ones who pull the trigger. A hard decision taken in"
-                    " seconds, and I have to be ready to take it at any hour.\n\nMost of the time it's waiting and"
-                    " drilling. I'd rather it stayed like that.",
-                    "Drill, check, and wait. Three shifts. The guns are for the day something"
-                    " goes wrong, and when it does, I decide in a second. I'm ready. I hope I never need to be.",
-                    "Nobody wants this but somebody has to do it. And I'd rather be the one watching than the one"
-                    " caught off guard.\n\nYou have a lot of time to think."
-                    "Drill it again, the same routine, until it's in the hands. Get the specs, learn to calculate"
-                    " in a fraction of a second, check incoming paths. And be the kind of person who can kill another"
-                    " human being if it's necessary.",
-                ),
-            )
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "Do nothing. Good."
-        elif soc < 80:
-            return "Sit, drill, wait. Until the shit hits the fan."
-        else:
-            return (
-                "Well, when things go really bad, a Gunner's responsibility is be the ones who pull"
-                " the trigger. A hard decision taken in seconds."
-            )
 
     def talk_hobby(self) -> str:
         return self.interlocutor.hobby
@@ -1036,37 +714,31 @@ class SettlementChat(Conversation):
         self.interlocutor.adjust_sympathy(-5)
         return f"<Looks weirdly> The Portal came on {pretty_date(star)}, {founding_when(star, now)}."
 
-    def talk_janitor(self) -> str:
-        if self.interlocutor.role is JANITOR:
-            return self.talk_of_own_role(
-                ("Maintenance. Not cleaners.", "Repairs. Air. Power. Checks.", "Fix things. Don't ask for more."),
-                (
-                    "Running around, checking the devices and the air. Repairs. Not here to clean your room.",
-                    "The maintenance of the settlement. Repairs, devices, checks, the air and the power. Not cleaning.",
-                    "I keep the devices working and the air where it should be. Nobody thanks us until it breaks.",
-                ),
-                (
-                    "Caring about the maintenance. Running around, checking the air and the power, the devices and the"
-                    " repairs, all shift long. Not your servant, not here to cook for you. But if a pipe bursts at"
-                    " night, I'm the one who runs to it.",
-                    "It's not glamorous. We check the air, the power, the devices, every repair that nobody asks about."
-                    " I like keeping things running, and I'm proud when everything works the way it should.",
-                    "Most people only notice us when something is wrong. I'd like them to notice when everything is"
-                    " fine, but that's not how it works, is it?",
-                ),
-            )
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
+    def talk_hithel(self) -> str:
+        my_random: random.Random = random.Random(seeds.derive(self.interlocutor.seed, 'hithel'))
 
+        soc: float = self.interlocutor.sociability100
+        if self.interlocutor.sympathy100 < 20:
+            return random.choice(self.unfriendly_rejections(soc))
         if soc < 20:
-            return "Base maintenance. Not cleaners."
-        elif soc < 80:
-            return "Base maintenance. Repairs, devices, checks, life support. Not here to clean your room."
-        else:
-            return (
-                "Caring about base maintenance. Running around, checking the life support, devices, repairs."
-                " Not your servant, not to cook for you."
+            return my_random.choice(["Huh? What about that?", "Somber people."])
+        if soc < 80:
+            return my_random.choice([
+                "Yeah, they have own manuals, you know?",
+                "You know a place is growing when you start seeing them. Until then we lack the *machines*"
+                " in the loop <laugh>.",
+                "Some look like... I don't know... tortured, yes? When ethics is your very job description.",
+                "Not all are so... meditative. Some simply work in factories, the only human there.",
+                ]
             )
+        return my_random.choice([
+            "Interesting people, yes? Ethics training, not technical. In which 'loop' do they work later is not so"
+            " relevant as that. Somehow it is... just to be deeply human.",
+            "Did you know that gunners are hithels? In a way, that's the most hithel you can be, yes? And yes,"
+            " they tend to be somber indeed.",
+            "I had once a relationship with a hithel. I don't know, they are not so cold as you may think. Yes,"
+            " few like it when they are *your* personnel department, but I am glad they are there.",
+        ])
 
     def talk_job(self) -> str:
         text: str = ''
@@ -1120,88 +792,6 @@ class SettlementChat(Conversation):
             self.offer(buttons, self.traitor_chance)
 
         return text
-
-    def talk_komisar(self) -> str:
-        # Sociability sets the verbosity; loyalty, the tone towards the entity.
-        soc: float = self.interlocutor.sociability100
-        loy: float = self.interlocutor.loyalty100
-        if self.interlocutor.role is KOMISAR:
-            very_short, short, long = (
-                (
-                    ("<Looks away>", "<Shrugs>. Talk, talk."),
-                    ("Soft-talking. Keep people in line. Or else.",
-                     "Talk, nod, write it down. They call it helping. I call it watching."),
-                    ("Making sure everybody 'understands the will of the Community'. Soft-talking, mostly. Else..."
-                     " well,"
-                     " the polischools are there.",
-                     "They say I'm here to help. I'm here to make sure people behave, and I do it with a smile. Try"
-                     " me.",
-                     "The Community has a way of making people quiet. I'm just the one who makes sure they learn it."),
-                ),
-                (
-                    ("Talk to them. Listen.", "Helping. Mostly."),
-                    ("Social engineers and psychologists. We make sure people understand the will of the Community.",
-                     "I listen, I advise, and I explain what the Community wants. And I write the reports, of course."),
-                    ("Social engineers, sociologists, publicists, historians... that's us, in the Ministry of"
-                     " Happiness."
-                     " The work is to make sure people understand the will of the Community. We also give personal"
-                     " advice, and I'd rather convince than punish.",
-                     "Indicate the right channels for a protest, talk with people if they feel bad, and make sure they"
-                     " understand what we are doing and why. Protest is allowed, through the right channels."
-                     " That's the deal.",
-                     "Some people come to me angry, some ashamed. Most leave calmer than they arrived. That's not"
-                     " magic,"
-                     " it's listening, and it's the Ministry's method."),
-                ),
-                (
-                    ("Helping people. Every day.", "Friend and helper."),
-                    ("Friendly advice about the will of the Community and our role in it. Help with personal problems.",
-                     "I help people with their problems and explain what the Community is for. Friend first."),
-                    ("The work is to be a friend and a good psychologist. People come to me with personal problems, and"
-                     " I help them see their own place in the Community. We use what we know about the mind to convince"
-                     " and befriend, never to force anybody.",
-                     "We work for the Ministry of Happiness, with the sociologists and the historians. If someone feels"
-                     " bad, they come to me first. I'd rather they came to me than to the Ministry of Protection.",
-                     "People often come to me about their children, their loneliness, the neighbours who don't help. I"
-                     " listen, I explain the Community's view, and I help them find the next step."),
-                ),
-            )[0 if loy < 20 else 1 if loy < 80 else 2]
-            return self.talk_of_own_role(very_short, short, long)
-
-        if soc < 20:
-            if loy < 20:
-                return "<Looks away>"
-            elif loy < 80:
-                return "<Shrugs> Talk a lot."
-            else:
-                return "Explain things. Help with problems."
-        elif soc < 80:
-            if loy < 20:
-                return "Soft-talking. Take care that people behave. Or else."
-            elif loy < 80:
-                return (
-                    "Social engineers and psychologists. The job is to make sure people understand the will of the"
-                    " Community. But they also often give personal advice."
-                )
-            else:
-                return (
-                    "The job is to friendly advice about the will of the Community and our role in it. Also, help"
-                    " with personal problems. Be a good psychologist. Friend and helper."
-                )
-        else:  # noqa: PLR5501
-            if loy < 20:
-                return "Making sure everybody 'understands the will of the Community'. Usually, soft-talking. Else..."
-            elif loy < 80:
-                return (
-                    "Indicate the right channels for a protest, talk with people if they feel bad, make sure"
-                    " people understand the will of the Community."
-                )
-            else:
-                return (
-                    "The job is to be your friend <smiles>. Often enough they are asked for personal advice. But"
-                    " of course the main tasks is to make sure people understand what are we doing here and what"
-                    " the Community is for."
-                )
 
     def talk_life(self) -> str:
         # General effect. People like to be asked about their lives. Once per day max, though.
@@ -1565,142 +1155,6 @@ class SettlementChat(Conversation):
                 " Then come the officers: lieutenants, captains and so on, all  depend on the Ministry of Protection."
             )
 
-    def talk_researcher(self) -> str:
-        if self.interlocutor.role is RESEARCHER:
-            return self.talk_of_own_role(
-                ("Science. Mostly boring.", "Rocks. Samples. Numbers.", "Measure it. Write it down."),
-                (
-                    "I test what the miners bring. Samples, measures, numbers. Useful is what counts here.",
-                    "Rocks, samples and measures for the machines. Theory is nice, but we build what works.",
-                    "From pure scientific theory to engineering research. But more of the latter.",
-                ),
-                (
-                    "From pure scientific theory to engineering research, but more of the latter, because the Community"
-                    " wants results that serve people. Did you find many rocks out there? I think iridium is the most"
-                    " important right now. Without the platinum-group metals there is no energy and no shields. Just"
-                    " cold rock.",
-                    "We test the rocks the ships bring, and the ones the miners dig. Some hide things nobody expected."
-                    " I like those days best. Tell me what you found, I want to see the readings.",
-                    "Thousands of readings for one useful result. Most of it goes in a drawer. The few that matter go"
-                    " straight to the engineers. That's a good week.",
-                ),
-            )
-        return (
-            "From pure scientific theory to engineering research. But more of the latter."
-        )
-
-    def talk_ringmaster(self) -> str:
-        # Sociability sets the verbosity; loyalty, the tone towards the entity.
-        soc: float = self.interlocutor.sociability100
-        loy: float = self.interlocutor.loyalty100
-        if self.interlocutor.role is RINGMASTER:
-            very_short, short, long = (
-                (
-                    ("Bigwhigs. Careful.", "Watch your mouth around them."),
-                    ("They are the bigwhigs, the supreme bosses of the system. Fiercely loyal.",
-                     "They take the decisions here. Kinglets in their turf."),
-                    ("They are the ones taking the decisions here. Kinglets in their turf. Fiercely loyal, and to"
-                     " nothing else.",
-                     "The bigwhigs run this system and answer only to the Ministry of Expansion, and they like it that"
-                     " way. Be careful what you say near them, pilot.",
-                     "They say the system belongs to the Ministry. In practice it belongs to the few of us who decide,"
-                     " and we don't explain ourselves to anybody here."),
-                ),
-                (
-                    ("Main coordinator. Answer to the Ministry.", "The expansion of this system. Hard."),
-                    ("The main coordinator of the expansion here. Depend directly on the Ministry.",
-                     "I coordinate this system for the Ministry of Expansion. A Commander takes over later."),
-                    ("Coordinate this system until cities are established, and then a Commander takes over. We depend"
-                     " directly on the Ministry of Expansion. Chosen very, very carefully. That's all I'll say.",
-                     "The main coordinator of the expansion effort in this system. Heavy, sometimes. But the Ministry"
-                     " trusts me, and I try to deserve it.",
-                     "Expansion means ships, settlers and a lot of paperwork. I push the schedule, and the Ministry"
-                     " checks"
-                     " I haven't pushed too far."),
-                ),
-                (
-                    ("Responsible of all this. Heavy burden.", "This system is mine to develop."),
-                    ("An important post. Main responsible of the system in development.",
-                     "Responsible for the whole system in development. Chosen very carefully, and I know it."),
-                    ("A very important post. Main responsible of the whole stellar system in development. A Commander"
-                     " takes over later and turns it all to protection, but during the settlement phase I am the"
-                     " highest"
-                     " authority here, and I answer only to the Ministry of Expansion. It is a very heavy burden for"
-                     " the"
-                     " Community.",
-                     "I carry the expansion of this system on my shoulders. Every settlement, every new town, every"
-                     " ship"
-                     " that arrives comes through me. Heavy, yes. But somebody has to carry it, and we are proud to do"
-                     " it.",
-                     "Every stone of this system will be set by people who decide carefully. I may be the one who"
-                     " decides, but I never decide alone. The Community is watching, and so am I."),
-                ),
-            )[0 if loy < 20 else 1 if loy < 80 else 2]
-            return self.talk_of_own_role(very_short, short, long)
-
-        if soc < 20:
-            if loy < 20:
-                return "Bigwhigs. Careful."
-            elif loy < 80:
-                return "Main coordinator. Answer to Ministry only."
-            else:
-                return "Responsible of all this. Heavy burden."
-        elif soc < 80:
-            if loy < 20:
-                return "They are bigwhigs, the supreme bosses of the stellar system. Fiercy loyal."
-            elif loy < 80:
-                return (
-                    "The main coordinator of the expansion effort in this system. Depend directly from the Ministry."
-                    " Later, a Commander takes over."
-                )
-            else:
-                return (
-                    "Important job. Main responsible of the stellar system in development, depending only on the"
-                    " Ministry of Expansion. Chosen very carefully."
-                )
-        else:  # noqa: PLR5501
-            if loy < 20:
-                return "They are the ones taking the decisions here. Kinglets in their turf. Fiercy loyal."
-            elif loy < 80:
-                return (
-                    "Coordinate this system, until cities are established and a Commander takes"
-                    " over. Depend directly on the Ministry of Expansion.\n\n"
-                    " Chosen very, very carefully."
-                )
-            else:
-                return (
-                    "A very important job. Main responsible of the whole stellar system in development. Later, a"
-                    " Commander takes over and makes it all about security, but during the settelment phase it is"
-                    " the highest authority available, and responds only to the Ministry of Expansion.\n\n"
-                    " It is to carry a very heavy burden for the Community."
-                )
-
-    def talk_smith(self) -> str:
-        if self.interlocutor.role is SMITH:
-            return self.talk_of_own_role(
-                ("Ore in. Metal out.", "Hot metal. Heavy work.", "Tough work. Tough people."),
-                (
-                    "Take the ore the miners bring and turn it into standard materials. Tough work.",
-                    "I melt and shape what the miners bring. Standard parts, nothing fancy.",
-                    "Ore comes in, usable material goes out. Standard sizes, so everything fits everywhere.",
-                ),
-                (
-                    "To take the ore the miners bring, and the other materials, and make them usable and standardised."
-                    " It needs tough people, unlike the desk types.\n\nWe make things for the whole Community, not"
-                    " for a"
-                    " boss. Standard sizes, so nobody gets a worse part because they are less important. That's fair,"
-                    " yes?",
-                    "Heat, metal and the hammer. It's hard. Hands get burnt, backs get broken, and nobody sees it. But"
-                    " the Community needs what we make, so we keep going. I'm proud of that.",
-                    "Every bar I make goes into something else: a ship, a pump, a frame. It's a long chain. I like"
-                    " being at the start of it.",
-                ),
-            )
-        return (
-            "To take the ore miners bring, as well as other materials, and transform it into usable, standardised"
-            " materials. Requires tough people, unlike other engineers."
-        )
-
     def talk_space(self) -> str:
         # Sympathy below 20: a brush-off, as in the talk of the portal. Empathy decides how the dangers are told: low,
         # the person enjoys them or says why they keep away; high with low sociability, the person is shy and does not
@@ -1756,39 +1210,6 @@ class SettlementChat(Conversation):
         else:
             body = random.choice(dangers)
         return f"{body} {closing}"
-
-    def talk_stevedore(self) -> str:
-        if self.interlocutor.role is STEVEDORE:
-            return self.talk_of_own_role(
-                ("Haul stuff. Simple.", "Carry it. Load it. Next.", "Heavy things. Go."),
-                (
-                    "Move cargo from and to the ships. Mostly alone, except for my colleague.",
-                    "Cargo in, cargo out. We take it off the ships and move the mines. Hard work with a partner.",
-                    "I move the mines and the cargo off the ships. A two-person task, and the other one keeps me"
-                    " honest.",
-                ),
-                (
-                    "Take cargo from the ship, move the mines. A lonely post, if it weren't for my colleague. We never"
-                    " work alone. Too dangerous, with the inertia. A load that slips in a bad burn can take a leg off,"
-                    " so we check each other.",
-                    "Two of us, always. The inertia is brutal when a load shifts, and nobody wants to be the one who"
-                    " lets go. My colleague and I know each other's moves better than our own.",
-                    "The mines are heavy and the pads are slippery. We learn to read a load before it moves. My"
-                    " colleague taught me that, and I'll teach the next one.",
-                ),
-            )
-        # Only sociability matters here: it sets the verbosity.
-        soc: float = self.interlocutor.sociability100
-
-        if soc < 20:
-            return "Haul stuff. Simple job."
-        elif soc < 80:
-            return "Move cargo from and to ships. A solitary job if not for your colleague."
-        else:
-            return (
-                "Take cargo from the ship, move mines. A solitary job if it was not for your colleague. They never"
-                " work alone. Too dangerous, with the inertia."
-            )
 
     def talk_surnemals(self) -> str:
         # Sympathy: a brush-off below 20. Sociability: the length of the answer.
@@ -2106,6 +1527,8 @@ class SettlementChat(Conversation):
         # Sympathy: a brush-off below 20. Sociability: how much is wrapped around the tiding. The tiding is drawn from
         # the person's seed and the day, so they tell the same one all day long.
         import game_environment as gem
+        from universe.society.politics.tidings import Tiding, Happening, Scope
+
         soc: float = self.interlocutor.sociability100
         if self.interlocutor.sympathy100 < 20:
             return random.choice(self.unfriendly_rejections(soc))
@@ -2117,14 +1540,29 @@ class SettlementChat(Conversation):
             if soc < 80:
                 return "Nothing new. Quiet days."
             return "I know nothing new... do you? Has something happened?"
-        text: str = random.Random(
+        selected: Tiding = random.Random(
             seeds.derive(self.interlocutor.seed, 'tidings', today.toordinal())
-            ).choice(current).text
+            ).choice(current)
+        text: str = selected.text
         if soc < 20:
             return text
         if soc < 80:
             return f"I have heard that {text}"
-        return f"Yes! Have you heard? {text.capitalize()} Wow!"
+
+        does_like: bool = \
+            (selected.happening == Happening.SETTLEMENT_FOUNDED and selected.scope == Scope.SYSTEM) \
+            or (selected.happening == Happening.SYSTEM_SETTLED and selected.scope == Scope.ENTITY) \
+            or selected.happening == Happening.SHIP_RESCUED
+        does_dislike: bool = \
+            (selected.happening == Happening.SYSTEM_SETTLED and selected.scope == Scope.MANKIND) \
+            or selected.happening == Happening.SHIP_LOST
+        if does_like:
+            return f"Yes! Have you heard? {text.capitalize()} Wow!"
+        elif does_dislike:
+            return f"Yes... {text.capitalize()} We must be careful."
+        else:
+            return f"Yes, I heard that {text}"
+
 
     def talk_united_diversity(self) -> str:
         # Political conversation, about the other entity (see talk_political). Everybody lives in Those-Who-Share (see
@@ -2294,7 +1732,646 @@ class SettlementChat(Conversation):
     def talk_unknown_tag(self) -> str:
         return ("I don't know what you mean.")
 
-    # endregion
+# endregion
+
+# region Roles
+
+    def talk_of_own_role(self, very_short: tuple[str, ...], short: tuple[str, ...], long: tuple[str, ...]) -> str:
+        """What a person says of their own role, one option of a pool. Sympathy decides whether they answer at all;
+        sociability decides how much: the pools go from very short to long. The pick is drawn from the person's seed,
+        so they always give the same answer."""
+        my_random: random.Random = random.Random(seeds.derive(self.interlocutor.seed, 'own_role_talk'))
+        soc: float = self.interlocutor.sociability100
+        sym: float = self.interlocutor.sympathy100
+        if sym < 20:
+            return my_random.choice(self.unfriendly_rejections(soc))
+        if soc < 20:
+            return my_random.choice(very_short)
+        if soc >= 80 and sym >= 80:
+            return my_random.choice(long)
+        return my_random.choice(short)
+
+    def talk_bureaucrat(self) -> str:
+        if self.interlocutor.role is BUREAUCRAT:
+            return self.talk_of_own_role(
+                (
+                    "Forms. Always forms.",
+                    "Requests. Complaints. Stamp it.",
+                    "Paperwork. Don't ask.",
+                    "Keep society humming.",
+                    "Things must be checked.",
+                    "Hear people out. Resolve problems.",
+                    ),
+                (
+                    "Requests, inspections, complaints. That keeps the machine of the Community going.",
+                    "Inspections and complaints. Somebody has to check that everything is in order.",
+                    "I handle the complaints, the requests and the inspections.",
+                    "Information must go up and down and to the Ministry of Happiness.",
+                    "People must complain through the right channels. But when they do, they must be really heard.",
+                ),
+                (
+                    "Administration, inspection, requests, complaints... to keep the machine of the Community going."
+                    " Everybody thinks it's boring. It is. But a complaint sent through the right channel does get"
+                    " answered, and that's what the Community is for.",
+                    "I check the forms, the inspections and the complaints, all shift long. Dissent has its official"
+                    " channels, protected and anonymous, and people do use them. Somebody has to read what they"
+                    " write.\n\nDon't ask me to bend the rules for you, ok? I just follow the process.",
+                    "Everybody has a file, and every file has a stamp. I know who waited longest and who got through"
+                    " first. We don't say it aloud, but we notice it.",
+                    "To care that things are done propertly. Even more important in the frontier than elsewhere."
+                    " It saves lifes. And also a constructive concern or complaint must be heard and handled."
+                    " Good ideas can come from anywhere.",
+                ),
+            )
+        return (
+            "Administration, inspection, requests, complaints... to keep the machine of the Community going."
+        )
+
+    def talk_communication_officer(self) -> str:
+        if self.interlocutor.role is COM_OFFICER:
+            return self.talk_of_own_role(
+                (
+                    "Sit and listen. Radio.",
+                    "Talk to the ships, to places. Be ready.",
+                    "Tidings. Alarms. Beacons.",
+                    "Signals. Pings. Sit. React."
+                ),
+                (
+                    "We take care of the communications with the ships. Relay, check, keep the channel open.",
+                    "I talk with the ships all shift. Route the messages, check the signals, repeat when lost.",
+                    "Communications with the ships and the other places. Uniform on, and the radio never shuts up.",
+                    "Communicate with the base, with other settlements, with people like you. Give warnings.",
+                    "We keep also digital communication tested, and autopilot, signatures.",
+                    "Sometimes we detect a smuggler with a false transponder or obsolete keys.",
+                    "We must remain alert at all times. Some pilots are reckless *ahem*.",
+                    "We spread tidings and news. Official busybodies. But we do some important stuff too.",
+                ),
+                (
+                    "Talk with the ships and the other places, all shift long. Good news, bad news, requests for"
+                    " permission. When a ship has a fault and the pilot is panicking, you stay calm. Same when the"
+                    " other side says nothing for an hour.",
+                    "We belong to Protection, so we wear uniform. It's not for show. Every message we send could matter"
+                    " to somebody out there, so we check them twice. And digital signatures are also critical.",
+                    "The ships are our eyes out there. A quiet channel for an hour is fine, got shadowed. A quiet"
+                    " channel for a day means something went wrong, and then I am the one who has to say so.",
+                    "We coordinate with other settlements, including the portal base. Protocol updates, security, news."
+                    " This is Ministry of Protection so... uniform.",
+                    "Sometimes we detect a smuggler... false transponder signal, obsolete keys, even hack attempts."
+                    " It is not just wait and chat with pilots.",
+                    "We are the ones in the nodes of the net. We know what is going on. Where every ship is, what is"
+                    " going on in every settlement. And when a pilot approaches at 100 m/s or you get a beacon, you"
+                    " must react FAST.",
+                ),
+            )
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Sit and talk."
+        elif soc < 80:
+            return "Take care of communications with the ship. Spread news."
+        else:
+            return (
+                "Talk with the ships and other places. Belongs to defence, Ministry of Protection, they have to"
+                " wear uniform."
+            )
+
+    def talk_coordinator(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is COORDINATOR:
+            very_short, short, long = (
+                (  # Low loy
+                    ("Little boss. Deal with it.", "Bossing people around. Somebody has to."),
+                    ("Bossing around the outposts. Making the calls nobody else wants.",
+                     "I make things happen here, whether they like it or not."),
+                    ("The outpost is mine to manage. I make the hard calls and remove the obstacles. When they cry"
+                     " to the portal base, I just smile. They would fall apart without someone pushing.",
+                     "Little boss of the outposts, and loving it. Nobody else would bother coordinating these people,"
+                     " so... it's mine.",
+                     "Nobody here follows me because they like me. They follow because the outposts run better when I"
+                     " push."),
+                ),
+                (  # Middle loy
+                    ("Coordinating. Fine.", "Outposts. Keeping them going."),
+                    ("Coordinate things in the outposts. Settle the disputes, pass the requests on.",
+                     "I keep the outposts running. Solve the problems before they reach the portal base."),
+                    ("The outposts need someone who removes the obstacles and resolves the conflicts before they grow."
+                     " I also coordinate with the portal base when something is needed from there.",
+                     "I coordinate the outposts. Mostly I listen, settle who gets what, and pass on what the portal"
+                     " base asks. Not glamorous, but somebody has to do it.",
+                     "I take the complaints, pass them up, and bring back what the portal base decides. People are"
+                     " happier when they know who to talk to."),
+                ),
+                (  # High loy
+                    ("Outposts. I manage them. Hard calls.", "Authority over an outpost. Respected people only."),
+                    ("Authority over an outpost. Not everybody can get elected.",
+                     "I make the hard calls for the outposts, and I answer for them."),
+                    (
+                        "The authority over the outposts. Not everybody gets elected. I remove the obstacles,"
+                        " coordinate, talk with the portal base and settle the conflicts. Nobody gets left alone"
+                        " here.",
+                        "Responsible for the outposts, and proud of it. The Community trusts me to decide, so I"
+                        " decide. Hard calls, every time, and I explain them to anyone who asks.",
+                        "Every one of the outposts has to work for the people in it. That's the point of the post,"
+                        " and I hold myself to it."
+                     ),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
+
+        if soc < 20:
+            if loy < 20:
+                return "Little boss."
+            elif loy < 80:
+                return "Chief in the outpost."
+            else:
+                return "Outposts. Manage stuff. Make hard calls."
+        elif soc < 80:
+            if loy < 20:
+                return "Bossing around in the outposts."
+            elif loy < 80:
+                return "Coordinate things in the outposts."
+            else:
+                return "Authority of an outpost. Job for well-respected people."
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "Little boss of the outposts. And loving it."
+            elif loy < 80:
+                return "Responsible for the outposts. Coordinate and communicate with the portal base."
+            else:
+                return (
+                    "The authority of an outpost. Job for highly respected people. Remove obstacles, coordinate,"
+                    " communicate with the portal base and resolve conflicts."
+                )
+
+    def talk_dockmaster(self) -> str:
+        if self.interlocutor.role is DOCKMASTER:
+            return self.talk_of_own_role(
+                (
+                    "Load. Unload. Repair.",
+                    "Ships in, ships out.",
+                    "Cargo. Pads. Repairs."
+                ),
+                (
+                    "Take care of the ships landing there. Pads, cargo, the usual.",
+                    "I see every ship that lands. Who comes in, who goes out, and what they carry.",
+                    "Load and unload, check the pads, and fix the ships that need fixing before they fly again.",
+                    "Charging the ships, checking their status, small repairs.",
+                    "Not only load and unload. It's about checking gear, small repairs. Sometimes even sealing leaks.",
+                ),
+                (
+                    "Responsible for ship maintenance and the cargo. Every ship that docks, I see it in, check the"
+                    " pads, handle the load, and see it out again. A bad landing costs more than a bad day.",
+                    "Ships come and go, and I keep them flying. Maintenance on the pads, the cargo on the racks, all"
+                    " of it. I like knowing the thing I fixed is out there working.",
+                    "We keep the pads clear, the cargo tied down and the ships fit to fly. The Community depends on"
+                    " those ships. I take that seriously, even at night.",
+                    "It is not only about loading, charging, unloading. It is check, maintenance, controlling. And"
+                    " making reparations myself. Sometimes a ship comes with a leak. Or the seal was done poorly.",
+                ),
+            )
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Load. Unload. Repair."
+        elif soc < 80:
+            return "Take care of the ships landing there."
+        else:
+            return "Responsible for ship maintanance and the cargo."
+
+    def talk_engineer(self) -> str:
+        if self.interlocutor.role is ENGINEER:
+            return self.talk_of_own_role(
+                (
+                    "Machines. Heavy stuff.",
+                    "Not only industrial machines",
+                    "Fix it. Build it.",
+                    "Designs. Machines. Noise."
+                    "Build, enhance, share.",
+                ),
+                (
+                    "We design, build, maintain. Everything. What do you want to know?",
+                    "Here is mostly construction, printers, melters. But you know us: everything goes. And nothing"
+                    " works without us.",
+                    "Practical, cheap, and it has to last. Keep the printers working, baby...",
+                    "I love more the theoretical work, just give me a CAD assistant an I'm happy.",
+                ),
+                (
+                    "Design and handle all kinds of machinery, starting from the heavy industry that keeps us alive."
+                    " We have the biggest industry of mankind, we share even outside the Community, but I like"
+                    " more to concentrate on frontier work, it's also much needed - a new system a year, yes?",
+                    "You know our philosophy... practical designs, cheap and robust. But it is not only so, you can"
+                    " think about ergonomy and even some decoration here and there. As long as the costs don't"
+                    " explode, it is ok. We are no longer in the First Phase, are you?",
+                    "Things here must last. Micrometeoroids, dust, radiation, extreme temperatures, you name it."
+                    " But I like the challenge. And we are the best. That's why The Shining Throne has to beg to us"
+                    " for expansion equipment",
+                    "Our industry is the biggest of mankind, and somebody has to keep it honest. Designs, machines,"
+                    " the plants. People often don't realise how important that is, or how good some of us are,"
+                    " but that's ok, we remain between ourselves.",
+                    "We take the thing seriously. Some machinery is simply not allowed to fail. That's the moment"
+                    " when you need redundancies, security buffers, breaking tests. And I do my part. Sometimes"
+                    " myself, also when the instruments say it's ok. I like to touch it. People may think it's"
+                    " old-fashioned. I think it's respect.",
+                ),
+            )
+        return (
+            "Design and handle all kinds of machinery, above all heavy industry."
+        )
+
+    def talk_farmer(self) -> str:
+        if self.interlocutor.role is FARMER:
+            return self.talk_of_own_role(
+                (
+                    "Food. Luminaria. Domouses.",
+                    "Food. Medicines. Domouses.",
+                    "Food. Medicines. Luminaria.",
+                    "Algae are my thing. They don't chatter.",
+                    "Crops and orchards. Calm.",
+                    "Noninses. Tasty."
+                    "It's insects for me.",
+                    "Booze. Nice.",
+                    "Pot. In pots. Hence the name.",
+                ),
+                (
+                    "We care about the food. All food. And non edible plants too, think luminaria.",
+                    "Well, if you had a domouse you know this, but we care about the fertile ones.",
+                    "The hydroponic gardens are not everything, we have also for example the tanks, and many kinds"
+                    " of algae. Your spiced rosaspira? That one too, spira is one of the originals we got.",
+                    "I grow noninse animals, sorry if you are vegan. Centipedes, mice, demodex, all of them.",
+                    "You are looking at the Ringmaster of Ants, Pilot <laugh>. If it's a kind of ant and it's on your"
+                    " plate in this place... me and my team grew it.",
+                    "We don't grow only food. The luminaria on the walls, it's ours too. Mycena chlorophos is the old"
+                    " name. Long name. There were many kinds of living beings back then.",
+                    "Well, we make the funky stuff. Vodka, gin, vaser, birra. Lots of birra. Cheers!",
+                    "Well... sometimes people just need to relax... we grow that, too...",
+                ),
+                (
+                    "Most of us work in hydroponic gardens, but this is not all we do. Some of us care about orchards,"
+                    " plantations, gardens, forests, luminaria, herbolariums... you name it. When there is a plant,"
+                    " we plant ourselves <smile>.",
+                    "Caring about plants is only part of the job. We have funghi too, like champignons. And the"
+                    " animals, of course, the insects and the three non-insects. And yes, domouses are also mice,"
+                    " just very very different from the ones in your chili.",
+                    "Guilty. I mean, if you are vegan, I am evil <laugh>. Of all possible things we do, I do"
+                    " care about our three noninses and yes, mice included. I don't know why people don't care"
+                    " so much about the demodex and the centipedes, but... <shrugs>.",
+                    "I care about the algae: spira, chlora and glena, with all its types. I am vegan, and it is a"
+                    " beautiful job.",
+                    "Luminaria is my stuff. The full name is mycena chlorophos, by the way. That's why walking with"
+                    " me is a bit strange. You are looking at me, I am looking at the walls. Save the dark ones."
+                    " Dark walls are boring.",
+                    "I make your burger <smiles>. I mean, I care about insects. Did you know that in old Earth they"
+                    " were all much smaller? The big ones, we have grown them ourselves. Which is not so easy, their"
+                    " full... body... is not designed for that, so to say.",
+                    "You think food, but the herbolarium is not only about spices. We grow medical supplies there,"
+                    " too. Biology is very complex, the most complex thing there is.",
+                ),
+            )
+        return (
+            "Grow all kinds of plants and care about the animals too. Even domouses, the fertile ones."
+        )
+
+    def talk_gunner(self) -> str:
+        if self.interlocutor.role is GUNNER:
+            return self.talk_of_own_role(
+                (
+                    "Do nothing. Good.",
+                    "Wait. Drill. Wait.",
+                    "Shoot when needed. Nothing else.",
+                    "Hithel with a gun."
+                ),
+                (
+                    "Sit, drill, simulate, wait. Until the shit hits the fan.",
+                    "The shift is to drill, read and wait for something you hope will never happen.",
+                    "This job needs a special kind of person. Maybe all hithels do.",
+                    "Watch the screens, drill the routines, and wait. And hope nobody needs me.",
+                ),
+                (
+                    "Well, when things go really bad, we are the ones who pull the trigger. A hard decision taken in"
+                    " seconds, and I have to be ready to take it at any hour.\n\nMost of the time it's waiting and"
+                    " drilling. I'd rather it stayed like that.",
+                    "Drill, check, and wait. Three shifts. The hithel manuals in your head. The guns are for the"
+                    " day something goes wrong, and when it does, I decide in a second. I'm ready. I hope I never"
+                    " need to be.",
+                    "Nobody wants this but somebody has to do it. And I'd rather be the one watching than the one"
+                    " caught off guard.\n\nYou have a lot of time to think. Not the normal hithel."
+                    "Drill it again, the same routine, until it's in the hands. Get the specs, learn to calculate"
+                    " in a fraction of a second, check incoming paths. And be the kind of person who can kill another"
+                    " human being if it's necessary.",
+                ),
+            )
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Do nothing. Good."
+        elif soc < 80:
+            return "Sit, drill, wait. Until the shit hits the fan."
+        else:
+            return (
+                "Well, when things go really bad, a Gunner's responsibility is be the ones who pull"
+                " the trigger. A hard decision taken in seconds."
+            )
+
+    def talk_janitor(self) -> str:
+        if self.interlocutor.role is JANITOR:
+            return self.talk_of_own_role(
+                (
+                    "<Points around> Keeping this alive."
+                    "Maintenance. Not cleaners.",
+                    "Repairs. Air. Power. Checks.",
+                    "Fix things. Don't ask for more."
+                    ),
+                (
+                    "Nourishing my Obsessive-Compulsive Disorder, that's my job <smiles>. And tinkering.",
+                    "Running around, checking life support. Repairs. Not here to clean your room. And those rumbas"
+                    " are *ours*.",
+                    "Keeping us all alive. Not here to make you a sandwich.",
+                    "The maintenance of the settlement. Repairs, devices, checks, the air and the power.",
+                    "I keep the devices working and the air where it should be. Nobody thanks us until it breaks.",
+                    "Well, we are the ones who send our filth to the hydros, that's for starters <laugh>.",
+                ),
+                (
+                    "Checking the life support, making usual repairs of everything possible, commanding the rumbas,"
+                    " keeping stock until some sucker of a meteoroid makes a leak our water goes away.",
+                    "Keeping you all alive here <laughs>. Running around, checking everything. Not your servant,"
+                    " not wipe your ass, not your cook. But if a pipe bursts in your room, I'm the one.",
+                    "Not a cute job, a useful job. We check the air, water, power, devices, repair before things"
+                    " break bcs it's easier to work when you are alive.",
+                    "I love it when I am done and I everything is tidy. OCD, yes? Maybe. I'm proud when everything"
+                    " works the way it should.",
+                    "Most people only notice us when something is wrong. I'd like them to notice when everything is"
+                    " fine, but that's not how it works, is it?",
+                ),
+            )
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+        if soc < 20:
+            return "Maintenance. Not cleaners."
+        elif soc < 80:
+            return "Base maintenance. Repairs, devices, checks, life support. Not here to clean our room, though."
+        else:
+            return (
+                "Caring about base maintenance. Running around, checking the life support, devices, repairs."
+                " Not our servants, not to cook for us."
+            )
+
+    def talk_komisar(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is KOMISAR:
+            very_short, short, long = (
+                (
+                    ("<Looks away>", "<Shrugs>. Talk, talk."),
+                    ("Soft-talking. Keep people in line. Or else.",
+                     "Talk, nod, write it down. They call it helping. I call it watching."),
+                    ("Making sure everybody 'understands the will of the Community'. Soft-talking, mostly. Else..."
+                     " well,"
+                     " the polischools are there.",
+                     "They say I'm here to help. I'm here to make sure people behave, and I do it with a smile. Try"
+                     " me.",
+                     "The Community has a way of making people quiet. I'm just the one who makes sure they learn it."),
+                ),
+                (
+                    ("Talk to them. Listen.", "Helping. Mostly."),
+                    ("Social engineers and psychologists. We make sure people understand the will of the Community.",
+                     "I listen, I advise, and I explain what the Community wants. And I write the reports, of course."),
+                    ("Social engineers, sociologists, publicists, historians... that's us, in the Ministry of"
+                     " Happiness."
+                     " The work is to make sure people understand the will of the Community. We also give personal"
+                     " advice, and I'd rather convince than punish.",
+                     "Indicate the right channels for a protest, talk with people if they feel bad, and make sure they"
+                     " understand what we are doing and why. Protest is allowed, through the right channels."
+                     " That's the deal.",
+                     "Some people come to me angry, some ashamed. Most leave calmer than they arrived. That's not"
+                     " magic,"
+                     " it's listening, and it's the Ministry's method."),
+                ),
+                (
+                    ("Helping people. Every day.", "Friend and helper."),
+                    ("Friendly advice about the will of the Community and our role in it. Help with personal problems.",
+                     "I help people with their problems and explain what the Community is for. Friend first."),
+                    ("The work is to be a friend and a good psychologist. People come to me with personal problems, and"
+                     " I help them see their own place in the Community. We use what we know about the mind to convince"
+                     " and befriend, never to force anybody.",
+                     "We work for the Ministry of Happiness, with the sociologists and the historians. If someone feels"
+                     " bad, they come to me first. I'd rather they came to me than to the Ministry of Protection.",
+                     "People often come to me about their children, their loneliness, the neighbours who don't help. I"
+                     " listen, I explain the Community's view, and I help them find the next step."),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
+
+        if soc < 20:
+            if loy < 20:
+                return "<Looks away>"
+            elif loy < 80:
+                return "<Shrugs> Talk a lot."
+            else:
+                return "Explain things. Help with problems."
+        elif soc < 80:
+            if loy < 20:
+                return "Soft-talking. Take care that people behave. Or else."
+            elif loy < 80:
+                return (
+                    "Social engineers and psychologists. The job is to make sure people understand the will of the"
+                    " Community. But they also often give personal advice."
+                )
+            else:
+                return (
+                    "The job is to friendly advice about the will of the Community and our role in it. Also, help"
+                    " with personal problems. Be a good psychologist. Friend and helper."
+                )
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "Making sure everybody 'understands the will of the Community'. Usually, soft-talking. Else..."
+            elif loy < 80:
+                return (
+                    "Indicate the right channels for a protest, talk with people if they feel bad, make sure"
+                    " people understand the will of the Community."
+                )
+            else:
+                return (
+                    "The job is to be your friend <smiles>. Often enough they are asked for personal advice. But"
+                    " of course the main tasks is to make sure people understand what are we doing here and what"
+                    " the Community is for."
+                )
+
+    def talk_researcher(self) -> str:
+        if self.interlocutor.role is RESEARCHER:
+            return self.talk_of_own_role(
+                ("Science. Mostly boring.", "Rocks. Samples. Numbers.", "Measure it. Write it down."),
+                (
+                    "I test what the miners bring. Samples, measures, numbers. Useful is what counts here.",
+                    "Rocks, samples and measures for the machines. Theory is nice, but we build what works.",
+                    "From pure scientific theory to engineering research. But more of the latter.",
+                ),
+                (
+                    "From pure scientific theory to engineering research, but more of the latter, because the Community"
+                    " wants results that serve people. Did you find many rocks out there? I think iridium is the most"
+                    " important right now. Without the platinum-group metals there is no energy and no shields. Just"
+                    " cold rock.",
+                    "We test the rocks the ships bring, and the ones the miners dig. Some hide things nobody expected."
+                    " I like those days best. Tell me what you found, I want to see the readings.",
+                    "Thousands of readings for one useful result. Most of it goes in a drawer. The few that matter go"
+                    " straight to the engineers. That's a good week.",
+                ),
+            )
+        return (
+            "From pure scientific theory to engineering research. But more of the latter."
+        )
+
+    def talk_ringmaster(self) -> str:
+        # Sociability sets the verbosity; loyalty, the tone towards the entity.
+        soc: float = self.interlocutor.sociability100
+        loy: float = self.interlocutor.loyalty100
+        if self.interlocutor.role is RINGMASTER:
+            very_short, short, long = (
+                (
+                    ("Bigwhigs. Careful.", "Watch your mouth around them."),
+                    ("They are the bigwhigs, the supreme bosses of the system. Fiercely loyal.",
+                     "They take the decisions here. Kinglets in their turf."),
+                    ("They are the ones taking the decisions here. Kinglets in their turf. Fiercely loyal, and to"
+                     " nothing else.",
+                     "The bigwhigs run this system and answer only to the Ministry of Expansion, and they like it that"
+                     " way. Be careful what you say near them, pilot.",
+                     "They say the system belongs to the Ministry. In practice it belongs to the few of us who decide,"
+                     " and we don't explain ourselves to anybody here."),
+                ),
+                (
+                    ("Main coordinator. Answer to the Ministry.", "The expansion of this system. Hard."),
+                    ("The main coordinator of the expansion here. Depend directly on the Ministry.",
+                     "I coordinate this system for the Ministry of Expansion. A Commander takes over later."),
+                    ("Coordinate this system until cities are established, and then a Commander takes over. We depend"
+                     " directly on the Ministry of Expansion. Chosen very, very carefully. That's all I'll say.",
+                     "The main coordinator of the expansion effort in this system. Heavy, sometimes. But the Ministry"
+                     " trusts me, and I try to deserve it.",
+                     "Expansion means ships, settlers and a lot of paperwork. I push the schedule, and the Ministry"
+                     " checks"
+                     " I haven't pushed too far."),
+                ),
+                (
+                    ("Responsible of all this. Heavy burden.", "This system is mine to develop."),
+                    ("An important post. Main responsible of the system in development.",
+                     "Responsible for the whole system in development. Chosen very carefully, and I know it."),
+                    ("A very important post. Main responsible of the whole stellar system in development. A Commander"
+                     " takes over later and turns it all to protection, but during the settlement phase I am the"
+                     " highest"
+                     " authority here, and I answer only to the Ministry of Expansion. It is a very heavy burden for"
+                     " the"
+                     " Community.",
+                     "I carry the expansion of this system on my shoulders. Every settlement, every new town, every"
+                     " ship"
+                     " that arrives comes through me. Heavy, yes. But somebody has to carry it, and we are proud to do"
+                     " it.",
+                     "Every stone of this system will be set by people who decide carefully. I may be the one who"
+                     " decides, but I never decide alone. The Community is watching, and so am I."),
+                ),
+            )[0 if loy < 20 else 1 if loy < 80 else 2]
+            return self.talk_of_own_role(very_short, short, long)
+
+        if soc < 20:
+            if loy < 20:
+                return "Bigwhigs. Careful."
+            elif loy < 80:
+                return "Main coordinator. Answer to Ministry only."
+            else:
+                return "Responsible of all this. Heavy burden."
+        elif soc < 80:
+            if loy < 20:
+                return "They are bigwhigs, the supreme bosses of the stellar system. Fiercy loyal."
+            elif loy < 80:
+                return (
+                    "The main coordinator of the expansion effort in this system. Depend directly from the Ministry."
+                    " Later, a Commander takes over."
+                )
+            else:
+                return (
+                    "Important job. Main responsible of the stellar system in development, depending only on the"
+                    " Ministry of Expansion. Chosen very carefully."
+                )
+        else:  # noqa: PLR5501
+            if loy < 20:
+                return "They are the ones taking the decisions here. Kinglets in their turf. Fiercy loyal."
+            elif loy < 80:
+                return (
+                    "Coordinate this system, until cities are established and a Commander takes"
+                    " over. Depend directly on the Ministry of Expansion.\n\n"
+                    " Chosen very, very carefully."
+                )
+            else:
+                return (
+                    "A very important job. Main responsible of the whole stellar system in development. Later, a"
+                    " Commander takes over and makes it all about security, but during the settelment phase it is"
+                    " the highest authority available, and responds only to the Ministry of Expansion.\n\n"
+                    " It is to carry a very heavy burden for the Community."
+                )
+
+    def talk_smith(self) -> str:
+        if self.interlocutor.role is SMITH:
+            return self.talk_of_own_role(
+                ("Ore in. Metal out.", "Hot metal. Heavy work.", "Tough work. Tough people."),
+                (
+                    "Take the ore the miners bring and turn it into standard materials. Tough work.",
+                    "I melt and shape what the miners bring. Standard parts, nothing fancy.",
+                    "Ore comes in, usable material goes out. Standard sizes, so everything fits everywhere.",
+                ),
+                (
+                    "To take the ore the miners bring, and the other materials, and make them usable and standardised."
+                    " It needs tough people, unlike the desk types.\n\nWe make things for the whole Community, not"
+                    " for a"
+                    " boss. Standard sizes, so nobody gets a worse part because they are less important. That's fair,"
+                    " yes?",
+                    "Heat, metal and the hammer. It's hard. Hands get burnt, backs get broken, and nobody sees it. But"
+                    " the Community needs what we make, so we keep going. I'm proud of that.",
+                    "Every bar I make goes into something else: a ship, a pump, a frame. It's a long chain. I like"
+                    " being at the start of it.",
+                ),
+            )
+        return (
+            "To take the ore miners bring, as well as other materials, and transform it into usable, standardised"
+            " materials. Requires tough people, unlike other engineers."
+        )
+
+    def talk_stevedore(self) -> str:
+        if self.interlocutor.role is STEVEDORE:
+            return self.talk_of_own_role(
+                ("Haul stuff. Simple.", "Carry it. Load it. Next.", "Heavy things. Go."),
+                (
+                    "Move cargo from and to the ships. Mostly alone, except for my colleague.",
+                    "Cargo in, cargo out. We take it off the ships and move the mines. Hard work with a partner.",
+                    "I move the mines and the cargo off the ships. A two-person task, and the other one keeps me"
+                    " honest.",
+                ),
+                (
+                    "Take cargo from the ship, move the mines. A lonely post, if it weren't for my colleague. We never"
+                    " work alone. Too dangerous, with the inertia. A load that slips in a bad burn can take a leg off,"
+                    " so we check each other.",
+                    "Two of us, always. The inertia is brutal when a load shifts, and nobody wants to be the one who"
+                    " lets go. My colleague and I know each other's moves better than our own.",
+                    "The mines are heavy and the pads are slippery. We learn to read a load before it moves. My"
+                    " colleague taught me that, and I'll teach the next one.",
+                ),
+            )
+        # Only sociability matters here: it sets the verbosity.
+        soc: float = self.interlocutor.sociability100
+
+        if soc < 20:
+            return "Haul stuff. Simple job."
+        elif soc < 80:
+            return "Move cargo from and to ships. A solitary job if not for your colleague."
+        else:
+            return (
+                "Take cargo from the ship, move mines. A solitary job if it was not for your colleague. They never"
+                " work alone. Too dangerous, with the inertia."
+            )
+
+# endregion
 
 #region Promotion
     def promotion_effects(self) -> str:
@@ -2895,21 +2972,6 @@ class SettlementChat(Conversation):
                 "Oh, no, don't approach me, ok? I don't want troubles and you have done enough. Just leave me alone.",
                 "Bugger off, will you? I know what you did. Nobody wants to talk with you.",
         ]
-
-    def talk_of_own_role(self, very_short: tuple[str, ...], short: tuple[str, ...], long: tuple[str, ...]) -> str:
-        """What a person says of their own role, one option of a pool. Sympathy decides whether they answer at all;
-        sociability decides how much: the pools go from very short to long. The pick is drawn from the person's seed,
-        so they always give the same answer."""
-        my_random: random.Random = random.Random(seeds.derive(self.interlocutor.seed, 'own_role_talk'))
-        soc: float = self.interlocutor.sociability100
-        sym: float = self.interlocutor.sympathy100
-        if sym < 20:
-            return my_random.choice(self.unfriendly_rejections(soc))
-        if soc < 20:
-            return my_random.choice(very_short)
-        if soc >= 80 and sym >= 80:
-            return my_random.choice(long)
-        return my_random.choice(short)
 
     def talk_political(
         self, topics: PoliticalTopics, friend_topics: PoliticalTopics, generic: tuple[PoliticalTexts, ...],

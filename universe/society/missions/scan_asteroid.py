@@ -91,6 +91,7 @@ class ScanAsteroid(Mission):
         site = {'system': system.get_alterations_key(), 'belt': None, 'key': None, 'seed': None}
         if is_free_living:
             site['seed'] = self.seed
+            site['name'] = Asteroid.draw_name(system, self.created_at, self.my_random)
             return site
         belt = self.my_random.choice(belts)
         key = belt.random_key(self.my_random, tier, belt.time_in_epoch(self.created_at)[0])
@@ -98,6 +99,7 @@ class ScanAsteroid(Mission):
             return None
         site['belt'] = int(belt.number)
         site['key'] = str(key)
+        site['name'] = Asteroid.draw_name(system, self.created_at, self.my_random)
         return site
 
     def _place(self, site: dict) -> tuple[StellarSystem, AsteroidBelt | None] | None:
@@ -128,16 +130,18 @@ class ScanAsteroid(Mission):
                 raise ValueError(f"{self.KIND}: the asteroid's system or belt is not there")
             system, belt = place
             if belt is None:
-                self._asteroid = system.free_asteroids.get(site['seed']) or Asteroid.free_living(system, site['seed'])
+                self._asteroid = (system.free_asteroids.get(site['seed'])
+                                  or Asteroid.free_living(system, site['seed'], site['name']))
             else:
                 key = AsteroidKey.from_ints(site['key'].split())
-                self._asteroid = belt.relevant.get(key) or belt.build(key)
+                self._asteroid = belt.relevant.get(key) or belt.build(key, site['name'])
         return self._asteroid
     # endregion
 
     # region Offer
     @classmethod
     def offer(cls, day: datetime, outpost: Settlement, chance: random.Random) -> ScanAsteroid | None:
+        del chance  # the base's signature: the offer's seed is the outpost and the day, as for DeliverWater
         mission = cls.generate(day, outpost)
         if mission.asteroid_site is None:
             return None  # no asteroid could be found for it
@@ -175,9 +179,9 @@ class ScanAsteroid(Mission):
             return
         system, belt = place
         if belt is None:
-            self._asteroid = system.promote_free_asteroid(site['seed'])
+            self._asteroid = system.promote_free_asteroid(site['seed'], site['name'])
             return
-        self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()))
+        self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()), site['name'])
 
     def progress(self) -> str:
         if self.accepted_at is None:
@@ -242,12 +246,15 @@ class ScanAsteroid(Mission):
         return AsteroidKey.from_ints(site['key'].split()) in belt.relevant
 
     def can_complete(self, player: Player) -> bool:
+        del player  # the scan is all that counts
         return self.asteroid().scan_progress >= 1.0
 
     def complete(self, player: Player) -> None:
         """Nothing is taken from the player: the scan is what was asked."""
+        del player
 
     def shortfall(self, player: Player) -> str:
+        del player
         return f"You have not scanned the asteroid {self.asteroid().name} yet."
 
     def give_reward(self, player: Player) -> None:

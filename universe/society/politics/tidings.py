@@ -27,12 +27,14 @@ class Scope(Enum):
 
 @dataclass(frozen=True)
 class Tiding:
+    happening: Happening
     day: date
     scope: Scope
     text: str
 
 
 class Happening(Enum):
+    UNCLASSIFIED = 'unclassified'
     SYSTEM_SETTLED = 'system settled'
     SETTLEMENT_FOUNDED = 'settlement founded'
     SETTLEMENT_ENLARGED = 'settlement enlarged'
@@ -82,7 +84,7 @@ MAX_AGE: dict[Scope, timedelta] = {
 
 # The built-in tidings.
 STATIC_TIDINGS: List[Tiding] = [
-    Tiding(date(700, 1, 3), Scope.SYSTEM, "Paladin Xi left the system."),
+    Tiding(Happening.UNCLASSIFIED, date(700, 1, 3), Scope.SYSTEM, "Paladin Xi left the system."),
 ]
 
 # The incidents a system may have on any day, with their chance per day, drawn from the system's seed in this order (a
@@ -101,7 +103,7 @@ def _tiding_of(event: Event, system: StellarSystem) -> Optional[Tiding]:
     """What an event is to a pilot in `system`, or None when it is not told there."""
     if event.happening is Happening.SYSTEM_SETTLED and event.entity is not None:
         scope = Scope.ENTITY if event.entity is system.political_entity else Scope.MANKIND
-        return Tiding(event.day, scope, f"{event.entity.name} settled a new system")
+        return Tiding(event.happening, event.day, scope, f"{event.entity.name} settled a new system")
     if event.system is not system:  # the others are told in their own system only
         return None
     match event.happening:
@@ -120,7 +122,7 @@ def _tiding_of(event: Event, system: StellarSystem) -> Optional[Tiding]:
             text = "A pilot used the beacon on time and could be rescued alive."
         case _:
             return None
-    return Tiding(event.day, Scope.SYSTEM, text)
+    return Tiding(event.happening, event.day, Scope.SYSTEM, text)
 
 
 def _incidents(system: StellarSystem, first: date, last: date) -> Iterator[Event]:

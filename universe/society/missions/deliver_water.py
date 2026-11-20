@@ -107,6 +107,7 @@ class DeliverWater(Mission):
         belts = [orbit for orbit in system.orbits if isinstance(orbit, AsteroidBelt)]
         if not belts:
             site['seed'] = self.seed
+            site['name'] = Asteroid.draw_name(system, self.created_at, self.my_random)
             return site
         planet_distance = self.issuer_settlement.plane_distance
         belt = min(belts, key=lambda candidate: abs(candidate.distance_from_star - planet_distance))
@@ -121,6 +122,7 @@ class DeliverWater(Mission):
             return None
         site['belt'] = int(belt.number)
         site['key'] = str(key)
+        site['name'] = Asteroid.draw_name(system, self.created_at, self.my_random)
         return site
 
     def _site(self) -> dict:
@@ -157,14 +159,15 @@ class DeliverWater(Mission):
             if seed in system.consumed_free:
                 return None
             if self._asteroid is None:
-                self._asteroid = system.free_asteroids.get(seed) or Asteroid.free_living(system, seed)
+                self._asteroid = (system.free_asteroids.get(seed)
+                                  or Asteroid.free_living(system, seed, self.asteroid_site['name']))
             return self._asteroid
         belt = self._belt(system)
         key = AsteroidKey.from_ints(self.asteroid_site['key'].split())
         if key in belt.consumed:
             return None
         if self._asteroid is None:
-            self._asteroid = belt.relevant.get(key) or belt.build(key)
+            self._asteroid = belt.relevant.get(key) or belt.build(key, self.asteroid_site['name'])
         return self._asteroid
 
     def accept(self, now: datetime) -> None:
@@ -176,10 +179,10 @@ class DeliverWater(Mission):
         site = self._site()
         system = self._system()
         if site['belt'] is None:
-            self._asteroid = system.promote_free_asteroid(site['seed'])
+            self._asteroid = system.promote_free_asteroid(site['seed'], site['name'])
         else:
             belt = self._belt(system)
-            self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()))
+            self._asteroid = belt.promote(AsteroidKey.from_ints(site['key'].split()), site['name'])
 
     def target_body(self) -> Optional[Asteroid]:
         """The asteroid is the target the long distance advice works for. The water does not have to come from it."""

@@ -3,7 +3,7 @@
 Most of a belt is cosmetic: rows of arrays that are regenerated whenever needed and are never remembered (see
 asteroid_belt.py). A relevant asteroid is one of those rows, promoted: it leaves the cosmetic population and follows a
 full elliptical orbit, with the eccentricity and inclination the cosmetic ones do without. Its orbit is a pure function
-of its key, name included, so the savefile holds only the key (an alteration of the belt).
+of its key; its name is drawn once, when its offer is made, and saved with it (an alteration of the belt).
 
 A free-living asteroid (`Asteroid.free_living`) belongs to no belt: the near-Earth objects and their like, on eccentric
 and tilted orbits that cross those of the planets, drawn from a seed alone. There is no cosmetic row to take out for it.
@@ -52,7 +52,7 @@ class AsteroidKey:
     @staticmethod
     def from_ints(values: Iterable[int]) -> AsteroidKey:
         tier, epoch, *indices = (int(value) for value in values)
-        return AsteroidKey(tier, epoch, tuple(indices[:3]), tuple(indices[3:6]))
+        return AsteroidKey(tier, epoch, (indices[0], indices[1], indices[2]), (indices[3], indices[4], indices[5]))
 
     def __str__(self) -> str:
         return " ".join(str(value) for value in (self.tier, self.epoch, *self.sector, *self.cell))
@@ -95,11 +95,11 @@ class Asteroid(Body):
     SCAN_STRUCTURE = 1.0
 
     def __init__(self, stellar_system: StellarSystem, seed: int, my_random: random.Random, semi_major_axis: float,
-                 diameter: float, eccentricity: float, inclination: float,
+                 diameter: float, eccentricity: float, inclination: float, name: str,
                  parent_belt: AsteroidBelt | None = None, key: AsteroidKey | None = None,
                  offer_seed: int | None = None) -> None:
         """Made by `of_belt` and `free_living`, which have drawn from `my_random` (the generator of `seed`) the values
-        that differ between them. The node, the periapsis argument and the mean anomaly follow, and the name last."""
+        that differ between them. The node, the periapsis argument and the mean anomaly follow."""
         self._position_cache: tuple[datetime, Vector3] | None = None
         self._velocity_cache: tuple[datetime, Vector3] | None = None
         self._stellar_system: StellarSystem = stellar_system
@@ -119,7 +119,7 @@ class Asteroid(Body):
             self.node_longitude, self.inclination, self.periapsis_argument)
         self.mean_motion: float = math.sqrt(
             World.GRAVITATIONAL_CONSTANT * stellar_system.star.mass / semi_major_axis ** 3)
-        self.name: str = self._generate_name(my_random)
+        self.name: str = name
         self.scan_progress: float = 0.0  # 0 to 1, the share of the scan done; saved with the asteroid (get_alterations)
         # 0 to 1, the share of a whole scoop done; not saved (see Ship.collect_raw_water)
         self.scoop_progress: float = 0.0
@@ -129,21 +129,22 @@ class Asteroid(Body):
         return self._stellar_system
 
     @staticmethod
-    def of_belt(parent_belt: AsteroidBelt, key: AsteroidKey, semi_major_axis: float, diameter: float) -> Asteroid:
-        """The asteroid of a belt's key: the semi-major axis and the diameter of its cosmetic row, the rest drawn from
-        the belt's seed and the key. A pure function of them, name included, whenever it is made."""
+    def of_belt(parent_belt: AsteroidBelt, key: AsteroidKey, semi_major_axis: float, diameter: float,
+                name: str) -> Asteroid:
+        """The asteroid of a belt's key: the semi-major axis and the diameter of its cosmetic row, the name given, the
+        rest drawn from the belt's seed and the key. A pure function of them whenever it is made."""
         seed = seeds.derive(parent_belt.seed, 'asteroid', str(key))
         my_random = random.Random(seed)
         eccentricity = min(abs(my_random.gauss(0.0, Asteroid.ECCENTRICITY_SIGMA)), Asteroid.MAX_ECCENTRICITY)
         inclination = math.radians(
             min(abs(my_random.gauss(0.0, Asteroid.INCLINATION_SIGMA_DEGREES)), Asteroid.MAX_INCLINATION_DEGREES))
         return Asteroid(parent_belt.parent_stellar_system, seed, my_random, semi_major_axis, diameter, eccentricity,
-                        inclination, parent_belt, key)
+                        inclination, name, parent_belt, key)
 
     @staticmethod
-    def free_living(stellar_system: StellarSystem, offer_seed: int) -> Asteroid:
-        """An asteroid of no belt, drawn from the system's seed and `offer_seed` (the mission's). Drawn in this order:
-        semi-major axis, eccentricity, inclination, tier and the diameter's generator."""
+    def free_living(stellar_system: StellarSystem, offer_seed: int, name: str) -> Asteroid:
+        """An asteroid of no belt, drawn from the system's seed and `offer_seed` (the mission's), the name given. Drawn
+        in this order: semi-major axis, eccentricity, inclination, tier and the diameter's generator."""
         seed = seeds.derive(stellar_system.seed, 'free asteroid', offer_seed)
         my_random = random.Random(seed)
         scales = SystemScales.of(stellar_system.star)
@@ -158,15 +159,15 @@ class Asteroid(Body):
         weights = [weight for _, weight in Asteroid.FREE_TIERS]
         tier = my_random.choices(tiers, weights)[0]
         diameter = float(sample_diameters(tier, np.random.default_rng(my_random.getrandbits(64)), 1)[0])
-        return Asteroid(stellar_system, seed, my_random, semi_major_axis, diameter, eccentricity, inclination,
+        return Asteroid(stellar_system, seed, my_random, semi_major_axis, diameter, eccentricity, inclination, name,
                         offer_seed=offer_seed)
 
     def site(self) -> dict:
         """What identifies the asteroid in its system, as a savefile holds it: the belt's orbit number and the key for a
-        belt-born one, the offer's seed for a free-living one (see StellarSystem.asteroid_from_site)."""
+        belt-born one, the offer's seed for a free-living one, and the name (see StellarSystem.asteroid_from_site)."""
         if self.parent_belt is not None:
-            return {'belt': int(self.parent_belt.number), 'key': str(self.key), 'seed': None}
-        return {'belt': None, 'key': None, 'seed': self.offer_seed}
+            return {'belt': int(self.parent_belt.number), 'key': str(self.key), 'seed': None, 'name': self.name}
+        return {'belt': None, 'key': None, 'seed': self.offer_seed, 'name': self.name}
 
     @property
     def mass(self) -> float:
@@ -175,9 +176,9 @@ class Asteroid(Body):
 
     def consume(self) -> None:
         """The scoop has taken the whole asteroid: it is gone from its belt or its system, for good."""
-        if self.parent_belt is not None:
+        if self.parent_belt is not None and self.key is not None:
             self.parent_belt.consume(self.key)
-        else:
+        elif self.offer_seed is not None:
             self.stellar_system.consume_free_asteroid(self.offer_seed)
 
     def advance_scan(self, game_seconds: float) -> bool:
@@ -202,14 +203,17 @@ class Asteroid(Body):
     def forget(self) -> None:
         """The pilot forgets the asteroid: a belt's goes back to the cosmetic population, a free-living one is no longer
         kept by its system. Either way it is gone from the knowledge base."""
-        if self.parent_belt is not None:
+        if self.parent_belt is not None and self.key is not None:
             self.parent_belt.forget(self.key)
-        else:
+        elif self.offer_seed is not None:
             self._stellar_system.forget_free_asteroid(self.offer_seed)
 
     def get_alterations(self) -> dict:
-        """What the savefile holds of the asteroid besides its key: the scan, once begun, and whether it is hidden."""
-        alterations = {'scan': self.scan_progress} if self.scan_progress > 0.0 else {}
+        """What the savefile holds of the asteroid besides its key: its name, the scan, once begun, and whether it is
+        hidden."""
+        alterations: dict = {'name': self.name}
+        if self.scan_progress > 0.0:
+            alterations['scan'] = self.scan_progress
         if self.hidden:
             alterations['hidden'] = True
         return alterations
@@ -219,17 +223,33 @@ class Asteroid(Body):
         self.hidden = bool(saved.get('hidden', False))
         return self
 
-    def _generate_name(self, my_random: random.Random) -> str:
-        """The asteroid's name, derived from its discoverer, usually a scientist."""
-        from universe.society.people.person import _pick_name
+    @staticmethod
+    def draw_name(system: StellarSystem, now: datetime, my_random: random.Random) -> str:
+        """The name of an asteroid whose offer is made at `now` in `system`, drawn from `my_random`. A researcher of the
+        system's settlements, chosen at random, gives the surname, and the number comes from their age (5 per year of
+        age, from 5 times (age - 25) exclusive to 5 times (age - 24) inclusive). Without a researcher the surname is
+        drawn from the name lists, and the number is the years since the portal base was founded, plus one. Raises
+        ValueError for a system with no portal base: no offer is made there."""
+        from universe.society.people.person import SECONDS_PER_YEAR, _pick_name
+        from universe.society.people.role import RESEARCHER
 
-        gender = 'female' if my_random.random() < 0.55 else 'male'
-        language: str = 'chinese' if my_random.random() < 0.6 else 'english'
-        discoverer_name = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
-
-        number: int = min(my_random.randint(1, 1000), my_random.randint(1, 1000))
-
-        return f"{discoverer_name.capitalize()}-{number}"
+        if system.portal_base is None or system.founded_at is None:
+            raise ValueError(f"{system.name} has no portal base: no asteroid is named there")
+        researchers = []
+        for settlement in system.settlements():
+            settlement.generate_staff(now)
+            researchers.extend(settlement.roster(RESEARCHER))
+        if researchers:
+            researcher = my_random.choice(researchers)
+            age = int((now - researcher.dob).total_seconds() / SECONDS_PER_YEAR)
+            number = my_random.randint((age - 25) * 5 + 1, (age - 24) * 5)
+            discoverer = researcher.surname
+        else:
+            gender = 'female' if my_random.random() < 0.55 else 'male'
+            language = 'chinese' if my_random.random() < 0.6 else 'english'
+            discoverer = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
+            number = now.year - system.founded_at.year + 1
+        return f"{discoverer.capitalize()}-{number}"
 
     def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
         """Position relative to the star, in the reference frame (meters). Memoised for the date of the last call."""

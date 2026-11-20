@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import random
 
 import logging
-from universe.society.politics import political_entity
 from universe.structure.seeds import of_text
 from .mission import Mission, register
 from universe.society.missions.terms import Terms

@@ -37,13 +37,16 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 ### 2026-11-18 (9/12)
 
-> STARTED: Extra time: 205h45' + 11:30 - 12:30
+### 2026-11-19 (10/12)
+
+> STARTED: Extra time: 205h30' + 20:00 - 20:45
 
   * Testing. I got my clearance too soon.
+  * Past of the NPCs: First extensions.
 
 > BACKLOG
 
-* INTERSTELLAR TRAVEL VIA BASE (200-500 in TWS)
+* INTERSTELLAR TRAVEL VIA BASE (1000-2000 in TWS)
   * Assigning the history to the new systems.
   * Focus: Depends on characteristics of the world.
   * Outposts Size 5, 6 - present.
@@ -57,14 +60,12 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Routine of the NPCs
   * Havens: Enter.
   * Township: Present.
-  * Extra: HITEL, new role - Human In THE Loop. HR, Scheduling, Traffic control, security.
   * Township: Enter.
   * City: Present.
   * City: Enter.
   * Metropolis: Present.
   * Metropolis: Enter.
   * Extra: Check and enhance the talk_ in settlement_chat
-    * JANITOR
     * KOMISAR
     * protection (CAPTAIN, SECURITY)
     * RESEARCHER
@@ -152,4 +153,15 @@ Lazy generation of the past life, when asked about life or family.
 Lazy generation of friends, when asked about friends. Requires basic generation.
 - Friendships, which can be ex- or different ones.
 
-... I am unsure about this.
+~~~~~~
+Hello. We continue, step by step, enhancing the NPCs . Before we start with the social lives proper, I would like to enchance all attributes which are *not* another Person, but which will be necessary in the future.
+
+I have thought about the following:
+- Ideology: a simply randomized 0 to 1, which we can use later for ideologies inside the entity. This is just to avoid a new change of the generation when we later use it. It is a placeholder.
+- Longevity: Another random 0 to 1 flat distribution. We will use it to calculate how long the NPC lives.
+- Perception: An attribute 0 to 100, similar to the PC's .
+- Education: An attribute 0 to 100, similar to the PC's .
+- Pronoun: This substitutes the gender group. 45% She, 10% They, 45% He
+- Physiology: 0 to 100, it should be calculated from a skewed gauss curve (maybe Poisson?) centered on 20, 50 (gauss) or 80 depending on the pronoun.
+- Attracted_to: 0 to 100, calculated in the reverse way than the physiology: skewed gauss curves, centered on 20, 50 or 80, but if it is a "he" then the most common value is 20, not 80.
+- Sexuality: 0 to 100 ,flat.
