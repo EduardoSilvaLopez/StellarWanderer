@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from common.vector3 import Vector3
 
 from universe.structure import seeds
+from universe.artifacts.settlements.focus_weights import focus_weights
 from universe.artifacts.settlements.outpost_solid import OutpostSolid, Part
 from universe.society.people.role import \
     BUREAUCRAT, CAPTAIN, ENGINEER, FARMER, KOMISAR, \
@@ -104,10 +105,12 @@ class Outpost(Settlement):
         seed = seeds.derive(planet.seed, 'outpost', self.number)
         super().__init__(seed, enlargement_dates)
         self.my_random: random.Random = random.Random(self.seed)
-        self.focus = random.Random(seeds.derive(self.seed, 'focus')).choice(list(SettlementFocus))
 
         entity = self.planet.parent_orbit.parent_stellar_system.political_entity
         assert entity is not None, "Outposts exist only in systems with a political entity"
+        odds = focus_weights(self.planet, entity)  # what the world and its founders lean toward, not a certainty
+        self.focus = random.Random(seeds.derive(self.seed, 'focus')).choices(
+            list(odds), weights=list(odds.values()))[0]
         self.name: str = entity.generate_outpost_name(self.my_random)
         # The first settlement on a planet defines its meridian zero.
         self.longitude: int = \

@@ -44,23 +44,25 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Extra: Arabs.
   * Extra: Indians.
   * Extra: Indonesians. 
-
-> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15 + 12:30 - 16:30
-
-  * Extra: Sikh. Dialog - what is that on your head?
   * Assigning the history to the new systems.
+
+> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15 + 12:30 - 16:30 + 19:45 - 
+
+  * Extra: Sikh.
+  * Focus: Depends on characteristics of the world.
+  * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (1000-2000 in TWS)
-  * Focus: Depends on characteristics of the world.
+  * Extra: Sikh. Dialog - what is that on your head?
   * Outposts Size 5, 6 - present.
-  * NPCs generation for outposts: Complete. Tidings associated.
-  * Outposts Size 6 - present.
-  * Environment of the PC (on character creation or interstellar travel if skipped)
   * Extra: Names of settlement change in a related way:
     * "Difficult Task" => "Task Defence Base" (Haven)
     * And then, cut (this is a tiding, BTW): "WU's KINdness" (Township) => "Wukin" (City) => "Larger Wukin" or "Wukin Metropolitan Area" (Metropolis)
+  * NPCs generation for outposts: Complete. Tidings associated.
+  * Outposts size 5-6 - enter.
+  * Environment of the PC (on character creation or interstellar travel if skipped)
   * Havens: Present.
   * Routine of the NPCs
   * Havens: Enter.

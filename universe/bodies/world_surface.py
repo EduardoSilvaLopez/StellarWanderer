@@ -51,6 +51,12 @@ SURFACE_WEIGHTS: Tuple[Tuple[float, Dict[SurfaceType, int]], ...] = (
 )
 
 
+def surface_probability(surface_type: SurfaceType, temperature: float) -> float:
+    """The chance that a world at `temperature` K gets this surface type: how ordinary it is for its place."""
+    weights = next(band for limit, band in SURFACE_WEIGHTS if temperature < limit)
+    return weights.get(surface_type, 0) / sum(weights.values())
+
+
 def equilibrium_temperature(star: Star, distance: float, bond_albedo: float = WORLD_BOND_ALBEDO) -> float:
     """K: the temperature of a world `distance` m from the star, in balance with the light it takes in (it reflects
     `bond_albedo` of it and radiates the rest from its whole surface). The default albedo is an airless world's."""
