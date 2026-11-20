@@ -89,6 +89,34 @@ class Ethnicity(Enum):
     BLACK = 2
     WHITE = 3
     LATIN = 4
+    ARAB = 5
+    INDIAN = 6
+    SIKH = 7
+    INDONESIAN = 8
+
+
+ETHNICITY_SHARES: dict[Ethnicity, float] = {
+    Ethnicity.ASIAN: 0.477, Ethnicity.WHITE: 0.261, Ethnicity.LATIN: 0.099, Ethnicity.BLACK: 0.063,
+    Ethnicity.ARAB: 0.04, Ethnicity.INDIAN: 0.04, Ethnicity.INDONESIAN: 0.01, Ethnicity.SIKH: 0.01,
+}
+# The ethnicities with no portraits yet show those of a look-alike one.
+PORTRAIT_FALLBACKS: dict[Ethnicity, Ethnicity] = {
+    Ethnicity.ARAB: Ethnicity.LATIN, Ethnicity.INDIAN: Ethnicity.ASIAN, Ethnicity.SIKH: Ethnicity.ASIAN,
+    Ethnicity.INDONESIAN: Ethnicity.ASIAN,
+}
+# The languages a name takes after the ethnicity, with their shares; the rest of the time it takes any other.
+NATIVE_LANGUAGES: dict[Ethnicity, dict[str, float]] = {
+    Ethnicity.ASIAN: {'chinese': 0.8}, Ethnicity.WHITE: {'english': 0.8}, Ethnicity.LATIN: {'spanish': 0.8},
+    Ethnicity.BLACK: {'english': 0.4, 'french': 0.2, 'swahili': 0.2}, Ethnicity.ARAB: {'arab': 0.8},
+    Ethnicity.INDIAN: {'indian': 0.8}, Ethnicity.SIKH: {'sikh': 0.8}, Ethnicity.INDONESIAN: {'indonesian': 0.8},
+}
+# Every language of names (files in common/resources/people), with its weight when it is not the native one.
+LANGUAGE_WEIGHTS: dict[str, float] = {
+    'chinese': 1, 'english': 1, 'spanish': 1, 'arab': 2, 'indian': 2, 'sikh': 1, 'japanese': 1, 'indonesian': 1,
+    'swahili': 1, 'german': 2, 'french': 2, 'italian': 1, 'russian': 1, 'ukrainian': 1,
+}
+INDONESIAN_HOME = 'Singapa, Tón-lǐ-xīn'
+INDONESIAN_HOME_SHARE = 0.6
 
 class Person:
 
@@ -117,28 +145,20 @@ class Person:
         assert entity is not None, "Settlements, and so their staff, exist only in systems with a political entity"
         self.entity: political_entity.PoliticalEntity = entity
 
-        self.race: Ethnicity = Ethnicity.ASIAN
-        rnd: float = my_random.random()
-        if rnd > 0.93:
-            self.race = Ethnicity.BLACK
-        elif rnd > 0.82:
-            self.race = Ethnicity.LATIN
-        elif rnd > 0.53:
-            self.race = Ethnicity.WHITE
+        self.race: Ethnicity = my_random.choices(list(ETHNICITY_SHARES), weights=list(ETHNICITY_SHARES.values()))[0]
 
         self.gender_group = Person.GenderGroup.MALE
         rnd = my_random.random()
         if rnd > 0.55:  # sue me :D
             self.gender_group = Person.GenderGroup.FEMALE
 
-        # All these can change later: mixed heritage, gender-fluid, french, german
-        language = 'chinese' if self.race == Ethnicity.ASIAN \
-            else 'english' if self.race in (Ethnicity.WHITE, Ethnicity.BLACK) \
-            else 'spanish'
+        # Each name has its own language, kept for the relatives that will be generated from them.
+        self.name_language: str = self._roll_language(my_random)
+        self.surname_language: str = self._roll_language(my_random)
         gender = self.gender_group.name.lower()
 
-        self.name: str = _pick_name(my_random, f'{language}_{gender}_names.txt')
-        self.surname: str = _pick_name(my_random, f'{language}_{gender}_surnames.txt')
+        self.name: str = _pick_name(my_random, f'{self.name_language}_{gender}_names.txt')
+        self.surname: str = _pick_name(my_random, f'{self.surname_language}_{gender}_surnames.txt')
         if role.reputation_bonus >= 0:
             self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) + role.reputation_bonus
         else:
@@ -151,7 +171,8 @@ class Person:
         self.sociability100 = _nudged(self.sociability100, role.personality_bonus[2])
 
         self.loyalty100: float = my_random.random() * 100
-        self.loyalty100 = _nudged(self.loyalty100, math.sqrt(self.reputation))
+        self.loyalty100 = _nudged(self.loyalty100, math.sqrt(self.reputation)) if self.reputation >= 0 else \
+            _nudged(self.loyalty100, self.reputation)
         self.loyalty100 = _nudged(self.loyalty100, role.personality_bonus[0])
 
         self.sympathy100: float = 50.0
@@ -203,14 +224,32 @@ class Person:
                     self.interactions[dt] = lines
             self.log_description()
 
+    def _roll_language(self, my_random: random.Random) -> str:
+        """The language of one name: one of the ethnicity's own by their shares, else any other by its weight."""
+        native: dict[str, float] = NATIVE_LANGUAGES[self.race]
+        rnd: float = my_random.random()
+        for language, share in native.items():
+            if rnd < share:
+                return language
+            rnd -= share
+        others: list[str] = [language for language in LANGUAGE_WEIGHTS if language not in native]
+        return my_random.choices(others, weights=[LANGUAGE_WEIGHTS[language] for language in others])[0]
+
     def _generate_place_of_birth(self, my_random: random.Random) -> tuple:
-        """Chooses a place of birth according to ethnicity, or just 'some place'."""
-        matching: list[str] = [name for name, ethnicity in political_entity.THOSE_WHO_SHARE.settlements
-                               if ethnicity == self.race]
-        planet: str = my_random.choice(political_entity.THOSE_WHO_SHARE.planets)
-        if matching and my_random.random() < 0.8:
-            return planet, my_random.choice(matching)
-        return planet, ('a small city' if my_random.random() < 2 / 3 else 'a town') + ", " + planet
+        """Chooses a place of birth according to ethnicity, or just 'some place'. An ethnicity with no settlement of
+        its own comes from any of them, and the Indonesians often from their home. The planet is the place's own,
+        so the two never disagree."""
+        settlements: list[tuple[str, Ethnicity]] = political_entity.THOSE_WHO_SHARE.settlements
+        matching: list[str] = [name for name, ethnicity in settlements if ethnicity == self.race]\
+            or [name for name, _ in settlements]
+        if self.race == Ethnicity.INDONESIAN and my_random.random() < INDONESIAN_HOME_SHARE:
+            place = INDONESIAN_HOME
+        elif matching and my_random.random() < 0.8:
+            place = my_random.choice(matching)
+        else:
+            planet: str = my_random.choice(political_entity.THOSE_WHO_SHARE.planets)
+            place = ('a small city' if my_random.random() < 2 / 3 else 'a town') + ", " + planet
+        return place.rsplit(', ', 1)[-1], place
 
     def _generate_childhood(self, my_random: random.Random) -> str:
         return my_random.choice((
@@ -261,21 +300,25 @@ class Person:
         from universe.artifacts.settlements.settlement import Settlement
         occupations: list[str] = [self.role.portrait, 'uniform'] if isinstance(self.residency, Settlement)\
             else ['generic']
-        suffix: str = "." + str(self.race.name).lower() + "." + age_group + "." + str(self.gender_group.name).lower()
+        ethnicities: list[Ethnicity] = [self.race] + ([PORTRAIT_FALLBACKS[self.race]]
+                                                       if self.race in PORTRAIT_FALLBACKS else [])
         portraits_dir = resource_path('portraits')
         try:
             names = os.listdir(portraits_dir)
         except OSError:
             names = []
 
-        # Sorted, so the same seed always picks the same portrait whatever order the OS lists the files in.
+        # Sorted, so the same seed always picks the same portrait whatever order the OS lists the files in. The
+        # person's own ethnicity comes before their occupation.
         candidates: list[str] = []
-        for occupation in occupations:
-            candidates = sorted(name for name in names if name.startswith(occupation + suffix))
+        prefixes: list[str] = [f"{occupation}.{ethnicity.name.lower()}.{age_group}.{self.gender_group.name.lower()}"
+                               for ethnicity in ethnicities for occupation in occupations]
+        for prefix in prefixes:
+            candidates = sorted(name for name in names if name.startswith(prefix))
             if candidates:
                 break
         if not candidates:
-            print(f"Warning: No person portrait starting with {occupations[0] + suffix} in {portraits_dir}")
+            print(f"Warning: No person portrait starting with {prefixes[0]} in {portraits_dir}")
             return
         filename: str = my_random.choice(candidates)
 
