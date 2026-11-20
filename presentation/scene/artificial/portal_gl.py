@@ -40,7 +40,7 @@ LIGHT_COLOUR = (235, 242, 255)  # the Portal's light: white, a little cold
 
 
 class PortalGl:
-    """Draws the Portal of the ship's system."""
+    """Draws the Portals of the ship's system."""
 
     RING_SEGMENTS = 128
     MIN_CORE_PIXELS = 0.5  # the ring's least half width on the screen (a pixel across), however far
@@ -92,23 +92,29 @@ class PortalGl:
         """White added to the opaque cockpit pixels, as much as the light says (the transparent panes stay so)."""
         if ship.is_bound:
             return
-        portal = environment.nearest_system.portal
-        if portal is None:
+        portals = environment.nearest_system.portals
+        if not portals:
             return
-        level = PortalGl.intensity(portal, PortalGl._relative_centre(portal, ship, environment))
+        level = max(PortalGl.intensity(portal, PortalGl._relative_centre(portal, ship, environment))
+                    for portal in portals)
         added = int(PortalGl.TINT_MAX * level)
         if added > 0:
             overlay.fill((added, added, added), special_flags=pygame.BLEND_RGB_ADD)
 
     @staticmethod
-    def is_behind_base(environment: GameEnvironment, ship: Ship) -> bool:
-        """Whether the Portal is farther from the ship than the base: it is then drawn first, as the base is drawn over
-        what is behind it."""
+    def draw_with_base(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
+        """The Portals and the base, the farthest from the ship first, as each is drawn over what is behind it."""
         system = environment.nearest_system
         position = ship.navigation.stellar_position(environment.date_time)
-        portal_distance = (system.portal.centre - position).length()
-        base_distance = (system.portal_base.stellar_position(environment.date_time) - position).length()
-        return portal_distance > base_distance
+        base = system.portal_base
+        things = [((portal.centre - position).length(), portal) for portal in system.portals]
+        if base is not None:
+            things.append(((base.stellar_position(environment.date_time) - position).length(), base))
+        for _, thing in sorted(things, key=lambda item: item[0], reverse=True):
+            if thing is base:
+                PortalBaseGl.draw(width, height, ship, environment)
+            else:
+                PortalGl.draw(width, height, ship, environment, thing)
     # endregion
 
     # region Glare
@@ -116,25 +122,26 @@ class PortalGl:
     def draw_glare(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
         """The darkening wash and the glow, over the sky. Call with the depth test off, after the sky and before what
         must stay in front of it (the base)."""
-        portal = environment.nearest_system.portal
-        relative = PortalGl._relative_centre(portal, ship, environment)
-        level = PortalGl.intensity(portal, relative)
-        wash = min(1.0, PortalGl.WASH_GAIN * level)  # wherever the ship points: only the distance counts
-
         view_height, horizon_y, focal = view_geometry(height)
-        right = float(relative @ np.array(tuple(ship.attitude.right)))
-        up = float(relative @ np.array(tuple(ship.attitude.up)))
-        forward = float(relative @ np.array(tuple(ship.attitude.forward)))
-        glow_level = PortalGl.glow_level(portal, relative, focal)
-        glow = None
-        if forward > NEAR_CLIP and glow_level > 0.0:
-            distance = float(np.linalg.norm(relative))
-            ring_px = focal * portal.RADIUS / math.sqrt(max(distance * distance - portal.RADIUS ** 2, 1.0))
-            half = min(max(PortalGl.GLOW_MIN_HALF_PX, PortalGl.GLARE_SIZE_OF_RING * ring_px),
-                       PortalGl.GLARE_MAX_HALF_SHARE * width)
-            glow = (width / 2.0 + focal * right / forward, horizon_y - focal * up / forward, half)
+        wash = 0.0
+        glows = []  # (x, y, half size, level) of the glow of each Portal that shows one
+        for portal in environment.nearest_system.portals:
+            relative = PortalGl._relative_centre(portal, ship, environment)
+            level = PortalGl.intensity(portal, relative)
+            wash = max(wash, min(1.0, PortalGl.WASH_GAIN * level))  # wherever the ship points: only the distance counts
+            right = float(relative @ np.array(tuple(ship.attitude.right)))
+            up = float(relative @ np.array(tuple(ship.attitude.up)))
+            forward = float(relative @ np.array(tuple(ship.attitude.forward)))
+            glow_level = PortalGl.glow_level(portal, relative, focal)
+            if forward > NEAR_CLIP and glow_level > 0.0:
+                distance = float(np.linalg.norm(relative))
+                ring_px = focal * portal.RADIUS / math.sqrt(max(distance * distance - portal.RADIUS ** 2, 1.0))
+                half = min(max(PortalGl.GLOW_MIN_HALF_PX, PortalGl.GLARE_SIZE_OF_RING * ring_px),
+                           PortalGl.GLARE_MAX_HALF_SHARE * width)
+                glows.append((width / 2.0 + focal * right / forward, horizon_y - focal * up / forward, half,
+                              glow_level))
 
-        if wash <= 0.0 and glow is None:
+        if wash <= 0.0 and not glows:
             return
         _, sprite = PortalBaseGl.soft_textures()
         GL.glViewport(0, 0, width, height)
@@ -157,8 +164,7 @@ class PortalGl:
                 GL.glVertex2f(x, y)
             GL.glEnd()
             GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive again
-        if glow is not None:
-            x, y, half = glow
+        for x, y, half, glow_level in glows:
             GL.glEnable(GL.GL_TEXTURE_2D)
             GL.glBindTexture(GL.GL_TEXTURE_2D, sprite)
             alpha = PortalGl.GLOW_STRENGTH * glow_level
@@ -178,9 +184,8 @@ class PortalGl:
 
     # region Ring
     @staticmethod
-    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
-        """The ring, in the 3D pass, with its own perspective."""
-        portal = environment.nearest_system.portal
+    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment, portal: Portal) -> None:
+        """The ring of one Portal, in the 3D pass, with its own perspective."""
         relative = PortalGl._relative_centre(portal, ship, environment)
         distance = float(np.linalg.norm(relative))
         if distance == 0.0:

@@ -195,16 +195,11 @@ class OpenGLGui:
             visibility = sun_visibility(environment, ship, view)
             StarGl.draw_glare(width, height, view, view.star, visibility)
             StarGl.draw_visor(width, height, visibility * visor_strength(view.disc_px))
-        if not ship.is_bound and environment.nearest_system.portal is not None:
-            # The Portal's glare hides the sky (the stars and the planets), not the base nor the asteroids, which come
-            # after it; the Portal and the base are drawn the farthest first, as each is drawn over what is behind it.
+        if not ship.is_bound and environment.nearest_system.portals:
+            # The Portals' glare hides the sky (the stars and the planets), not the base nor the asteroids, which come
+            # after it; the Portals and the base are drawn the farthest first, as each is drawn over what is behind it.
             PortalGl.draw_glare(width, height, ship, environment)
-            portal_first = PortalGl.is_behind_base(environment, ship)
-            if portal_first:
-                PortalGl.draw(width, height, ship, environment)
-            PortalBaseGl.draw(width, height, ship, environment)
-            if not portal_first:
-                PortalGl.draw(width, height, ship, environment)
+            PortalGl.draw_with_base(width, height, ship, environment)
         sightings = [] if ship.is_bound else Asteroids.draw(width, height, ship, environment)
         frame_watch.mark('space')
         # Nothing is seen beyond MAX_DEPTH, so above it there are no rocks to draw (the ground of a world with relief is

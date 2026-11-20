@@ -1,6 +1,6 @@
-"""What the portal base does about a ship that heads for the Portal, in three stages. Each stage is given by where the
-ship's straight line takes it (Portal.arrival_time), counted to the Portal's centre, with the ship's velocity in the
-stellar frame (the Portal does not move in it):
+"""What the portal base does about a ship that heads for one of its Portals (each has its own), in three stages. Each
+stage is given by where the ship's straight line takes it (Portal.arrival_time), counted to the Portal's centre, with
+the ship's velocity in the stellar frame (the Portal does not move in it):
 
   1. it gets within STAGES[0] metres in under its seconds: a warning dialog, and a notification that the base's weapons
      are aimed at the ship;
@@ -28,6 +28,7 @@ from universe.society.politics import political_entity
 from common.messages import Message, show_message
 
 if TYPE_CHECKING:
+    from universe.artifacts.settlements.portal import Portal
     from universe.artifacts.settlements.portal_base import PortalBase
     from universe.society.people.player import Player
     from game_environment import GameEnvironment
@@ -49,10 +50,12 @@ class PortalDefence:
     def update(player: Player, environment: GameEnvironment) -> float:
         """Every frame: gives the stage the ship's course calls for, if it is a higher one than the last given. Returns
         the seconds of game time that what it did takes (0 for nearly always)."""
+        return sum(PortalDefence._check(player, environment, portal) for portal in environment.nearest_system.portals)
+
+    @staticmethod
+    def _check(player: Player, environment: GameEnvironment, portal: Portal) -> float:
+        """The same for one Portal, which keeps the warnings given about it."""
         system = environment.nearest_system
-        portal = system.portal
-        if portal is None:  # no Portal here to be warned about
-            return 0.0
         now = environment.date_time
         step = 0.0 if portal.checked_at is None else max(0.0, (now - portal.checked_at).total_seconds())
         portal.checked_at = now
@@ -133,7 +136,8 @@ class PortalDefence:
                 f" but {final_status}. And you will never touch a ship again."
                 )
             return 0.0
-        base.stellar_system.portal.warning_stage = 0  # the pilot starts again after the return
+        for portal in base.stellar_system.portals:
+            portal.warning_stage = 0  # the pilot starts again after the return
         base.place_after_leaving(player.ship)
         base.prepare()
         for person in base.staff:

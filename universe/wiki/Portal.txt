@@ -18,7 +18,8 @@ The Portal radius is measures 1.2356 x 10^36 Planck lengths, and that number is 
 Nobody has an explanation of why the aliens chose it. Some scientists think the Portal only works at that size, others that the aliens simply built what their physics gave them. Mankind has not been able to change it, so it counts as a law.
 
 LOCATION
-- Each Portal is next to the portal base of its system. It is "beyond" the base, further from the star than the base, and 1 km away from the axis. It is far enough from the base so that its light does not affect it. Its ring is oriented perpendicular to the z axis.
+- A system has one Portal for each system it is linked to: the one that settled it, and each one it settled. They are next to the portal base. Each is "beyond" the base, further from the star than the base, and 1 km away from the axis. It is far enough from the base so that its light does not affect it. Its ring is oriented perpendicular to the z axis. With several Portals, they stand at the corners of a regular polygon round the axis: two opposite each other, three 120 degrees apart, four 90 degrees apart, and so on.
+- The two ends of a link do not share their attitude: each end is placed as its own base and star ask, as if both stars were on one axis.
 - All this is intentional. A ship arriving from the stars along the axis sees the ring from the side and cannot just go through it: it has to decelerate, change its attitude and then approach the ring, which takes time. That time is the time the base has to shoot unauthorised and unresponsive ships down.
 
 HOW IT LOOKS

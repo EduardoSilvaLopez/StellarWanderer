@@ -60,10 +60,10 @@ class StellarSystem:
             own_alterations['date_time'] = saved_alterations['date_time']
             self.saved_alterations = own_alterations
         self.star.hidden = bool((self.saved_alterations or {}).get('star', {}).get('hidden', False))
-        # A system has a portal base, and the Portal it protects, only if its history says so (see _place_settlements):
+        # A system has a portal base, and the Portals it protects, only if its history says so (see _place_settlements):
         # the pilot may arrive by hand to one that has neither.
         self.portal_base: PortalBase | None = None
-        self.portal: Portal | None = None
+        self.portals: list[Portal] = []
 
         self.orbits: list[Orbit] = self._generate_orbits(my_random)
 
@@ -80,8 +80,10 @@ class StellarSystem:
         self._place_settlements()
 
     def _place_settlements(self) -> None:
-        """Gives the system the settlements of its history: the first is the portal base (with the Portal it protects),
-        each other one an outpost on a rocky world (a planet or a moon) other than the initial moon. The first outpost
+        """Gives the system the settlements of its history: the first is the portal base (with the Portals it protects:
+        one to the system that settled this one, and one to each system it settled that the game date has reached, in
+        the order it settled them), each other one an outpost on a rocky world (a planet or a moon) other than the
+        initial moon. The first outpost
         goes to the initial planet, so the pilot has one near; each of the rest is drawn from a seed of its own, so its
         world does not change when the history grows. A system without a history has no settlement at all. The base is
         made after the system's saved state, which holds its visits and handling."""
@@ -89,7 +91,11 @@ class StellarSystem:
             return
         settlements: list[list[datetime]] = self.history.settlements
         self.portal_base = PortalBase(self, settlements[0], (self.saved_alterations or {}).get('portal_base'))
-        self.portal = Portal(self.portal_base)  # nothing about it is saved
+        linked = ([] if self.history.origin is None else [self.history.origin]) + [
+            child for child in self.history.children if child.founded_at <= self.parent_galaxy.history.now]
+        # nothing about the Portals is saved
+        self.portals = [Portal(self.portal_base, index, len(linked), linked_system.cell)
+                        for index, linked_system in enumerate(linked)]
         rocky_worlds = [world for world in self.get_all_worlds() if isinstance(world, RockyWorld)]
         initial_planet = next((world for world in rocky_worlds if world.is_initial_planet()), None)
         initial_moon = initial_planet.moons[0] if initial_planet is not None and initial_planet.moons else None

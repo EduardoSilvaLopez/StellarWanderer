@@ -1,14 +1,20 @@
-"""The Portal of a stellar system: a ring of intense white light, next to the portal base that protects it.
+"""A Portal of a stellar system: a ring of intense white light, next to the portal base that protects it.
 
 All Portals are the same size, because mankind has not learned to change the design. The radius is a number of Planck
 lengths, and that number is the ratio of the electric force to the gravitational force between two protons (it does not
 depend on their distance): RADIUS = 19.97 m. The band is thin: its thickness is the fine-structure constant times the
 radius.
 
-It hangs beyond the base (further from the star), at `BEYOND_BASE` along the star's z axis and `OFFSET_FROM_AXIS` away
-from it, in a direction round the axis that is drawn from the seed (so it is always the same in a system). Its ring lies
-in a plane that contains the z direction: a ship arriving from the stars along the axis sees it edge-on, and has to
-decelerate and turn to face it. The ring's normal is the horizontal direction from the axis to the Portal.
+A system has one Portal for each system it is linked to: the system that settled it, and each one it settled itself (see
+`StellarSystem._place_settlements`). The Portals hang beyond the base (further from the star), at `BEYOND_BASE` along
+the star's z axis and `OFFSET_FROM_AXIS` away from it, as the corners of a regular polygon round the axis: the first
+one's direction is drawn from the seed (so it is always the same in a system), and the others follow at equal angles,
+two opposite each other, three 120 degrees apart, and so on. Each ring lies in a plane that contains the z direction: a
+ship arriving from the stars along the axis sees it edge-on, and has to decelerate and turn to face it. The ring's
+normal is the horizontal direction from the axis to the Portal.
+
+The two ends of a link do not share their attitude: each end is placed as its own base and star ask, as if both stars
+were on one axis.
 
 The Portal is not targeted: the base is. What the base does about a ship that approaches it is in PortalDefence.
 """
@@ -23,6 +29,7 @@ import numpy as np
 
 from common.vector3 import Vector3
 from universe.structure import seeds
+from universe.structure.fixed_stars import Cell
 
 if TYPE_CHECKING:
     from universe.artifacts.settlements.portal_base import PortalBase
@@ -43,18 +50,22 @@ PROTON_FORCE_RATIO = ELEMENTARY_CHARGE ** 2 / (4.0 * math.pi * VACUUM_PERMITTIVI
 
 
 class Portal:
-    """The Portal of a stellar system."""
+    """One Portal of a stellar system."""
 
     RADIUS = PROTON_FORCE_RATIO * PLANCK_LENGTH  # m: the ring's radius, 19.97 m, the same for every Portal
     BAND_THICKNESS = FINE_STRUCTURE * RADIUS  # m: about 14.6 cm
     OFFSET_FROM_AXIS = 1000.0  # m, from the star's z axis: far enough for its light not to disturb the base
     BEYOND_BASE = 1000.0  # m, further from the star than the base
 
-    def __init__(self, base: PortalBase) -> None:
+    def __init__(self, base: PortalBase, index: int, count: int, destination: Cell) -> None:
+        """The `index`-th of the `count` Portals of the base, linked to the system of the star in cell `destination`."""
         self.base: PortalBase = base
+        self.index: int = index
+        self.destination: Cell = destination
         self.seed: int = seeds.derive(base.seed, 'portal')
-        # The direction round the axis, drawn from the seed: the same in a system whenever it is made again.
-        self.azimuth: float = random.Random(self.seed).uniform(0.0, math.tau)
+        # The direction round the axis: the first Portal's is drawn from the seed (the same in a system whenever it is
+        # made again), and the others are the corners of the regular polygon from it.
+        self.azimuth: float = (random.Random(self.seed).uniform(0.0, math.tau) + math.tau * index / count) % math.tau
         out = Vector3(math.cos(self.azimuth), math.sin(self.azimuth), 0.0)
         self.centre: Vector3 = Vector3(out.x * self.OFFSET_FROM_AXIS, out.y * self.OFFSET_FROM_AXIS,
                                        base.height + self.BEYOND_BASE)

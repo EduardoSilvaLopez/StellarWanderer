@@ -94,6 +94,7 @@ class SystemHistory:
         self.cur_time: datetime = founded_at
         self.origin: Optional[SystemHistory] = origin
         self.children_count: int = 0
+        self.children: List[SystemHistory] = []  # the systems it settled, in the order it settled them
         self.size: int = 0
         self.size_dates: List[datetime] = []  # when each step of size was done, from the start (see grow)
         self.settlements: List[List[datetime]] = [[founded_at]]  # the portal base is founded with the system
@@ -268,6 +269,7 @@ class ExpansionHistory:
             else:
                 child = SystemHistory(self, star, pending.when, system, system.children_count)
                 system.children_count += 1
+                system.children.append(child)
                 self.settled[child.cell] = child
                 self._schedule(child, queue)
         elif pending.action is Action.ENLARGEMENT:
