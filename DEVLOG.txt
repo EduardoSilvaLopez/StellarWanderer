@@ -39,10 +39,15 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 ### 2026-11-19 (10/12)
 
-> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15
-
   * Testing. I got my clearance too soon.
   * Past of the NPCs: First extensions.
+  * Extra: Arabs.
+
+> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15
+
+  * Extra: Indians.
+  * Extra: Sikh. Dialog - what is that on your head?
+  * Extra: Indonesians.
 
 > BACKLOG
 
@@ -73,7 +78,6 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
     * SMITH
     * STEVEDORE
   * Extra: Binding slowly.
-  * Extra: Arabs.
   * Extra: Move more than one but less than max, by keeping the button pressed.
   * Extra: Missions:
     * Scraps from resources to industrial.
@@ -86,7 +90,6 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Conversion mechanics.
   * United Diversity
   * The Shining Throne
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * OROGRAPHY II
   * Mountain chains.
@@ -99,7 +102,6 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Base
   * Directly? Try the current ship configurations.
   * Extra: Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
-  * Extra: Indians incl. Sikh. Put a Sikh also on each race and gender, only one. Dialog - what is that on your head?
 
 * REVAMP PEOPLE: Sexual desire, orientation and identity. Details on childhood (orphan?). Romanticism towards player. Relationships between them. Current familiar relations. Events on their past.
 * KUIPER: Drawf planets, land on big asteoids.
