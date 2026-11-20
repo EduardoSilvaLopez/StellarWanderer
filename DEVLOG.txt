@@ -39,7 +39,7 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 ### 2026-11-19 (10/12)
 
-> STARTED: Extra time: 205h30' + 20:00 - 20:45
+> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15
 
   * Testing. I got my clearance too soon.
   * Past of the NPCs: First extensions.
@@ -129,18 +129,6 @@ NPCs are generated in steps and from different "crawling" mechanisms following a
 
 What we have no is the "generation from settlement": We give a current role and we generate from there.
 
-This generation sets already some basic characteristics, which are the current ones plus:
-- longevity: float = 50.0
-- perception: float = 50.0
-- education: float = 50.0 - with a minimum for advanced roles
-- pronoun: Optional[Person.Pronoun] << 45% 10% 45%
-- physiology: float = 50.0 << This is the source of the profiles and thus the former gender.
-  * A skewed gauss-like curve centered on 20 or 80 respectively, or a uniform distribution for THEY.
-- attracted_to: float = 50.0
-  * A skewerd gauss-like curve centered on 20 or 80, by physiology <= 50
-- sexuality: float = 50.0
-  * Uniform distribution.
-
 Lazy generation of the past life, when asked about life or family.
 - When they finished their studies, which depends on the role: at age 16 or 22 with a small random factor.
 - Time keeping the role, which depends on how adequate it is for this person.
@@ -152,16 +140,3 @@ Lazy generation of the past life, when asked about life or family.
 
 Lazy generation of friends, when asked about friends. Requires basic generation.
 - Friendships, which can be ex- or different ones.
-
-~~~~~~
-Hello. We continue, step by step, enhancing the NPCs . Before we start with the social lives proper, I would like to enchance all attributes which are *not* another Person, but which will be necessary in the future.
-
-I have thought about the following:
-- Ideology: a simply randomized 0 to 1, which we can use later for ideologies inside the entity. This is just to avoid a new change of the generation when we later use it. It is a placeholder.
-- Longevity: Another random 0 to 1 flat distribution. We will use it to calculate how long the NPC lives.
-- Perception: An attribute 0 to 100, similar to the PC's .
-- Education: An attribute 0 to 100, similar to the PC's .
-- Pronoun: This substitutes the gender group. 45% She, 10% They, 45% He
-- Physiology: 0 to 100, it should be calculated from a skewed gauss curve (maybe Poisson?) centered on 20, 50 (gauss) or 80 depending on the pronoun.
-- Attracted_to: 0 to 100, calculated in the reverse way than the physiology: skewed gauss curves, centered on 20, 50 or 80, but if it is a "he" then the most common value is 20, not 80.
-- Sexuality: 0 to 100 ,flat.

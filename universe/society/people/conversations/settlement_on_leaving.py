@@ -42,7 +42,7 @@ class SettlementOnLeaving(Conversation):
         paragraphs: List[str] = [self.generate_introduction_text().strip()]
         officer: Optional[Person] = self.settlement.officer_for_leaving
         if self.has_promotion and officer is not None:
-            his: str = "her" if officer.gender_group is Person.GenderGroup.FEMALE else "his"
+            his: str = {Person.Pronoun.SHE: "her", Person.Pronoun.THEY: "their"}.get(officer.pronoun, "his")
             paragraphs.append(f"The {officer.role.name} wants you to present yourself in {his} office.")
         if is_not_ready:
             paragraphs.append("The ship is not ready yet.")

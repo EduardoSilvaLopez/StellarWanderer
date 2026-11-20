@@ -84,6 +84,29 @@ def _nudged(value: float, change: float) -> float:
     offset = math.copysign(10 * math.log2(1 + abs(ruler) * math.log(2) / 10), ruler)
     return apply_directly + max(0, min(100, 50 + offset))
 
+# The curves of physiology and attraction (see _skewed): at 20 or 80, a bump with a tail to the far end, lifted at both
+# ends by a straight floor (a pure Beta would be zero there); at 50, a gauss.
+SKEW_BUMP_WEIGHT = 0.354  # the share of the bump in the mix, the rest being the floor
+SKEW_FLOOR_TILT = 0.62  # the floor falls from 1 at 0 to 1 - SKEW_FLOOR_TILT at 1
+SKEW_MAX_DENSITY = 1.5  # above the highest point of the mix, for the rejection sampling
+SKEW_GAUSS_SPREAD = 20.0
+
+
+def _skewed(centre: float, my_random: random.Random) -> float:
+    """A value from 0 to 100 that is most likely at `centre` (20, 50 or 80). Those at 80 mirror those at 20."""
+    if centre == 50:
+        while True:
+            value: float = my_random.gauss(50, SKEW_GAUSS_SPREAD)
+            if 0 <= value <= 100:
+                return value
+    while True:
+        x: float = my_random.random()
+        bump: float = 30 * x * (1 - x) ** 4  # the Beta(2, 5) density, peak at 0.2
+        density: float = SKEW_BUMP_WEIGHT * bump + (1 - SKEW_BUMP_WEIGHT) * (1 - SKEW_FLOOR_TILT * x)
+        if my_random.random() * SKEW_MAX_DENSITY < density:
+            return 100 * (1 - x if centre > 50 else x)
+
+
 class Ethnicity(Enum):
     ASIAN = 1
     BLACK = 2
@@ -120,14 +143,14 @@ INDONESIAN_HOME_SHARE = 0.6
 
 class Person:
 
-    class GenderGroup(Enum):  # aesthetically speaking, identification can be done later.
-        MALE = 1
-        FEMALE = 2
-
-    class Pronoun(Enum):  # the pilot's own choice (PilotIdentityDialog); it is not a gender
+    class Pronoun(Enum):  # chosen by the pilot (PilotIdentityDialog), drawn for the people; not a gender
         SHE = 1
         THEY = 2
         HE = 3
+
+    # The pronoun sets the physiology (the centre of its curve) and the attraction (the mirror one), as for the pilot.
+    PHYSIOLOGY_CENTRE: dict = {Pronoun.SHE: 20, Pronoun.THEY: 50, Pronoun.HE: 80}
+    ATTRACTION_CENTRE: dict = {Pronoun.SHE: 80, Pronoun.THEY: 50, Pronoun.HE: 20}
 
     # region Generation
     def __init__(self, seed: int, residency: Settlement, role: Role, hired_at: datetime) -> None:
@@ -147,15 +170,19 @@ class Person:
 
         self.race: Ethnicity = my_random.choices(list(ETHNICITY_SHARES), weights=list(ETHNICITY_SHARES.values()))[0]
 
-        self.gender_group = Person.GenderGroup.MALE
-        rnd = my_random.random()
-        if rnd > 0.55:  # sue me :D
-            self.gender_group = Person.GenderGroup.FEMALE
+        rnd: float = my_random.random()
+        self.pronoun: Person.Pronoun = Person.Pronoun.SHE if rnd < 0.45 else Person.Pronoun.THEY if rnd < 0.55 \
+            else Person.Pronoun.HE
+        self.physiology: float = _skewed(Person.PHYSIOLOGY_CENTRE[self.pronoun], my_random)
+        self.attracted_to: float = _skewed(Person.ATTRACTION_CENTRE[self.pronoun], my_random)
 
-        # Each name has its own language, kept for the relatives that will be generated from them.
+        # Each name has its own language, kept for the relatives that will be generated from them. The pronoun gives
+        # the list of names; they take the side of the physiology, where over 50 is male.
+        name_is_male: bool = self.pronoun == Person.Pronoun.HE \
+            or (self.pronoun == Person.Pronoun.THEY and self.physiology > 50)
+        gender: str = 'male' if name_is_male else 'female'
         self.name_language: str = self._roll_language(my_random)
         self.surname_language: str = self._roll_language(my_random)
-        gender = self.gender_group.name.lower()
 
         self.name: str = _pick_name(my_random, f'{self.name_language}_{gender}_names.txt')
         self.surname: str = _pick_name(my_random, f'{self.surname_language}_{gender}_surnames.txt')
@@ -187,8 +214,12 @@ class Person:
             self.empathy100 + my_random.gauss(0, 10),
             self.sociability100 + my_random.gauss(0, 10)
             )
-        for _ in range(1, 7): # Space for further characteristics.
-            my_random.random()
+        self.perception: float = my_random.uniform(0, 100)
+        self.education: float = my_random.uniform(0, 100)
+        self.sexuality: float = my_random.uniform(0, 100)
+        self.ideology: float = my_random.random()  # a placeholder: the ideologies of the entity will read it
+        self.longevity: float = my_random.random()  # read later, to work out when they die
+        my_random.random()  # Space for further characteristics.
         retirement_age: float = my_random.uniform(RETIREMENT_AGE_MIN, RETIREMENT_AGE_MAX) + max(0, role.age_raise)
         self.retirement_at: datetime = self.dob + timedelta(seconds=retirement_age * SECONDS_PER_YEAR)
         self._icon_seed: int = my_random.getrandbits(63)
@@ -311,7 +342,8 @@ class Person:
         # Sorted, so the same seed always picks the same portrait whatever order the OS lists the files in. The
         # person's own ethnicity comes before their occupation.
         candidates: list[str] = []
-        prefixes: list[str] = [f"{occupation}.{ethnicity.name.lower()}.{age_group}.{self.gender_group.name.lower()}"
+        sex: str = 'male' if self.physiology > 50 else 'female'
+        prefixes: list[str] = [f"{occupation}.{ethnicity.name.lower()}.{age_group}.{sex}"
                                for ethnicity in ethnicities for occupation in occupations]
         for prefix in prefixes:
             candidates = sorted(name for name in names if name.startswith(prefix))
@@ -392,7 +424,7 @@ class Person:
         for the gender and race, which are shown as a plain line."""
         result: list[tuple[str, str]] = [
             ('ID', f"{self.seed}."),
-            ('', f"{self.gender_group.name.capitalize()}, {self.race.name.capitalize()}"),
+            ('', f"{self.pronoun.name.capitalize()}, {self.race.name.capitalize()}"),
             ('D.O.B.', f"{self.dob.strftime('%Y-%m-%d')} ({self.age} y.o.)"),
             ('Role', self.role.name),
             ('Last time met', self.last_time_met_text()),
