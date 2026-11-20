@@ -6,7 +6,6 @@ import random
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import universe.structure.constants
 from universe.society.people import knowledge
 from common.units import format_compact_distance
 from universe.structure import seeds
@@ -39,9 +38,10 @@ class StellarSystem:
         self.seed: int = seeds.derive(star.seed, 'system')
         my_random: random.Random = random.Random(self.seed)
 
-        # Only the initial star has a history so far; it gives the system its entity.
-        self.history: SystemHistory | None = parent_galaxy.initial_history \
-            if star.position == universe.structure.constants.INITIAL_STAR_POSITION else None
+        # The history of the system, if its star was settled by the game date: it gives the system its entity, its
+        # founding date and its settlements. The initial system is the one the galaxy picked from the history.
+        self.history: SystemHistory | None = parent_galaxy.history_of(star.cell)
+        self.is_initial: bool = star.cell == parent_galaxy.initial_cell
         self.political_entity: political_entity.PoliticalEntity | None = \
             self.history.entity if self.history is not None else None
         # When the system was colonised, which is also when its portal base was founded.
@@ -100,8 +100,10 @@ class StellarSystem:
                 continue
             if number == 1 and initial_planet is not None:
                 world = initial_planet
-            else:
+            elif eligible:
                 world = random.Random(seeds.derive(self.seed, 'settlement', number)).choice(eligible)
+            else:
+                continue  # no rocky world to put it on: the system has no outpost there
             outpost = Outpost(world, number, (world.saved_alterations or {}).get('outposts'), dates)
             world.outposts[outpost.get_alterations_key()] = outpost  # May overwrite: the key is the place.
 
@@ -132,8 +134,7 @@ class StellarSystem:
         jovian planets, at distances that follow the star's luminosity (see orbit_layout.py); none for a star of type O.
         The initial system always has an earthlike planet in orbit `OrbitLayout.INITIAL_ORBIT_NUMBER`. The layout is
         logged."""
-        is_initial_system = self.star.position == universe.structure.constants.INITIAL_STAR_POSITION
-        layout = OrbitLayout.generate(self.star, my_random, is_initial_system)
+        layout = OrbitLayout.generate(self.star, my_random, self.is_initial)
         orbits = [
             (AsteroidBelt if plan.kind is OrbitKind.ASTEROID_BELT else Orbit)(
                 self, plan.number, plan.kind, plan.distance, self.saved_alterations)

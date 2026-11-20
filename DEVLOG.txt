@@ -42,17 +42,17 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Testing. I got my clearance too soon.
   * Past of the NPCs: First extensions.
   * Extra: Arabs.
-
-> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15
-
   * Extra: Indians.
+  * Extra: Indonesians. 
+
+> STARTED: Extra time: 205h30' + 20:00 - 20:45 + 6:00 - 8:15 + 12:30 - 16:30
+
   * Extra: Sikh. Dialog - what is that on your head?
-  * Extra: Indonesians.
+  * Assigning the history to the new systems.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (1000-2000 in TWS)
-  * Assigning the history to the new systems.
   * Focus: Depends on characteristics of the world.
   * Outposts Size 5, 6 - present.
   * NPCs generation for outposts: Complete. Tidings associated.

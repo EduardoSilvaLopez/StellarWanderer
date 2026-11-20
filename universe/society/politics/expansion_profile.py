@@ -17,5 +17,5 @@ class ExpansionProfile:
         self.tech_factor = tech_factor
 
 LowTechImperialist = ExpansionProfile("The Shining Throne", 6, 10, 105, 0.8)
-TechConservative = ExpansionProfile("Those-Who-Share", 2, 8, 195, 1)
+TechConservative = ExpansionProfile("Those-Who-Share", 3, 4, 170, 1)
 TechOrganic = ExpansionProfile("United Diversity", 4, 6, 270, 1)

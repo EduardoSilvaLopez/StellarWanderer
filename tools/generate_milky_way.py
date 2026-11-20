@@ -3,8 +3,8 @@ presentation/scene/interstellar/milky_way.py).
 
 Run from the project root:  python tools/generate_milky_way.py [width of the model, default 2048]
 
-The panorama is the Milky Way as seen from the initial star (universe/structure/constants.py INITIAL_STAR_POSITION),
-plus Andromeda and the two Magellanic Clouds. It is an equirectangular picture in galactic coordinates: the column is
+The panorama is the Milky Way as seen from SOL_REFERENCE_POSITION (universe/structure/constants.py), plus Andromeda
+and the two Magellanic Clouds. It is an equirectangular picture in galactic coordinates: the column is
 the galactic longitude l (the centre of the picture is l = 0, the direction of the galactic centre, and l grows to the
 right), the row is the galactic latitude b (the top is the north galactic pole). The picture is twice as wide as the
 model, which is smoothed up.
@@ -12,7 +12,7 @@ model, which is smoothed up.
 How it is made:
 - The light comes from a model of the Galaxy (all lengths in kpc, centred on the galactic centre): a thin and a thick
   disc, a bulge with a bar at 27 degrees, and spiral arms with the radii and pitch angles of Reid et al. 2019
-  (approximate: they are continued beyond what they measured). The Sun is at the position of the initial star. The light
+  (approximate: they are continued beyond what they measured). The Sun is at SOL_REFERENCE_POSITION. The light
   along each sight line is summed, with the dust in between: a disc of dust that follows the arms, in clumps (noise),
   and a few real clouds near the Sun (Aquila Rift, Ophiuchus, Pipe, Coalsack...). Dust reddens: blue is dimmed more than
   red. - The scale is physical: the model is set so that the median of the band along the galactic plane is a surface
@@ -36,7 +36,7 @@ import pygame
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from universe.structure.constants import INITIAL_STAR_POSITION  # noqa: E402
+from universe.structure.constants import SOL_REFERENCE_POSITION  # noqa: E402
 
 OUT_PATH = os.path.join(ROOT, 'common', 'resources', 'textures', 'milky_way.png')
 
@@ -44,7 +44,7 @@ KPC_PER_LY = 0.306601e-3
 # Standard galactic frame (right-handed, kpc, centred on the galactic centre): X to the centre, Y to l = 90, Z to the
 # north pole. The game's galactic x is the opposite of X (the centre is at the origin and the star at +x); y and z are
 # the same.
-SUN = np.array([-INITIAL_STAR_POSITION[0], INITIAL_STAR_POSITION[1], INITIAL_STAR_POSITION[2]]) * KPC_PER_LY
+SUN = np.array([-SOL_REFERENCE_POSITION[0], SOL_REFERENCE_POSITION[1], SOL_REFERENCE_POSITION[2]]) * KPC_PER_LY
 SUN_RADIUS = float(np.hypot(SUN[0], SUN[1]))
 
 BAND_MAG = 21.7  # the median of the band along the plane (|b| under BAND_LATITUDE), V mag/arcsec2

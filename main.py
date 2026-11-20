@@ -472,7 +472,9 @@ def main() -> None:
                         audio.play(SettlementScreenDialog.OPEN_SOUND)
                     elif (base := gem.current_environment.nearest_system.portal_base) is not None \
                             and ship.scanner.in_base_zone():  # fixed to the base: SPACE docks when stopped inside
-                        speed = (ship.velocity.as_vector() - ship.navigation.velocity_reference_frame()).length()
+                        # against the base it docks to, not the targeted body (which may be far away and fast)
+                        speed = (ship.velocity.as_vector()
+                                 - base.calculate_stellar_velocity(gem.current_environment.date_time)).length()
                         if not base.in_docking_place(ship.position.as_vector()):
                             ship.notification.set("[Com. Officer] To dock, fly into the hangar and stop there.")
                         elif speed >= PortalBase.DOCK_MAX_SPEED:

@@ -3,7 +3,7 @@ import logging
 import math
 from typing import Optional
 from universe.bodies.body import Body
-from universe.structure.constants import EPOCH as EPOCH_DATE, INITIAL_STAR_POSITION
+from universe.structure.constants import EPOCH as EPOCH_DATE
 from universe.structure.galaxy import Galaxy
 from universe.structure.game_clock import GameClock
 from universe.structure.orbit_layout import OrbitLayout
@@ -40,7 +40,7 @@ class GameEnvironment:
         return self.clock.now
 
     def generate_default(self) -> None:
-        self.nearest_system = self.galaxy.add_stellar_system(self.galaxy.fixed_star_at(INITIAL_STAR_POSITION))
+        self.nearest_system = self.galaxy.add_stellar_system(self.galaxy.initial_star)
         current_orbit = self.nearest_system.get_orbit(float(OrbitLayout.INITIAL_ORBIT_NUMBER))
         self.fixed_body = self.targeted_body = self.last_fixed_body = current_orbit.planets[0].moons[0]
         logger.info(f"Initial world's radius: {self.fixed_body.radius}")

@@ -1,39 +1,43 @@
-"""The fixed stars: the stars of the sectors around the initial star, generated from the galaxy seed and kept in memory.
+"""The stars of the galaxy, made on demand from the galaxy seed and kept in memory (StarField).
 
-Galactic space is cut into cubes of SECTOR_SIZE ly, aligned to multiples of it. Sectors sit in districts (DISTRICT_SIZE
-ly) and districts in quadrants (QUADRANT_SIZE ly); those two levels only feed the seeds for now (see seeds.py). The
-sectors within SECTOR_RADIUS of the initial star's sector (a block of 2 * SECTOR_RADIUS + 1 sectors on each side, 5 x 5
-x 5 for a radius of 2) are generated. Each sector draws its stars from a seed derived from its quadrant, its district
-and its index, so the same galaxy always gives the same stars. A star has a float position inside its sector and
-occupies the integer cell (1 ly) that contains it; no two stars share a cell, and its seed comes from that cell.
+Galactic space is cut into sectors: cubes of SECTOR_SIZE ly, aligned to multiples of it. Sectors sit in districts
+(DISTRICT_SIZE ly) and districts in quadrants (QUADRANT_SIZE ly); those two levels only feed the seeds (see seeds.py).
+A sector draws a Poisson count of stars (FIXED_STARS_MEAN_PER_SECTOR) at random positions inside itself. A star
+occupies the integer cell (1 ly) that contains it, and its seed comes from that cell. A cell lies inside one sector,
+so two sectors never clash; inside a sector, a star that lands on a cell already taken is lost (rare, and harmless).
 
-A fixed star is only its seed and position, plus the properties Star derives from its seed: no orbits, planets or moons.
-Its StellarSystem takes its seed from the star's, so the system and the fixed star describe the same star.
+A sector is made the first time something asks for it and then kept. Its stars depend only on the galaxy seed and its
+own index, never on what was asked before, so the galaxy reads the same in any order. Nothing is saved.
 
-Nothing is saved for a fixed star: it is regenerated from the galaxy seed whenever it is needed.
+The sky shows the sectors within SECTOR_RADIUS of the initial star's sector (Galaxy.fixed_star_positions). The history
+reads the stars wherever its settling systems look (universe/society/politics/settling.py), so any sector can be asked
+for.
+
+A fixed star is only its seed and position, plus what Star derives from its seed: no orbits, planets or moons. Its
+StellarSystem takes its seed from the star's, so the system and the fixed star describe the same star.
 """
 
-import logging
+from __future__ import annotations
+
 import math
 import random
-from collections import Counter
 from itertools import product
+from typing import Optional
 
+from universe.bodies.star import Star, cell_of
 from universe.structure import seeds
 from universe.structure.constants import (
     DISTRICT_SIZE,
     FIXED_STARS_MEAN_PER_SECTOR,
-    INITIAL_STAR_POSITION,
     LIGHT_YEAR_M,
     QUADRANT_SIZE,
-    SECTOR_RADIUS,
     SECTOR_SIZE,
 )
-from universe.bodies.star import Star, cell_of
 
-logger = logging.getLogger(__name__)
-
-REPORT_RADIUS = 40.0  # ly: the radius around the initial star in which the log counts the stars
+Sector = tuple[int, int, int]
+Cell = tuple[int, int, int]
+Position = tuple[float, float, float]
+MAX_SEARCH_STEPS = 200  # the nearest star of a type is looked for in shells of SECTOR_SIZE: 200 shells is 4000 ly
 
 
 def region_of(position: tuple[float, float, float], size: int) -> tuple[int, int, int]:
@@ -41,13 +45,13 @@ def region_of(position: tuple[float, float, float], size: int) -> tuple[int, int
     return (math.floor(position[0] / size), math.floor(position[1] / size), math.floor(position[2] / size))
 
 
-def _sector_origin(sector: tuple[int, int, int]) -> tuple[float, float, float]:
+def _sector_origin(sector: Sector) -> Position:
     return (float(sector[0] * SECTOR_SIZE), float(sector[1] * SECTOR_SIZE), float(sector[2] * SECTOR_SIZE))
 
 
-def _sector_seed(galaxy_seed: int, sector: tuple[int, int, int]) -> int:
+def _sector_seed(galaxy_seed: int, sector: Sector) -> int:
     """The seed of a sector, through the quadrant and the district that contain it."""
-    origin: tuple[float, float, float] = _sector_origin(sector)
+    origin: Position = _sector_origin(sector)
     quadrant_seed: int = seeds.derive(galaxy_seed, 'quadrant', *region_of(origin, QUADRANT_SIZE))
     district_seed: int = seeds.derive(quadrant_seed, 'district', *region_of(origin, DISTRICT_SIZE))
     return seeds.derive(district_seed, 'sector', *sector)
@@ -64,65 +68,91 @@ def _poisson(my_random: random.Random, mean: float) -> int:
     return count
 
 
-def _generate_sector(galaxy_seed: int, sector: tuple[int, int, int],
-                     used_cells: set[tuple[int, int, int]]) -> tuple[list[Star], int]:
-    """The random stars of one sector, and the number skipped because their cell was taken. `used_cells` holds the
-    cells taken so far, in the whole region; it is updated."""
+def _generate_sector(galaxy_seed: int, sector: Sector) -> list[Star]:
+    """The stars of one sector, in the order they were drawn."""
     sector_seed: int = _sector_seed(galaxy_seed, sector)
     my_random: random.Random = random.Random(sector_seed)
-    origin: tuple[float, float, float] = _sector_origin(sector)
+    origin: Position = _sector_origin(sector)
     stars: list[Star] = []
-    skipped: int = 0
+    taken: set[Cell] = set()
     for _ in range(_poisson(my_random, FIXED_STARS_MEAN_PER_SECTOR)):
-        position: tuple[float, float, float] = tuple(c + my_random.random() * SECTOR_SIZE for c in origin)
-        if cell_of(position) in used_cells:
-            skipped += 1  # one attempt only: a collision is rare, and losing the star is harmless
+        position: Position = tuple(c + my_random.random() * SECTOR_SIZE for c in origin)
+        cell: Cell = cell_of(position)
+        if cell in taken:
             continue
-        used_cells.add(cell_of(position))
-        stars.append(Star(seeds.derive(sector_seed, 'star', *cell_of(position)), position))
-    return stars, skipped
-
-
-def stellar_position(position: tuple[float, float, float]) -> tuple[float, float, float]:
-    """A galactic position (in ly) in the stellar frame of the initial star, in meters. The stellar frame has x right,
-    y up and z forward (north); galactic x is forward, y right and z up, so the stellar frame takes galactic (y, z, x).
-    That is a cyclic permutation, a rotation, so nothing is mirrored. The initial star is the origin."""
-    dx, dy, dz = (p - i for p, i in zip(position, INITIAL_STAR_POSITION))
-    return (dy * LIGHT_YEAR_M, dz * LIGHT_YEAR_M, dx * LIGHT_YEAR_M)
-
-
-def generate_region(galaxy_seed: int) -> list[Star]:
-    """The fixed stars of the region around the initial star, the initial star included (always a G star). Logs
-    aggregate results."""
-    centre: tuple[int, int, int] = region_of(INITIAL_STAR_POSITION, SECTOR_SIZE)
-    initial_star_seed: int = seeds.derive(_sector_seed(galaxy_seed, centre), 'star', *cell_of(INITIAL_STAR_POSITION))
-    initial_star: Star = Star(initial_star_seed, INITIAL_STAR_POSITION, Star.Type.G)
-    stars: list[Star] = [initial_star]
-    used_cells: set[tuple[int, int, int]] = {cell_of(INITIAL_STAR_POSITION)}
-
-    per_sector_counts: list[int] = []
-    skipped_total: int = 0
-    for offset in product(range(-SECTOR_RADIUS, SECTOR_RADIUS + 1), repeat=3):
-        sector = (centre[0] + offset[0], centre[1] + offset[1], centre[2] + offset[2])
-        sector_stars, skipped = _generate_sector(galaxy_seed, sector, used_cells)
-        per_sector_counts.append(len(sector_stars))
-        stars.extend(sector_stars)
-        skipped_total += skipped
-
-    _log_summary(galaxy_seed, stars, per_sector_counts, skipped_total)
+        taken.add(cell)
+        stars.append(Star(seeds.derive(sector_seed, 'star', *cell), position))
     return stars
 
 
-def _log_summary(galaxy_seed: int, stars: list[Star], per_sector_counts: list[int], skipped: int) -> None:
-    within: int = sum(1 for star in stars if math.dist(star.position, INITIAL_STAR_POSITION) <= REPORT_RADIUS)
-    types: Counter = Counter(star.type.name for star in stars)
-    side: int = 2 * SECTOR_RADIUS + 1
-    logger.info(
-        f"Fixed stars of galaxy {galaxy_seed}: {len(stars)} stars (the initial one included) in {side ** 3} sectors of "
-        f"{SECTOR_SIZE} ly; per sector min {min(per_sector_counts)}, "
-        f"mean {sum(per_sector_counts) / len(per_sector_counts):.1f}, "
-        f"max {max(per_sector_counts)}."
-    )
-    logger.info(f"Fixed stars skipped because their cell was taken: {skipped}.")
-    logger.info(f"Fixed stars within {REPORT_RADIUS} ly of the initial star: {within}.")
-    logger.info("Fixed stars by type: " + ", ".join(f"{name} {types[name]}" for name in sorted(types)) + ".")
+def _distance_to_sector(point: Position, sector: Sector) -> float:
+    """The distance (ly) from a point to the nearest point of a sector; 0 when the point is inside it."""
+    origin: Position = _sector_origin(sector)
+    nearest: Position = tuple(min(max(p, lo), lo + SECTOR_SIZE) for p, lo in zip(point, origin))
+    return math.dist(point, nearest)
+
+
+def stellar_position(position: Position, origin: Position) -> Position:
+    """A galactic position (in ly) in the stellar frame of the star at `origin`, in meters. The stellar frame has x
+    right, y up and z forward (north); galactic x is forward, y right and z up, so the stellar frame takes galactic
+    (y, z, x). That is a cyclic permutation, a rotation, so nothing is mirrored. The star at `origin` is the origin."""
+    dx, dy, dz = (p - o for p, o in zip(position, origin))
+    return (dy * LIGHT_YEAR_M, dz * LIGHT_YEAR_M, dx * LIGHT_YEAR_M)
+
+
+class StarField:
+    """The stars of one galaxy seed, sector by sector, made when asked for and kept."""
+
+    def __init__(self, galaxy_seed: int) -> None:
+        self.galaxy_seed: int = galaxy_seed
+        self._sectors: dict[Sector, tuple[list[Star], dict[Cell, Star]]] = {}
+
+    def sector_of(self, position: Position) -> Sector:
+        """The sector that contains a galactic position (in ly)."""
+        return region_of(position, SECTOR_SIZE)
+
+    def stars_of(self, sector: Sector) -> list[Star]:
+        """The stars of a sector, made if they were not yet."""
+        return self._made(sector)[0]
+
+    def star_at(self, cell: Cell) -> Optional[Star]:
+        """The star that occupies a cell, or None if no star is there."""
+        return self._made(self.sector_of(cell))[1].get(cell)
+
+    def stars_within(self, centre: Position, radius: float) -> list[Star]:
+        """The stars at most `radius` ly from `centre`. The sectors are visited in a fixed order, and so are their
+        stars, so the list is the same whatever was asked before."""
+        low: Sector = self.sector_of(tuple(c - radius for c in centre))
+        high: Sector = self.sector_of(tuple(c + radius for c in centre))
+        found: list[Star] = []
+        for sector in product(*(range(lo, hi + 1) for lo, hi in zip(low, high))):
+            if _distance_to_sector(centre, sector) > radius:
+                continue
+            found.extend(star for star in self.stars_of(sector) if math.dist(star.position, centre) <= radius)
+        return found
+
+    def stars_around(self, sector: Sector, radius_sectors: int) -> list[Star]:
+        """The stars of the block of sectors that is `radius_sectors` sectors wide on each side of `sector`."""
+        found: list[Star] = []
+        for offset in product(range(-radius_sectors, radius_sectors + 1), repeat=3):
+            found.extend(self.stars_of((sector[0] + offset[0], sector[1] + offset[1], sector[2] + offset[2])))
+        return found
+
+    def nearest_of_type(self, centre: Position, star_type: Star.Type) -> Star:
+        """The star of a type nearest to `centre`. The search grows in shells of one sector: once a star of the type
+        is found at a distance d, every star nearer than d is inside the shell already searched, so the nearest is
+        exact."""
+        for step in range(1, MAX_SEARCH_STEPS + 1):
+            candidates: list[Star] = [star for star in self.stars_within(centre, step * SECTOR_SIZE)
+                                      if star.type is star_type]
+            if candidates:
+                return min(candidates, key=lambda star: math.dist(star.position, centre))
+        raise RuntimeError(f"No star of type {star_type.name} within {MAX_SEARCH_STEPS * SECTOR_SIZE} ly of {centre}.")
+
+    def _made(self, sector: Sector) -> tuple[list[Star], dict[Cell, Star]]:
+        made = self._sectors.get(sector)
+        if made is None:
+            stars: list[Star] = _generate_sector(self.galaxy_seed, sector)
+            made = (stars, {star.cell: star for star in stars})
+            self._sectors[sector] = made
+        return made

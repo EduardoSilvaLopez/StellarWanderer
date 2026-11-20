@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import logging
 from common.units import format_compact_distance
-import universe.structure.constants
 from universe.structure import seeds
 from universe.artifacts.ore_mine import OreMine
 from universe.bodies.km2 import Km2
@@ -248,8 +247,7 @@ class RockyWorld(World):
     def is_initial_planet(self) -> bool:
         return self.parent_planet is None\
             and self.parent_orbit.number == 3.0\
-            and (self.stellar_system.x, self.stellar_system.y,
-                 self.stellar_system.z) == universe.structure.constants.INITIAL_STAR_POSITION
+            and self.stellar_system.is_initial
 
     def _generate_mass_density_and_radius(self, my_random: random.Random, radius: float) -> None:
         """Sets `density`, `mass` and `radius`. The density before compression is drawn by the surface type (icy or

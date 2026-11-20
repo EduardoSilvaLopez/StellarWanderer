@@ -1,13 +1,15 @@
-'''The whole galaxy. We won't have more than one. Its history (universe/society/politics) is made with it, up to the
-game date.'''
+'''The whole galaxy. We won't have more than one. Its history (universe/society/politics) settles the stars up to the
+game date and picks the initial star, where the game starts; the stars are made from the galaxy seed when they are
+asked for (fixed_stars.py).'''
 
 from __future__ import annotations
 import copy
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from universe.structure import fixed_stars
-from universe.structure.constants import EPOCH, INITIAL_STAR_POSITION
+from universe.structure.constants import EPOCH, SECTOR_RADIUS, SECTOR_SIZE
+from universe.structure.fixed_stars import region_of, stellar_position
 from universe.society.politics.expansion_history import ExpansionHistory, SystemHistory
 from universe.society.politics.tidings import Tidings
 from universe.bodies.star import Star, cell_of
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
     from universe.artifacts.settlements.outpost import Outpost
     from universe.artifacts.settlements.settlement import Settlement
 
+logger = logging.getLogger(__name__)
+
 
 class Galaxy:
 
@@ -24,13 +28,15 @@ class Galaxy:
         self.seed: int = user_given_seed
         self.history: ExpansionHistory = ExpansionHistory(user_given_seed, date_time)
         self.history.log_results()
-        # The history of the initial star, which gives the system its entity and its settlements (the other stars have none).
+        # The history picks the initial star: the star of the system the game starts in (it gives the system its entity
+        # and its settlements; the other systems are only what the history says).
         self.initial_history: SystemHistory = self.history.initial_system(EPOCH)
+        self.initial_star: Star = self.initial_history.star
+        self.initial_cell: tuple[int, int, int] = self.initial_star.cell
+        logger.info(f"Initial star of galaxy {user_given_seed}: {self.initial_star.name} at "
+                    f"{self.initial_star.position} ly.")
+        self.stars = self.history.stars
         self.tidings: Tidings = Tidings(self.history)
-        # The fixed stars of the region around the initial star, keyed by their integer cell. Generated from the seed.
-        self.fixed_stars: dict[tuple[int, int, int], Star] = {
-            cell_of(star.position): star for star in fixed_stars.generate_region(user_given_seed)
-        }
         self._fixed_star_positions: Optional[list[tuple[Star, tuple[float, float, float]]]] = None
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
@@ -49,15 +55,20 @@ class Galaxy:
         self.stellar_systems.append(new_system)
         return new_system
 
+    def history_of(self, cell: tuple[int, int, int]) -> Optional[SystemHistory]:
+        """The history of the system of a star's cell, or None if the history does not settle that star by the game
+        date. The system makes its own portal base and outposts from it."""
+        return self.history.system_at(cell)
+
     def system_of_key(self, key: str) -> Optional[StellarSystem]:
         """The stellar system with that alterations key (its star's cell, "26010 10 10"), generated if it was not yet.
-        None if no fixed star is there."""
+        None if no star is there."""
         existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.get_alterations_key() == key),
                                                  None)
         if existing is not None:
             return existing
         cell_x, cell_y, cell_z = (int(c) for c in key.split())
-        star: Optional[Star] = self.fixed_stars.get((cell_x, cell_y, cell_z))
+        star: Optional[Star] = self.stars.star_at((cell_x, cell_y, cell_z))
         return self.add_stellar_system(star) if star is not None else None
 
     def settlement_of(self, full_keys: str) -> Settlement:
@@ -92,21 +103,21 @@ class Galaxy:
 
     # region Fixed stars
     def fixed_star_at(self, position: tuple[float, float, float]) -> Star:
-        """The fixed star in the cell that contains the galactic position (in ly). Only the region has fixed stars."""
-        star: Optional[Star] = self.fixed_stars.get(cell_of(position))
+        """The fixed star in the cell that contains the galactic position (in ly)."""
+        star: Optional[Star] = self.stars.star_at(cell_of(position))
         if star is None:
-            raise ValueError(f"No fixed star at galactic position {position}: fixed stars exist only around the "
-            f"initial star.")
+            raise ValueError(f"No star at galactic position {position}.")
         return star
 
     def fixed_star_positions(self) -> list[tuple[Star, tuple[float, float, float]]]:
-        """Each fixed star except the initial one (the sun), with its position in the stellar frame, in meters.
-        The stars do not move, so the positions are worked out once."""
+        """Each star of the sky (the sectors around the initial star) except the initial one, with its position in the
+        stellar frame of the initial star, in meters. The stars do not move, so the positions are worked out once."""
         if self._fixed_star_positions is None:
+            centre = region_of(self.initial_star.position, SECTOR_SIZE)
             self._fixed_star_positions = [
-                (star, fixed_stars.stellar_position(star.position))
-                for star in self.fixed_stars.values()
-                if star.position != INITIAL_STAR_POSITION
+                (star, stellar_position(star.position, self.initial_star.position))
+                for star in self.stars.stars_around(centre, SECTOR_RADIUS)
+                if star.cell != self.initial_cell
             ]
         return self._fixed_star_positions
     # endregion
