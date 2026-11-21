@@ -327,7 +327,12 @@ class Settlement(Updatable):
 
     def is_available(self, person: Person, now: datetime) -> bool:
         """Whether `person` is listed for a chat at `now`: not on vacation (the substitute covers their shift), not
-        working, and not resting (see _is_free). The one-shift role, on duty all the time, is always listed."""
+        working, and not resting (see _is_free). The one-shift role, on duty all the time, is always listed. A Student,
+        in the polischool, is never listed."""
+        # A Student is in the polischool. Children will be Students too, without being there: then this must test the
+        # polischool status, not the title.
+        if person.get_title() == 'Student':
+            return False
         role = person.role
         if role.shifts == 1 and role.vacation == 0:
             return True

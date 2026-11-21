@@ -53,11 +53,12 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
   * Outpost size 3: Add security team.
   * Outpost size 4: Add 9 people more... who? Mechanics, new role? Administratives? 3rd team Stevedores? 2nd Specialists? Builders?
-  * Outposts Size 5, 6 - present.
+  * More complex "life" dialog.
 
 > BACKLOG
 
 * INTERSTELLAR TRAVEL VIA BASE (1000-2000 in TWS)
+  * Outposts Size 5, 6 - present.
   * Extra: Sikh. Dialog - what is that on your head?
   * Dialog on outpost gives the reasons of the focus, extracted from the code.
   * Names of settlement change in a related way:

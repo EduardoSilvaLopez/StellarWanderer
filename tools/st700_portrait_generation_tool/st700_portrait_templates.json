@@ -1,0 +1,61 @@
+{
+  "_help": "Edit the prompt templates and rules here. Placeholders: {article} {ethnicity} {person} {gender} {clothing}. {person} is the age+gender phrase from 'person' below. Lookups that depend on gender use the gender's CLASS (see gender_class), so androgyne uses the female wording for age words and clothing.",
+
+  "settings": {
+    "style": "Casual Photo",
+    "shape": "Portrait",
+    "batch_size": 16
+  },
+
+  "ethnicities": {
+    "_help": "file tag : word used in the prompt. 'All' uses this list. Add new groups here, or just type a new name when you run the tool.",
+    "arab": "Arab",
+    "asian": "Asian",
+    "black": "black",
+    "indian": "Indian",
+    "indonesian": "Indonesian",
+    "latin": "Latino",
+    "sikh": "Sikh",
+    "white": "white"
+  },
+
+  "gender_class": {
+    "male": "male",
+    "female": "female",
+    "androgyne": "female"
+  },
+
+  "neutral_pronoun_genders": ["androgyne"],
+
+  "categories": {
+    "street": {
+      "ages": ["child"],
+      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person} with an sleeveless shirt and a jacket. The background is a sci-fi street at night."
+    },
+    "hydroponic": {
+      "ages": ["teen", "young", "adult", "mature", "old"],
+      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person} with {clothing}. The background is a lavish hydroponic garden."
+    },
+    "uniform": {
+      "ages": ["young", "adult", "mature", "old"],
+      "template": "Frontal close-up passport photo of the face of {article} {ethnicity} {person} with an olive Peaked Cap with a red star on it and a Soviet style uniform. The background is futuristic, but with no windows."
+    }
+  },
+
+  "person": {
+    "child":  "{gender} 10yo child",
+    "teen":   "teen {gender}",
+    "young":  { "male": "young {gender}", "female": "young adult {gender}" },
+    "adult":  "adult {gender}",
+    "mature": "mature {gender}",
+    "old":    "old {gender}"
+  },
+
+  "clothing": {
+    "teen":   "an sleeveless shirt",
+    "young":  "an sleeveless shirt",
+    "adult":  "an sleeveless shirt",
+    "mature": { "male": "a tube top", "female": "a blouse" },
+    "old":    { "male": "a tube top", "female": "a blouse" }
+  }
+}

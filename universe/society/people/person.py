@@ -190,6 +190,9 @@ class Person:
             self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) + role.reputation_bonus
         else:
             self.reputation: float = 5 * social_factor * my_random.gauss(1.0, 0.3) * -role.reputation_bonus
+        # Never below 0: a Student (a polischool departure, a status of the staffing history) is not made by chance.
+        # Generation is for a role for now; a future kind of generation (children, for one) may start lower.
+        self.reputation = max(self.reputation, 0.0)
 
         self.empathy100: float = my_random.random() * 100
         self.empathy100 = _nudged(self.empathy100, role.personality_bonus[1])

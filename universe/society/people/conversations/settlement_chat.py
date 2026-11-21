@@ -794,6 +794,81 @@ class SettlementChat(Conversation):
 
         return text
 
+    def _life_pieces(self, high: bool, warm: bool, self_description: str) -> list[str]:
+        """What a person says of their life, one piece each, in the order said. High sociability has more of them
+        (see talk_life); warm sympathy adds words to some of them."""
+        person = self.interlocutor
+        if high and warm:
+            birth = f"Well... ok, I was born in {person.place_of_birth}. I really miss home sometimes."
+        elif warm:
+            birth = f"Well, I was born in {person.place_of_birth}."
+        else:
+            birth = f"I was born in {person.place_of_birth}."
+        if person.education < 20:
+            birth += " There was no school there."
+        pieces: list[str] = []
+        if warm and person.sexuality > 20 and (person.attracted_to > 50) == (self.player.physiology > 50):
+            pieces.append("<looks up and down to you, flirting>")
+        pieces.append(birth)
+        if person.entity is political_entity.THOSE_WHO_SHARE:
+            # Stable families are common; the other children are raised by the Community, in a collective house.
+            in_family: bool = random.Random(seeds.derive(person.seed, 'upbringing')).random() < 2 / 3
+            pieces.append("I grew up in a family." if in_family
+                          else "I grew up in a collective house.")
+        if high:
+            pieces.append(f"I had {person.childhood}, I would say." + (" But that's the past." if warm else ""))
+        pieces.append(f"I am {person.age} years old." + (" I know, I know." if high and warm else ""))
+        if high or not warm:
+            pieces.append(f"I work here as a {person.role.name}, that's my job.")
+        else:
+            pieces.append(f"I work here as a {person.role.name} from {person.work_hours_text()}.")
+        if person.education >= 70:
+            diploma_place: str = person.place_of_birth
+            if person.place_of_birth.startswith('a town'):  # a small town has no college: another settlement, by seed
+                names: list[str] = [name for name, _ in political_entity.THOSE_WHO_SHARE.settlements]
+                diploma_place = random.Random(seeds.derive(person.seed, 'diploma_place')).choice(names)
+            pieces.append(f"I got my diploma in {diploma_place}.")
+        elif person.education >= 20:
+            pieces.append("I wanted to work, not study.")
+        shift: Optional[int] = None if person.role.shifts == 1 and person.role.vacation == 0 \
+            else person.residency.shift_of(person)
+        if shift == 0:
+            pieces.append("I work the night shift, so I sleep through the day.")
+        elif shift == 1:
+            pieces.append("I work the day shift, so I sleep at night.")
+        elif shift == 2:
+            pieces.append("I work the evening shift, so I sleep late in the morning.")
+        elif shift is not None:
+            pieces.append("I'm a substitute, so my hours change all the time.")
+        # Those who were sent to the polischool and are out again (the Students in it cannot be reached at all).
+        if warm and person.entity is political_entity.THOSE_WHO_SHARE and person.reputation < 20 \
+                and random.Random(seeds.derive(person.seed, 'polischool')).random() < 1 / 2:
+            pieces.append("I... went to polischool, but you probably know that already...")
+        pieces.append(f"People say I'm {self_description}.")
+        if warm:
+            hobby_end = "My hobby." if high else "That's my hobby."
+            pieces.append(f"Oh... and {person.hobby} {hobby_end}")
+        return pieces
+
+    def _life_said(self, high: bool, warm: bool, self_description: str, fewest: int, most: int) -> str:
+        """Some of the pieces, at random, then, always, the pronoun when the look does not match it: it is the last
+        thing said, and a they always says it."""
+        person = self.interlocutor
+        said: str = self._pick_life(self._life_pieces(high, warm, self_description), fewest, most)
+        mismatch: bool = person.pronoun is person.Pronoun.THEY \
+            or (person.pronoun is person.Pronoun.SHE and person.physiology > 50) \
+            or (person.pronoun is person.Pronoun.HE and person.physiology <= 50)
+        if mismatch:
+            said += f" I am a {person.pronoun.name.lower()}."
+        return said
+
+    @staticmethod
+    def _pick_life(pieces: list[str], fewest: int, most: int) -> str:
+        """Between `fewest` and `most` of the pieces, kept in their order, drawn at random on each ask."""
+        count: int = random.randint(fewest, min(most, len(pieces)))
+        chosen: list[int] = sorted(random.sample(range(len(pieces)), count))
+        return " ".join(pieces[index] for index in chosen)
+
     def talk_life(self) -> str:
         # General effect. People like to be asked about their lives. Once per day max, though.
         date_str: str = self.date_time.date().isoformat()
@@ -824,35 +899,33 @@ class SettlementChat(Conversation):
         else:
             self_description = "ok, I guess"
 
-        if soc < 20:
-            if sym < 20:
+        if sym < 20:
+            if soc < 20:
                 if days_to_birthday == 0:
                     return "On my birthday, for fuck's sake. Leave me alone."
                 return "Leave me alone."
-            elif sym < 80:
-                if days_to_birthday == 0:
-                    return "Life's ok. Birthday."
-                if self.interlocutor.how_happy_with_role() == 2:
-                    return "Job's good. Life's ok."
-                return "Life's ok."
-            else:
-                if days_to_birthday == 0:
-                    return "Doing ok. My birthday today."
-                if self.interlocutor.how_happy_with_role() == 1:
-                    return "Job's ok. Doing ok. Thanks."
-                return "Doing ok. Thanks."
-        elif soc < 80:
-            if sym < 20:
+            if soc < 80:
                 job: str = " I don't have enough with my job?" if self.interlocutor.how_happy_with_role() == 0 else ""
                 if days_to_birthday == 0:
                     return f"On my birthday, for fuck's sake.{job} Leave me alone."
                 return f"Oh, no.{job} Leave me alone."
-            elif sym < 80:
-                text = (
-                    f"Me? I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
-                    f" I work here as a {self.interlocutor.role.name}, that's my job."
-                    f" People say I'm {self_description}."
-                )
+            text = "What do you want to know? I work here. I do my best <stares at you firmly>."
+            if days_to_birthday == -1:
+                text += "\n\nYesterday was my birthday, if you want to know."
+            elif days_to_birthday == 0:
+                text += "\n\nToday is my birthday. So leave me alone."
+            return text
+
+        if sym < 80:
+            if soc < 20:
+                if days_to_birthday == 0:
+                    return "Life's ok. Birthday."
+                pool = ["Life's ok.", "Not bad.", "Same as always.", "Can't complain."]
+                if self.interlocutor.how_happy_with_role() == 2:
+                    pool.append("Job's good.")
+                return self._pick_life(pool, 1, 1)
+            if soc < 80:
+                text = f"Me? {self._life_said(False, False, self_description, 2, 3)}"
                 if days_to_birthday == -2:
                     text += "\n\nI had my birthday two days ago."
                 elif days_to_birthday == -1:
@@ -862,70 +935,52 @@ class SettlementChat(Conversation):
                 elif days_to_birthday == 1:
                     text += "\n\nTomorrow is my birthday."
                 return text
-            else:
-                text = (
-                    "Me? Thank you for asking, friend <smiles>."
-                    f" Well, I was born in {self.interlocutor.place_of_birth}, I am {self.interlocutor.age} years old,"
-                    f" I work here as a {self.interlocutor.role.name} from {self.interlocutor.work_hours_text()}."
-                    f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby} That's my hobby"
-                )
-                if days_to_birthday == -2:
-                    text += "\n\nMy birthday was two days ago."
-                elif days_to_birthday == -1:
-                    text += "\n\nMy birthday was yesterday."
-                elif days_to_birthday == 0:
-                    text += "\n\nToday is my birthday. Just saying."
-                elif days_to_birthday == 1:
-                    text += "\n\nTomorrow is my birthday, by the way."
-                return text
-        else: # noqa: PLR5501 High soc
-            if sym < 20:
-                text = "What do you want to know? I work here. I do my best <stares at you firmly>."
-                if days_to_birthday == -1:
-                    text += "\n\nYesterday was my birthday, if you want to know."
-                elif days_to_birthday == 0:
-                    text += "\n\nToday is my birthday. So leave me alone."
-                return text
-            elif sym < 80:
-                text = (
-                    f"Me? I was born in {self.interlocutor.place_of_birth},"
-                    f" I had {self.interlocutor.childhood}, I would say."
-                    f" I am {self.interlocutor.age} years old."
-                    f" I work here as a {self.interlocutor.role.name}, that's my job."
-                    f" People say I'm {self_description}."
-                )
-                if days_to_birthday == -2:
-                    text += "\n\nI had my birthday two days ago. Too late for Happy birthday! <laughs>."
-                elif days_to_birthday == -1:
-                    text += "\n\nMy birthday was yesterday, you just missed my 'Happy birthday!' <laughs>."
-                elif days_to_birthday == 0:
-                    text += "\n\nToday is my birthday. You can still wish me 'happy birthday' <smiles>."
-                elif days_to_birthday == 1:
-                    text += "\n\nTomorrow is my birthday, if you want to wish me happy birthday <smiles>."
-                return text
-            else:
-                text = (
-                    "Me? You want to talk about my life? I am flattered <laughs>."
-                    f" Well... ok, I was born in {self.interlocutor.place_of_birth}. I really miss home sometimes."
-                    f" I had {self.interlocutor.childhood}, I would say. But that's the past."
-                    f" I am {self.interlocutor.age} years old. I know, I know."
-                    f" I work here as a {self.interlocutor.role.name}, that's my job."
-                    f" People say I'm {self_description}."
-                    f"\n\nOh... and {self.interlocutor.hobby} My hobby."
-                )
-                if days_to_birthday == -2:
-                    text += "\n\nBTW, I had my birthday two days ago."
-                elif days_to_birthday == -1:
-                    text += "\n\nBTW, my birthday was yesterday, if you want to know."
-                elif days_to_birthday == 0:
-                    text += "\n\nYou know something? Today is my birthday! Will you wish me happy birthday?"
-                elif days_to_birthday == 1:
-                    text += (
-                        "\n\nLook, so... tomorrow is my birthday. You could come by. Even without a present."
-                        " I forgive you <laughs>."
-                    )
-                return text
+            text = f"Me? {self._life_said(True, False, self_description, 3, 5)}"
+            if days_to_birthday == -2:
+                text += "\n\nI had my birthday two days ago. Too late for Happy birthday! <laughs>."
+            elif days_to_birthday == -1:
+                text += "\n\nMy birthday was yesterday, you just missed my 'Happy birthday!' <laughs>."
+            elif days_to_birthday == 0:
+                text += "\n\nToday is my birthday. You can still wish me 'happy birthday' <smiles>."
+            elif days_to_birthday == 1:
+                text += "\n\nTomorrow is my birthday, if you want to wish me happy birthday <smiles>."
+            return text
+
+        if soc < 20:
+            if days_to_birthday == 0:
+                return "Doing ok. My birthday today."
+            pool = [
+                "Doing ok. Thanks.", "Can't complain. Thanks.", "Pretty good. Thanks.", "Doing fine. Thanks.",
+            ]
+            if self.interlocutor.how_happy_with_role() == 1:
+                pool.append("Job's ok. Doing ok. Thanks.")
+            return self._pick_life(pool, 1, 1)
+        if soc < 80:
+            said = self._life_said(False, True, self_description, 2, 3)
+            text = f"Me? Thank you for asking, friend <smiles>. {said}"
+            if days_to_birthday == -2:
+                text += "\n\nMy birthday was two days ago."
+            elif days_to_birthday == -1:
+                text += "\n\nMy birthday was yesterday."
+            elif days_to_birthday == 0:
+                text += "\n\nToday is my birthday. Just saying."
+            elif days_to_birthday == 1:
+                text += "\n\nTomorrow is my birthday, by the way."
+            return text
+        said = self._life_said(True, True, self_description, 3, 5)
+        text = f"Me? You want to talk about my life? I am flattered <laughs>. {said}"
+        if days_to_birthday == -2:
+            text += "\n\nBTW, I had my birthday two days ago."
+        elif days_to_birthday == -1:
+            text += "\n\nBTW, my birthday was yesterday, if you want to know."
+        elif days_to_birthday == 0:
+            text += "\n\nYou know something? Today is my birthday! Will you wish me happy birthday?"
+        elif days_to_birthday == 1:
+            text += (
+                "\n\nLook, so... tomorrow is my birthday. You could come by. Even without a present."
+                " I forgive you <laughs>."
+            )
+        return text
 
     def talk_noobie(self) -> str:
         # Sympathy: a brush-off below 20. Sociability: the length of the answer. Once the pilot is no longer new, the
