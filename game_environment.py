@@ -45,6 +45,18 @@ class GameEnvironment:
         self.fixed_body = self.targeted_body = self.last_fixed_body = current_orbit.planets[0].moons[0]
         logger.info(f"Initial world's radius: {self.fixed_body.radius}")
 
+    def arrive_in(self, system: StellarSystem) -> None:
+        """The ship is now in `system` (it went through a Portal). Call once the ship has been placed in its frame. What
+        was about the old system is dropped: the ship is fixed to nothing, and the target and the body it was last fixed
+        to are the portal base, or else the star. The warnings of the system's Portals start again."""
+        self.nearest_system = system
+        self.fixed_body = None
+        base = system.portal_base
+        self.targeted_body = self.last_fixed_body = base if base is not None and base.is_shown else system.star
+        for portal in system.portals:
+            portal.warning_stage = 0
+            portal.checked_at = None
+
     @property
     def fixed_world(self) -> Optional[World]:
         """The fixed body when it is a world, else None (the star, or outside every fixed zone). For the code that needs

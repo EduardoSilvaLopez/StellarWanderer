@@ -26,6 +26,7 @@ from presentation.constants import CONSOLE_TOP, MAX_DEPTH, MILKY_WAY_EXPOSURE, N
 
 if TYPE_CHECKING:
     from datetime import datetime
+    from universe.artifacts.spaceships.attitude import Attitude
     from universe.artifacts.spaceships.ship import Ship
 
 PANORAMA_PATH = resource_path('textures', 'milky_way.png')
@@ -43,9 +44,10 @@ class MilkyWay:
     _failed: bool = False
 
     @staticmethod
-    def draw(width: int, height: int, ship: Ship, date_time: datetime) -> None:
+    def draw(width: int, height: int, ship: Ship, date_time: datetime, attitude: Optional[Attitude] = None) -> None:
         """Draw the sky's background into the canopy part of the window, in the colours that are already there (the
-        clear colour)."""
+        clear colour). With an `attitude` it is the sky as seen by a view of its own, unbound, at the same stellar axes
+        (the one seen through a Portal)."""
         if MILKY_WAY_EXPOSURE <= 0.0 or not MilkyWay._ready():
             return
         view_height = int(height * CONSOLE_TOP)
@@ -57,7 +59,7 @@ class MilkyWay:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GL.glMultMatrixf(ship.attitude.camera_matrix())
+        GL.glMultMatrixf((attitude or ship.attitude).camera_matrix())
         # The sphere is in the stellar frame; its axes' images in the active frame are the columns of this matrix.
         x_axis, y_axis, z_axis = ship.navigation.sky_rotation(date_time)
         GL.glMultMatrixf([

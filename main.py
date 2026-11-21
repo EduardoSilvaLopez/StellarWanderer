@@ -115,6 +115,7 @@ def center_window_on_screen(window_title: str, window_size: Tuple[int, int]) -> 
 def resize_window(width: int, height: int) -> pygame.Surface:
     """Re-create the OpenGL window at the requested size (never below MIN_SIZE)."""
     size = (max(width, MIN_SIZE[0]), max(height, MIN_SIZE[1]))
+    pygame.display.gl_set_attribute(pygame.GL_STENCIL_SIZE, 8)  # the mask of the sky seen through a Portal
     return pygame.display.set_mode(size, pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
 
 

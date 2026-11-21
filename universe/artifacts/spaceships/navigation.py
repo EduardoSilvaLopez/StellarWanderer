@@ -55,7 +55,8 @@ class Navigation:
     `attractor` and `_move_unbound`). The TRAVEL autopilot (`travel`, see travel_assist.py) flies the ship to the
     target along the long distance advice's straight line, and the ORBIT assist and it end each other. The pilot is
     told on entering and leaving such a zone (`_announce_compensation`). Near the portal base the time scale is
-    limited (`portal_base_time_limit`).
+    limited (`portal_base_time_limit`). A ship that goes through a Portal's ring is in the other system the same frame
+    (`_cross_portals`).
 
     Bind, unbind and braking thresholds are distances from the body's centre in radii (1.0 = surface). The bound
     altitude bar spans 0 to (UNBIND_RADIUS_MULTIPLE - 1.0) × radius altitude; the unbound meter spans 1.0 to
@@ -366,6 +367,7 @@ class Navigation:
             start = ship.position.as_vector()
             self._move_unbound(delta_time)
             self._collide_with_portal_base(start)
+            self._cross_portals(start)
             return
         start = ship.position.as_vector()
         ship.position.add_vector(ship.velocity.as_vector() * delta_time)
@@ -544,6 +546,45 @@ class Navigation:
             (x, y, z), velocity_after = resolved
             ship.position.set_vector((centre.x + x, centre.y + y, centre.z + z))
             ship.velocity.set_vector(velocity_after)
+
+    def _cross_portals(self, start: Vector3) -> None:
+        """Unbound: if the frame's motion, from `start` to the ship's position, went through the opening of a Portal, the
+        ship is in the other system, at the same place relative to the ring there, with its velocity and attitude
+        turned as the link turns them (`Portal.carry`), and the rest of the frame's motion done there: nothing in what
+        the pilot feels changes. The ship goes through whatever the pilot's clearance (see `Portal.crossing`). The
+        ship's old state, tied to the old system, is dropped (`GameEnvironment.arrive_in`)."""
+        ship = self.ship
+        if ship.is_docked:
+            return
+        environment = gem.current_environment
+        system = environment.nearest_system
+        end = ship.position.as_vector()
+        portal = next((candidate for candidate in system.portals if candidate.crossing(start, end) is not None), None)
+        if portal is None:
+            return
+        arrival = portal.other_end(environment.galaxy)
+        if arrival is None:
+            logger.warning(f"The Portal of {system.name} to {portal.destination} has no other end: the ship stays.")
+            return
+        destination = arrival.base.stellar_system
+
+        position = arrival.centre + portal.carry(arrival, end - portal.centre)
+        velocity = portal.carry(arrival, ship.velocity.as_vector())
+        ship.position.set_vector((position.x, position.y, position.z))
+        ship.velocity.set_vector((velocity.x, velocity.y, velocity.z))
+        attitude = ship.attitude
+        attitude.right = portal.carry(arrival, attitude.right)
+        attitude.up = portal.carry(arrival, attitude.up)
+        attitude.forward = portal.carry(arrival, attitude.forward)
+
+        self.coasting = None
+        self.compensating = None
+        if self.orbit is not None:
+            self.orbit.end(None)
+        if self.travel is not None:
+            self.travel.end(None)
+        environment.arrive_in(destination)
+        logger.info(f"The ship went through the Portal of {system.name} into {destination.name}.")
 
     def _collide_with_outposts(self, start: Vector3) -> None:
         """Bound, the ship's hull comes to rest against the buildings of the outposts of its world (see OutpostSolid),

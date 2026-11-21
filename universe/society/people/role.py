@@ -36,6 +36,26 @@ class Role:
         return self.shifts + (1 if self.vacation > 0 else 0)
 
 
+BUILDER = Role(
+    'person',
+    'Builder',
+    reputation_bonus=0,
+    personality_bonus=(0, 0, 0),  #loy, emp, soc
+    ideal_for=(40, 45, 50),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
+    )
+BUREAUCRAT = Role(
+    'bureaucrat',
+    'Bureaucrat',
+    reputation_bonus=10,
+    personality_bonus=(0, -10, 10),  #loy, emp, soc
+    ideal_for=(50, 45, 55),
+    shifts=3,
+    vacation=0.33,
+    portrait="hydroponic",
+    )
 COM_OFFICER = Role(
     'person',
     'Communication Officer',
@@ -53,16 +73,6 @@ DOCKMASTER = Role(
     ideal_for=(65, 45, 50),
     shifts=3,
     vacation=0.33,
-    )
-BUREAUCRAT = Role(
-    'bureaucrat',
-    'Bureaucrat',
-    reputation_bonus=10,
-    personality_bonus=(0, -10, 10),  #loy, emp, soc
-    ideal_for=(50, 45, 55),
-    shifts=3,
-    vacation=0.33,
-    portrait="hydroponic",
     )
 ENGINEER = Role(
     'engineer',

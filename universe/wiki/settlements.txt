@@ -1,0 +1,36 @@
+Settlement is the generic name for every place where people live, even if temporarily.
+
+Model for population:
+https://docs.google.com/spreadsheets/d/133_SVh4LD7VqrFjkqI0FKpis4muumoG0LG3I1auNfCw/edit?gid=1846207695#gid=1846207695
+
+Portal base:
+1. Pop 29: Com. Officers, Dockmasters, 2 x Stevedores, Gunners, Janitors, Sec. Officers, Komisar, Ringmaster
+
+Outposts: Size 1-6
+1. Pop 9: Simple building. Com. Officers, Dockmasters, Coordinator
+2. Pop 13: + Stevedores. Aspect: Concrete saquere, landing spot.
+3. Pop 22: + Stevedores, Security, Komisar. Aspect: Landing pad, middle building, antenna.
+4. Pop 35: + 2 x Builders, Specialists with Chef. Aspect: 2nd landing pad, Antenna masts, Roadside Ad.
+5. Pop 61
+6. Pop 105
+
+Havens: Size 7-12
+7. Pop 178
+8. Pop 300?
+9. Pop 500?
+10. Pop 1000?
+11. Pop 2000?
+12. Pop 4000?
+
+Township: Size 13-18
+13. Pop 1000?
+14. Pop 1500?
+15. Pop 2200?
+16. Pop 3300?
+17. Pop 5000?
+18. Pop 7000?
+19. Pop 10000?
+
+City: Size 19-24
+
+Metropolis: 25+

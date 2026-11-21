@@ -10,7 +10,7 @@ the sky. Three things follow from it, in the order of the frame:
     drawn after it, are not darkened.
   * the ring (`draw`), in the 3D pass, with its own perspective as the base has: a band of white light with a halo,
     whose band never gets narrower than a pixel, and which is not drawn at all while the ring is under a pixel across.
-    Its opening is drawn as the rest of the sky, from both sides.
+    Its opening is a window to the sky of the system at the other end of the link (`PortalWindow`), from both sides.
   * the cockpit (`tint_cockpit`): white added to the opaque pixels of the cockpit, as the star's colour is
     (presentation/scene/starlight.py).
 
@@ -30,6 +30,7 @@ from OpenGL import GL, GLU
 from presentation.constants import MIN_VISIBLE_PX, NEAR_CLIP, VIEW_VERTICAL_FOV_RADIANS
 from presentation.cockpit.instruments.common import view_geometry
 from .portal_base_gl import PortalBaseGl
+from .portal_window import PortalWindow
 
 if TYPE_CHECKING:
     from universe.artifacts.settlements.portal import Portal
@@ -55,8 +56,8 @@ class PortalGl:
     WASH_GAIN = 3.7  # the dark wash saturates at 1/WASH_GAIN of the light
     GLOW_START_PX = 0.1  # the ring's diameter on the screen where its glow begins: far beyond the ring's first pixel
     GLOW_FULL_PX = 200.0  # the ring's diameter on the screen where its glow is full
-    GLOW_STRENGTH = 0.3  # of the glow's brightness
-    TINT_MAX = 115  # the most white added to the cockpit
+    GLOW_STRENGTH = 0.12  # of the glow's brightness: low enough for the window in the ring to be seen
+    TINT_MAX = 45  # the most white added to the cockpit: the same reason
 
     # region Light
     @staticmethod
@@ -114,6 +115,7 @@ class PortalGl:
             if thing is base:
                 PortalBaseGl.draw(width, height, ship, environment)
             else:
+                PortalWindow.draw(width, height, ship, environment, thing)
                 PortalGl.draw(width, height, ship, environment, thing)
     # endregion
 

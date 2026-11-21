@@ -33,6 +33,7 @@ from universe.structure.fixed_stars import Cell
 
 if TYPE_CHECKING:
     from universe.artifacts.settlements.portal_base import PortalBase
+    from universe.structure.galaxy import Galaxy
 
 # Physical constants, SI (CODATA 2018).
 SPEED_OF_LIGHT = 299792458.0  # m/s
@@ -62,6 +63,7 @@ class Portal:
         self.base: PortalBase = base
         self.index: int = index
         self.destination: Cell = destination
+        self._other_end: Optional[Portal] = None  # found the first time it is asked for (see other_end)
         self.seed: int = seeds.derive(base.seed, 'portal')
         # The direction round the axis: the first Portal's is drawn from the seed (the same in a system whenever it is
         # made again), and the others are the corners of the regular polygon from it.
@@ -84,6 +86,36 @@ class Portal:
         tangent = np.array(tuple(self.tangent))
         axis = np.array([0.0, 0.0, 1.0])
         return centre + self.RADIUS * (np.cos(angle)[:, None] * axis + np.sin(angle)[:, None] * tangent)
+
+    def other_end(self, galaxy: Galaxy) -> Optional[Portal]:
+        """The Portal at the other end of the link, in the system it leads to (which is made if it was not yet). None if
+        there is no such Portal."""
+        if self._other_end is None:
+            system = galaxy.system_of_key(' '.join(str(coordinate) for coordinate in self.destination))
+            here = self.base.stellar_system.star.cell
+            if system is not None:
+                self._other_end = next((portal for portal in system.portals if portal.destination == here), None)
+        return self._other_end
+
+    def crossing(self, start: Vector3, end: Vector3) -> Optional[float]:
+        """The fraction of a straight move from the stellar-frame `start` to `end` at which it goes through the opening
+        of the ring, from either side; None if it stays on one side or passes outside the ring. A ship that goes
+        through always crosses: the Portal is open to everyone, and only the base's defence (PortalDefence) may stop it."""
+        before = (start - self.centre).dot(self.normal)
+        after = (end - self.centre).dot(self.normal)
+        if (before <= 0.0) == (after <= 0.0):
+            return None
+        fraction = before / (before - after)
+        point = start + (end - start) * fraction
+        return fraction if (point - self.centre).length() <= self.RADIUS else None
+
+    def carry(self, other: Portal, vector: Vector3) -> Vector3:
+        """A displacement or a direction in the stellar frame at this Portal, as it is at the `other` end of the link:
+        turned about the base axis (the z axis, in both systems) by the difference of the two Portals' directions. Each
+        end is placed as its own base and star ask, as if both stars were on one axis, so this is all the link turns."""
+        turn = other.azimuth - self.azimuth
+        cosine, sine = math.cos(turn), math.sin(turn)
+        return Vector3(vector.x * cosine - vector.y * sine, vector.x * sine + vector.y * cosine, vector.z)
 
     def arrival_time(self, position: Vector3, velocity: Vector3, radius: float) -> Optional[float]:
         """The seconds until a ship at the stellar-frame `position`, moving in a straight line at `velocity`, is within

@@ -285,7 +285,7 @@ class OpenGLGui:
         position = np.array([ship.position.x, ship.position.y, ship.position.z])
         seconds = (environment.date_time - environment.EPOCH).total_seconds()
         kind = (width, height, ship.is_bound, id(environment.targeted_body), id(environment.fixed_world),
-                player.show_orbits)
+                player.show_orbits, id(environment.nearest_system))
         last = self._sky_state
         altitude = ship.navigation.altitude() if ship.is_bound else 0.0
         high = altitude > self.SKY_HIGH_ALTITUDE

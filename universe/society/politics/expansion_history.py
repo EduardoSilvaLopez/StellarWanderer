@@ -80,7 +80,7 @@ class SystemHistory:
     NEW_STAR_SIG = 5 * SECS_PER_YEAR
     UPGRADE_AVG = 3 * SECS_PER_YEAR / 12
     UPGRADE_SIG = 3 * SECS_PER_YEAR / 120
-    SIZE_OF_CITY = 12
+    SIZE_OF_CITY = 13
 
     def __init__(self, full_history: ExpansionHistory, star: Star, founded_at: datetime,
                  origin: Optional[SystemHistory], index: int) -> None:

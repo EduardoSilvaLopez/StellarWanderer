@@ -21,7 +21,9 @@ from presentation.constants import (
 )
 
 if TYPE_CHECKING:
+    from common.vector3 import Vector3
     from universe.bodies.star import Star
+    from universe.artifacts.spaceships.attitude import Attitude
     from universe.artifacts.spaceships.ship import Ship
     from game_environment import GameEnvironment
 
@@ -86,12 +88,17 @@ def star_rgba(width: int, height: int, centre_x: float, centre_y: float, disc_px
 
 def view_of(environment: GameEnvironment, ship: Ship, width: int, height: int) -> Optional[StarView]:
     """Where the targeted body's star is on the screen, or None when it is not in front of the ship."""
-    from presentation.cockpit.instruments.common import view_geometry, project_to_camera
     body = environment.targeted_body
-    star = body.stellar_system.star
     star_vector = ship.navigation.direction_to_star(body, environment.date_time)
+    return view_from(body.stellar_system.star, star_vector, ship.attitude, width, height)
+
+
+def view_from(star: Star, star_vector: Vector3, attitude: Attitude, width: int, height: int) -> Optional[StarView]:
+    """Where `star`, in the direction `star_vector` from the viewer, is on the screen for a view with `attitude`, or
+    None when it is not in front of it."""
+    from presentation.cockpit.instruments.common import view_geometry, project_direction
     _, horizon_y, focal_length_px = view_geometry(height)
-    projected = project_to_camera(ship, star_vector, width, horizon_y, focal_length_px)
+    projected = project_direction(attitude, star_vector, width, horizon_y, focal_length_px)
     if projected is None:
         return None
     disc_px = focal_length_px * math.atan(star.radius / star_vector.length())

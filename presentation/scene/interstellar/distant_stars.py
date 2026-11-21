@@ -13,7 +13,10 @@ from universe.structure.constants import ABSOLUTE_MAGNITUDE_DISTANCE_LY, FIXED_S
 from presentation.constants import FIXED_STAR_DOT_RADIUS_PX, NAKED_EYE_LIMIT_MAGNITUDE, NEAR_CLIP
 
 if TYPE_CHECKING:
+    from common.vector3 import Vector3
     from game_environment import GameEnvironment
+    from universe.artifacts.spaceships.attitude import Attitude
+    from universe.bodies.star import Star
     from presentation.scene.interplanetary.local_star import StarView
     from universe.artifacts.spaceships.ship import Ship
 
@@ -28,35 +31,49 @@ class DistantStars:
     the sun's hole in the sky hides a star behind the sun, and the ground hides the stars below the horizon.
 
     The range, brightness and in-front tests run on numpy arrays of all the stars, made once for the galaxy's list
-    of fixed stars (their positions do not change); only the stars that pass are projected one by one.
+    of fixed stars of each system (their positions do not change); only the stars that pass are projected one by one.
+    The sky seen through a Portal is the one of the system at its other end (`dots_seen_from`).
     """
 
-    _source: Optional[list] = None  # the galaxy's list the arrays were made from
-    _positions: Optional[np.ndarray] = None  # (n, 3), in meters, in the stellar frame
-    _absolute_magnitudes: Optional[np.ndarray] = None  # (n,)
-    _colours: list = []  # of each star
+    # The arrays of each sky that has been drawn (the ship's, and the ones seen through the Portals), by the cell of the
+    # star at the origin of the sky: (the galaxy's list they were made from, positions (n, 3) in meters in the stellar
+    # frame, absolute magnitudes (n,), the colour of each star).
+    _arrays: dict[tuple, tuple[list, np.ndarray, np.ndarray, list]] = {}
     _squares: Optional[tuple] = None  # the window size, the vertices and the colours of the squares last made
 
     @staticmethod
-    def _star_arrays(environment: GameEnvironment) -> tuple[list, np.ndarray, np.ndarray]:
-        """The galaxy's fixed stars, their positions and their absolute magnitudes, as arrays in the same order."""
-        stars = environment.galaxy.fixed_star_positions()
-        if DistantStars._source is not stars:
-            DistantStars._source = stars
-            DistantStars._positions = np.array([position for _, position in stars], dtype=float).reshape(-1, 3)
-            DistantStars._absolute_magnitudes = np.array([star.absolute_magnitude for star, _ in stars], dtype=float)
-            DistantStars._colours = [star.color for star, _ in stars]
-        return stars, DistantStars._positions, DistantStars._absolute_magnitudes
+    def _star_arrays(environment: GameEnvironment, origin: Star) -> tuple[np.ndarray, np.ndarray, list]:
+        """The fixed stars of the sky of the system of `origin`: their positions, their absolute magnitudes and their
+        colours, in the same order."""
+        stars = environment.galaxy.fixed_star_positions(origin)
+        cached = DistantStars._arrays.get(origin.cell)
+        if cached is None or cached[0] is not stars:
+            cached = DistantStars._arrays[origin.cell] = (
+                stars, np.array([position for _, position in stars], dtype=float).reshape(-1, 3),
+                np.array([star.absolute_magnitude for star, _ in stars], dtype=float), [star.color for star, _ in stars])
+        return cached[1], cached[2], cached[3]
 
     @staticmethod
     def visible_dots(environment: GameEnvironment, ship: Ship, w: int, h: int) -> list[tuple[tuple, tuple[int, int]]]:
         """(colour, screen position) for every fixed star in range, bright enough and in front of the camera."""
+        date_time = environment.date_time
+        basis = None
+        if ship.is_bound:
+            east, up, north = environment.fixed_world.surface_basis(ship.position.x, ship.position.z, date_time)
+            basis = np.array([[v.x, v.y, v.z] for v in (east, up, north)])
+        return DistantStars.dots_seen_from(environment, environment.nearest_system.star,
+                                           ship.navigation.stellar_position(date_time), ship.attitude, w, h, basis)
+
+    @staticmethod
+    def dots_seen_from(environment: GameEnvironment, origin: Star, position: Vector3, attitude: Attitude, w: int,
+                       h: int, surface_basis: Optional[np.ndarray] = None) -> list[tuple[tuple, tuple[int, int]]]:
+        """The same for a view at `position` of the sky of the system of `origin` (stellar frame, star `origin` at the
+        origin), looking with `attitude`. `surface_basis` (east, up, north as rows) is given while bound, when the
+        directions go through the surface frame; unbound, a star behind the view is not seen."""
         from presentation.cockpit.instruments.common import view_geometry
         _, horizon_y, focal_length_px = view_geometry(h)
-        date_time = environment.date_time
-        ship_position = ship.navigation.stellar_position(date_time)
-        stars, positions, absolute_magnitudes = DistantStars._star_arrays(environment)
-        offsets = positions - np.array([ship_position.x, ship_position.y, ship_position.z])
+        positions, absolute_magnitudes, colours = DistantStars._star_arrays(environment, origin)
+        offsets = positions - np.array([position.x, position.y, position.z])
         distance_squared = np.einsum('ij,ij->i', offsets, offsets)
         # The same brightness as Star.apparent_magnitude, for every star at once.
         distance_ly = np.sqrt(distance_squared) / LIGHT_YEAR_M
@@ -65,20 +82,17 @@ class DistantStars:
             (apparent_magnitudes <= NAKED_EYE_LIMIT_MAGNITUDE)
         # Unbound, a star behind the ship is not visible: its forward component is the dot product with the ship's
         # forward axis.
-        if not ship.is_bound:
-            forward = ship.attitude.forward
+        if surface_basis is None:
+            forward = attitude.forward
             visible &= offsets @ np.array([forward.x, forward.y, forward.z]) > 0.0
         indices = np.flatnonzero(visible)
         if not len(indices):
             return []
         # What Navigation.direction_to_point and project_to_camera do, for all the stars at once: the direction in the
-        # active frame (bound, through the surface basis), then onto the ship's axes and the screen.
+        # active frame (bound, through the surface basis), then onto the view's axes and the screen.
         vectors = offsets[indices]
-        if ship.is_bound:
-            east, up, north = environment.fixed_world.surface_basis(ship.position.x, ship.position.z, date_time)
-            basis = np.array([[v.x, v.y, v.z] for v in (east, up, north)])
-            vectors = np.stack([vectors[:, 0], -vectors[:, 1], vectors[:, 2]], axis=1) @ basis.T
-        attitude = ship.attitude
+        if surface_basis is not None:
+            vectors = np.stack([vectors[:, 0], -vectors[:, 1], vectors[:, 2]], axis=1) @ surface_basis.T
         axes = np.array([[v.x, v.y, v.z] for v in (attitude.right, attitude.up, attitude.forward)])
         camera = vectors @ axes.T
         forward = camera[:, 2]
@@ -88,8 +102,7 @@ class DistantStars:
         screen_y = horizon_y - focal_length_px * camera[:, 1] / safe
         margin = 10 * w
         shown = in_front & (np.abs(screen_x - w / 2) <= margin) & (np.abs(screen_y - horizon_y) <= margin)
-        return [(DistantStars._colours[indices[i]], (int(screen_x[i]), int(screen_y[i])))
-                for i in np.flatnonzero(shown)]
+        return [(colours[indices[i]], (int(screen_x[i]), int(screen_y[i]))) for i in np.flatnonzero(shown)]
 
     @staticmethod
     def draw(w: int, h: int, environment: GameEnvironment, ship: Ship, view: Optional[StarView],
@@ -105,15 +118,28 @@ class DistantStars:
             if view is not None:
                 dots = [(colour, (x, y)) for colour, (x, y) in dots
                         if math.hypot(x - int(view.x), y - int(view.y)) > hidden]
-            radius = FIXED_STAR_DOT_RADIUS_PX
-            corners = np.array([(-radius, -radius), (radius + 1, -radius), (radius + 1, radius + 1),
-                                (-radius, radius + 1)], dtype=np.float32)
-            centres = np.array([centre for _, centre in dots], dtype=np.float32).reshape(-1, 1, 2)
-            colours = np.array([colour[:3] for colour, _ in dots], dtype=np.uint8).reshape(-1, 1, 3)
-            cache = DistantStars._squares = (
-                (w, h), np.ascontiguousarray((centres + corners).reshape(-1, 2)),
+            cache = DistantStars._squares = ((w, h), *DistantStars._squares_of(dots))
+        DistantStars.draw_squares(w, h, cache[1], cache[2])
+
+    @staticmethod
+    def _squares_of(dots: list[tuple[tuple, tuple[int, int]]]) -> tuple[np.ndarray, np.ndarray]:
+        """The vertices and the colours of the small squares of the dots."""
+        radius = FIXED_STAR_DOT_RADIUS_PX
+        corners = np.array([(-radius, -radius), (radius + 1, -radius), (radius + 1, radius + 1),
+                            (-radius, radius + 1)], dtype=np.float32)
+        centres = np.array([centre for _, centre in dots], dtype=np.float32).reshape(-1, 1, 2)
+        colours = np.array([colour[:3] for colour, _ in dots], dtype=np.uint8).reshape(-1, 1, 3)
+        return (np.ascontiguousarray((centres + corners).reshape(-1, 2)),
                 np.ascontiguousarray(np.broadcast_to(colours, (len(dots), 4, 3)).reshape(-1, 3)))
-        _, vertices, colours = cache
+
+    @staticmethod
+    def draw_window(w: int, h: int, dots: list[tuple[tuple, tuple[int, int]]]) -> None:
+        """The dots of a sky seen through a Portal (see PortalWindow), made again at every frame."""
+        DistantStars.draw_squares(w, h, *DistantStars._squares_of(dots))
+
+    @staticmethod
+    def draw_squares(w: int, h: int, vertices: np.ndarray, colours: np.ndarray) -> None:
+        """Draws the squares (`_squares_of`) over the window."""
         if not len(vertices):
             return
         GL.glViewport(0, 0, w, h)

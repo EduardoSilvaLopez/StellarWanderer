@@ -14,6 +14,7 @@ from presentation.constants import (
 )
 
 if TYPE_CHECKING:
+    from universe.artifacts.spaceships.attitude import Attitude
     from universe.artifacts.spaceships.ship import Ship
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,13 @@ def project_to_camera(ship: Ship, vector: Vector3, w: int, horizon_y: int,
     camera but have a huge sideways offset (e.g. a world very far away, nearly
     perpendicular to the view), which would otherwise project to a screen coordinate
     large enough to overflow pygame's Rect."""
-    right, cam_up, cam_forward = ship.attitude.camera_components(vector)
+    return project_direction(ship.attitude, vector, w, horizon_y, focal_length_px)
+
+
+def project_direction(attitude: Attitude, vector: Vector3, w: int, horizon_y: int,
+                      focal_length_px: float) -> Optional[Tuple[float, float]]:
+    """`project_to_camera` for any attitude, not only the ship's (the sky seen through a Portal has its own)."""
+    right, cam_up, cam_forward = attitude.camera_components(vector)
     if cam_forward <= NEAR_CLIP:
         return None
     screen_x = w / 2 + focal_length_px * right / cam_forward

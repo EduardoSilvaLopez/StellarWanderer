@@ -9,7 +9,8 @@ so two sectors never clash; inside a sector, a star that lands on a cell already
 A sector is made the first time something asks for it and then kept. Its stars depend only on the galaxy seed and its
 own index, never on what was asked before, so the galaxy reads the same in any order. Nothing is saved.
 
-The sky shows the sectors within SECTOR_RADIUS of the initial star's sector (Galaxy.fixed_star_positions). The history
+The sky shows the sectors within SECTOR_RADIUS of the sector of the star of the system the ship is in
+(Galaxy.fixed_star_positions). The history
 reads the stars wherever its settling systems look (universe/society/politics/settling.py), so any sector can be asked
 for.
 

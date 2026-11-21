@@ -53,6 +53,7 @@ class PortalBase(Body, Settlement):
     def has_settlements(self) -> bool:
         return True
     kind = SettlementKind.PORTAL_BASE
+    TODO_FROM_SIZE = 2
     MOUTH_DEPTH = 48.0  # m, from the ring's centre to the mouth of the hangar, at the reference radius (100 m)
     BERTH_CLEARANCE = 200.0  # m, how far in front of the mouth the ship is put when the pilot leaves
     DOCK_MAX_SPEED = 1.0  # m/s relative to the base: the ship docks only below this, inside the docking place

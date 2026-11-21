@@ -12,7 +12,7 @@ from universe.structure import seeds
 from universe.artifacts.settlements.focus_weights import focus_weights
 from universe.artifacts.settlements.outpost_solid import OutpostSolid, Part
 from universe.society.people.role import \
-    BUREAUCRAT, CAPTAIN, ENGINEER, FARMER, KOMISAR, \
+    BUILDER, BUREAUCRAT, CAPTAIN, ENGINEER, FARMER, KOMISAR, \
     RESEARCHER, SECURITY, SMITH, STEVEDORE, Role
 from universe.bodies.rocky_world import RockyWorld
 from universe.artifacts.settlements.settlement_kind import SettlementKind
@@ -60,6 +60,7 @@ class Outpost(Settlement):
     """
 
     kind = SettlementKind.OUTPOST
+    TODO_FROM_SIZE = 4
     HEIGHT = 6.0
     WIDTH = 24.0
     DEPTH = 12.0
@@ -83,9 +84,13 @@ class Outpost(Settlement):
     ANNEX_OVERLAP = 2.0  # m, how far the annex reaches into the building from its back wall
     ANNEX_CENTRE_Z = -DEPTH / 2.0 + ANNEX_OVERLAP - ANNEX_DEPTH / 2.0  # m, along local z
     # The teams each size adds to the staff, from that size on: a size 2 outpost has one team of stevedores, a size 3
-    # one more and a Komisar (a leader on duty all the time, as at the portal base; the coordinator still decides when
-    # a pilot may leave).
-    SIZE_GENERIC_TEAMS: Dict[int, Dict[Role, int]] = {2: {STEVEDORE: 1}, 3: {STEVEDORE: 1, KOMISAR: 1}}
+    # one more, a Komisar (a leader on duty all the time, as at the portal base; the coordinator still decides when
+    # a pilot may leave) and a team of security; from size 4, two teams of builders.
+    SIZE_GENERIC_TEAMS: Dict[int, Dict[Role, int]] = {
+        2: {STEVEDORE: 1},
+        3: {STEVEDORE: 1, KOMISAR: 1, SECURITY: 1},
+        4: {BUILDER: 2},
+    }
     # The teams a size adds from that size on, by the outpost's focus: from size 4, one full team of a role of its own.
     SIZE_FOCUS_TEAMS: Dict[int, Dict[SettlementFocus, Dict[Role, int]]] = {
         4: {

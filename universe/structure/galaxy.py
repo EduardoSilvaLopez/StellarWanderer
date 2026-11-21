@@ -37,7 +37,8 @@ class Galaxy:
                     f"{self.initial_star.position} ly.")
         self.stars = self.history.stars
         self.tidings: Tidings = Tidings(self.history)
-        self._fixed_star_positions: Optional[list[tuple[Star, tuple[float, float, float]]]] = None
+        # The sky of each system visited, by its star's cell (see fixed_star_positions)
+        self._fixed_star_positions: dict[tuple[int, int, int], list[tuple[Star, tuple[float, float, float]]]] = {}
         self.stellar_systems: List[StellarSystem] = []
         self.saved_alterations: Optional[dict] = saved_alterations
         self.is_altered: bool = saved_alterations is not None and saved_alterations != {}
@@ -109,17 +110,19 @@ class Galaxy:
             raise ValueError(f"No star at galactic position {position}.")
         return star
 
-    def fixed_star_positions(self) -> list[tuple[Star, tuple[float, float, float]]]:
-        """Each star of the sky (the sectors around the initial star) except the initial one, with its position in the
-        stellar frame of the initial star, in meters. The stars do not move, so the positions are worked out once."""
-        if self._fixed_star_positions is None:
-            centre = region_of(self.initial_star.position, SECTOR_SIZE)
-            self._fixed_star_positions = [
-                (star, stellar_position(star.position, self.initial_star.position))
+    def fixed_star_positions(self, origin: Star) -> list[tuple[Star, tuple[float, float, float]]]:
+        """Each star of the sky of the system of `origin` (the sectors around it) except `origin` itself, with its
+        position in that system's stellar frame, in meters. The stars do not move, so the list is worked out once for
+        each system, and it is the same list every time (its identity says the sky has not changed)."""
+        positions = self._fixed_star_positions.get(origin.cell)
+        if positions is None:
+            centre = region_of(origin.position, SECTOR_SIZE)
+            positions = self._fixed_star_positions[origin.cell] = [
+                (star, stellar_position(star.position, origin.position))
                 for star in self.stars.stars_around(centre, SECTOR_RADIUS)
-                if star.cell != self.initial_cell
+                if star.cell != origin.cell
             ]
-        return self._fixed_star_positions
+        return positions
     # endregion
 
     # region Alterations

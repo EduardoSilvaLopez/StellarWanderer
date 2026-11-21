@@ -23,7 +23,7 @@ from universe.society.people.conversation import Conversation
 from universe.society.people.person import Person
 from universe.structure import seeds
 from universe.society.people.role import (
-    BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, FARMER,
+    BUILDER, BUREAUCRAT, CAPTAIN, COM_OFFICER, COORDINATOR, DOCKMASTER, ENGINEER, FARMER,
     GUNNER, JANITOR, KOMISAR, RESEARCHER, RINGMASTER, SECURITY, SMITH, STEVEDORE,
 )
 from universe.society.people.player import Player
@@ -160,6 +160,7 @@ class SettlementChat(Conversation):
             'asteroid, asteroids': self.talk_asteroid,
             'base': self.talk_base,
             'belt': self.talk_belt,
+            'builder, builders': self.talk_builder,
             'bureaucrat, bureaucrats': self.talk_bureaucrat,
             'communication officer, communication officers': self.talk_communication_officer,
             'captain': self.talk_protection,
@@ -1563,7 +1564,6 @@ class SettlementChat(Conversation):
         else:
             return f"Yes, I heard that {text}"
 
-
     def talk_united_diversity(self) -> str:
         # Political conversation, about the other entity (see talk_political). Everybody lives in Those-Who-Share (see
         # get_title), so the more loyal they are, the less they like United Diversity. Empathy weighs less: the less
@@ -1751,6 +1751,57 @@ class SettlementChat(Conversation):
             return my_random.choice(long)
         return my_random.choice(short)
 
+    def talk_builder(self) -> str:
+        if self.interlocutor.role is BUILDER:
+            return self.talk_of_own_role(
+                (
+                    "Dig. Drill. Seal.",
+                    "Nanodust gets into everything.",
+                    "Walls first. Then people.",
+                    "Stars through the dome. Nice.",
+                    "One mistake and you're dead.",
+                    "We made this <points around>.",
+                    "It's not a wall <points out>. It's many.",
+                    "Walls talk. We listen.",
+                    "Every world is different for a digger.",
+                ),
+                (
+                    "Dots and lines, yes? You travel along the lines. We make the dots.",
+                    "We drill, we seal, we pour. Every wall here has passed through our hands.",
+                    "The sensors tell us where a wall is weak, long before anyone sees a crack. The job never ends.",
+                    "Ask the rock, not the people, what it will stand. The rock always has its say.",
+                    "Out on the surface we see the stars while we work. Not many jobs give you that.",
+                    "Every habitat is different: temperature, density, tectonics. We learn each one before we build.",
+                    "One day we are sweating our suits through poisonous nanodust. Three months later you walk your"
+                    " kid playing in the same spot.",
+                    "It's not easy. Radiation, storms, pressure, gas chambers, tectonics, nanodust, corrosion. But"
+                    " it's satisfactory. We makes homes.",
+                    "Every world is different, you can't imagine how different. The first thing your next team asks"
+                    " you. Where exactly have you worked already?"
+                ),
+                (
+                    "It is a strange sensation, going with the drilling machines through poisonous dust protected by"
+                    " a full suit in the vacuum... and some months later you are touching the walls in that"
+                    " very same spot with your naked skin.",
+                    "You pilots are right. Space wants to kill us. Not only open space, the worlds too. Nanodust,"
+                    " landslides, pockets of gas, corrosive materials. At the other side of the covering you touch"
+                    " and see, there are layers and more layers of carefully chosen isolation.",
+                    "Walls speak to us. That's why we don't just come, build and go. Some of us must remain here."
+                    " There are sensors, and we install tubes of special materials too, and we have our stuff. We"
+                    " know what is going on, so that we can seal sections and repair them long before any of you"
+                    " notices anything.",
+                    "Working the surface is the best and the worst. Storms and radiation, yes. But you see the stars"
+                    " while working. You imagine the dome. People will spend centuries looking at that exact line of"
+                    " horizon while sightseeing. We are the first to see it and know that.",
+                    "It's a job... and it's dozens of jobs. The first thing your team will ask you is, in which worlds"
+                    " did you work before. Temperature. Density. Tectonics. Pressure. Composition. Different habitats"
+                    " need wildly different approaches. And mistakes can kill you.",
+                ),
+            )
+        return (
+            "Administration, inspection, requests, complaints... to keep the machine of the Community going."
+        )
+
     def talk_bureaucrat(self) -> str:
         if self.interlocutor.role is BUREAUCRAT:
             return self.talk_of_own_role(
@@ -1778,8 +1829,8 @@ class SettlementChat(Conversation):
                     " write.\n\nDon't ask me to bend the rules for you, ok? I just follow the process.",
                     "Everybody has a file, and every file has a stamp. I know who waited longest and who got through"
                     " first. We don't say it aloud, but we notice it.",
-                    "To care that things are done propertly. Even more important in the frontier than elsewhere."
-                    " It saves lifes. And also a constructive concern or complaint must be heard and handled."
+                    "To care that things are done properly. Even more important in the frontier than elsewhere."
+                    " It saves lives. And also a constructive concern or complaint must be heard and handled."
                     " Good ideas can come from anywhere.",
                 ),
             )

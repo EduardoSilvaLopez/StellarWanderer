@@ -64,6 +64,8 @@ class Settlement(Updatable):
     roles: Dict[Role, int] = {COM_OFFICER: 1, DOCKMASTER: 1, COORDINATOR: 1}
     # The roles the pilot can call on in their office (the Offices of the settlement screen), in the order shown.
     offices: Tuple[Role, ...] = (COORDINATOR,)
+    # The size from which a kind's effects are not made yet: a visit then shows a TODO message (see prepare).
+    TODO_FROM_SIZE: int
     # The kind of settlement: what the missions' terms are looked up by (see settlement_kind.py).
     kind: SettlementKind
     name: str  # each kind sets its own name
@@ -347,9 +349,16 @@ class Settlement(Updatable):
 
     # region Visits
     def prepare(self) -> Settlement:
-        ''' Prepare for visit.'''
+        ''' Prepare for visit. Also called when the Km2 with the settlement is built and when a save loads.'''
         if self.size >= 5:  # no effect of sizes from 5 on exists yet: this marks where one is to be made
             logger.error(f"Size {self.size} for {self.kind.value}")
+        if self.size >= self.TODO_FROM_SIZE:
+            from common.messages import Message, show_message
+            show_message(Message(
+                title='TODO',
+                text=f"{self.address()} is size {self.size}. Its effects from size {self.TODO_FROM_SIZE} on are not"
+                     " made yet.",
+            ))
         self.generate_staff()
         shift = gem.current_environment.date_time.hour // 8
         self._pick_all_on_duty(gem.current_environment.date_time)
