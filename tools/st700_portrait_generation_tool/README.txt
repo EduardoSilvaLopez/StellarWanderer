@@ -117,6 +117,30 @@ Open  st700_portrait_templates.json  with Notepad. It contains:
                   The tag is used in file names (latin), the word in the
                   prompt (Latino). Note black and white are lowercase in the
                   prompts, as in your earlier sets. Add a line to add a group.
+  ethnic_rules    extra wording for particular ethnic groups. Currently:
+                    - Arab and Indian, female and androgyne: prompt gets
+                      "with uncovered hair," before the clothes and
+                      "Her hair is visible." ("Their hair is visible." for
+                      androgyne) at the end; negative prompt:
+                      headscarf, hijab, veil, head covering.
+                    - Indian, all genders: negative prompt: bindi.
+                    - Sikh, young to old, all genders: "with a turban,". In
+                      UNIFORM prompts the turban replaces the peaked cap
+                      ("an olive turban with a red star on it").
+                    - Sikh children and teens: no turban wording; negative
+                      prompt: turban.
+                  To change any wording, edit the text in the file.
+
+                  ABOUT THE NEGATIVE PROMPT: Perchance has no visible box for
+                  it, but every image request carries a "negativePrompt"
+                  field. The tool puts the negative text there and prints
+                  "negative prompt ... added to N generation request(s)" so you
+                  can see it was sent. HOWEVER, in two test batches (a red hat
+                  with negative "hat", and an apple with negative "red") the
+                  generator showed no visible effect, so it may be ignored or
+                  weak. Check the first results of each group. If a negative
+                  does not work, the only reliable lever is the prompt text
+                  itself (positive wording such as "with uncovered hair").
   gender_class    which gender uses which wording. Right now "androgyne" is
                   treated like "female" for age words and clothing, so mature
                   and old androgyne wear a blouse, and young androgyne is

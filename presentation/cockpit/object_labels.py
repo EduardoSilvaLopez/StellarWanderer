@@ -1,4 +1,4 @@
-"""Labels for visible objects (star, portal base, all worlds, and the asteroids of the ongoing missions) showing name
+"""Labels for visible objects (star, portal base, Portals, all worlds, and the asteroids of the ongoing missions) showing name
 and compact distance."""
 
 from __future__ import annotations
@@ -93,8 +93,8 @@ class ObjectLabels:
     @staticmethod
     def _draw_body_labels(surface: pygame.Surface, label_font: FallbackFont, w: int, h: int, horizon_y: int,
                           focal_length_px: float, environment: GameEnvironment, ship: Ship) -> None:
-        """The star, the portal base, every world, and the asteroids of the ongoing missions, of the targeted body's
-        system (unbound). A body the pilot has hidden gets no label."""
+        """The star, the portal base, its Portals, every world, and the asteroids of the ongoing missions, of the
+        targeted body's system (unbound). A body the pilot has hidden gets no label."""
         body = environment.targeted_body
         system = body.stellar_system
 
@@ -116,6 +116,16 @@ class ObjectLabels:
             if base.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
                 label_surf, rect = ObjectLabels._render_label(
                     label_font, base.name, format_compact_distance(base_vector.length()),
+                    int(projected[0]), int(projected[1])
+                )
+                surface.blit(label_surf, rect)
+
+        for portal in system.portals:  # the label hangs at the ring's centre
+            portal_vector = portal.centre - ship.position.as_vector()
+            projected = project_to_camera(ship, portal_vector, w, horizon_y, focal_length_px)
+            if portal.is_shown and projected is not None and ObjectLabels._in_windshield(projected, w, h):
+                label_surf, rect = ObjectLabels._render_label(
+                    label_font, portal.name, format_compact_distance(portal_vector.length()),
                     int(projected[0]), int(projected[1])
                 )
                 surface.blit(label_surf, rect)

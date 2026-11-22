@@ -1603,7 +1603,7 @@ class SettlementChat(Conversation):
         if soc < 20:
             return text
         if soc < 80:
-            return f"I have heard that {text}"
+            return f"I have heard that {text.lower()}"
 
         does_like: bool = \
             (selected.happening == Happening.SETTLEMENT_FOUNDED and selected.scope == Scope.SYSTEM) \

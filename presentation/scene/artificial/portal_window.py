@@ -2,9 +2,10 @@
 
 The other end is placed as if both stars were on one axis (`Portal.carry`), so the sky through the ring is the one the
 ship would see from the same place relative to the other ring, looking the same way relative to it: the Milky Way, the
-fixed stars of that system and its star, not its worlds. It is drawn inside the ring's disc, over what the ship's own sky
-drew there (this side's sky, worlds and base are not seen through it), with the stencil as the mask. Crossing is then
-unseen: the ring behind the ship shows the old system, and the rest of the view is already the new one.
+fixed stars of that system, its star, its base and its other rings, not its worlds. It is drawn inside the ring's
+disc, over what the ship's own sky drew there (this side's sky, worlds and base are not seen through it), with the
+stencil as the mask. Crossing is then unseen: the ring behind the ship shows the old system, and the rest of the view
+is already the new one.
 
 Drawn from the ring's own frame in double precision, as `PortalGl` draws the ring, just before its band.
 """
@@ -21,6 +22,7 @@ from presentation.cockpit.instruments.common import view_geometry
 from presentation.constants import MIN_VISIBLE_PX, NEAR_CLIP, SPACE_COLOR, VIEW_VERTICAL_FOV_RADIANS
 from presentation.scene.interplanetary.local_star import view_from
 from presentation.scene.interplanetary.star_gl import StarGl
+from presentation.scene.artificial.portal_base_gl import PortalBaseGl
 from presentation.scene.interstellar.distant_stars import DistantStars
 from presentation.scene.interstellar.milky_way import MilkyWay
 from universe.artifacts.spaceships.attitude import Attitude
@@ -46,15 +48,15 @@ class PortalWindow:
             PortalWindow._has_stencil = GL.glGetIntegerv(GL.GL_STENCIL_BITS) > 0
         if not PortalWindow._has_stencil:
             return
-        arrival = portal.other_end(environment.galaxy)
-        if arrival is None:
-            return
         date_time = environment.date_time
         position = ship.navigation.stellar_position(date_time)
         to_centre = portal.centre - position
         distance = to_centre.length()
         view_height, _, focal = view_geometry(height)
         if distance == 0.0 or 2.0 * portal.RADIUS * focal / distance < MIN_VISIBLE_PX:
+            return
+        arrival = portal.other_end(environment.galaxy, generate=False)  # made beforehand (Navigation), not here
+        if arrival is None:
             return
         points = portal.ring_points(DISC_SEGMENTS) - np.array(tuple(position))  # the ring's rim from the ship
         forward = ship.attitude.forward
@@ -80,7 +82,26 @@ class PortalWindow:
         if view is not None:
             StarGl.draw_star(width, height, view, (date_time - environment.EPOCH).total_seconds(),
                              ship.owner.time_scale)
+        PortalWindow._draw_artifacts(width, height, ship, environment, arrival, seen_from, attitude)
         GL.glDisable(GL.GL_STENCIL_TEST)
+
+    @staticmethod
+    def _draw_artifacts(width: int, height: int, ship: Ship, environment: GameEnvironment, arrival: Portal,
+                        seen_from: Vector3, attitude: Attitude) -> None:
+        """The base and the other rings of the system at the other end, farthest first, as they are seen from there (the
+        ring that is the window itself is not drawn, and no ring shows a window of its own through this one)."""
+        # Local: the ring's drawing imports this module.
+        from presentation.scene.artificial.portal_gl import PortalGl
+        system = arrival.base.stellar_system
+        date_time = environment.date_time
+        things: list[tuple[float, object]] = [((portal.centre - seen_from).length(), portal)
+                                              for portal in system.portals if portal is not arrival]
+        things.append(((arrival.base.calculate_stellar_position(date_time) - seen_from).length(), arrival.base))
+        for _, thing in sorted(things, key=lambda item: item[0], reverse=True):
+            if thing is arrival.base:
+                PortalBaseGl.draw(width, height, ship, environment, arrival.base, seen_from, attitude)
+            else:
+                PortalGl.draw(width, height, ship, environment, thing, seen_from, attitude)
 
     @staticmethod
     def _mask(width: int, height: int, view_height: int, ship: Ship, to_centre: Vector3, points: np.ndarray,

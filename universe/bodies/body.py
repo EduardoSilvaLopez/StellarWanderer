@@ -18,6 +18,8 @@ class Body:
     Only a world has a surface the ship can bind to (`is_world`); the star is never bound to."""
 
     is_world: bool = False
+    is_solid: bool = True  # False for what a ship goes through (a Portal): no collision warning
+    can_be_fixed_to: bool = True  # False: it has no fixed zone, the ship is never fixed to it
     name: str
     radius: float
     hidden: bool = False  # set by the knowledge base (see set_hidden)

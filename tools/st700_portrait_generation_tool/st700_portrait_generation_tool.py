@@ -44,18 +44,56 @@ def pick(spec, gender, gclass):
     return spec
 
 
-def build_prompt(cfg, category, ethnicity, gender, age):
+def pick_cat(spec, category, default=""):
+    """A value that is a text, or {category: text, 'default': text}."""
+    if isinstance(spec, dict):
+        return spec.get(category, spec.get("default", default))
+    return spec
+
+
+def apply_rules(cfg, eth_tag, category, gender, gclass, age):
+    """Merge the matching ethnic_rules -> (head clause, headgear, suffix, negative prompt)."""
+    head, suffix, negative = "", "", []
+    headgear = cfg.get("defaults", {}).get("headgear", "")
+    for r in cfg.get("ethnic_rules", []):
+        if eth_tag not in r.get("ethnicities", []):
+            continue
+        classes = r.get("classes")
+        if classes and gclass not in classes and gender not in classes:
+            continue
+        if r.get("ages") and age not in r["ages"]:
+            continue
+        if r.get("negative"):
+            negative.append(r["negative"])
+        if "head" in r:
+            head += pick_cat(r["head"], category)
+        if "headgear" in r:
+            headgear = pick_cat(r["headgear"], category, headgear)
+        if "suffix" in r:
+            suffix += pick(r["suffix"], gender, gclass)
+    return head, headgear, suffix, ", ".join(negative)
+
+
+def neutralize(prompt):
+    """he/she/his/her/him -> they/their/them, keeping capital letters."""
+    for pat, rep in NEUTRAL:
+        prompt = re.sub(pat, lambda m, rep=rep: rep.capitalize() if m.group(0)[0].isupper() else rep,
+                        prompt, flags=re.IGNORECASE)
+    return prompt
+
+
+def build_prompt(cfg, category, eth_tag, ethnicity, gender, age):
     gclass = cfg["gender_class"].get(gender, gender)
     person = pick(cfg["person"][age], gender, gclass).format(gender=gender)
     clothing = pick(cfg["clothing"].get(age, ""), gender, gclass)
+    head, headgear, suffix, negative = apply_rules(cfg, eth_tag, category, gender, gclass, age)
     article = "an" if ethnicity[:1].lower() in "aeiou" else "a"
     prompt = cfg["categories"][category]["template"].format(
-        article=article, ethnicity=ethnicity, person=person,
-        gender=gender, clothing=clothing)
+        article=article, ethnicity=ethnicity, person=person, gender=gender,
+        clothing=clothing, head=head, headgear=headgear, suffix=suffix)
     if gender in cfg.get("neutral_pronoun_genders", []):
-        for pat, rep in NEUTRAL:
-            prompt = re.sub(pat, rep, prompt, flags=re.IGNORECASE)
-    return prompt
+        prompt = neutralize(prompt)
+    return prompt, negative
 
 
 def known_ethnicities(cfg):
@@ -122,10 +160,11 @@ def plan_groups(cfg, ethnicities, genders, categories, ages):
                 if (age == "child") != (cat == "street"):
                     continue  # street is children only; the others never are
                 for gen in genders:
+                    prompt, negative = build_prompt(cfg, cat, eth_tag, eth, gen, age)
                     groups.append({
                         "eth": eth, "cat": cat, "age": age, "gender": gen,
                         "prefix": f"{cat}.{eth_tag}.{age}.{gen}",
-                        "prompt": build_prompt(cfg, cat, eth, gen, age)})
+                        "prompt": prompt, "negative": negative})
     return groups
 
 
@@ -218,9 +257,29 @@ def collect_images(page, gen, expected, timeout):
     return images
 
 
-def generate_batch(browser, cfg, prompt, batch_size, timeout):
+def install_negative_prompt(page, negative):
+    """The generator has no negative-prompt box, but every image request carries a
+    "negativePrompt" field. Add our text to it. Returns a counter dict."""
+    stats = {"rewritten": 0}
+
+    def handler(route, request):
+        try:
+            data = json.loads(request.post_data or "{}")
+            old = (data.get("negativePrompt") or "").strip()
+            data["negativePrompt"] = ", ".join(x for x in (old, negative) if x)
+            stats["rewritten"] += 1
+            route.continue_(post_data=json.dumps(data))
+        except Exception:
+            route.continue_()
+
+    page.route("**/api/generate*", handler)
+    return stats
+
+
+def generate_batch(browser, cfg, prompt, batch_size, timeout, negative=""):
     page = browser.contexts[0].new_page()
     try:
+        neg_stats = install_negative_prompt(page, negative) if negative else None
         page.goto(URL, wait_until="domcontentloaded")
         gen = wait_generator_frame(page)
         # The plus button reveals shape/count but also appends a random phrase
@@ -237,7 +296,12 @@ def generate_batch(browser, cfg, prompt, batch_size, timeout):
             raise RuntimeError("Prompt text did not stick")
         gen.get_by_role("button", name="generate").first.click()
         page.wait_for_timeout(3000)
-        return collect_images(page, gen, batch_size, timeout)
+        images = collect_images(page, gen, batch_size, timeout)
+        if neg_stats is not None:
+            n = neg_stats["rewritten"]
+            print(f"      negative prompt '{negative}' added to {n} generation request(s)"
+                  + ("" if n else "  (WARNING: not applied!)"), flush=True)
+        return images
     finally:
         page.close()
 
@@ -296,6 +360,8 @@ def main():
         flag = "skip (complete)" if g["batches"] == 0 else f"{g['batches']} batch(es)"
         print(f"  {g['prefix']:<46} have {g['have']:>3}  -> {flag}")
         print(f"      {g['prompt']}")
+        if g["negative"]:
+            print(f"      NEGATIVE: {g['negative']}")
     print(f"\n{total_batches} batch(es), about {total_batches * MINUTES_PER_BATCH:.0f} minutes.")
     if a.dry_run or total_batches == 0:
         return
@@ -325,7 +391,8 @@ def main():
                 need = a.target - len(used_indices(out, g["prefix"]))
                 print(f"   batch {batches}: generating {batch_size} (need {need})", flush=True)
                 try:
-                    imgs = generate_batch(browser, cfg, g["prompt"], batch_size, a.timeout)
+                    imgs = generate_batch(browser, cfg, g["prompt"], batch_size, a.timeout,
+                                          g["negative"])
                 except Exception as e:
                     print(f"   ERROR: {e}")
                     continue

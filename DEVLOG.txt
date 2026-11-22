@@ -47,13 +47,19 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Assigning the history to the new systems.
   * Focus: Depends on characteristics of the world.
   * Extra: Sikh.
-
-> STARTED: Extra time: 214h45' + 12:45-14:00 + 16:00 - 
-
-  * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
   * Outpost size 3: Add security team.
   * Outpost size 4: Add 9 people more... who? Mechanics, new role? Administratives? 3rd team Stevedores? 2nd Specialists? Builders?
   * More complex "life" dialog.
+
+### 2026-11-22 (11/12)
+
+> STARTED: Extra time: 217h00' + 6:00 - 
+
+  * Extra: androgyne.
+  * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
+    * Strange generation of the base near portal.
+    * First time cross provokes a single strange frame.
+
 
 > BACKLOG
 

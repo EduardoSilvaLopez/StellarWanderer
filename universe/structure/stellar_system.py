@@ -175,10 +175,10 @@ class StellarSystem:
         return next((orbit for orbit in self.orbits if orbit.number == number), None)
 
     def get_all_bodies(self) -> list[Body]:
-        """The star first, then the portal base (if it has one), then every world (each planet before its moons), then the asteroids of
-        the ongoing missions."""
+        """The star first, then the portal base (if it has one) and its Portals, then every world (each planet before its
+        moons), then the asteroids of the ongoing missions."""
         base = [] if self.portal_base is None else [self.portal_base]
-        return [self.star] + base + self.get_all_worlds() + self.mission_asteroids()
+        return [self.star] + base + self.portals + self.get_all_worlds() + self.mission_asteroids()
 
     def mission_asteroids(self) -> list[Asteroid]:
         """The asteroids of the pilot's accepted, not yet finished scan missions whose target is in this system. They

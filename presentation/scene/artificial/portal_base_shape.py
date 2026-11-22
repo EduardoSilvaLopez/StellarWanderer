@@ -362,7 +362,7 @@ def make_model(radius: float, sun_colour: tuple[int, int, int] = (255, 255, 255)
         oriented_box(doors, (x_axis, y_axis, z_axis), ranges, inner_tile)
 
     spinning_marks = Builder(sun_colour)
-    offset = 0.5  # m, the marks stand off the walls: nearer, they flicker (depth fighting) as the ring turns
+    offset = 1.5  # m, the marks stand off the walls: nearer, they flicker (depth fighting) as the ring turns
     for step, region in enumerate(NUMBERS):
         angle = step * math.pi / 2.0
         centre_radius = radius - RING_THICKNESS * a / 2.0

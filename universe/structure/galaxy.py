@@ -61,11 +61,14 @@ class Galaxy:
         date. The system makes its own portal base and outposts from it."""
         return self.history.system_at(cell)
 
+    def existing_system_of_key(self, key: str) -> Optional[StellarSystem]:
+        """The stellar system with that alterations key if it has been generated, else None (nothing is generated)."""
+        return next((s for s in self.stellar_systems if s.get_alterations_key() == key), None)
+
     def system_of_key(self, key: str) -> Optional[StellarSystem]:
         """The stellar system with that alterations key (its star's cell, "26010 10 10"), generated if it was not yet.
         None if no star is there."""
-        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.get_alterations_key() == key),
-                                                 None)
+        existing = self.existing_system_of_key(key)
         if existing is not None:
             return existing
         cell_x, cell_y, cell_z = (int(c) for c in key.split())

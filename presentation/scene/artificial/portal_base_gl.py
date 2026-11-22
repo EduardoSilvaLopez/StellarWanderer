@@ -35,9 +35,11 @@ from presentation.cockpit.instruments.common import view_geometry
 from .portal_base_shape import BaseModel, Mesh, make_model
 
 if TYPE_CHECKING:
+    from common.vector3 import Vector3
     from universe.artifacts.settlements.portal_base import PortalBase
     from game_environment import GameEnvironment
     from universe.artifacts.spaceships.ship import Ship
+    from universe.artifacts.spaceships.attitude import Attitude
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +68,7 @@ class PortalBaseGl:
     MIN_PLUME_PIXELS = 1.6  # the half-width a plume keeps on the screen, however far
     MIN_SPRITE_PIXELS = 4.0
 
-    _model: BaseModel | None = None
-    _model_key: tuple[float, tuple[int, int, int]] | None = None
+    _models: dict[tuple[float, tuple[int, int, int]], BaseModel] = {}
     _textures: dict[str, int] = {}
     _soft_textures: tuple[int, int] | None = None  # the gradient across a strip, and the round sprite
     _spin: float = 0.0  # the angle of the ring (rad), from the game's date
@@ -75,11 +76,17 @@ class PortalBaseGl:
 
     # region Frame
     @staticmethod
-    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
-        """Draws the base of the system, if it is in front of the ship. Call while unbound, after the sky."""
-        base = environment.nearest_system.portal_base
+    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment, base: PortalBase | None = None,
+             position: Vector3 | None = None, attitude: Attitude | None = None) -> None:
+        """Draws the base of the system, if it is in front of the ship. Call while unbound, after the sky. To draw
+        another system's base, as seen through a Portal's window, give it with the position and attitude it is seen
+        from (in its own stellar frame)."""
         date = environment.date_time
-        position = ship.navigation.stellar_position(date)
+        if base is None:
+            base = environment.nearest_system.portal_base
+        if position is None:
+            position = ship.navigation.stellar_position(date)
+        attitude = attitude or ship.attitude
         centre = base.calculate_stellar_position(date)
         relative = np.array([centre.x - position.x, centre.y - position.y, centre.z - position.z])
         distance = float(np.linalg.norm(relative))
@@ -88,7 +95,7 @@ class PortalBaseGl:
         model = PortalBaseGl._get_model(base)
         plume_length = PortalBaseGl.plume_length(base)
         reach = math.hypot(model.radius, abs(model.plume_start_z) + plume_length)
-        forward = ship.attitude.forward
+        forward = attitude.forward
         ahead = float(relative @ np.array([forward.x, forward.y, forward.z]))
         if distance > reach and math.acos(max(-1.0, min(1.0, ahead / distance))) > math.radians(75.0) + math.asin(
                 reach / distance):
@@ -105,12 +112,13 @@ class PortalBaseGl:
         GL.glPushMatrix()
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
-        matrix = ship.attitude.camera_matrix()
+        matrix = attitude.camera_matrix()
         if apparent < PortalBaseGl.MIN_PIXELS:
             PortalBaseGl._draw_point(matrix, relative, aspect)
         else:
             PortalBaseGl._set_clock(base, environment.date_time)
-            PortalBaseGl._draw_base(model, base, ship, matrix, relative, distance, reach, plume_length, aspect, focal)
+            PortalBaseGl._draw_base(model, base, attitude, matrix, relative, distance, reach, plume_length, aspect,
+                                    focal)
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPopMatrix()
         GL.glMatrixMode(GL.GL_PROJECTION)
@@ -153,8 +161,8 @@ class PortalBaseGl:
         GL.glMultMatrixf(matrix)
 
     @staticmethod
-    def _draw_base(model: BaseModel, base: PortalBase, ship: Ship, matrix: list, relative: np.ndarray, distance: float,
-                   reach: float, plume_length: float, aspect: float, focal: float) -> None:
+    def _draw_base(model: BaseModel, base: PortalBase, attitude: Attitude, matrix: list, relative: np.ndarray,
+                   distance: float, reach: float, plume_length: float, aspect: float, focal: float) -> None:
         margin = 1.05 * reach
         PortalBaseGl._perspective(matrix, max(0.05, distance - margin), distance + margin, aspect)
         GL.glTranslated(float(relative[0]), float(relative[1]), float(relative[2]))
@@ -208,7 +216,7 @@ class PortalBaseGl:
         GL.glDisable(GL.GL_POLYGON_OFFSET_FILL)
 
         GL.glDepthFunc(GL.GL_LESS)
-        PortalBaseGl._draw_plumes(model, ship, relative, plume_length, focal)
+        PortalBaseGl._draw_plumes(model, attitude, relative, plume_length, focal)
         GL.glDisableClientState(GL.GL_TEXTURE_COORD_ARRAY)
         GL.glDisableClientState(GL.GL_VERTEX_ARRAY)
         GL.glDisable(GL.GL_TEXTURE_2D)
@@ -245,7 +253,7 @@ class PortalBaseGl:
 
     # region Plumes
     @staticmethod
-    def _draw_plumes(model: BaseModel, ship: Ship, relative: np.ndarray, length: float, focal: float) -> None:
+    def _draw_plumes(model: BaseModel, attitude: Attitude, relative: np.ndarray, length: float, focal: float) -> None:
         """The plumes and the glow at the nozzles, in the frame of the ring (which is turned by the spin), faced to
         the camera. Every strip of every nozzle and every glow is built in one numpy pass, and drawn in two calls."""
         GL.glEnable(GL.GL_BLEND)
@@ -255,8 +263,8 @@ class PortalBaseGl:
         cos_a, sin_a = math.cos(-PortalBaseGl._spin), math.sin(-PortalBaseGl._spin)
         rotation = np.array([[cos_a, -sin_a, 0.0], [sin_a, cos_a, 0.0], [0.0, 0.0, 1.0]])
         camera = rotation @ -relative
-        right = rotation @ np.array(tuple(ship.attitude.right))
-        up = rotation @ np.array(tuple(ship.attitude.up))
+        right = rotation @ np.array(tuple(attitude.right))
+        up = rotation @ np.array(tuple(attitude.up))
         gradient, round_sprite = PortalBaseGl.soft_textures()
 
         nozzles = np.array(model.nozzles)  # (4, 3)
@@ -361,12 +369,12 @@ class PortalBaseGl:
         """The model of the base, made when it is first seen: the lighting in it depends on the colour of the star."""
         star_colour = tuple(int(channel) for channel in base.stellar_system.star.color)
         key = (base.radius, star_colour)
-        if PortalBaseGl._model is None or PortalBaseGl._model_key != key:
+        model = PortalBaseGl._models.get(key)
+        if model is None:  # kept for each look: the base of the other end of a Portal is seen through its window
             with frame_watch.timed('portal base model'):
                 tint = tuple(int(255 * (0.7 + 0.3 * channel / 255.0)) for channel in star_colour)
-                PortalBaseGl._model = make_model(base.radius, tint)
-                PortalBaseGl._model_key = key
-        return PortalBaseGl._model
+                model = PortalBaseGl._models[key] = make_model(base.radius, tint)
+        return model
 
     @staticmethod
     def _texture(name: str) -> int:

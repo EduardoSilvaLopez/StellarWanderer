@@ -73,7 +73,8 @@ class Navigation:
     UNBIND_RADIUS_MULTIPLE = 1.2  # unbind beyond this distance from the world's centre, in radii
     FIXED_ZONE_RADIUS_MULTIPLE = 10  # the fixed zone: inside this distance from a body's centre, in radii
     PORTAL_BASE_FRAME_TRAVEL = 5.0  # m, the most the hull moves in a frame near the portal base (see its time limit)
-    COLLISION_BRAKE_FRACTION = 1.0 / 3.0  # share of BRAKE_ACC assumed available when judging a collision
+    PORTAL_PREPARE_DISTANCE = 50000.0  # m: the nearest Portal's other system is made when the ship is this near
+    COLLISION_BRAKE_FRACTION = 1.0 / 3.0 # share of BRAKE_ACC assumed available when judging a collision
     BRAKED = 1e-3  # m/s or degrees/s: at or under this, there is nothing left for the brake to do
     # m: a ship that moves farther than this in a frame outruns the rocks
     ROCKS_TRAVEL_LIMIT = RockyWorld.SURROUNDINGS_RADIUS
@@ -559,6 +560,12 @@ class Navigation:
         environment = gem.current_environment
         system = environment.nearest_system
         end = ship.position.as_vector()
+        if system.portals:
+            # The system at the other end of the nearest Portal is made while the ship is still far from it, so that
+            # the crossing itself has nothing to generate (and the window of the ring can show it).
+            nearest = min(system.portals, key=lambda candidate: (candidate.centre - end).length())
+            if (nearest.centre - end).length() < self.PORTAL_PREPARE_DISTANCE:
+                nearest.other_end(environment.galaxy)
         portal = next((candidate for candidate in system.portals if candidate.crossing(start, end) is not None), None)
         if portal is None:
             return
@@ -584,7 +591,10 @@ class Navigation:
         if self.travel is not None:
             self.travel.end(None)
         environment.arrive_in(destination)
-        logger.info(f"The ship went through the Portal of {system.name} into {destination.name}.")
+        offset = position - arrival.centre
+        logger.info(f"The ship went through the Portal of {system.name} into {destination.name}: "
+                    f"{offset.length():.1f} m from the ring's centre ({offset.dot(arrival.normal):+.1f} m along its normal), "
+                    f"{velocity.length():.2f} m/s.")
 
     def _collide_with_outposts(self, start: Vector3) -> None:
         """Bound, the ship's hull comes to rest against the buildings of the outposts of its world (see OutpostSolid),
@@ -848,7 +858,7 @@ class Navigation:
         """True if the ship, on its straight line relative to the body, would reach the surface even braking
         with only COLLISION_BRAKE_FRACTION of BRAKE_ACC. Sideways dodging is not considered. Inside a fixed zone that
         pulls the path curves, so this is then only a guide."""
-        if self.ship.is_bound:
+        if self.ship.is_bound or not body.is_solid:
             return False
         relative_position, relative_velocity = self._relative_to_body(body)
         speed = relative_velocity.length()

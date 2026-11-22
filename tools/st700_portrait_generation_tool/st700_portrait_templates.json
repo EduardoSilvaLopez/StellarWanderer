@@ -27,18 +27,52 @@
 
   "neutral_pronoun_genders": ["androgyne"],
 
+  "defaults": {
+    "headgear": "an olive Peaked Cap with a red star on it"
+  },
+
+  "_ethnic_rules_help": "Extra wording per ethnic group, merged in the order listed. 'ethnicities' = file tags. 'classes' (optional) = genders or gender classes it applies to; androgyne counts as female. 'ages' (optional) = ages it applies to. 'negative' = text sent in the generator's hidden NEGATIVE PROMPT (things the image must not contain); several rules are joined with commas.'head' goes right after the age/gender phrase (before the clothing); 'headgear' replaces {headgear} (the cap in uniform prompts); both can be a text or {category: text, 'default': text}. 'suffix' is added at the very end of the prompt and can be {gender or class: text, 'default': text}.",
+  "ethnic_rules": [
+    {
+      "name": "Arab and Indian females and androgynes: uncovered, visible hair, no head covering",
+      "ethnicities": ["arab", "indian"],
+      "classes": ["female"],
+      "head": " with uncovered hair,",
+      "suffix": { "androgyne": " Their hair is visible.", "default": " Her hair is visible." },
+      "negative": "headscarf, hijab, veil, head covering"
+    },
+    {
+      "name": "Indian, all genders: no bindi",
+      "ethnicities": ["indian"],
+      "negative": "bindi"
+    },
+    {
+      "name": "Sikh, young and older, all genders: turban (in uniform prompts it replaces the cap)",
+      "ethnicities": ["sikh"],
+      "ages": ["young", "adult", "mature", "old"],
+      "head": { "uniform": "", "default": " with a turban," },
+      "headgear": { "uniform": "an olive turban with a red star on it" }
+    },
+    {
+      "name": "Sikh children and teens: no turban",
+      "ethnicities": ["sikh"],
+      "ages": ["child", "teen"],
+      "negative": "turban"
+    }
+  ],
+
   "categories": {
     "street": {
       "ages": ["child"],
-      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person} with an sleeveless shirt and a jacket. The background is a sci-fi street at night."
+      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person}{head} with an sleeveless shirt and a jacket. The background is a sci-fi street at night.{suffix}"
     },
     "hydroponic": {
       "ages": ["teen", "young", "adult", "mature", "old"],
-      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person} with {clothing}. The background is a lavish hydroponic garden."
+      "template": "Sci-fi setting. Frontal close-up passport photo of the face of a content {ethnicity} {person}{head} with {clothing}. The background is a lavish hydroponic garden.{suffix}"
     },
     "uniform": {
       "ages": ["young", "adult", "mature", "old"],
-      "template": "Frontal close-up passport photo of the face of {article} {ethnicity} {person} with an olive Peaked Cap with a red star on it and a Soviet style uniform. The background is futuristic, but with no windows."
+      "template": "Frontal close-up passport photo of the face of {article} {ethnicity} {person}{head} with {headgear} and a Soviet style uniform. The background is futuristic, but with no windows.{suffix}"
     }
   },
 

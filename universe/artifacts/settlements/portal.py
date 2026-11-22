@@ -16,7 +16,9 @@ normal is the horizontal direction from the axis to the Portal.
 The two ends of a link do not share their attitude: each end is placed as its own base and star ask, as if both stars
 were on one axis.
 
-The Portal is not targeted: the base is. What the base does about a ship that approaches it is in PortalDefence.
+The Portal is a body (`Body`): it can be targeted, and is labelled at the centre of the ring with the system it leads
+to. Nothing is fixed to it and it is not solid. What the base does about a ship that approaches it is in
+PortalDefence.
 """
 
 from __future__ import annotations
@@ -28,12 +30,14 @@ from typing import TYPE_CHECKING, Optional
 import numpy as np
 
 from common.vector3 import Vector3
+from universe.bodies.body import Body
 from universe.structure import seeds
 from universe.structure.fixed_stars import Cell
 
 if TYPE_CHECKING:
     from universe.artifacts.settlements.portal_base import PortalBase
     from universe.structure.galaxy import Galaxy
+    from universe.structure.stellar_system import StellarSystem
 
 # Physical constants, SI (CODATA 2018).
 SPEED_OF_LIGHT = 299792458.0  # m/s
@@ -50,9 +54,14 @@ PROTON_FORCE_RATIO = ELEMENTARY_CHARGE ** 2 / (4.0 * math.pi * VACUUM_PERMITTIVI
                                                 * PROTON_MASS ** 2)
 
 
-class Portal:
-    """One Portal of a stellar system."""
+class Portal(Body):
+    """One Portal of a stellar system. It is a body the pilot can target, as the base is, to fly to it: the label of the
+    ring's centre reads "System <the one it leads to>". It is not solid (a ship goes through it), and the ship is never
+    fixed to it."""
 
+    is_world = False
+    is_solid = False
+    can_be_fixed_to = False
     RADIUS = PROTON_FORCE_RATIO * PLANCK_LENGTH  # m: the ring's radius, 19.97 m, the same for every Portal
     BAND_THICKNESS = FINE_STRUCTURE * RADIUS  # m: about 14.6 cm
     OFFSET_FROM_AXIS = 1000.0  # m, from the star's z axis: far enough for its light not to disturb the base
@@ -63,6 +72,7 @@ class Portal:
         self.base: PortalBase = base
         self.index: int = index
         self.destination: Cell = destination
+        self.radius: float = self.RADIUS
         self._other_end: Optional[Portal] = None  # found the first time it is asked for (see other_end)
         self.seed: int = seeds.derive(base.seed, 'portal')
         # The direction round the axis: the first Portal's is drawn from the seed (the same in a system whenever it is
@@ -79,6 +89,22 @@ class Portal:
         self.rearm_distance: float = 0.0  # m: the warnings start again when the ship is farther than this
         self.checked_at: Optional[datetime] = None
 
+    @property
+    def name(self) -> str:
+        """What the pilot reads on the ring: the system it leads to (the star's name is known without making it)."""
+        star = self.base.stellar_system.parent_galaxy.stars.star_at(self.destination)
+        return f"System {star.name}" if star is not None else "System"
+
+    @property
+    def stellar_system(self) -> StellarSystem:
+        return self.base.stellar_system
+
+    def calculate_stellar_position(self, current_datetime: datetime) -> Vector3:
+        return self.centre
+
+    def calculate_stellar_velocity(self, current_datetime: datetime) -> Vector3:
+        return Vector3(0.0, 0.0, 0.0)
+
     def ring_points(self, count: int) -> np.ndarray:
         """`count` points on the ring's centre line, in the stellar frame (m): (count, 3)."""
         angle = np.linspace(0.0, math.tau, count, endpoint=False)
@@ -87,11 +113,13 @@ class Portal:
         axis = np.array([0.0, 0.0, 1.0])
         return centre + self.RADIUS * (np.cos(angle)[:, None] * axis + np.sin(angle)[:, None] * tangent)
 
-    def other_end(self, galaxy: Galaxy) -> Optional[Portal]:
-        """The Portal at the other end of the link, in the system it leads to (which is made if it was not yet). None if
-        there is no such Portal."""
+    def other_end(self, galaxy: Galaxy, generate: bool = True) -> Optional[Portal]:
+        """The Portal at the other end of the link, in the system it leads to (which is made if it was not yet, unless
+        `generate` is False: making a system takes a noticeable time, which the pilot must not feel in a frame that
+        has other things to do). None if there is no such Portal, or if it is not made and may not be."""
         if self._other_end is None:
-            system = galaxy.system_of_key(' '.join(str(coordinate) for coordinate in self.destination))
+            key = ' '.join(str(coordinate) for coordinate in self.destination)
+            system = galaxy.system_of_key(key) if generate else galaxy.existing_system_of_key(key)
             here = self.base.stellar_system.star.cell
             if system is not None:
                 self._other_end = next((portal for portal in system.portals if portal.destination == here), None)

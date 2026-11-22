@@ -85,6 +85,7 @@ class PortalBase(Body, Settlement):
         self.name: str = self._generate_name(my_random)
         Settlement.__init__(self, self.seed, enlargement_dates)
         self.focus: SettlementFocus = SettlementFocus.ADMINISTRATION
+        self.clearance_announced: bool = False  # not saved: the cleared pilot was told of the approach (PortalDefence)
         if saved is not None:  # what the settlement saved in its system (see StellarSystem.get_alterations)
             self._read_alterations(saved)
             self.hidden = bool(saved.get('hidden', False))

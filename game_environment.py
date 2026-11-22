@@ -75,7 +75,7 @@ class GameEnvironment:
         fixed: Optional[Body] = None
         fixed_distance = math.inf
         for body in self.nearest_system.get_all_bodies():
-            if not body.is_shown:
+            if not body.is_shown or not body.can_be_fixed_to:
                 continue
             distance = math.dist(player_position, body.calculate_stellar_position(self.date_time))
             if distance < Navigation.FIXED_ZONE_RADIUS_MULTIPLE * body.radius and distance < fixed_distance:

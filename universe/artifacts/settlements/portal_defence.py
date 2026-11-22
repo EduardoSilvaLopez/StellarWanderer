@@ -10,6 +10,11 @@ the ship's velocity in the stellar frame (the Portal does not move in it):
      FORCED_BACK_SECONDS of game time (`update` returns them, for the caller to add to the clock). The stop always
      works (the base's lasers are what stops the ones who try to steal their ships; no failure is played).
 
+A pilot with the interstellar clearance, going to a Those-Who-Share system, gets no stage: once, on reaching the first
+sphere of any Portal of the system, a notification confirms the clearance (the Portal itself is open to everyone; this is
+only the base's reaction). It is not repeated until the ship is beyond REARM_FACTOR times the first sphere of every
+Portal of the system.
+
 A ship already inside a sphere counts as arriving unless it moves away. Each stage is given once, one at a time, and
 only when the ship is also nearer than NEXT_STAGE_FRACTION of the distance where the one before was given: a ship that
 speeds up from rest widens the distances its time gives, and would get them all at once. The stages are given again
@@ -24,6 +29,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from universe.society.people import promotion
 from universe.society.politics import political_entity
 from common.messages import Message, show_message
 
@@ -50,7 +56,18 @@ class PortalDefence:
     def update(player: Player, environment: GameEnvironment) -> float:
         """Every frame: gives the stage the ship's course calls for, if it is a higher one than the last given. Returns
         the seconds of game time that what it did takes (0 for nearly always)."""
-        return sum(PortalDefence._check(player, environment, portal) for portal in environment.nearest_system.portals)
+        system = environment.nearest_system
+        seconds = sum(PortalDefence._check(player, environment, portal) for portal in system.portals)
+        if system.portal_base is not None and PortalDefence._is_clear_of_all(player, environment):
+            system.portal_base.clearance_announced = False
+        return seconds
+
+    @staticmethod
+    def _is_clear_of_all(player: Player, environment: GameEnvironment) -> bool:
+        """Whether the ship is beyond the re-arm distance of every Portal of its system."""
+        position = player.ship.navigation.stellar_position(environment.date_time)
+        limit = PortalDefence.REARM_FACTOR * PortalDefence.STAGES[0][0]
+        return all((position - portal.centre).length() > limit for portal in environment.nearest_system.portals)
 
     @staticmethod
     def _check(player: Player, environment: GameEnvironment, portal: Portal) -> float:
@@ -74,6 +91,13 @@ class PortalDefence:
         distance = (position - portal.centre).length()
         if portal.warning_stage > 0 and distance > portal.rearm_distance:
             portal.warning_stage = 0  # it has left the area where it was warned: the warnings start again
+        if PortalDefence._is_authorised(player, environment, portal):
+            base = system.portal_base
+            inside_first = distance <= PortalDefence.STAGES[0][0]
+            if stage > 0 and inside_first and base is not None and not base.clearance_announced:
+                base.clearance_announced = True  # told once, until the ship leaves all the spheres
+                player.ship.notification.set("You are approaching the network. Clearance confirmed. Good trip.")
+            return 0.0
         if portal.warning_stage > 0 and distance > PortalDefence.NEXT_STAGE_FRACTION * portal.stage_distance:
             stage = portal.warning_stage  # not yet close enough for the next one
         elif stage > portal.warning_stage > 0:
@@ -93,6 +117,15 @@ class PortalDefence:
             PortalDefence._warn(player, base, stage, first)
             return 0.0
         return PortalDefence._block(player, base)
+
+    @staticmethod
+    def _is_authorised(player: Player, environment: GameEnvironment, portal: Portal) -> bool:
+        """Whether the base lets the pilot approach this Portal: they hold the interstellar clearance, and the system it
+        leads to belongs to Those-Who-Share (interstellar is not international)."""
+        if promotion.INTERSTELLAR_CLEARANCE_FLAG not in player.flags:
+            return False
+        history = environment.galaxy.history_of(portal.destination)  # no need to generate the system for this
+        return history is not None and history.entity is political_entity.THOSE_WHO_SHARE
 
     @staticmethod
     def _warn(player: Player, base: PortalBase, stage: int, first: bool) -> None:

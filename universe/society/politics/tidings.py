@@ -108,14 +108,14 @@ def _tiding_of(event: Event, system: StellarSystem) -> Optional[Tiding]:
         return None
     match event.happening:
         case Happening.SETTLEMENT_FOUNDED:
-            text = f"{event.subject} was founded."
+            text = f"{event.subject.capitalize()} was founded."
         case Happening.SETTLEMENT_ENLARGED:
-            text = f"{event.subject} was enlarged."
+            text = f"{event.subject.capitalize()} was enlarged."
         case Happening.WATER_EMERGENCY:
-            text = f"{event.subject} had a water emergency."
+            text = f"{event.subject.capitalize()} had a water emergency."
         case Happening.STORM_BORN:
             width = int(float(f"{2.0 * event.facts['radius'] / 1000:.1g}"))  # one digit: 4000 Km, not 4005 Km
-            text = f"A storm {width} Km wide broke out on {event.subject}."
+            text = f"A storm {width} Km wide broke out on {event.subject.capitalize()}."
         case Happening.SHIP_LOST:
             text = "A ship failed. We could not save the pilot."
         case Happening.SHIP_RESCUED:

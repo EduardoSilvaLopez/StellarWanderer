@@ -2,12 +2,9 @@
 
 The light it gives is what the ring's angular radius says (`intensity`): nothing far away, full when the ring is big in
 the sky. Three things follow from it, in the order of the frame:
-  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a white glow round the ring, which
-    is absent from afar, shows well before the ring is a pixel across and grows as the ship nears it (`glow_level`), and
-    a black wash over the whole view, as strong as the light, whichever
-    way the ship points: the eyes adapt, as
-    behind sunglasses, and the stars and the planets (the sky) go dark. The portal base and the asteroids, which are
-    drawn after it, are not darkened.
+  * the glare (`draw_glare`), over the sky and under everything that is drawn after it: a faint white glow round the
+    ring, which is absent from afar, shows well before the ring is a pixel across and grows as the ship nears it
+    (`glow_level`). The sky is not darkened, so that the window in the ring can be seen.
   * the ring (`draw`), in the 3D pass, with its own perspective as the base has: a band of white light with a halo,
     whose band never gets narrower than a pixel, and which is not drawn at all while the ring is under a pixel across.
     Its opening is a window to the sky of the system at the other end of the link (`PortalWindow`), from both sides.
@@ -33,7 +30,9 @@ from .portal_base_gl import PortalBaseGl
 from .portal_window import PortalWindow
 
 if TYPE_CHECKING:
+    from common.vector3 import Vector3
     from universe.artifacts.settlements.portal import Portal
+    from universe.artifacts.spaceships.attitude import Attitude
     from game_environment import GameEnvironment
     from universe.artifacts.spaceships.ship import Ship
 
@@ -53,11 +52,10 @@ class PortalGl:
     GLARE_MAX_HALF_SHARE = 4.0  # of the window's width
     ANGLE_START = 0.0058  # rad, the ring's angular radius where its light begins to dazzle (a third of a degree)
     ANGLE_FULL = 0.102  # rad, where it dazzles fully (about 6 degrees)
-    WASH_GAIN = 3.7  # the dark wash saturates at 1/WASH_GAIN of the light
     GLOW_START_PX = 0.1  # the ring's diameter on the screen where its glow begins: far beyond the ring's first pixel
     GLOW_FULL_PX = 200.0  # the ring's diameter on the screen where its glow is full
-    GLOW_STRENGTH = 0.12  # of the glow's brightness: low enough for the window in the ring to be seen
-    TINT_MAX = 45  # the most white added to the cockpit: the same reason
+    GLOW_STRENGTH = 0.03# of the glow's brightness: low enough for the window in the ring to be seen
+    TINT_MAX = 8 # the most white added to the cockpit: the same reason
 
     # region Light
     @staticmethod
@@ -122,15 +120,12 @@ class PortalGl:
     # region Glare
     @staticmethod
     def draw_glare(width: int, height: int, ship: Ship, environment: GameEnvironment) -> None:
-        """The darkening wash and the glow, over the sky. Call with the depth test off, after the sky and before what
+        """The glow of each ring, over the sky. Call with the depth test off, after the sky and before what
         must stay in front of it (the base)."""
         view_height, horizon_y, focal = view_geometry(height)
-        wash = 0.0
         glows = []  # (x, y, half size, level) of the glow of each Portal that shows one
         for portal in environment.nearest_system.portals:
             relative = PortalGl._relative_centre(portal, ship, environment)
-            level = PortalGl.intensity(portal, relative)
-            wash = max(wash, min(1.0, PortalGl.WASH_GAIN * level))  # wherever the ship points: only the distance counts
             right = float(relative @ np.array(tuple(ship.attitude.right)))
             up = float(relative @ np.array(tuple(ship.attitude.up)))
             forward = float(relative @ np.array(tuple(ship.attitude.forward)))
@@ -143,7 +138,7 @@ class PortalGl:
                 glows.append((width / 2.0 + focal * right / forward, horizon_y - focal * up / forward, half,
                               glow_level))
 
-        if wash <= 0.0 and not glows:
+        if not glows:
             return
         _, sprite = PortalBaseGl.soft_textures()
         GL.glViewport(0, 0, width, height)
@@ -157,15 +152,6 @@ class PortalGl:
         GL.glDisable(GL.GL_DEPTH_TEST)
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive
-        if wash > 0.0:
-            GL.glDisable(GL.GL_TEXTURE_2D)
-            GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)  # darkens
-            GL.glColor4f(0.0, 0.0, 0.0, wash)
-            GL.glBegin(GL.GL_QUADS)
-            for x, y in ((0, 0), (width, 0), (width, height), (0, height)):
-                GL.glVertex2f(x, y)
-            GL.glEnd()
-            GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE)  # additive again
         for x, y, half, glow_level in glows:
             GL.glEnable(GL.GL_TEXTURE_2D)
             GL.glBindTexture(GL.GL_TEXTURE_2D, sprite)
@@ -186,15 +172,20 @@ class PortalGl:
 
     # region Ring
     @staticmethod
-    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment, portal: Portal) -> None:
-        """The ring of one Portal, in the 3D pass, with its own perspective."""
-        relative = PortalGl._relative_centre(portal, ship, environment)
+    def draw(width: int, height: int, ship: Ship, environment: GameEnvironment, portal: Portal,
+             seen_from: Vector3 | None = None, attitude: Attitude | None = None) -> None:
+        """The ring of one Portal, in the 3D pass, with its own perspective. To draw a ring of another system, as seen
+        through a window, give the position and attitude it is seen from (in its own stellar frame)."""
+        attitude = attitude or ship.attitude
+        if seen_from is None:
+            seen_from = ship.navigation.stellar_position(environment.date_time)
+        position = np.array(tuple(seen_from))
+        relative = np.array(tuple(portal.centre)) - position
         distance = float(np.linalg.norm(relative))
         if distance == 0.0:
             return
-        position = np.array(tuple(ship.navigation.stellar_position(environment.date_time)))
         points = portal.ring_points(PortalGl.RING_SEGMENTS) - position  # the ring's centre line from the ship
-        forward = np.array(tuple(ship.attitude.forward))
+        forward = np.array(tuple(attitude.forward))
         if float((points @ forward).max()) <= NEAR_CLIP and float(relative @ forward) <= NEAR_CLIP:
             return  # all of it behind the ship
 
@@ -212,7 +203,7 @@ class PortalGl:
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GL.glMultMatrixf(ship.attitude.camera_matrix())
+        GL.glMultMatrixf(attitude.camera_matrix())
         GL.glDisable(GL.GL_DEPTH_TEST)
 
         PortalGl._draw_band(portal, points, focal)
