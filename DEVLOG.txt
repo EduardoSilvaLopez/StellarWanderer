@@ -59,7 +59,7 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
 
 > BACKLOG
 
-* TRAVEL TO THE CORE
+* TRIP TO KAISELIN
   * Outposts Size 5, 6 - present.
   * Extra: Sikh. Dialog - what is that on your head?
   * Dialog on outpost gives the reasons of the focus, extracted from the code.
