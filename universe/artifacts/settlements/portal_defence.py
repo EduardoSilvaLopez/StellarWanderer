@@ -11,9 +11,9 @@ the ship's velocity in the stellar frame (the Portal does not move in it):
      works (the base's lasers are what stops the ones who try to steal their ships; no failure is played).
 
 A pilot with the interstellar clearance, going to a Those-Who-Share system, gets no stage: once, on reaching the first
-sphere of any Portal of the system, a notification confirms the clearance (the Portal itself is open to everyone; this is
-only the base's reaction). It is not repeated until the ship is beyond REARM_FACTOR times the first sphere of every
-Portal of the system.
+sphere of any Portal of the system, a notification confirms the clearance (the Portal itself is open to everyone;
+this is only the base's reaction). It is not repeated until the ship is beyond REARM_FACTOR times the first sphere of
+every Portal of the system.
 
 A ship already inside a sphere counts as arriving unless it moves away. Each stage is given once, one at a time, and
 only when the ship is also nearer than NEXT_STAGE_FRACTION of the distance where the one before was given: a ship that

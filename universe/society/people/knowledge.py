@@ -14,7 +14,9 @@ root, next to the environment and the player: it is loaded before the environmen
 it. The people are not here: `GameEnvironment.persons` holds those the player has talked to."""
 
 from __future__ import annotations
+from contextlib import contextmanager
 import copy
+from typing import Iterator
 
 
 class Knowledge:
@@ -42,3 +44,15 @@ class Knowledge:
 
 
 current_knowledge: Knowledge = None
+
+
+@contextmanager
+def silent() -> Iterator[None]:
+    """What is generated inside is not learned: for the systems the game builds only to read them, never visited."""
+    global current_knowledge
+    learned: Knowledge = current_knowledge
+    current_knowledge = Knowledge()
+    try:
+        yield
+    finally:
+        current_knowledge = learned

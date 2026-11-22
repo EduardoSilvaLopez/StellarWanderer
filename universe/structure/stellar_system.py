@@ -44,6 +44,9 @@ class StellarSystem:
         self.is_initial: bool = star.cell == parent_galaxy.initial_cell
         self.political_entity: political_entity.PoliticalEntity | None = \
             self.history.entity if self.history is not None else None
+        # The names the entity gave to its oldest places are worked out before the first of its systems is made, for
+        # its worlds and outposts to take them as they are made.
+        parent_galaxy.oldest_places.names_of(self.political_entity)
         # When the system was colonised, which is also when its portal base was founded.
         self.founded_at: datetime | None = self.history.founded_at if self.history is not None else None
         self.star: Star = star  # the system's star, as a body ships can navigate to

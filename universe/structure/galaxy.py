@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, List, Optional
 
 from universe.structure.constants import EPOCH, SECTOR_RADIUS, SECTOR_SIZE
 from universe.structure.fixed_stars import region_of, stellar_position
+from universe.society.people import knowledge
+from universe.society.politics.biggest_places import BiggestPlaces
 from universe.society.politics.expansion_history import ExpansionHistory, SystemHistory
+from universe.society.politics.oldest_places import OldestPlaces
+from universe.society.politics.place_rows import PlaceRows
 from universe.society.politics.tidings import Tidings
 from universe.bodies.star import Star, cell_of
 from universe.structure.stellar_system import StellarSystem
@@ -37,6 +41,9 @@ class Galaxy:
                     f"{self.initial_star.position} ly.")
         self.stars = self.history.stars
         self.tidings: Tidings = Tidings(self.history)
+        self.place_rows: PlaceRows = PlaceRows(self)
+        self.oldest_places: OldestPlaces = OldestPlaces(self)  # before any system is made: they take their names from it
+        self.biggest_places: BiggestPlaces = BiggestPlaces(self, self.place_rows)
         # The sky of each system visited, by its star's cell (see fixed_star_positions)
         self._fixed_star_positions: dict[tuple[int, int, int], list[tuple[Star, tuple[float, float, float]]]] = {}
         self.stellar_systems: List[StellarSystem] = []
@@ -55,6 +62,19 @@ class Galaxy:
             new_system = StellarSystem(self, star, self.saved_alterations)
         self.stellar_systems.append(new_system)
         return new_system
+
+    def preview_system(self, star: Star) -> StellarSystem:
+        """The system of a star, built only to be read: the existing one if the galaxy has it, else one that the galaxy
+        does not keep, the pilot's knowledge does not learn and the star is not attached to. The pilot's own visit
+        builds the system for real, and so teaches it."""
+        existing: Optional[StellarSystem] = next((s for s in self.stellar_systems if s.star.cell == star.cell), None)
+        if existing is not None:
+            return existing
+        attached: Optional[StellarSystem] = star.stellar_system  # the real one, if it is being made just now
+        with knowledge.silent():
+            preview = StellarSystem(self, star, {})
+        star.attach_to(attached)
+        return preview
 
     def history_of(self, cell: tuple[int, int, int]) -> Optional[SystemHistory]:
         """The history of the system of a star's cell, or None if the history does not settle that star by the game

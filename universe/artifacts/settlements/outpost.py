@@ -116,7 +116,10 @@ class Outpost(Settlement):
         odds = focus_weights(self.planet, entity)  # what the world and its founders lean toward, not a certainty
         self.focus = random.Random(seeds.derive(self.seed, 'focus')).choices(
             list(odds), weights=list(odds.values()))[0]
-        self.name: str = entity.generate_outpost_name(self.my_random)
+        self.name: str = entity.generate_outpost_name(self.my_random)  # drawn even when the entity named it by hand
+        named = self.planet.parent_orbit.parent_stellar_system.parent_galaxy.oldest_places.names_of(entity)
+        if named is not None and self.seed in named.settlements:
+            self.name = named.settlements[self.seed][0]  # the entity gave its oldest settlements their names by hand
         # The first settlement on a planet defines its meridian zero.
         self.longitude: int = \
             0 if not planet.outposts else \

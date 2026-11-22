@@ -117,7 +117,7 @@ class PortalBaseGl:
             PortalBaseGl._draw_point(matrix, relative, aspect)
         else:
             PortalBaseGl._set_clock(base, environment.date_time)
-            PortalBaseGl._draw_base(model, base, attitude, matrix, relative, distance, reach, plume_length, aspect,
+            PortalBaseGl._draw_base(model, base, attitude, matrix, relative, ahead, reach, plume_length, aspect,
                                     focal)
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPopMatrix()
@@ -162,9 +162,12 @@ class PortalBaseGl:
 
     @staticmethod
     def _draw_base(model: BaseModel, base: PortalBase, attitude: Attitude, matrix: list, relative: np.ndarray,
-                   distance: float, reach: float, plume_length: float, aspect: float, focal: float) -> None:
+                   depth: float, reach: float, plume_length: float, aspect: float, focal: float) -> None:
+        """`depth` is the base's distance along the view direction, not its distance from the ship: the planes are
+        perpendicular to the view, so for a base far off the axis the distance would put the near plane through it."""
         margin = 1.05 * reach
-        PortalBaseGl._perspective(matrix, max(0.05, distance - margin), distance + margin, aspect)
+        near = max(0.05, depth - margin)
+        PortalBaseGl._perspective(matrix, near, max(near + 1.0, depth + margin), aspect)
         GL.glTranslated(float(relative[0]), float(relative[1]), float(relative[2]))
         GL.glEnable(GL.GL_DEPTH_TEST)
         GL.glDepthMask(GL.GL_TRUE)

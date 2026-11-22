@@ -28,6 +28,9 @@ initial star, and so the place of the start is the result of the generation.
 
 Each event is dated at the end of its period. The first settlement of a system is its portal base, founded with the
 system; the others are outposts made by StellarSystem._place_settlements.
+
+The oldest systems of each entity are named by the entity (`oldest_systems`), oldest first; its oldest worlds and
+settlements are named when they are made (oldest_places.py).
 """
 
 from __future__ import annotations
@@ -194,6 +197,17 @@ class ExpansionHistory:
         # The ones founded after `now` are not part of the history the game knows yet.
         self.all_systems: List[SystemHistory] = [system for system in self.all_settled if system.founded_at <= now]
         self._by_cell: Dict[Cell, SystemHistory] = {system.cell: system for system in self.all_systems}
+        self._name_oldest_systems()
+
+    def _name_oldest_systems(self) -> None:
+        """The oldest systems of each entity take the names it gave them by hand, oldest first. Foundation dates never
+        change, and a run to a later date only adds younger systems, so a system keeps its name whatever the date."""
+        named: Dict[str, int] = {}
+        for system in self.all_settled:
+            taken: int = named.get(system.entity.name, 0)
+            if taken < len(system.entity.oldest_systems):
+                system.star.name = system.entity.oldest_systems[taken]
+            named[system.entity.name] = taken + 1
 
     def to_dict(self) -> dict:
         """The whole history as plain data, for the cache of the run (data/Cache/<seed>/history.json): every settled

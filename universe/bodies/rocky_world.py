@@ -141,9 +141,12 @@ class RockyWorld(World):
         my_random: random.Random = random.Random(self.seed)
 
         self.name =\
-            (self.parent_planet.name + "-" + str(self.index + 1)).capitalize()\
+            self.parent_planet.name + "-" + str(self.index + 1)\
             if self.parent_planet\
             else self._generate_planet_name(my_random)
+        named = self.stellar_system.parent_galaxy.oldest_places.names_of(self.stellar_system.political_entity)
+        if named is not None and self.seed in named.worlds:
+            self.name = named.worlds[self.seed]  # the entity gave its oldest worlds their names by hand
 
         # The make-up first: temperature (a moon is as far from the star as its planet), surface, density, mass, radius.
         planet = self.parent_planet if self.parent_planet else self

@@ -823,11 +823,7 @@ class SettlementChat(Conversation):
         else:
             pieces.append(f"I work here as a {person.role.name} from {person.work_hours_text()}.")
         if person.education >= 70:
-            diploma_place: str = person.place_of_birth
-            if person.place_of_birth.startswith('a town'):  # a small town has no college: another settlement, by seed
-                names: list[str] = [name for name, _ in political_entity.THOSE_WHO_SHARE.settlements]
-                diploma_place = random.Random(seeds.derive(person.seed, 'diploma_place')).choice(names)
-            pieces.append(f"I got my diploma in {diploma_place}.")
+            pieces.append(f"I got my diploma in {person.diploma_place()}.")
         elif person.education >= 20:
             pieces.append("I wanted to work, not study.")
         shift: Optional[int] = None if person.role.shifts == 1 and person.role.vacation == 0 \

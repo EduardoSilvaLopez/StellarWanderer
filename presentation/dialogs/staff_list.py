@@ -34,7 +34,7 @@ CARD_PAD = 12
 CARD_GAP = 12
 PORTRAIT_MAX_WIDTH = 120
 PORTRAIT_RATIO = 1.5  # height over width, as the portraits (512 x 768)
-PORTRAIT_FILL = (16, 52, 56)  # the box of a person whose portrait cannot be loaded
+PORTRAIT_FILL = (16, 52, 56)  # the box of a person whose portrait cannot be loaded; it names the files searched
 COMMENT_LINES = 3  # the most lines of a comment a card shows; a longer one ends with an ellipsis
 EMPTY_TEXT = 'Nobody is available.'
 SEARCH_GAP = 8  # between the search box and the first card
@@ -137,7 +137,8 @@ class StaffList:
         return lines
 
     def _card(self, person: Person, width: int, selected: bool, focused: bool) -> pygame.Surface:
-        """The card of `person`, `width` wide: the portrait, then the name, the role, the last time met and the comment.
+        """The card of `person`, `width` wide: the portrait (or, without one, the portrait prefixes searched), then the
+        name, the role, the last time met and the comment.
         A selected card is outlined in the accent colour; a focused one (the keyboard's) has an inner ring."""
         body = body_font(BODY_SIZE)
         heading = title_font(HEADING_SIZE)
@@ -166,6 +167,12 @@ class StaffList:
             card.blit(pygame.transform.smoothscale(person.icon, portrait_size), portrait)
         else:
             pygame.draw.rect(card, PORTRAIT_FILL, portrait)
+            y_missing = portrait.top + CARD_PAD
+            for line in self._wrapped(person.missing_portrait, body, portrait.width - CARD_PAD):
+                if y_missing + body.get_linesize() > portrait.bottom:
+                    break
+                card.blit(body.render(line, True, TEXT_COLOR), (portrait.left + CARD_PAD // 2, y_missing))
+                y_missing += body.get_linesize()
         pygame.draw.rect(card, ACCENT, portrait, 2)
 
         y = CARD_PAD

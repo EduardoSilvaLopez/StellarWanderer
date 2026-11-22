@@ -72,7 +72,7 @@
     },
     "uniform": {
       "ages": ["young", "adult", "mature", "old"],
-      "template": "Frontal close-up passport photo of the face of {article} {ethnicity} {person}{head} with {headgear} and a Soviet style uniform. The background is futuristic, but with no windows.{suffix}"
+      "template": "Frontal close-up passport photo of the face of a content {ethnicity} {person}{head} with {headgear} and a Soviet style uniform. The background is futuristic, but with no windows.{suffix}"
     }
   },
 

@@ -13,12 +13,14 @@ import pygame
 
 if TYPE_CHECKING:
     from universe.society.people.player import Player
+    from universe.society.politics.biggest_places import Biggest, Place
     from universe.artifacts.settlements.settlement import Settlement
 
 from universe.society.politics import political_entity
 from universe.society.people.role import (RETIREMENT_AGE_MAX, RETIREMENT_AGE_MIN, STAFF_AGE_MAX, STAFF_AGE_MIN, Role)
 import game_environment as gem
 from common.paths import resource_path
+from universe.structure import seeds
 
 PEOPLE_DIR = resource_path('people')
 SECONDS_PER_YEAR = 365.2425 * 24 * 60 * 60
@@ -138,8 +140,9 @@ LANGUAGE_WEIGHTS: dict[str, float] = {
     'chinese': 1, 'english': 1, 'spanish': 1, 'arab': 2, 'indian': 2, 'sikh': 1, 'japanese': 1, 'indonesian': 1,
     'swahili': 1, 'german': 2, 'french': 2, 'italian': 1, 'russian': 1, 'ukrainian': 1,
 }
-INDONESIAN_HOME = 'Singapa, Tón-lǐ-xīn'
-INDONESIAN_HOME_SHARE = 0.6
+BORN_IN_SETTLEMENT_SHARE = 0.8  # of the people: born in one of the biggest settlements, not in a small city or a town
+ETHNICITY_BIRTH_WEIGHT = 5  # how much likelier a settlement of their own ethnicity is, if it has one
+DIPLOMA_AGE = 15  # in years after birth: the date of the biggest settlements a diploma is looked for in
 
 class Person:
 
@@ -209,7 +212,7 @@ class Person:
 
         seconds_after_birth: float = (my_random.random() * (age_max - age_min) + age_min) * 365.2425 * 24 * 60 * 60
         self.dob: datetime = hired_at - timedelta(seconds=seconds_after_birth)
-        self.planet_of_birth, self.place_of_birth = self._generate_place_of_birth(my_random)
+        self.planet_of_birth, self.place_of_birth = self._generate_place_of_birth(my_random, residency)
         self.childhood: str = self._generate_childhood(my_random)
         self.hobby: str = self._generate_hobby(my_random)
         self.ideal_role_dimensions: tuple = (
@@ -232,6 +235,7 @@ class Person:
 
         self._icon: Optional[pygame.Surface] = None  # stays None if the portrait cannot be loaded
         self._icon_loaded: bool = False
+        self.missing_portrait: str = ''  # the portrait prefixes searched and not found, one a line (`_icon` None)
 
         self.interactions: dict = {}
         # Where the player first talked to this person, e.g. "Consequential Task, planet Iuief, Aqakhaceia System"
@@ -269,21 +273,32 @@ class Person:
         others: list[str] = [language for language in LANGUAGE_WEIGHTS if language not in native]
         return my_random.choices(others, weights=[LANGUAGE_WEIGHTS[language] for language in others])[0]
 
-    def _generate_place_of_birth(self, my_random: random.Random) -> tuple:
-        """Chooses a place of birth according to ethnicity, or just 'some place'. An ethnicity with no settlement of
-        its own comes from any of them, and the Indonesians often from their home. The planet is the place's own,
-        so the two never disagree."""
-        settlements: list[tuple[str, Ethnicity]] = political_entity.THOSE_WHO_SHARE.settlements
-        matching: list[str] = [name for name, ethnicity in settlements if ethnicity == self.race]\
-            or [name for name, _ in settlements]
-        if self.race == Ethnicity.INDONESIAN and my_random.random() < INDONESIAN_HOME_SHARE:
-            place = INDONESIAN_HOME
-        elif matching and my_random.random() < 0.8:
-            place = my_random.choice(matching)
-        else:
-            planet: str = my_random.choice(political_entity.THOSE_WHO_SHARE.planets)
-            place = ('a small city' if my_random.random() < 2 / 3 else 'a town') + ", " + planet
-        return place.rsplit(', ', 1)[-1], place
+    def _generate_place_of_birth(self, my_random: random.Random, residency: Settlement) -> tuple[str, str]:
+        """Where they were born, as (world, place), among the biggest places of their entity in the year they were born
+        (see BiggestPlaces): mostly a settlement, by its size and likelier if its ethnicity is theirs; else a small city
+        or a town on a big world. The world is the place's own, so the two never disagree."""
+        biggest: Biggest = gem.current_environment.galaxy.biggest_places.at(self.entity, self.dob)
+        if biggest.settlements and my_random.random() < BORN_IN_SETTLEMENT_SHARE:
+            place: Place = my_random.choices(biggest.settlements, weights=[
+                settlement.size * (ETHNICITY_BIRTH_WEIGHT if settlement.ethnicity == self.race else 1)
+                for settlement in biggest.settlements])[0]
+            return place.world, f"{place.name}, {place.world}"
+        world: str = my_random.choices(biggest.worlds, weights=[big.size for big in biggest.worlds])[0].name \
+            if biggest.worlds else residency.stellar_system.name  # an entity with no world yet: where they work
+        return world, ('a small city' if my_random.random() < 2 / 3 else 'a town') + ", " + world
+
+    def diploma_place(self) -> str:
+        """Where they got their diploma: where they were born, unless that is a town (it has no college), and then one
+        of the biggest settlements when they were about to study, by a seed of its own."""
+        if not self.place_of_birth.startswith('a town'):
+            return self.place_of_birth
+        studying: datetime = self.dob + timedelta(seconds=DIPLOMA_AGE * SECONDS_PER_YEAR)
+        settlements: tuple[Place, ...] = gem.current_environment.galaxy.biggest_places.at(self.entity, studying)\
+            .settlements
+        if not settlements:
+            return self.place_of_birth
+        place: Place = random.Random(seeds.derive(self.seed, 'diploma_place')).choice(settlements)
+        return f"{place.name}, {place.world}"
 
     def _generate_childhood(self, my_random: random.Random) -> str:
         return my_random.choice((
@@ -353,6 +368,7 @@ class Person:
             if candidates:
                 break
         if not candidates:
+            self.missing_portrait = '\n'.join(dict.fromkeys(prefixes))
             print(f"Warning: No person portrait starting with {prefixes[0]} in {portraits_dir}")
             return
         filename: str = my_random.choice(candidates)

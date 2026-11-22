@@ -247,8 +247,8 @@ class Star(Body):
         """The integer cell that contains the star: its key in the galaxy."""
         return cell_of(self.position)
 
-    def attach_to(self, system: StellarSystem) -> None:
-        """Make `system` the star's stellar system (what `stellar_system` returns)."""
+    def attach_to(self, system: StellarSystem | None) -> None:
+        """Make `system` the star's stellar system (what `stellar_system` returns); None when it has none."""
         self._system = system
 
     @property

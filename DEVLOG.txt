@@ -44,22 +44,18 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
   * Extra: Arabs.
   * Extra: Indians.
   * Extra: Indonesians. 
-  * Assigning the history to the new systems.
+  * Assigning the history to the new systems. Including built-in names (Sol may have inconsistencies)
   * Focus: Depends on characteristics of the world.
   * Extra: Sikh.
   * Outpost size 3: Add security team.
   * Outpost size 4: Add 9 people more... who? Mechanics, new role? Administratives? 3rd team Stevedores? 2nd Specialists? Builders?
   * More complex "life" dialog.
+  * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
+  * Extra: androgyne.
 
 ### 2026-11-22 (11/12)
 
-> STARTED: Extra time: 217h00' + 6:00 - 
-
-  * Extra: androgyne.
-  * "You can pass". 'sol>2>3>1' is size 185, 37 settlements from 12 down.
-    * Strange generation of the base near portal.
-    * First time cross provokes a single strange frame.
-
+> STARTED: Extra time: 217h00' + 6:00 - 6:30 + 7:30 - 9:30
 
 > BACKLOG
 
@@ -94,9 +90,10 @@ DEVELOPER'S DIARY since last release 2026-11-11 (4/12)
     * Pellets or air from resources to industrial.
     * Machines from industrial to all the rest.
 
-* ABANDONING THOSE-WHO-SHARE
+* INTERNATIONAL TRAVEL
   * Ȼ are cargo in Shining Throne and as essential resource in UniDiv.
   * Filling up the other entities.
+  * Sol system: the initial "100" were actually a full set of settlements on year 700, where they get converted to that and are allowed to grow with the rest. The settlements generated in the original run are new settlements, besides the built-in ones.
   * Conversion mechanics.
   * United Diversity
   * Megapolis: Present.

@@ -22,8 +22,9 @@ class PoliticalEntity:
             settlement_names_1: List[str],
             settlement_names_2: List[str],
             exchange_value: dict,
-            biggest_cities: List[tuple],
-            planets: List[(str)],
+            oldest_systems: List[(str)],
+            oldest_worlds: List[(str)],
+            oldest_settlements: List[tuple],
             portal_base_names: List[(str)],
             hobbies_sociable: List[(str)],
             hobbies_asocial: List[(str)],
@@ -37,8 +38,12 @@ class PoliticalEntity:
         self.settlement_names_1: List[str] = settlement_names_1
         self.settlement_names_2: List[str] = settlement_names_2
         self.exchange_reputation_changes: dict = exchange_value
-        self.settlements = biggest_cities
-        self.planets = planets
+        # The names given by hand to the entity's oldest systems, worlds and settlements, oldest first. They override
+        # the generated names (the history names the systems, OldestPlaces the rest); a settlement's entry also says
+        # the ethnicity of its people.
+        self.oldest_systems = oldest_systems
+        self.oldest_worlds = oldest_worlds
+        self.oldest_settlements = oldest_settlements
         self.portal_base_names = portal_base_names
         self.hobbies_sociable: List[str] = hobbies_sociable  # what the people do for fun (see Person._generate_hobby)
         self.hobbies_asocial: List[str] = hobbies_asocial  # the same, for people with sociability below 20
@@ -103,13 +108,22 @@ UNITED_DIVERSITY: PoliticalEntity = PoliticalEntity(
             "heat_shield_2": 500000,
             "sealing_pack": 600,
             "repair_kit": 3000,
-        },
-        biggest_cities=[
-            ('Carela ', Ethnicity.WHITE),
+        }
+        , oldest_systems= [
+            'Sol',
         ]
-        , planets= [
+        , oldest_worlds= [
             'Moon',
             'Mars',
+            'Titan',
+            'Ceres',
+            'Venus',
+            'Callisto',
+            'Mercury',
+            'Earth',
+        ]
+        , oldest_settlements=[
+            ('Carela ', Ethnicity.WHITE),
         ]
         , portal_base_names= [
             "Prime",
@@ -225,33 +239,13 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             "heat_shield_2": 50.0,
             "sealing_pack": 0.6,
             "repair_kit": 3,
-        },
-        biggest_cities=[
-            ('Jiùjīnshān, Ài', Ethnicity.BLACK),
-            ('Niǔyuē, Shèqū', Ethnicity.BLACK),
-            ('Bālí, Tón-lǐ-xīn', Ethnicity.WHITE),
-            ('Bólín, Ài', Ethnicity.WHITE),
-            ('Mòxīgē, Ài', Ethnicity.LATIN),
-            ("Shèngbǎoluó, Xǐ'ài", Ethnicity.LATIN),
-            ('Mǎdélǐ, Shèqū', Ethnicity.LATIN),
-            ('Togyo, Ài', Ethnicity.ASIAN),
-            ('Sel, Shèqū', Ethnicity.ASIAN),
-            ('Shangha, Shèqū', Ethnicity.ASIAN),
-            ('Bejing, Ài', Ethnicity.ASIAN),
-            ('Chenzhen, Tón-lǐ-xīn', Ethnicity.ASIAN),
-            ('Singapa, Tón-lǐ-xīn', Ethnicity.ASIAN),
-            ('Guanzhou, Ài', Ethnicity.ASIAN),
-            ('Xīn-xīàng, Tón-lǐ-xīn', Ethnicity.ASIAN),
-            ("Pínděng, Xǐ'ài", Ethnicity.ASIAN),
-            ('Tuánjié, Ài', Ethnicity.ASIAN),
-            ('Lanfang-dexī, Tuánjié', Ethnicity.ASIAN),
-            ('Wei-de-xīwàng, Tuánjié', Ethnicity.ASIAN),
-            ('Kǎisèlín, Ài', Ethnicity.ASIAN),
-            ('Àidéhuá-duō, Guānhái', Ethnicity.ASIAN),
-            ('Dàshān, Guānhái', Ethnicity.ASIAN),
-            ('Huǒshānkǒu, Bānzhù', Ethnicity.ASIAN),
+        }
+        , oldest_systems= [
+            'Three Aspects',
+            'Hope',
+            'Expectation',
         ]
-        , planets= [
+        , oldest_worlds= [
             'Ài',
             'Shèqū',
             'Tón-lǐ-xīn',
@@ -259,6 +253,31 @@ THOSE_WHO_SHARE: PoliticalEntity = PoliticalEntity(
             'Tuánjié',
             'Guānhái',
             'Bānzhù',
+        ]
+        , oldest_settlements=[
+            ('Jiùjīnshān', Ethnicity.BLACK),
+            ('Niǔyuē', Ethnicity.BLACK),
+            ('Bālí', Ethnicity.WHITE),
+            ('Bólín', Ethnicity.WHITE),
+            ('Mòxīgē', Ethnicity.LATIN),
+            ('Shèngbǎoluó', Ethnicity.LATIN),
+            ('Mǎdélǐ', Ethnicity.LATIN),
+            ('Togyo', Ethnicity.ASIAN),
+            ('Sel', Ethnicity.ASIAN),
+            ('Shangha', Ethnicity.ASIAN),
+            ('Bejing', Ethnicity.ASIAN),
+            ('Chenzhen', Ethnicity.ASIAN),
+            ('Singapa', Ethnicity.ASIAN),
+            ('Guanzhou', Ethnicity.ASIAN),
+            ('Xīn-xīàng', Ethnicity.ASIAN),
+            ('Pínděng', Ethnicity.ASIAN),
+            ('Tuánjié', Ethnicity.ASIAN),
+            ('Lanfang-dexī', Ethnicity.ASIAN),
+            ('Wei-de-xīwàng', Ethnicity.ASIAN),
+            ('Kǎisèlín', Ethnicity.ASIAN),
+            ('Àidéhuá-duō', Ethnicity.ASIAN),
+            ('Dàshān', Ethnicity.ASIAN),
+            ('Huǒshānkǒu', Ethnicity.ASIAN),
         ]
         , portal_base_names= [
             "Affection",
@@ -406,12 +425,22 @@ THE_SHINING_THRONE: PoliticalEntity = PoliticalEntity(
             "heat_shield_2": 50.0,
             "sealing_pack": 0.0,
             "repair_kit": 0.0,
-        },
-        biggest_cities=[
-            ('Glorious Seat, New Earth', Ethnicity.BLACK),
+        }
+        , oldest_systems= [
+            'New Sol',
+            'Baubaiter Prime',
+            'Hasbur Prime',
+            'Song Prime',
+            'Grimaldi Prime',
+            'Kennedy Prime',
+            'Chrysanthemum',
+            'Borbon Prime',
         ]
-        , planets= [
+        , oldest_worlds= [
             'New Earth',
+        ]
+        , oldest_settlements=[
+            ('Glorious Seat', Ethnicity.BLACK),
         ]
         , portal_base_names= [
             "TBD",
